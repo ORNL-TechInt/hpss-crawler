@@ -4,6 +4,7 @@ crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import ConfigParser
 import daemon
+import glob
 import logging
 import optparse
 import os
@@ -212,14 +213,16 @@ def Crawl_cleanup():
     if not testhelp.keepfiles():
         flist = ['test_crawl.log',
                  'test_start.log',
-                 'test_crawl_cfgdump_stdout.cfg',
+                 'test_*.cfg',
+                 'test_*.log',
                  'test.d'
                  ]
-        for fname in flist:
-            if os.path.isdir(fname):
-                shutil.rmtree(fname)
-            elif os.path.exists(fname):
-                os.unlink(fname)
+        for fspec in flist:
+            for fname in glob.glob(fspec):
+                if os.path.isdir(fname):
+                    shutil.rmtree(fname)
+                elif os.path.exists(fname):
+                    os.unlink(fname)
 
     if is_running():
         testhelp.touch('crawler.exit')
