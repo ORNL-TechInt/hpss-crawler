@@ -56,7 +56,7 @@ def crl_cfgdump(argv):
             for option in cfg.options(section):
                 print("%s = %s" % (option, cfg.get(section, option)))
     elif o.target == 'log':
-        clogpath = cfg.get('DEFAULT', 'logpath')
+        clogpath = cfg.get('crawler', 'logpath')
         if o.logpath != '':
             log = get_logger(o.logpath)
         elif clogpath != '':
@@ -248,8 +248,9 @@ class CrawlDaemon(daemon.Daemon):
 # ------------------------------------------------------------------------------
 class Crawl(unittest.TestCase):
 
+    default_logpath = './test_default_hpss_crawl.log'
     cfg = {'crawler': {'plugin_dir': './plugins',
-                       'logpath': '/var/log/hpss_crawl.log',
+                       'logpath': default_logpath,
                        'logsize': '5mb',
                        'logmax': '5',
                        'e-mail_recipients':
@@ -261,37 +262,52 @@ class Crawl(unittest.TestCase):
                         }
            }
 
-    
     # --------------------------------------------------------------------------
-    def test_crawl_cfgdump_log(self):
+    def test_crawl_cfgdump_log_nopath(self):
         """
-        TEST: "crawl cfgdump -c <cfgpath> --to log --log <logpath>"
-        EXP: what is written to log matches what was written to cfgpath
+        TEST: "crawl cfgdump -c <cfgpath> --to log"
+        EXP: what is written to log matches what was written to
+        cfgpath. output should go to log path named in cfg.
         """
         cfname = "test_crawl_cfgdump_log.cfg"
-        cfg = {'crawler': {'plugin_dir': './plugins',
-                           'logpath': '/var/log/hpss_crawl.log',
-                           'logsize': '5mb',
-                           'logmax': '5',
-                           'e-mail_recipients':
-                           'tbarron@ornl.gov, tusculum@gmail.com',
-                           'trigger': '<command-line>'
-                           },
-               'plugin-A': {'frequency': '1h',
-                            'operations': '15'
-                            }
-               }
-
         self.write_cfg_file(cfname, self.cfg)
-        cmd = 'crawl cfgdump -c %s --to stdout' % cfname
+        cmd = 'crawl cfgdump -c %s --to log' % cfname
         result = pexpect.run(cmd)
         # print(">>>\n%s\n<<<" % result)
+        self.vassert_nin("Traceback", result)
+        self.assertEqual(os.path.exists(self.default_logpath), True)
+        lcontent = contents(self.default_logpath)
         for section in self.cfg.keys():
-            self.vassert_in('[%s]' % section, result)
+            self.vassert_in('[%s]' % section, lcontent)
 
             for item in self.cfg[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cfg[section][item]), result)
+                                (item, self.cfg[section][item]), lcontent)
+        
+    # --------------------------------------------------------------------------
+    def test_crawl_cfgdump_log_path(self):
+        """
+        TEST: "crawl cfgdump -c <cfgpath> --to log --log <logpath>"
+        EXP: what is written to log matches what was written to
+        cfgpath. output should go to logpath specified on command
+        line.
+        """
+        cfname = "test_crawl_cfgdump_log.cfg"
+        logpath = "./test_local.log"
+        self.write_cfg_file(cfname, self.cfg)
+        cmd = ('crawl cfgdump -c %s --to log --logpath %s'
+               % (cfname, logpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.assertEqual(os.path.exists(logpath), True)
+        lcontent = contents(logpath)
+        # print(">>>\n%s\n<<<" % result)
+        for section in self.cfg.keys():
+            self.vassert_in('[%s]' % section, lcontent)
+
+            for item in self.cfg[section].keys():
+                self.vassert_in('%s = %s' %
+                                (item, self.cfg[section][item]), lcontent)
         
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_stdout(self):
