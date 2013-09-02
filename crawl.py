@@ -216,12 +216,10 @@ def Crawl_cleanup():
                  'test.d'
                  ]
         for fname in flist:
-            if os.path.isfile(fname):
-                os.unlink(fname)
-            elif os.path.isdir(fname):
+            if os.path.isdir(fname):
                 shutil.rmtree(fname)
-            except:
-                pass
+            elif os.path.exists(fname):
+                os.unlink(fname)
 
     if is_running():
         testhelp.touch('crawler.exit')
@@ -250,13 +248,27 @@ class CrawlDaemon(daemon.Daemon):
 # ------------------------------------------------------------------------------
 class Crawl(unittest.TestCase):
 
+    cfg = {'crawler': {'plugin_dir': './plugins',
+                       'logpath': '/var/log/hpss_crawl.log',
+                       'logsize': '5mb',
+                       'logmax': '5',
+                       'e-mail_recipients':
+                       'tbarron@ornl.gov, tusculum@gmail.com',
+                       'trigger': '<command-line>'
+                       },
+           'plugin-A': {'frequency': '1h',
+                        'operations': '15'
+                        }
+           }
+
+    
     # --------------------------------------------------------------------------
-    def test_crawl_cfgdump_stdout(self):
+    def test_crawl_cfgdump_log(self):
         """
-        TEST: "crawl cfgdump -c <cfgpath> --to stdout"
-        EXP: what is written to stdout matches what was written to cfgpath
+        TEST: "crawl cfgdump -c <cfgpath> --to log --log <logpath>"
+        EXP: what is written to log matches what was written to cfgpath
         """
-        cfname = "test_crawl_cfgdump_stdout.cfg"
+        cfname = "test_crawl_cfgdump_log.cfg"
         cfg = {'crawler': {'plugin_dir': './plugins',
                            'logpath': '/var/log/hpss_crawl.log',
                            'logsize': '5mb',
@@ -270,15 +282,34 @@ class Crawl(unittest.TestCase):
                             }
                }
 
-        self.write_cfg_file(cfname, cfg)
+        self.write_cfg_file(cfname, self.cfg)
         cmd = 'crawl cfgdump -c %s --to stdout' % cfname
         result = pexpect.run(cmd)
         # print(">>>\n%s\n<<<" % result)
-        for section in cfg.keys():
+        for section in self.cfg.keys():
             self.vassert_in('[%s]' % section, result)
 
-            for item in cfg[section].keys():
-                self.vassert_in('%s = %s' % (item, cfg[section][item]), result)
+            for item in self.cfg[section].keys():
+                self.vassert_in('%s = %s' %
+                                (item, self.cfg[section][item]), result)
+        
+    # --------------------------------------------------------------------------
+    def test_crawl_cfgdump_stdout(self):
+        """
+        TEST: "crawl cfgdump -c <cfgpath> --to stdout"
+        EXP: what is written to stdout matches what was written to cfgpath
+        """
+        cfname = "test_crawl_cfgdump_stdout.cfg"
+        self.write_cfg_file(cfname, self.cfg)
+        cmd = 'crawl cfgdump -c %s --to stdout' % cfname
+        result = pexpect.run(cmd)
+        # print(">>>\n%s\n<<<" % result)
+        for section in self.cfg.keys():
+            self.vassert_in('[%s]' % section, result)
+
+            for item in self.cfg[section].keys():
+                self.vassert_in('%s = %s' %
+                                (item, self.cfg[section][item]), result)
         
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
