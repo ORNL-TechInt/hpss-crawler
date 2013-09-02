@@ -1,5 +1,7 @@
-DODO
 crawl
+DODO
+NOTES
+*.cfg
 *.log
 *.stderr
 *.stdout
