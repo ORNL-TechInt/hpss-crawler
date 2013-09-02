@@ -1,4 +1,12 @@
+DODO
+crawl
+*.log
+*.stderr
+*.stdout
 *.py[cod]
+*~
+\#*
+.#*
 
 # C extensions
 *.so
