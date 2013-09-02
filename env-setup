@@ -1,0 +1,2 @@
+unset PYTHONPATH
+export PATH=${PATH}:$HOME/prj/hpss/crawler
