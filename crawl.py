@@ -272,7 +272,7 @@ class Crawl(unittest.TestCase):
         EXP: what is written to log matches what was written to
         cfgpath. output should go to log path named in cfg.
         """
-        cfname = "test_crawl_cfgdump_log.cfg"
+        cfname = "test.d/test_crawl_cfgdump_log.cfg"
         self.write_cfg_file(cfname, self.cfg)
         cmd = 'crawl cfgdump -c %s --to log' % cfname
         result = pexpect.run(cmd)
@@ -330,6 +330,21 @@ class Crawl(unittest.TestCase):
                 self.vassert_in('%s = %s' %
                                 (item, self.cfg[section][item]), result)
         
+    # --------------------------------------------------------------------------
+    def test_crawl_fire_log_nopath(self):
+        """
+        TEST: crawl fire --plugin <plugmod>
+        EXP: plugin fired and output went to default log path
+        """
+        # cfname = "test_crawl_fire_log.cfg"
+#         # create a plug module
+#         # add the plug module to the config
+#         self.write_cfg_file(cfname, self.cfg)
+#         cmd = 'crawl fire --plugin %s' % plugname
+#         result = pexpect.run(cmd)
+#         # verify that the log file contents indicate that the plugin fired
+        pass
+    
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
         """
@@ -460,6 +475,10 @@ class Crawl(unittest.TestCase):
         """
         if 'crawler' not in cfgdict.keys():
             raise StandardError("section 'crawler' missing from test config file")
+
+        dname = os.path.dirname(fname)
+        if dname != '' and not os.path.exists(dname):
+            os.mkdir(dname)
         
         f = open(fname, 'w')
         section_l = cfgdict.keys()
