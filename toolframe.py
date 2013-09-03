@@ -140,8 +140,11 @@ def tf_launch(prefix, cleanup_tests = None, testclass='', logfile=''):
         os.symlink(sname, pname)
     elif sys._getframe(1).f_code.co_name in ['?', '<module>']:
         if sname.endswith('.py'):
-            testhelp.main(sys.argv, testclass, logfile=logfile)
-            if None != cleanup_tests:
+            if '-d' in sys.argv:
+                sys.argv.remove('-d')
+                pdb.set_trace()
+            keep = testhelp.main(sys.argv, testclass, logfile=logfile)
+            if None != cleanup_tests and not keep:
                 cleanup_tests()
         else:
             tf_main(sys.argv, prefix=prefix)

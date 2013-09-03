@@ -2,6 +2,7 @@
 """
 crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
+import ConfigParser
 import daemon
 import logging
 import optparse
@@ -9,6 +10,7 @@ import os
 import pdb
 import pexpect
 import re
+import shutil
 import socket
 import sys
 import testhelp
@@ -16,6 +18,56 @@ import time
 import toolframe
 import unittest
 
+# ------------------------------------------------------------------------------
+def crl_cfgdump(argv):
+    """cfgdump - load a config file and dump its contents
+
+    usage: crawl cfgdump -c <filename> [--to stdout|log] [--logpath <path>]
+    """
+    p = optparse.OptionParser()
+    p.add_option('-c', '--cfg',
+                 action='store', default='', dest='config',
+                 help='config file name')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-t', '--to',
+                 action='store', default='', dest='target',
+                 help='specify where to send the output')
+    p.add_option('-l', '--logpath',
+                 action='store', default='', dest='logpath',
+                 help='specify where to send the output')
+    (o, a) = p.parse_args(argv)
+    
+    if o.debug: pdb.set_trace()
+
+
+    if o.config == '':    o.config = 'crawl.cfg'
+    if o.target == '':    o.target = 'stdout'
+
+    cfg = ConfigParser.ConfigParser()
+    cfg.read(o.config)
+
+    section_l = cfg.sections()
+    
+    if o.target == 'stdout':
+        for section in section_l:
+            print("[%s]" % section)
+            for option in cfg.options(section):
+                print("%s = %s" % (option, cfg.get(section, option)))
+    elif o.target == 'log':
+        clogpath = cfg.get('DEFAULT', 'logpath')
+        if o.logpath != '':
+            log = get_logger(o.logpath)
+        elif clogpath != '':
+            log = get_logger(clogpath)
+        else:
+            log = get_logger()
+        for section in section_l:
+            log.info("[%s]" % section)
+            for option in cfg.options(section):
+                log.info("%s = %s" % (option, cfg.get(section, option)))
+        
 # ------------------------------------------------------------------------------
 def crl_log(argv):
     """log - write a message to the indicated log file
@@ -35,7 +87,6 @@ def crl_log(argv):
     
     log = get_logger(o.logfile)
     log.info(" ".join(a))
-    pass
 
 # ------------------------------------------------------------------------------
 def crl_start(argv):
@@ -117,7 +168,7 @@ def contents(filepath, string=True):
     return rval
 
 # ------------------------------------------------------------------------------
-def get_logger(filename="/var/log/integrity.log"):
+def get_logger(filename="/var/log/crawl.log"):
     """
     Return the logging object for this process. Instantiate it if it
     does not exist already.
@@ -160,11 +211,15 @@ def Crawl_cleanup():
     """
     if not testhelp.keepfiles():
         flist = ['test_crawl.log',
-                 'test_start.log'
+                 'test_start.log',
+                 'test_crawl_cfgdump_stdout.cfg',
+                 'test.d'
                  ]
         for fname in flist:
-            try:
+            if os.path.isfile(fname):
                 os.unlink(fname)
+            elif os.path.isdir(fname):
+                shutil.rmtree(fname)
             except:
                 pass
 
@@ -192,28 +247,39 @@ class CrawlDaemon(daemon.Daemon):
                 self.dlog('crawler is running at %s'
                           % time.strftime('%Y.%m%d %H:%M:%S'))
 
-        
 # ------------------------------------------------------------------------------
 class Crawl(unittest.TestCase):
 
     # --------------------------------------------------------------------------
-    def vassert_in(self, expected, actual):
+    def test_crawl_cfgdump_stdout(self):
         """
-        If expected does not occur in actual, report it as an error.
+        TEST: "crawl cfgdump -c <cfgpath> --to stdout"
+        EXP: what is written to stdout matches what was written to cfgpath
         """
-        if not expected in actual:
-            self.fail('\n"""\n%s\n"""\n\n   NOT FOUND IN\n\n"""\n%s\n"""' %
-                      (expected, actual))
+        cfname = "test_crawl_cfgdump_stdout.cfg"
+        cfg = {'crawler': {'plugin_dir': './plugins',
+                           'logpath': '/var/log/hpss_crawl.log',
+                           'logsize': '5mb',
+                           'logmax': '5',
+                           'e-mail_recipients':
+                           'tbarron@ornl.gov, tusculum@gmail.com',
+                           'trigger': '<command-line>'
+                           },
+               'plugin-A': {'frequency': '1h',
+                            'operations': '15'
+                            }
+               }
 
-    # ------------------------------------------------------------------------
-    def vassert_nin(self, expected, actual):
-        """
-        If expected occurs in actual, report it as an error.
-        """
-        if expected in actual:
-            self.fail('\n"""\n%s\n"""\n\n   SHOULD NOT BE IN\n\n"""\n%s\n"""' %
-                      (expected, actual))
+        self.write_cfg_file(cfname, cfg)
+        cmd = 'crawl cfgdump -c %s --to stdout' % cfname
+        result = pexpect.run(cmd)
+        # print(">>>\n%s\n<<<" % result)
+        for section in cfg.keys():
+            self.vassert_in('[%s]' % section, result)
 
+            for item in cfg[section].keys():
+                self.vassert_in('%s = %s' % (item, cfg[section][item]), result)
+        
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
         """
@@ -318,6 +384,45 @@ class Crawl(unittest.TestCase):
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
         
+    # --------------------------------------------------------------------------
+    def vassert_in(self, expected, actual):
+        """
+        If expected does not occur in actual, report it as an error.
+        """
+        if not expected in actual:
+            self.fail('\n"""\n%s\n"""\n\n   NOT FOUND IN\n\n"""\n%s\n"""' %
+                      (expected, actual))
+
+    # ------------------------------------------------------------------------
+    def vassert_nin(self, expected, actual):
+        """
+        If expected occurs in actual, report it as an error.
+        """
+        if expected in actual:
+            self.fail('\n"""\n%s\n"""\n\n   SHOULD NOT BE IN\n\n"""\n%s\n"""' %
+                      (expected, actual))
+
+    # ------------------------------------------------------------------------
+    def write_cfg_file(self, fname, cfgdict):
+        """
+        Write a config file for testing. Put the 'crawler' section first.
+        Complain if the 'crawler' section is not present.
+        """
+        if 'crawler' not in cfgdict.keys():
+            raise StandardError("section 'crawler' missing from test config file")
+        
+        f = open(fname, 'w')
+        section_l = cfgdict.keys()
+        section_l.remove('crawler')
+        section_l = ['crawler'] + section_l
+
+        for section in section_l:
+            f.write("[%s]\n" % section)
+            for item in cfgdict[section].keys():
+                f.write("%s = %s\n" % (item, cfgdict[section][item]))
+            f.write("\n")
+        f.close()
+
 # ------------------------------------------------------------------------------
 toolframe.tf_launch("crl",
                     cleanup_tests=Crawl_cleanup,
