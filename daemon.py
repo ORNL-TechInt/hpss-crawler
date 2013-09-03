@@ -18,20 +18,14 @@ class Daemon:
     Usage: subclass the Daemon class and override the run() method
     """
     # -----------------------------------------------------------------------
-    def __init__(self,
-                 pidfile,
-                 stdin='/dev/null',
-                 stdout='/dev/null',
-                 stderr='/dev/null',
-                 workdir='.',
-                 logger=None):
+    def __init__(self, pidfile, stdin='/dev/null',
+                 stdout='/dev/null', stderr='/dev/null', logger=None):
         self.origdir = os.getcwd()
         self.stdin = stdin
         self.stdout = stdout
         self.stderr = stderr
         self.pidfile = pidfile
         self.logger = logger
-        self.workdir = workdir
         
     # -----------------------------------------------------------------------
     def daemonize(self):
@@ -52,12 +46,12 @@ class Daemon:
             sys.exit(1)
         
         # decouple from parent environment
-        if not os.path.exists(self.workdir):
-            os.mkdir(self.workdir)
-        elif not os.path.isdir(self.workdir):
-            raise StandardError("Can't cd to '%s' -- it's not a directory"
-                                % self.workdir)
-        os.chdir(self.workdir)
+        workdir = "/tmp/esg"
+        if not os.path.exists(workdir):
+            os.mkdir(workdir)
+        elif not os.path.isdir(workdir):
+            raise StandardError("Can't cd to '%s' -- it's not a directory" % workdir)
+        os.chdir(workdir)
         os.setsid()
         os.umask(0)
         
@@ -78,10 +72,9 @@ class Daemon:
         sys.stderr.flush()
 
         self.dlog("closing all open files");
-        dont_close = []
-        if self.logger != None:
-            dont_close.append(self.logger.handlers[0].stream.fileno())
-
+        dont_close = [
+            self.logger.handlers[0].stream.fileno()
+        ]
         # close all open files
         maxfd = self.get_max_fd()
         for fd in reversed(range(maxfd)):

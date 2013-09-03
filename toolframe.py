@@ -130,7 +130,7 @@ def tf_help(A, prefix=None):
             
 
 # ---------------------------------------------------------------------------
-def tf_launch(prefix, cleanup_tests = None, testclass='', logfile=''):
+def tf_launch(prefix, cleanup_tests = None):
     if len(sys.argv) == 1 and sys.argv[0] == '':
         return
     sname = sys.argv[0]
@@ -140,11 +140,8 @@ def tf_launch(prefix, cleanup_tests = None, testclass='', logfile=''):
         os.symlink(sname, pname)
     elif sys._getframe(1).f_code.co_name in ['?', '<module>']:
         if sname.endswith('.py'):
-            if '-d' in sys.argv:
-                sys.argv.remove('-d')
-                pdb.set_trace()
-            keep = testhelp.main(sys.argv, testclass, logfile=logfile)
-            if None != cleanup_tests and not keep:
+            testhelp.main(sys.argv)
+            if None != cleanup_tests:
                 cleanup_tests()
         else:
             tf_main(sys.argv, prefix=prefix)
