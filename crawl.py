@@ -251,7 +251,7 @@ class CrawlDaemon(daemon.Daemon):
 # ------------------------------------------------------------------------------
 class Crawl(unittest.TestCase):
 
-    default_logpath = './test_default_hpss_crawl.log'
+    default_logpath = 'test.d/test_default_hpss_crawl.log'
     cfg = {'crawler': {'plugin_dir': './plugins',
                        'logpath': default_logpath,
                        'logsize': '5mb',
@@ -272,7 +272,7 @@ class Crawl(unittest.TestCase):
         EXP: what is written to log matches what was written to
         cfgpath. output should go to log path named in cfg.
         """
-        cfname = "test.d/test_crawl_cfgdump_log.cfg"
+        cfname = "test.d/test_crawl_cfgdump_log_n.cfg"
         self.write_cfg_file(cfname, self.cfg)
         cmd = 'crawl cfgdump -c %s --to log' % cfname
         result = pexpect.run(cmd)
@@ -295,8 +295,8 @@ class Crawl(unittest.TestCase):
         cfgpath. output should go to logpath specified on command
         line.
         """
-        cfname = "test_crawl_cfgdump_log.cfg"
-        logpath = "./test_local.log"
+        cfname = "test.d/test_crawl_cfgdump_log_p.cfg"
+        logpath = "test.d/test_local.log"
         self.write_cfg_file(cfname, self.cfg)
         cmd = ('crawl cfgdump -c %s --to log --logpath %s'
                % (cfname, logpath))
@@ -318,7 +318,7 @@ class Crawl(unittest.TestCase):
         TEST: "crawl cfgdump -c <cfgpath> --to stdout"
         EXP: what is written to stdout matches what was written to cfgpath
         """
-        cfname = "test_crawl_cfgdump_stdout.cfg"
+        cfname = "test.d/test_crawl_cfgdump_stdout.cfg"
         self.write_cfg_file(cfname, self.cfg)
         cmd = 'crawl cfgdump -c %s --to stdout' % cfname
         result = pexpect.run(cmd)
@@ -350,7 +350,7 @@ class Crawl(unittest.TestCase):
         """
         TEST: "crawl log --log filename message" will write message to filename
         """
-        lfname = 'test_crawl.log'
+        lfname = 'test.d/test_crawl.log'
         msg = "this is a test log message"
         cmd = "crawl log --log %s %s" % (lfname, msg)
         result = pexpect.run(cmd)
@@ -401,11 +401,12 @@ class Crawl(unittest.TestCase):
         """
         TEST: 'crawl status' should report the crawler status correctly.
         """
+        logpath = 'test.d/test_start.log'
         cmd = 'crawl status'
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), "The crawler is not running.")
         
-        cmd = 'crawl start --log test_start.log --context TEST'
+        cmd = 'crawl start --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
@@ -417,7 +418,7 @@ class Crawl(unittest.TestCase):
         self.assertEqual('The crawler is running as process' in result,
                          True)
 
-        cmd = 'crawl stop --log test_start.log --context TEST'
+        cmd = 'crawl stop --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1)
@@ -434,14 +435,15 @@ class Crawl(unittest.TestCase):
         """
         TEST: 'crawl stop' should cause a running daemon to shut down.
         """
-        cmd = 'crawl start --log test_start.log --context TEST'
+        logpath = 'test.d/test_start.log'
+        cmd = 'crawl start --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
 
-        cmd = 'crawl stop --log test_start.log'
+        cmd = 'crawl stop --log %s' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1)
