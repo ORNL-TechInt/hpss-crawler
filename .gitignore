@@ -1,4 +1,5 @@
 NOTES
 crawl
+*.log
 *.pyc
 *~

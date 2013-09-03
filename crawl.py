@@ -73,11 +73,14 @@ def crl_start(argv):
 def crl_status(argv):
     """status - report whether the crawler is running or not
 
-    usage: crawl stop
+    usage: crawl status
     """
-    pass
+    if is_running():
+        cpid = contents('crawler_pid').strip()
+        print("The crawler is running as process %s." % cpid)
+    else:
+        print("The crawler is not running.")
     
-
 # ------------------------------------------------------------------------------
 def crl_stop(argv):
     """stop - shut down the crawler daemon if it is running
@@ -262,6 +265,39 @@ class Crawl(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(is_running(), False)
         
+    # --------------------------------------------------------------------------
+    def test_crawl_status(self):
+        """
+        TEST: 'crawl status' should report the crawler status correctly.
+        """
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual(result.strip(), "The crawler is not running.")
+        
+        cmd = 'crawl start --log test_start.log --context TEST'
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+
+        self.assertEqual(is_running(), True)
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual('The crawler is running as process' in result,
+                         True)
+
+        cmd = 'crawl stop --log test_start.log --context TEST'
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        time.sleep(1)
+        
+        self.assertEqual(is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual(result.strip(), "The crawler is not running.")
+
     # --------------------------------------------------------------------------
     def test_crawl_stop(self):
         """
