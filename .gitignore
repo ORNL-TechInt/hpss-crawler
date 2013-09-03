@@ -2,6 +2,7 @@ cmsg
 crawl
 DODO
 NOTES
+test.d
 *.cfg
 *.log
 *.stderr
