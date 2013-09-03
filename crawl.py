@@ -3,6 +3,7 @@
 crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import ConfigParser
+import copy
 import daemon
 import glob
 import logging
@@ -252,7 +253,7 @@ class CrawlDaemon(daemon.Daemon):
 class Crawl(unittest.TestCase):
 
     default_logpath = 'test.d/test_default_hpss_crawl.log'
-    cfg = {'crawler': {'plugin_dir': './plugins',
+    cfg = {'crawler': {'plugin_dir': 'test.d/plugins',
                        'logpath': default_logpath,
                        'logsize': '5mb',
                        'logmax': '5',
@@ -331,19 +332,40 @@ class Crawl(unittest.TestCase):
                                 (item, self.cfg[section][item]), result)
         
     # --------------------------------------------------------------------------
-    def test_crawl_fire_log_nopath(self):
+    def test_crawl_fire_log_path(self):
         """
         TEST: crawl fire --plugin <plugmod>
-        EXP: plugin fired and output went to default log path
+        EXP: plugin fired and output went to specified log path
         """
-        # cfname = "test_crawl_fire_log.cfg"
-#         # create a plug module
-#         # add the plug module to the config
-#         self.write_cfg_file(cfname, self.cfg)
-#         cmd = 'crawl fire --plugin %s' % plugname
-#         result = pexpect.run(cmd)
-#         # verify that the log file contents indicate that the plugin fired
-        pass
+        cfname = "test.d/test_crawl_fire_log.cfg"
+        lfname = "test.d/test_crawl_fire.log"
+        plugdir = 'test.d/plugins'
+        plugname = 'plugin_1'
+        
+        # create a plug module
+        self.write_plugmod(plugdir, plugname)
+        
+        # add the plug module to the config
+        t = copy.deepcopy(self.cfg)
+        t[plugname] = {}
+        t[plugname]['frequency'] = '1m'
+        self.write_cfg_file(cfname, t)
+
+        # carry out the test
+        cmd = 'crawl fire --plugin %s --logpath %s' % (plugname, lfname)
+        result = pexpect.run(cmd)
+        
+        # verify that the log file contents indicate that the plugin fired
+        # test.d/plugins/plugin_1 should exist
+        self.assertEqual(os.path.exists('%s/%s' % (plugdir, plugname)), True)
+        
+        # test.d/fired should exist and contain 'plugin plugin_1 fired'
+        self.assertEqual(os.path.exists('test.d/fired'), True)
+        self.vassert_in('plugin plugin_1 fired', content('test.d/fired'))
+        
+        # lfname should exist and contain specific strings
+        self.assertEqual(os.path.exists(lfname), True)
+        self.vassert_in('firing plugin_1', content(lfname))
     
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
@@ -494,6 +516,23 @@ class Crawl(unittest.TestCase):
             f.write("\n")
         f.close()
 
+    # ------------------------------------------------------------------------
+    def write_plugmod(self, plugdir, plugname):
+        """
+        Create a plugin module to test firing
+        """
+        if not os.path.exists(plugdir):
+            os.makedirs(plugdir)
+
+        f = open('%s/%s' % (plugdir, plugname), 'w')
+        f.write("#!/bin/env python\n")
+        f.write("def main():\n")
+        f.write("    q = open('test.d/fired', 'w')\n")
+        f.write(r"    q.write('plugin %s fired\n')" % plugname)
+        f.write("\n")
+        f.write("    q.close()\n")
+        f.close()
+        
 # ------------------------------------------------------------------------------
 toolframe.tf_launch("crl",
                     cleanup_tests=Crawl_cleanup,
