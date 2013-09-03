@@ -1,0 +1,42 @@
+[crawler]
+
+# where the plugins live
+plugin-dir = ./plugins
+
+# where to write log information
+logpath    = /var/log/hpss_crawl.log
+
+# max size of a log file before rotating it
+logsize    = 5mb
+
+# max number of log files to keep
+logmax     = 5
+
+# addresses to receive e-mail about significant events
+notify-e-mail = tbarron@ornl.gov, tusculum@gmail.com
+
+# program to run on significant events
+notify-program = command line
+
+# the section name matches the name of a plugin module
+[plugin-A]
+
+# how long to sleep between runs of this plugin (1 hour)
+# other interval names: second, minute, day, week, month, year
+# With no specifier, the number is taken as a count of seconds
+# mutually exclusive with schedule
+frequency     = 1 hour
+
+# crontab-style schedule: minute hour month-day month week-day
+# mutually exclusive with frequency
+schedule      = * 2,3,4 1 * *
+
+# max number of operations in a single run
+operations    = 20
+
+# read filename and include any configuration information found there
+include       = filename
+
+# This plugin can decide to pass file paths along to downstream
+# plugins for further operations
+downstream    = plugin-name
