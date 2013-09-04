@@ -47,8 +47,7 @@ def crl_cfgdump(argv):
     if o.config == '':    o.config = 'crawl.cfg'
     if o.target == '':    o.target = 'stdout'
 
-    cfg = ConfigParser.ConfigParser()
-    cfg.read(o.config)
+    cfg = get_config(o.config)
 
     section_l = cfg.sections()
     
@@ -58,6 +57,7 @@ def crl_cfgdump(argv):
             for option in cfg.options(section):
                 print("%s = %s" % (option, cfg.get(section, option)))
     elif o.target == 'log':
+        # this could be 'log = get_logger(o.logpath, cfg)'
         clogpath = cfg.get('crawler', 'logpath')
         if o.logpath != '':
             log = get_logger(o.logpath)
@@ -70,6 +70,42 @@ def crl_cfgdump(argv):
             for option in cfg.options(section):
                 log.info("%s = %s" % (option, cfg.get(section, option)))
         
+# ------------------------------------------------------------------------------
+def crl_fire(argv):
+    """fire - run a plugin
+
+    usage: crawl fire --cfg cfgname --logpath logfname --plugin plugname
+    """
+    p = optparse.OptionParser()
+    p.add_option('-c', '--cfg',
+                 action='store', default='', dest='config',
+                 help='config file name')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-l', '--logpath',
+                 action='store', default='', dest='logpath',
+                 help='specify where to send the output')
+    p.add_option('-p', '--plugin',
+                 action='store', default='', dest='plugname',
+                 help='which plugin to fire')
+    (o, a) = p.parse_args(argv)
+    
+    if o.debug: pdb.set_trace()
+
+    cfg = get_config(o.config)
+    lfname = cfg.get('crawler', 'logpath')
+    log = get_logger(o.logpath, cfg)
+
+    if not cfg.has_section(o.plugname):
+        print("No plugin named '%s' is defined")
+    else:
+        plugdir = cfg.get('crawler', 'plugin_dir')
+        sys.path.append(plugdir)
+        __import__(o.plugname)
+        log.info('firing %s' % o.plugname)
+        sys.modules[o.plugname].main()
+    
 # ------------------------------------------------------------------------------
 def crl_log(argv):
     """log - write a message to the indicated log file
@@ -170,11 +206,34 @@ def contents(filepath, string=True):
     return rval
 
 # ------------------------------------------------------------------------------
-def get_logger(filename="/var/log/crawl.log"):
+def get_config(cfname=''):
+    if cfname == '':
+        envval = os.getenv('CRAWL_CONF')
+        if None != envval:
+            cfname = envval
+    
+    if cfname == '':
+        cfname = 'crawl.cfg'
+
+    rval = ConfigParser.ConfigParser()
+    rval.read(cfname)
+    return rval
+
+# ------------------------------------------------------------------------------
+def get_logger(cmdline='', cfg=None):
     """
     Return the logging object for this process. Instantiate it if it
     does not exist already.
     """
+    filename = '/var/log/crawl.log'
+    if cmdline != '':
+        filename = cmdline
+    elif cfg != None:
+        try:
+            filename = cfg.get('crawler', 'logpath')
+        except:
+            pass
+
     try:
         rval = get_logger._logger
     except AttributeError:
@@ -352,20 +411,25 @@ class Crawl(unittest.TestCase):
         self.write_cfg_file(cfname, t)
 
         # carry out the test
-        cmd = 'crawl fire --plugin %s --logpath %s' % (plugname, lfname)
+        cmd = ('crawl fire -c %s --plugin %s --logpath %s' %
+               (cfname, plugname, lfname))
         result = pexpect.run(cmd)
+
+        # verify that command ran successfully
+        self.vassert_nin("Traceback", result)
         
-        # verify that the log file contents indicate that the plugin fired
-        # test.d/plugins/plugin_1 should exist
+        # test.d/plugins/plugin_1.py should exist
+        if not plugname.endswith('.py'):
+            plugname += '.py'
         self.assertEqual(os.path.exists('%s/%s' % (plugdir, plugname)), True)
         
         # test.d/fired should exist and contain 'plugin plugin_1 fired'
         self.assertEqual(os.path.exists('test.d/fired'), True)
-        self.vassert_in('plugin plugin_1 fired', content('test.d/fired'))
+        self.vassert_in('plugin plugin_1 fired', contents('test.d/fired'))
         
         # lfname should exist and contain specific strings
         self.assertEqual(os.path.exists(lfname), True)
-        self.vassert_in('firing plugin_1', content(lfname))
+        self.vassert_in('firing plugin_1', contents(lfname))
     
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
@@ -524,7 +588,12 @@ class Crawl(unittest.TestCase):
         if not os.path.exists(plugdir):
             os.makedirs(plugdir)
 
-        f = open('%s/%s' % (plugdir, plugname), 'w')
+        if plugname.endswith('.py'):
+            plugname = re.sub(r'\.py$', '', plugname)
+
+        plugfname = plugname + '.py'
+
+        f = open('%s/%s' % (plugdir, plugfname), 'w')
         f.write("#!/bin/env python\n")
         f.write("def main():\n")
         f.write("    q = open('test.d/fired', 'w')\n")
