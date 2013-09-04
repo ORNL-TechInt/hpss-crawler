@@ -208,7 +208,9 @@ def get_config(cfname=''):
     if cfname == '':
         cfname = 'crawl.cfg'
 
-    rval = ConfigParser.ConfigParser()
+    if not os.access(cfname, os.R_OK):
+        raise StandardError("%s does not exist or is not readable" % cfname)
+    rval = ConfigParser.SafeConfigParser()
     rval.read(cfname)
     return rval
 
@@ -317,6 +319,21 @@ class Crawl(unittest.TestCase):
                         'operations': '15'
                         }
            }
+
+    # --------------------------------------------------------------------------
+    def test_crawl_cfgdump_nosuch(self):
+        """
+        TEST: "crawl cfgdump -c test.d/nosuch.cfg"
+        EXP: attempting to open a nonexistent config file throws an error
+        """
+        cfname = 'test.d/nosuch.cfg'
+        if os.path.exists(cfname):
+            os.unlink(cfname)
+        cmd = 'crawl cfgdump -c %s' % cfname
+        result = pexpect.run(cmd)
+        self.vassert_in("Traceback", result)
+        self.vassert_in("%s does not exist or is not readable" % cfname,
+                        result)
 
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_log_nopath(self):
