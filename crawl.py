@@ -312,6 +312,7 @@ class Crawl(unittest.TestCase):
     testdir = 'test.d'
     default_cfname = 'crawl.cfg'
     env_cfname = 'envcrawl.cfg'
+    exp_cfname = 'explicit.cfg'
     default_logpath = '%s/test_default_hpss_crawl.log' % testdir
     cfg = {'crawler': {'plugin_dir': '%s/plugins' % testdir,
                        'logpath': default_logpath,
@@ -665,10 +666,10 @@ class Crawl(unittest.TestCase):
         EXP: get_config(), get_config('') should throw a StandardError
         about the file not existing or not being readable
         """
-        os.chdir(self.testdir)
-        os.environ['CRAWL_CFG'] = self.env_cfname
+        self.cd(self.testdir)
+        os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
-        d.set('crawler', 'filename', self.env_cfname)
+        d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0000)
 
@@ -701,8 +702,8 @@ class Crawl(unittest.TestCase):
         EXP: get_config(), get_config('') should throw a StandardError
         about the file not existing or not being readable
         """
-        os.chdir(self.testdir)
-        os.environ['CRAWL_CFG'] = self.env_cfname
+        self.cd(self.testdir)
+        os.environ['CRAWL_CONF'] = self.env_cfname
         if os.path.exists(self.env_cfname):
             os.unlink(self.env_cfname)
 
@@ -726,7 +727,6 @@ class Crawl(unittest.TestCase):
                              self.env_cfname)
         self.assertEqual(got_exception, True)
 
-
     # --------------------------------------------------------------------------
     def test_get_config_env_ok(self):
         """
@@ -735,10 +735,10 @@ class Crawl(unittest.TestCase):
 
         EXP: get_config(), get_config('') should load the config
         """
-        os.chdir(self.testdir)
-        os.environ['CRAWL_CFG'] = self.env_cfname
+        self.cd(self.testdir)
+        os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
-        d.set('crawler', 'filename', self.env_cfname)
+        d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0644)
 
@@ -760,31 +760,92 @@ class Crawl(unittest.TestCase):
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_noread(self):
-        # ----------------------------------------------------------------------
-        # env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and is
-        # readable, unreadable explicit.cfg exists =>
-        # get_config('explicit.cfg') should should throw a
-        # StandardError about the file not existing or not being
-        # readable
-        self.fail('under construction')
+        """
+        TEST: env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and is
+              readable, unreadable explicit.cfg exists
+
+        EXP: get_config('explicit.cfg') should should throw a
+             StandardError about the file not existing or not being
+             readable
+        """
+        self.cd(self.testdir)
+        os.environ['CRAWL_CONF'] = self.env_cfname
+        d = copy.deepcopy(self.cfg)
+        d['crawler']['filename'] = self.env_cfname
+        self.write_cfg_file(self.env_cfname, d)
+        os.chmod(self.env_cfname, 0644)
+
+        d = copy.deepcopy(self.cfg)
+        d['crawler']['filename'] = self.exp_cfname
+        self.write_cfg_file(self.exp_cfname, d)
+        os.chmod(self.exp_cfname, 0000)
+
+        got_exception = False
+        try:
+            cfg = get_config(self.exp_cfname)
+        except StandardError as e:
+            got_exception = True
+            self.assertEqual(str(e),
+                             '%s does not exist or is not readable' %
+                             self.exp_cfname)
+        self.assertEqual(got_exception, True)
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_nosuch(self):
-        # ----------------------------------------------------------------------
-        # env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and is
-        # readable, explicit.cfg does not exist =>
-        # get_config('explicit.cfg') should throw a
-        # StandardError about the file not existing or not being
-        # readable
-        self.fail('under construction')
+        """
+        TEST: env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and
+              is readable, explicit.cfg does not exist
+              
+        EXP: get_config('explicit.cfg') should throw a StandardError
+             about the file not existing or not being readable
+        """
+        self.cd(self.testdir)
+        os.environ['CRAWL_CONF'] = self.env_cfname
+        d = copy.deepcopy(self.cfg)
+        d['crawler']['filename'] = self.env_cfname
+        self.write_cfg_file(self.env_cfname, d)
+        os.chmod(self.env_cfname, 0644)
+
+        if os.path.exists(self.exp_cfname):
+            os.unlink(self.exp_cfname)
+
+        got_exception = False
+        try:
+            cfg = get_config(self.exp_cfname)
+        except StandardError as e:
+            got_exception = True
+            self.assertEqual(str(e),
+                             '%s does not exist or is not readable' %
+                             self.exp_cfname)
+        self.assertEqual(got_exception, True)
+
     # --------------------------------------------------------------------------
     def test_get_config_exp_ok(self):
-        # ----------------------------------------------------------------------
-        # env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and is
-        # readable, readable explicit.cfg does exist =>
-        # get_config('explicit.cfg') should load the explicit.cfg
+        """
+        TEST: env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and is
+              readable, readable explicit.cfg does exist
 
-        self.fail('under construction')
+        EXP: get_config('explicit.cfg') should load the explicit.cfg
+        """
+        self.cd(self.testdir)
+        os.environ['CRAWL_CONF'] = self.env_cfname
+        d = copy.deepcopy(self.cfg)
+        d['crawler']['filename'] = self.env_cfname
+        self.write_cfg_file(self.env_cfname, d)
+        os.chmod(self.env_cfname, 0644)
+
+        d = copy.deepcopy(self.cfg)
+        d['crawler']['filename'] = self.exp_cfname
+        self.write_cfg_file(self.exp_cfname, d)
+        os.chmod(self.exp_cfname, 0644)
+
+        got_exception = False
+        try:
+            cfg = get_config(self.exp_cfname)
+        except StandardError as e:
+            got_exception = True
+        self.assertEqual(got_exception, False)
+        self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
     # --------------------------------------------------------------------------
     def cd(self, dirname):
