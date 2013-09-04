@@ -57,14 +57,7 @@ def crl_cfgdump(argv):
             for option in cfg.options(section):
                 print("%s = %s" % (option, cfg.get(section, option)))
     elif o.target == 'log':
-        # this could be 'log = get_logger(o.logpath, cfg)'
-        clogpath = cfg.get('crawler', 'logpath')
-        if o.logpath != '':
-            log = get_logger(o.logpath)
-        elif clogpath != '':
-            log = get_logger(clogpath)
-        else:
-            log = get_logger()
+        log = get_logger(o.logpath, cfg)
         for section in section_l:
             log.info("[%s]" % section)
             for option in cfg.options(section):
