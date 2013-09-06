@@ -215,7 +215,7 @@ def get_config(cfname=''):
     return rval
 
 # ------------------------------------------------------------------------------
-def get_logger(cmdline='', cfg=None):
+def get_logger(cmdline='', cfg=None, reset=False):
     """
     Return the logging object for this process. Instantiate it if it
     does not exist already.
@@ -847,6 +847,45 @@ class Crawl(unittest.TestCase):
         self.assertEqual(got_exception, False)
         self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
+    # --------------------------------------------------------------------------
+    def test_get_logger_default(self):
+        """
+        TEST: Call get_logger() with no argument
+
+        EXP: Attempts to log to '/var/log/crawl.log'
+        """
+        got_exception = False
+        try:
+            lobj = get_logger()
+        except IOError as e:
+            self.assertEqual('Permission denied' in str(e), True)
+            self.assertEqual('/var/log/crawl.log' in str(e), True)
+            got_exception = True
+
+        if os.getuid() != 0 and got_exception == False:
+            self.fail('Only root should be able to write to the '
+                      + 'default log file')
+        elif os.getuid() == 0 and got_exception == True:
+            self.fail('Root should be able to write to the default log file')
+        
+    # --------------------------------------------------------------------------
+    def test_get_logger_config(self):
+        """
+        TEST: Call get_logger('', cfg) with an empty path and a config object
+
+        EXP: Attempts to log to cfg.get('crawler', 'logpath')
+        """
+        self.fail("under construction")
+        
+    # --------------------------------------------------------------------------
+    def test_get_logger_path(self):
+        """
+        TEST: Call get_logger() with a pathname
+
+        EXP: Attempts to log to pathname
+        """
+        self.fail("under construction")
+        
     # --------------------------------------------------------------------------
     def cd(self, dirname):
         try:
