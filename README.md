@@ -25,3 +25,19 @@ needed.
 
 Test results are written to stdout and also logged in crawl_test.log so a
 history is available.
+
+
+## Git Repo Branches
+
+The git repo has the following branches used for the indicated intentions
+
+   devel - current development
+   master - last stable release
+
+   post - this branch is historic and the material from it has been merged to
+          dev. it can be deleted
+
+   prehistory - This branch contains the history of the work from before the
+                github repo was established. It is fully incorporated into
+                devel, however deleting this branch would lose the steps from
+                project inception to when the github repo was set up.
