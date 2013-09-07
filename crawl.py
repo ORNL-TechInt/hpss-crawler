@@ -126,6 +126,9 @@ def crl_start(argv):
     usage: crawl start
     """
     p = optparse.OptionParser()
+    p.add_option('-c', '--cfg',
+                 action='store', default='', dest='config',
+                 help='config file name')
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
@@ -143,6 +146,10 @@ def crl_start(argv):
         print('crawler_pid exists. If you are sure it is not running,\n' +
               'please remove crawler_pid and try again.')
     else:
+        #
+        # Initialize the configuration
+        #
+        cfg = get_config(o.config)
         crawler = CrawlDaemon('crawler_pid',
                               stdout="crawler.stdout",
                               stderr="crawler.stderr",
@@ -199,19 +206,31 @@ def contents(filepath, string=True):
     return rval
 
 # ------------------------------------------------------------------------------
-def get_config(cfname=''):
-    if cfname == '':
-        envval = os.getenv('CRAWL_CONF')
-        if None != envval:
-            cfname = envval
+def get_config(cfname='', reset=False):
+    if reset:
+        try:
+            del get_config._config
+        except AttributeError:
+            pass
+        return
     
-    if cfname == '':
-        cfname = 'crawl.cfg'
+    try:
+        rval = get_config._config
+    except AttributeError:
+        if cfname == '':
+            envval = os.getenv('CRAWL_CONF')
+            if None != envval:
+                cfname = envval
+    
+        if cfname == '':
+            cfname = 'crawl.cfg'
 
-    if not os.access(cfname, os.R_OK):
-        raise StandardError("%s does not exist or is not readable" % cfname)
-    rval = ConfigParser.SafeConfigParser()
-    rval.read(cfname)
+        if not os.access(cfname, os.R_OK):
+            raise StandardError("%s does not exist or is not readable" % cfname)
+        rval = ConfigParser.SafeConfigParser()
+        rval.read(cfname)
+        get_config._config = rval
+        
     return rval
 
 # ------------------------------------------------------------------------------
@@ -309,6 +328,7 @@ class CrawlDaemon(daemon.Daemon):
         we fire off plug-ins as appropriate.
         """
         exitfile = 'crawler.exit'
+        cfg = get_config()
         while True:
             time.sleep(1)
 
@@ -316,6 +336,15 @@ class CrawlDaemon(daemon.Daemon):
                 os.unlink(exitfile)
                 self.dlog('crawler shutting down')
                 break
+
+            #
+            # !@! Fire any plugins that are due
+            #
+
+            #
+            # !@! Figure out when the next event is to be and set the sleep
+            # duration
+            #
 
             if 0 == int(time.time()) % 10:
                 self.dlog('crawler is running at %s'
@@ -483,7 +512,10 @@ class Crawl(unittest.TestCase):
         when file 'crawler.exit' is touched. Verify that crawler_pid exists
         while crawler is running and that it is removed when it stops.
         """
-        cmd = 'crawl start --log test_start.log --context TEST'
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        self.write_cfg_file(cfgpath, self.cfg)
+        cmd = ('crawl start --log test_start.log --cfg %s --context TEST'
+               % (cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
@@ -501,7 +533,10 @@ class Crawl(unittest.TestCase):
         """
         TEST: If the crawler is already running, decline to run a second copy.
         """
-        cmd = 'crawl start --log test_start.log --context TEST'
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        self.write_cfg_file(cfgpath, self.cfg)
+        cmd = ('crawl start --log test_start.log --cfg %s --context TEST'
+               % (cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
@@ -521,11 +556,14 @@ class Crawl(unittest.TestCase):
         TEST: 'crawl status' should report the crawler status correctly.
         """
         logpath = '%s/test_start.log' % self.testdir
+        cfgpath = '%s/test_status.cfg' % self.testdir
+        self.write_cfg_file(cfgpath, self.cfg)
         cmd = 'crawl status'
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), "The crawler is not running.")
         
-        cmd = 'crawl start --log %s --context TEST' % (logpath)
+        cmd = ('crawl start --log %s --cfg %s --context TEST'
+               % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
@@ -555,7 +593,10 @@ class Crawl(unittest.TestCase):
         TEST: 'crawl stop' should cause a running daemon to shut down.
         """
         logpath = '%s/test_start.log' % self.testdir
-        cmd = 'crawl start --log %s --context TEST' % (logpath)
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        self.write_cfg_file(cfgpath, self.cfg)
+        cmd = ('crawl start --log %s --cfg %s --context TEST' %
+               (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
@@ -579,6 +620,7 @@ class Crawl(unittest.TestCase):
         StandardError about the file not existing or not being
         readable
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         self.clear_env()
         d = copy.deepcopy(self.cfg)
@@ -615,6 +657,7 @@ class Crawl(unittest.TestCase):
         StandardError about the file not existing or not being
         readable
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         self.clear_env()
         if os.path.exists(self.default_cfname):
@@ -648,6 +691,7 @@ class Crawl(unittest.TestCase):
 
         EXP: get_config() or get_config('') should load the config
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         self.clear_env()
         d = copy.deepcopy(self.cfg)
@@ -681,6 +725,7 @@ class Crawl(unittest.TestCase):
         EXP: get_config(), get_config('') should throw a StandardError
         about the file not existing or not being readable
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
@@ -717,6 +762,7 @@ class Crawl(unittest.TestCase):
         EXP: get_config(), get_config('') should throw a StandardError
         about the file not existing or not being readable
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
         if os.path.exists(self.env_cfname):
@@ -750,6 +796,7 @@ class Crawl(unittest.TestCase):
 
         EXP: get_config(), get_config('') should load the config
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
@@ -783,6 +830,7 @@ class Crawl(unittest.TestCase):
              StandardError about the file not existing or not being
              readable
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
@@ -814,6 +862,7 @@ class Crawl(unittest.TestCase):
         EXP: get_config('explicit.cfg') should throw a StandardError
              about the file not existing or not being readable
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
@@ -842,6 +891,7 @@ class Crawl(unittest.TestCase):
 
         EXP: get_config('explicit.cfg') should load the explicit.cfg
         """
+        get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
         d = copy.deepcopy(self.cfg)
