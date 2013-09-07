@@ -141,14 +141,14 @@ def crl_start(argv):
 
     if os.path.exists('crawler_pid'):
         print('crawler_pid exists. If you are sure it is not running,\n' +
-              'please remove crawler_pid.')
+              'please remove crawler_pid and try again.')
     else:
         crawler = CrawlDaemon('crawler_pid',
                               stdout="crawler.stdout",
                               stderr="crawler.stderr",
                               logger=get_logger(o.logfile),
                               workdir='.')
-    crawler.start()
+        crawler.start()
     pass
 
 # ------------------------------------------------------------------------------
@@ -480,7 +480,7 @@ class Crawl(unittest.TestCase):
     def test_crawl_start(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
-        when file 'crawler.exit' is touched. Verify that crawler_pid is exists
+        when file 'crawler.exit' is touched. Verify that crawler_pid exists
         while crawler is running and that it is removed when it stops.
         """
         cmd = 'crawl start --log test_start.log --context TEST'
