@@ -341,6 +341,11 @@ class CrawlDaemon(daemon.Daemon):
         """
         exitfile = 'crawler.exit'
         cfg = get_config()
+        for s in cfg.sections():
+            self.dlog('CONFIG: [%s]' % s)
+            for o in cfg.options(s):
+                self.dlog('CONFIG: %s: %s' % (o, cfg.get(s, o)))
+                
         while True:
             time.sleep(1)
 
