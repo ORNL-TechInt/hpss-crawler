@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/bin/env python
 """
 crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
@@ -287,6 +287,23 @@ def is_running():
     return running
     
 # ------------------------------------------------------------------------------
+def persistent_rm(path):
+    """
+    Try up to 10 times to remove a directory tree, sleeping after each attempt
+    to give the file system time to respond.
+    """
+    done = False
+    retries = 0
+    while not done and retries < 10:
+        try:
+            shutil.rmtree(path)
+            done = True
+        except OSError as e:
+            time.sleep(1.0)
+            print("Trying shutil.rmtree(%s) again..." % path)
+            retries += 1
+
+# ------------------------------------------------------------------------------
 def Crawl_setup():
     """
     Setup needed before running the tests.
@@ -299,26 +316,21 @@ def Crawl_cleanup():
     """
     Clean up after a sequence of tests.
     """
+    if os.getcwd().endswith('/test.d'):
+        os.chdir('..')
+        
     if not testhelp.keepfiles():
-        flist = ['test_crawl.log',
-                 'test_start.log',
-                 'test_*.cfg',
-                 'test_*.log',
-                 'test.d'
-                 ]
+        flist = ['test.d']
         for fspec in flist:
             for fname in glob.glob(fspec):
                 if os.path.isdir(fname):
-                    shutil.rmtree(fname)
+                    persistent_rm(fname)
                 elif os.path.exists(fname):
                     os.unlink(fname)
 
     if is_running():
         testhelp.touch('crawler.exit')
 
-    if os.getcwd().endswith('/test.d'):
-        os.chdir('..')
-        
 # ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
     # --------------------------------------------------------------------------
@@ -513,9 +525,10 @@ class Crawl(unittest.TestCase):
         while crawler is running and that it is removed when it stops.
         """
         cfgpath = '%s/test_start.cfg' % self.testdir
+        logpath = '%s/test_start.log' % self.testdir
         self.write_cfg_file(cfgpath, self.cfg)
-        cmd = ('crawl start --log test_start.log --cfg %s --context TEST'
-               % (cfgpath))
+        cmd = ('crawl start --log %s --cfg %s --context TEST'
+               % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 
@@ -534,9 +547,10 @@ class Crawl(unittest.TestCase):
         TEST: If the crawler is already running, decline to run a second copy.
         """
         cfgpath = '%s/test_start.cfg' % self.testdir
+        logpath = '%s/test_start.log' % self.testdir
         self.write_cfg_file(cfgpath, self.cfg)
-        cmd = ('crawl start --log test_start.log --cfg %s --context TEST'
-               % (cfgpath))
+        cmd = ('crawl start --log %s --cfg %s --context TEST'
+               % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
 

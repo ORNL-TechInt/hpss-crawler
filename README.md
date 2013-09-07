@@ -41,3 +41,12 @@ The git repo has the following branches used for the indicated intentions
                 github repo was established. It is fully incorporated into
                 devel, however deleting this branch would lose the steps from
                 project inception to when the github repo was set up.
+
+
+## Configuration
+
+The configuration file is determined by the --cfg option on the command line,
+the environment variable $CRAWL_CONF, and the default of 'crawl.cfg' in that
+order.
+
+
