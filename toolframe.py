@@ -130,7 +130,11 @@ def tf_help(A, prefix=None):
             
 
 # ---------------------------------------------------------------------------
-def tf_launch(prefix, cleanup_tests = None, testclass='', logfile=''):
+def tf_launch(prefix,
+              setup_tests=None,
+              cleanup_tests=None,
+              testclass='',
+              logfile=''):
     if len(sys.argv) == 1 and sys.argv[0] == '':
         return
     sname = sys.argv[0]
@@ -143,6 +147,8 @@ def tf_launch(prefix, cleanup_tests = None, testclass='', logfile=''):
             if '-d' in sys.argv:
                 sys.argv.remove('-d')
                 pdb.set_trace()
+            if None != setup_tests:
+                setup_tests()
             keep = testhelp.main(sys.argv, testclass, logfile=logfile)
             if None != cleanup_tests and not keep:
                 cleanup_tests()
