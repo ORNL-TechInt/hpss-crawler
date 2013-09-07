@@ -220,6 +220,13 @@ def get_logger(cmdline='', cfg=None, reset=False):
     Return the logging object for this process. Instantiate it if it
     does not exist already.
     """
+    if reset:
+        try:
+            del get_logger._logger
+        except AttributeError:
+            pass
+        return
+
     filename = '/var/log/crawl.log'
     if cmdline != '':
         filename = cmdline
@@ -259,6 +266,14 @@ def is_running():
         if 'crawl start' in line:
             running = True
     return running
+    
+# ------------------------------------------------------------------------------
+def Crawl_setup():
+    """
+    Setup needed before running the tests.
+    """
+    if not os.path.isdir(Crawl.testdir):
+        os.mkdir(Crawl.testdir)
     
 # ------------------------------------------------------------------------------
 def Crawl_cleanup():
@@ -848,12 +863,35 @@ class Crawl(unittest.TestCase):
         self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
     # --------------------------------------------------------------------------
+    def test_get_logger_config(self):
+        """
+        TEST: Call get_logger('', cfg) with an empty path and a config object
+
+        EXP: Attempts to log to cfg.get('crawler', 'logpath')
+        """
+        get_logger(reset=True)
+        t = copy.deepcopy(self.cfg)
+        logpath = '%s/test_get_logger_config.log' % self.testdir
+        t['crawler']['logpath'] = logpath
+        if os.path.exists(logpath):
+            os.unlink(logpath)
+        self.assertEqual(os.path.exists(logpath), False,
+                         '%s should not exist but does' % logpath)
+
+        lobj = get_logger('', self.dict2cfg(t))
+
+        self.assertEqual(os.path.exists(logpath), True,
+                         '%s should exist but does not' % logpath)
+        self.assertNotEqual(lobj, None)
+        
+    # --------------------------------------------------------------------------
     def test_get_logger_default(self):
         """
         TEST: Call get_logger() with no argument
 
         EXP: Attempts to log to '/var/log/crawl.log'
         """
+        get_logger(reset=True)
         got_exception = False
         try:
             lobj = get_logger()
@@ -869,22 +907,21 @@ class Crawl(unittest.TestCase):
             self.fail('Root should be able to write to the default log file')
         
     # --------------------------------------------------------------------------
-    def test_get_logger_config(self):
-        """
-        TEST: Call get_logger('', cfg) with an empty path and a config object
-
-        EXP: Attempts to log to cfg.get('crawler', 'logpath')
-        """
-        self.fail("under construction")
-        
-    # --------------------------------------------------------------------------
     def test_get_logger_path(self):
         """
         TEST: Call get_logger() with a pathname
 
         EXP: Attempts to log to pathname
         """
-        self.fail("under construction")
+        get_logger(reset=True)
+        logpath = '%s/test_get_logger_path.log' % self.testdir
+        if os.path.exists(logpath):
+            os.unlink(logpath)
+        self.assertEqual(os.path.exists(logpath), False,
+                         '%s should not exist but does' % logpath)
+        lobj = get_logger(logpath)
+        self.assertEqual(os.path.exists(logpath), True,
+                         '%s should exist but does not' % logpath)
         
     # --------------------------------------------------------------------------
     def cd(self, dirname):
@@ -905,6 +942,18 @@ class Crawl(unittest.TestCase):
         except KeyError:
             pass
         
+    # --------------------------------------------------------------------------
+    def dict2cfg(self, d):
+        """
+        Load the contents of a two layer dictionary into a ConfigParser object
+        """
+        rval = ConfigParser.SafeConfigParser()
+        for s in sorted(d.keys()):
+            rval.add_section(s)
+            for o in sorted(d[s].keys()):
+                rval.set(s, o, d[s][o])
+        return rval
+    
     # --------------------------------------------------------------------------
     def tearDown(self):
         if os.getcwd().endswith('/test.d'):
@@ -977,6 +1026,7 @@ class Crawl(unittest.TestCase):
         
 # ------------------------------------------------------------------------------
 toolframe.tf_launch("crl",
+                    setup_tests=Crawl_setup,
                     cleanup_tests=Crawl_cleanup,
                     testclass='Crawl',
                     logfile='crawl_test.log')
