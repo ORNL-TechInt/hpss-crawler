@@ -45,8 +45,14 @@ The git repo has the following branches used for the indicated intentions
 
 ## Configuration
 
-The configuration file is determined by the --cfg option on the command line,
+The configuration file is determined by the -c/--cfg option on the command line,
 the environment variable $CRAWL_CONF, and the default of 'crawl.cfg' in that
 order.
 
 
+## Log file
+
+The log file is determined by the -l/--logpath command line option, the
+'logpath' setting in the 'crawler' section of the configuration file, the
+environment variable $CRAWL_LOG, or the default of '/var/log/crawl.log', in that
+order.
