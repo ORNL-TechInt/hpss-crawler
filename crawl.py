@@ -398,6 +398,15 @@ def Crawl_cleanup():
 # ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
     # --------------------------------------------------------------------------
+    def fire(self, plugin, cfg):
+        plugdir = cfg.get('crawler', 'plugin-dir')
+        if plugdir not in sys.path:
+            sys.path.append(plugdir)
+        if plugin not in sys.modules.keys():
+            __import__(plugin)
+        sys.modules[plugin].main(cfg)
+        
+    # --------------------------------------------------------------------------
     def run(self):
         """
         This routine runs in the background as a daemon. Here's where
@@ -438,7 +447,7 @@ class CrawlDaemon(daemon.Daemon):
 
                         if freq < time.time() - last:
                             self.dlog('TIME TO FIRE "%s"!!' % s)
-                            # self.fire(s, cfg)
+                            self.fire(s, cfg)
                             last = time.time()
                             cfg.set(s, 'last_fired', '%f' % last)
 
