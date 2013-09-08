@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 """
 crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
@@ -18,6 +18,7 @@ import sys
 import testhelp
 import time
 import toolframe
+import traceback as tb
 import unittest
 
 # ------------------------------------------------------------------------------
@@ -133,7 +134,7 @@ def crl_start(argv):
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
     p.add_option('-l', '--log',
-                 action='store', default='crawler.log', dest='logfile',
+                 action='store', default='', dest='logfile',
                  help='specify the log file')
     p.add_option('-C', '--context',
                  action='store', default='', dest='context',
@@ -150,11 +151,13 @@ def crl_start(argv):
         # Initialize the configuration
         #
         cfg = get_config(o.config)
+        log = get_logger(o.logfile, cfg)
         crawler = CrawlDaemon('crawler_pid',
                               stdout="crawler.stdout",
                               stderr="crawler.stderr",
-                              logger=get_logger(o.logfile),
+                              logger=log,
                               workdir='.')
+        log.info('crl_start: calling crawler.start()')
         crawler.start()
     pass
 
@@ -339,33 +342,55 @@ class CrawlDaemon(daemon.Daemon):
         This routine runs in the background as a daemon. Here's where
         we fire off plug-ins as appropriate.
         """
-        exitfile = 'crawler.exit'
-        cfg = get_config()
-        for s in cfg.sections():
-            self.dlog('CONFIG: [%s]' % s)
-            for o in cfg.options(s):
-                self.dlog('CONFIG: %s: %s' % (o, cfg.get(s, o)))
+        try:
+            exitfile = 'crawler.exit'
+            cfg = get_config()
+            for s in cfg.sections():
+                self.dlog('CONFIG: [%s]' % s)
+                for o in cfg.options(s):
+                    self.dlog('CONFIG: %s: %s' % (o, cfg.get(s, o)))
+
+            while True:
+                self.dlog('Check for exit')
+                if os.path.exists(exitfile):
+                    os.unlink(exitfile)
+                    self.dlog('crawler shutting down')
+                    break
+
+                #
+                # !@! Fire any plugins that are due
+                #
+                self.dlog('Check for plugins to fire')
+                for s in cfg.sections():
+                    if s != 'crawler':
+                        self.dlog('considering whether to fire "%s"' % s)
+                        freq = cfg.getfloat(s, 'frequency')
+                        # self.dlog('%s.frequency = %s' % (s, freq))
+                        try:
+                            last = cfg.getfloat(s, 'last_fired')
+                        except ConfigParser.NoOptionError:
+                            cfg.set(s, 'last_fired', '0.0')
+                            last = 0.0
+                        # self.dlog('last = %s'
+                        #           % time.strftime("%Y.%m%d %H:%M:%S",
+                        #                           time.localtime(last)))
+
+                        if freq < time.time() - last:
+                            self.dlog('TIME TO FIRE "%s"!!' % s)
+                            # self.fire(s, cfg)
+                            last = time.time()
+                            cfg.set(s, 'last_fired', '%f' % last)
+
+                #
+                # We cycle at one second so we can detect if the user asks us to
+                # stop or if the config file changes and needs to be reloaded
+                #
+                time.sleep(1.0)
                 
-        while True:
-            time.sleep(1)
-
-            if os.path.exists(exitfile):
-                os.unlink(exitfile)
-                self.dlog('crawler shutting down')
-                break
-
-            #
-            # !@! Fire any plugins that are due
-            #
-
-            #
-            # !@! Figure out when the next event is to be and set the sleep
-            # duration
-            #
-
-            if 0 == int(time.time()) % 10:
-                self.dlog('crawler is running at %s'
-                          % time.strftime('%Y.%m%d %H:%M:%S'))
+        except:
+            tbstr = tb.format_exc()
+            for line in tbstr.split('\n'):
+                self.dlog(line)
 
 # ------------------------------------------------------------------------------
 class Crawl(unittest.TestCase):
