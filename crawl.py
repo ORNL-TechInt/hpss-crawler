@@ -237,6 +237,17 @@ def get_config(cfname='', reset=False):
     return rval
 
 # ------------------------------------------------------------------------------
+def get_frequency(section, cfg):
+    """
+    Return the number of seconds indicated by the frequency spec
+    """
+    spec = cfg.get(section, 'frequency')
+    [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
+    mult = map_time_unit(unit)
+    rval = int(mag) * mult
+    return rval
+
+# ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False):
     """
     Return the logging object for this process. Instantiate it if it
@@ -249,7 +260,8 @@ def get_logger(cmdline='', cfg=None, reset=False):
             pass
         return
 
-    filename = '/var/log/crawl.log'
+    envval = os.getenv('CRAWL_LOG')
+
     if cmdline != '':
         filename = cmdline
     elif cfg != None:
@@ -257,7 +269,11 @@ def get_logger(cmdline='', cfg=None, reset=False):
             filename = cfg.get('crawler', 'logpath')
         except:
             pass
-
+    elif envval != None:
+        filename = envval
+    else:
+        filename = '/var/log/crawl.log'
+        
     try:
         rval = get_logger._logger
     except AttributeError:
@@ -289,6 +305,51 @@ def is_running():
             running = True
     return running
     
+# ------------------------------------------------------------------------------
+def map_time_unit(spec):
+    """
+    Map various duration specifications (and abbreviations) to the number of
+    seconds in the time period.
+    """
+    done = False
+    while not done:
+        try:
+            rval = map_time_unit._map[spec]
+            done = True
+        except AttributeError:
+            map_time_unit._map = {'s': 1,
+                                  'sec': 1,
+                                  'second': 1,
+                                  'seconds': 1,
+                                  'm': 60,
+                                  'min': 60,
+                                  'minute': 60,
+                                  'minutes': 60,
+                                  'h': 3600,
+                                  'hr': 3600,
+                                  'hour': 3600,
+                                  'hours': 3600,
+                                  'd': 24 * 3600,
+                                  'day': 24 * 3600,
+                                  'days': 24 * 3600,
+                                  'w': 7 * 24 * 3600,
+                                  'week': 7 * 24 * 3600,
+                                  'weeks': 7 * 24 * 3600,
+                                  'month': 30 * 24 * 3600,
+                                  'months': 30 * 24 * 3600,
+                                  'y': 365 * 24 * 3600,
+                                  'year': 365 * 24 * 3600,
+                                  'years': 365 * 24 * 3600,
+                                  }
+            done = False
+        except KeyError:
+            l = get_logger()
+            l.info("Unknown time unit '%s', mult = 1" % spec)
+            rval = 1
+            done = True
+
+    return rval
+
 # ------------------------------------------------------------------------------
 def persistent_rm(path):
     """
@@ -364,7 +425,7 @@ class CrawlDaemon(daemon.Daemon):
                 for s in cfg.sections():
                     if s != 'crawler':
                         self.dlog('considering whether to fire "%s"' % s)
-                        freq = cfg.getfloat(s, 'frequency')
+                        freq = get_frequency(s, cfg)
                         # self.dlog('%s.frequency = %s' % (s, freq))
                         try:
                             last = cfg.getfloat(s, 'last_fired')
@@ -957,6 +1018,56 @@ class Crawl(unittest.TestCase):
         self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
     # --------------------------------------------------------------------------
+    def test_get_frequency(self):
+        os.environ['CRAWL_LOG'] = '%s/test_get_frequency.log' % self.testdir
+        t = self.dict2cfg(copy.deepcopy(self.cfg))
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(type(result), int,
+                         'type of get_frequency result should be %s but is %s (%s)'
+                         % ('int', type(result), str(result)))
+        self.assertEqual(result, 3600,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+
+        t.set('plugin-A', 'frequency', '5')
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(result, 5,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+
+        t.set('plugin-A', 'frequency', '5min')
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(result, 300,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+        
+        t.set('plugin-A', 'frequency', '3 days')
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(result, 3 * 24 * 3600,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+        
+        t.set('plugin-A', 'frequency', '2     w')
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(result, 2 * 7 * 24 * 3600,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+        
+        t.set('plugin-A', 'frequency', '4 months')
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(result, 4 * 30 * 24 * 3600,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+        
+        t.set('plugin-A', 'frequency', '8 y')
+        result = get_frequency('plugin-A', t)
+        self.assertEqual(result, 8 * 365 * 24 * 3600,
+                         'get_frequency() got %s wrong: %d'
+                         % (t.get('plugin-A', 'frequency'), result))
+        
+        del os.environ['CRAWL_LOG']
+
+    # --------------------------------------------------------------------------
     def test_get_logger_config(self):
         """
         TEST: Call get_logger('', cfg) with an empty path and a config object
@@ -1017,6 +1128,35 @@ class Crawl(unittest.TestCase):
         self.assertEqual(os.path.exists(logpath), True,
                          '%s should exist but does not' % logpath)
         
+    # --------------------------------------------------------------------------
+    def test_map_time_unit(self):
+        """
+        TEST: return value from map_time_unit should reflect the number of
+              seconds in the indicated unit or 1 if unit not known
+
+        EXP: expected return values encoded in umap
+        """
+        os.environ['CRAWL_LOG'] = '%s/test_map_time_unit.log' % self.testdir
+        umap = {'s': 1, 'sec': 1, 'second': 1, 'seconds': 1,
+                'm': 60, 'min': 60, 'minute': 60, 'minutes': 60,
+                'h': 3600, 'hr': 3600, 'hour': 3600, 'hours': 3600,
+                'd': 24 * 3600, 'day': 24 * 3600, 'days': 24 * 3600,
+                'w': 7 * 24 * 3600, 'week': 7 * 24 * 3600,
+                'weeks': 7 * 24 * 3600,
+                'month': 30 * 24 * 3600, 'months': 30 * 24 * 3600,
+                'y': 365 * 24 * 3600, 'year': 365 * 24 * 3600,
+                'years': 365 * 24 * 3600,
+                }
+        for unit in umap.keys():
+            result = map_time_unit(unit)
+            self.assertEqual(result, umap[unit])
+
+            unit += '_x'
+            result = map_time_unit(unit)
+            self.assertEqual(result, 1)
+            
+        del os.environ['CRAWL_LOG']
+
     # --------------------------------------------------------------------------
     def cd(self, dirname):
         try:
