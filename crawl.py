@@ -326,7 +326,8 @@ def map_time_unit(spec):
             rval = map_time_unit._map[spec]
             done = True
         except AttributeError:
-            map_time_unit._map = {'s': 1,
+            map_time_unit._map = {'': 1,
+                                  's': 1,
                                   'sec': 1,
                                   'second': 1,
                                   'seconds': 1,
@@ -418,8 +419,8 @@ class CrawlDaemon(daemon.Daemon):
         except:
             tbstr = tb.format_exc()
             for line in tbstr.split('\n'):
-                self.dlog(line)
-            
+                self.dlog("crawl: '%s'" % line)
+
     # --------------------------------------------------------------------------
     def run(self):
         """
@@ -432,9 +433,9 @@ class CrawlDaemon(daemon.Daemon):
                 exitfile = 'crawler.exit'
                 cfg = get_config()
                 for s in cfg.sections():
-                    self.dlog('CONFIG: [%s]' % s)
+                    self.dlog('crawl: CONFIG: [%s]' % s)
                     for o in cfg.options(s):
-                        self.dlog('CONFIG: %s: %s' % (o, cfg.get(s, o)))
+                        self.dlog('crawl: CONFIG: %s: %s' % (o, cfg.get(s, o)))
 
                 heartbeat = get_timeval(cfg, 'crawler', 'heartbeat', 10)
                 last_heartbeat = time.time() - heartbeat - 1
@@ -443,7 +444,7 @@ class CrawlDaemon(daemon.Daemon):
                     # Issue the heartbeat if it's time
                     #
                     if last_heartbeat < (time.time() - heartbeat):
-                        self.dlog('Crawling...')
+                        self.dlog('crawl: heartbeat...')
                         last_heartbeat = time.time()
 
                     #
@@ -451,7 +452,7 @@ class CrawlDaemon(daemon.Daemon):
                     #
                     if os.path.exists(exitfile):
                         os.unlink(exitfile)
-                        self.dlog('crawler shutting down')
+                        self.dlog('crawl: shutting down')
                         keep_going = False
                         break
 
@@ -460,20 +461,24 @@ class CrawlDaemon(daemon.Daemon):
                     #
                     for s in cfg.sections():
                         if s != 'crawler':
-                            # self.dlog('considering whether to fire "%s"' % s)
+                            firable = cfg.get(s, 'fire')
+                            if firable not in ['yes', 'y', 'true', 'on', 1]:
+                                continue
+                            
+                            # self.dlog('crawl: considering whether to fire "%s"' % s)
                             freq = get_timeval(cfg, s, 'frequency', 3600)
-                            # self.dlog('%s.frequency = %s' % (s, freq))
+                            # self.dlog('crawl: %s.frequency = %s' % (s, freq))
                             try:
                                 last = cfg.getfloat(s, 'last_fired')
                             except ConfigParser.NoOptionError:
                                 cfg.set(s, 'last_fired', '0.0')
                                 last = 0.0
-                            # self.dlog('last = %s'
+                            # self.dlog('crawl: last = %s'
                             #           % time.strftime("%Y.%m%d %H:%M:%S",
                             #                           time.localtime(last)))
 
                             if freq < time.time() - last:
-                                self.dlog('Firing plugin "%s"!!' % s)
+                                self.dlog('crawl: Firing plugin "%s"' % s)
                                 self.fire(s, cfg)
                                 last = time.time()
                                 cfg.set(s, 'last_fired', '%f' % last)
@@ -489,7 +494,7 @@ class CrawlDaemon(daemon.Daemon):
             except:
                 tbstr = tb.format_exc()
                 for line in tbstr.split('\n'):
-                    self.dlog(line)
+                    self.dlog("crawl: '%s'" % line)
                 keep_going = False
 
 # ------------------------------------------------------------------------------
