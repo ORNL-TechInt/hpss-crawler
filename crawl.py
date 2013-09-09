@@ -14,6 +14,7 @@ import pexpect
 import re
 import shutil
 import socket
+import stat
 import sys
 import testhelp
 import time
@@ -195,6 +196,18 @@ def crl_stop(argv):
     testhelp.touch('crawler.exit')
     
 # ---------------------------------------------------------------------------
+def cfg_changed(cfg):
+    """
+    Return True if the mtime on the configuration file is more recent than the
+    'loadtime' option stored in the configuration itself.
+    """
+    filename = cfg.get('crawler', 'filename')
+    loadtime = float(cfg.get('crawler', 'loadtime'))
+    s = os.stat(filename)
+    rval = (loadtime < s[stat.ST_MTIME])
+    return rval
+
+# ---------------------------------------------------------------------------
 def contents(filepath, string=True):
     """
     Return the contents of a file as a string.
@@ -242,6 +255,8 @@ def get_config(cfname='', reset=False):
                                           'frequency': '3600',
                                           'heartbeat': '10'})
         rval.read(cfname)
+        rval.set('crawler', 'filename', cfname)
+        rval.set('crawler', 'loadtime', str(time.time()))
         get_config._config = rval
         
     return rval
@@ -441,25 +456,24 @@ class CrawlDaemon(daemon.Daemon):
         we fire off plug-ins as appropriate.
         """
         keep_going = True
+        cfgname = ''
         while keep_going:
             try:
                 exitfile = 'crawler.exit'
-                cfg = get_config()
+                cfg = get_config(cfgname)
                 for s in cfg.sections():
                     self.dlog('crawl: CONFIG: [%s]' % s)
                     for o in cfg.options(s):
                         self.dlog('crawl: CONFIG: %s: %s' % (o, cfg.get(s, o)))
 
                 heartbeat = get_timeval(cfg, 'crawler', 'heartbeat', 10)
-                last_heartbeat = time.time() - heartbeat - 1
                 while True:
                     #
                     # Issue the heartbeat if it's time
                     #
-                    if last_heartbeat < (time.time() - heartbeat):
+                    if 0 == (int(time.time()) % heartbeat):
                         self.dlog('crawl: heartbeat...')
-                        last_heartbeat = time.time()
-
+                        
                     #
                     # Check for the exit signal
                     #
@@ -497,11 +511,21 @@ class CrawlDaemon(daemon.Daemon):
                                 cfg.set(s, 'last_fired', '%f' % last)
 
                     #
+                    # If config file has changed, reload it by reseting the
+                    # cached config object and breaking out of the inner loop.
+                    # The first thing the outer loop does is to load the
+                    # configuration
+                    #
+                    if cfg_changed(cfg):
+                        cfgname = cfg.get('crawler', 'filename')
+                        get_config(reset=True)
+                        break
+                    
+                    #
                     # We cycle at one second so we can detect if the user asks
                     # us to stop or if the config file changes and needs to be
                     # reloaded
                     #
-
                     time.sleep(1.0)
 
             except:
@@ -532,21 +556,6 @@ class Crawl(unittest.TestCase):
            }
 
     # --------------------------------------------------------------------------
-    def test_crawl_cfgdump_nosuch(self):
-        """
-        TEST: "crawl cfgdump -c test.d/nosuch.cfg"
-        EXP: attempting to open a nonexistent config file throws an error
-        """
-        cfname = '%s/nosuch.cfg' % self.testdir
-        if os.path.exists(cfname):
-            os.unlink(cfname)
-        cmd = 'crawl cfgdump -c %s' % cfname
-        result = pexpect.run(cmd)
-        self.vassert_in("Traceback", result)
-        self.vassert_in("%s does not exist or is not readable" % cfname,
-                        result)
-
-    # --------------------------------------------------------------------------
     def test_crawl_cfgdump_log_nopath(self):
         """
         TEST: "crawl cfgdump -c <cfgpath> --to log"
@@ -567,7 +576,10 @@ class Crawl(unittest.TestCase):
             for item in self.cfg[section].keys():
                 self.vassert_in('%s = %s' %
                                 (item, self.cfg[section][item]), lcontent)
-        
+
+        self.vassert_nin('heartbeat', lcontent)
+        self.vassert_nin('fire', lcontent)
+
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_log_path(self):
         """
@@ -593,6 +605,24 @@ class Crawl(unittest.TestCase):
                 self.vassert_in('%s = %s' %
                                 (item, self.cfg[section][item]), lcontent)
         
+        self.vassert_nin('heartbeat', lcontent)
+        self.vassert_nin('fire', lcontent)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_cfgdump_nosuch(self):
+        """
+        TEST: "crawl cfgdump -c test.d/nosuch.cfg"
+        EXP: attempting to open a nonexistent config file throws an error
+        """
+        cfname = '%s/nosuch.cfg' % self.testdir
+        if os.path.exists(cfname):
+            os.unlink(cfname)
+        cmd = 'crawl cfgdump -c %s' % cfname
+        result = pexpect.run(cmd)
+        self.vassert_in("Traceback", result)
+        self.vassert_in("%s does not exist or is not readable" % cfname,
+                        result)
+
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_stdout(self):
         """
