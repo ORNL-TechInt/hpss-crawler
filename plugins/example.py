@@ -1,3 +1,4 @@
+import ConfigParser
 import sys
 
 def main(cfg):

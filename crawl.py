@@ -88,7 +88,6 @@ def crl_fire(argv):
     if o.debug: pdb.set_trace()
 
     cfg = get_config(o.config)
-    lfname = cfg.get('crawler', 'logpath')
     log = get_logger(o.logpath, cfg)
 
     if not cfg.has_section(o.plugname):
@@ -210,6 +209,15 @@ def contents(filepath, string=True):
 
 # ------------------------------------------------------------------------------
 def get_config(cfname='', reset=False):
+    """
+    Open the config file based on cfname, $CRAWL_CONF, or the default, in that
+    order. Construct a ConfigParser object, cache it, and return it. Subsequent
+    calls will retrieve the cached object unless reset=True, in which case the
+    old object is destroyed and a new one is constructed.
+
+    Note that values in the default dict passed to ConfigParser.ConfigParser
+    must be strings.
+    """
     if reset:
         try:
             del get_config._config
@@ -230,7 +238,9 @@ def get_config(cfname='', reset=False):
 
         if not os.access(cfname, os.R_OK):
             raise StandardError("%s does not exist or is not readable" % cfname)
-        rval = ConfigParser.SafeConfigParser()
+        rval = ConfigParser.ConfigParser({'fire': 'no',
+                                          'frequency': '3600',
+                                          'heartbeat': '10'})
         rval.read(cfname)
         get_config._config = rval
         
@@ -409,6 +419,9 @@ def Crawl_cleanup():
 class CrawlDaemon(daemon.Daemon):
     # --------------------------------------------------------------------------
     def fire(self, plugin, cfg):
+        """
+        Load the plugin if necessary, then run it
+        """
         try:
             plugdir = cfg.get('crawler', 'plugin-dir')
             if plugdir not in sys.path:
@@ -1229,7 +1242,7 @@ class Crawl(unittest.TestCase):
         """
         Load the contents of a two layer dictionary into a ConfigParser object
         """
-        rval = ConfigParser.SafeConfigParser()
+        rval = ConfigParser.ConfigParser()
         for s in sorted(d.keys()):
             rval.add_section(s)
             for o in sorted(d[s].keys()):

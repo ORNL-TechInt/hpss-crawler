@@ -1,3 +1,4 @@
+# ------------------------------------------------------------
 [crawler]
 
 # where the plugins live
@@ -18,8 +19,16 @@ notify-e-mail = tbarron@ornl.gov, tusculum@gmail.com
 # program to run on significant events
 notify-program = command line
 
+# The heartbeat option tells the crawler how often it must
+# write something to the log file to prove it's still running
+heartbeat = 10s
+
+# ------------------------------------------------------------
 # the section name matches the name of a plugin module
 [plugin-A]
+# The default value of fire is 'no'. For a plugin to fire, it must
+# have a 'fire' option with the value 'yes', 'true', or 1
+fire = no
 
 # how long to sleep between runs of this plugin (1 hour)
 # other interval names: second, minute, day, week, month, year
@@ -40,3 +49,8 @@ include       = filename
 # This plugin can decide to pass file paths along to downstream
 # plugins for further operations
 downstream    = plugin-name
+
+# Arbitrary config items can be added to a plugin's section to support any needs
+# it has
+unique_option = foobar
+
