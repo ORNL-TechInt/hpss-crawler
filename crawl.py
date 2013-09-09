@@ -542,19 +542,23 @@ class Crawl(unittest.TestCase):
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
     default_logpath = '%s/test_default_hpss_crawl.log' % testdir
-    cfg = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
-                       'logpath': default_logpath,
-                       'logsize': '5mb',
-                       'logmax': '5',
-                       'e-mail-recipients':
-                       'tbarron@ornl.gov, tusculum@gmail.com',
-                       'trigger': '<command-line>'
-                       },
-           'plugin-A': {'frequency': '1h',
-                        'operations': '15'
-                        }
-           }
+    cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
+                         'logpath': default_logpath,
+                         'logsize': '5mb',
+                         'logmax': '5',
+                         'e-mail-recipients':
+                         'tbarron@ornl.gov, tusculum@gmail.com',
+                         'trigger': '<command-line>'
+                         },
+             'plugin-A': {'frequency': '1h',
+                          'operations': '15'
+                          }
+             }
 
+    # --------------------------------------------------------------------------
+    def test_cfgcopy(self):
+        self.fail('under construction')
+        
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_log_nopath(self):
         """
@@ -563,19 +567,19 @@ class Crawl(unittest.TestCase):
         cfgpath. output should go to log path named in cfg.
         """
         cfname = "%s/test_crawl_cfgdump_log_n.cfg" % self.testdir
-        self.write_cfg_file(cfname, self.cfg)
+        self.write_cfg_file(cfname, self.cdict)
         cmd = 'crawl cfgdump -c %s --to log' % cfname
         result = pexpect.run(cmd)
         # print(">>>\n%s\n<<<" % result)
         self.vassert_nin("Traceback", result)
         self.assertEqual(os.path.exists(self.default_logpath), True)
         lcontent = contents(self.default_logpath)
-        for section in self.cfg.keys():
+        for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
-            for item in self.cfg[section].keys():
+            for item in self.cdict[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cfg[section][item]), lcontent)
+                                (item, self.cdict[section][item]), lcontent)
 
         self.vassert_nin('heartbeat', lcontent)
         self.vassert_nin('fire', lcontent)
@@ -590,7 +594,7 @@ class Crawl(unittest.TestCase):
         """
         cfname = "%s/test_crawl_cfgdump_log_p.cfg" % self.testdir
         logpath = "%s/test_local.log" % self.testdir
-        self.write_cfg_file(cfname, self.cfg)
+        self.write_cfg_file(cfname, self.cdict)
         cmd = ('crawl cfgdump -c %s --to log --logpath %s'
                % (cfname, logpath))
         result = pexpect.run(cmd)
@@ -598,12 +602,12 @@ class Crawl(unittest.TestCase):
         self.assertEqual(os.path.exists(logpath), True)
         lcontent = contents(logpath)
         # print(">>>\n%s\n<<<" % result)
-        for section in self.cfg.keys():
+        for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
-            for item in self.cfg[section].keys():
+            for item in self.cdict[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cfg[section][item]), lcontent)
+                                (item, self.cdict[section][item]), lcontent)
         
         self.vassert_nin('heartbeat', lcontent)
         self.vassert_nin('fire', lcontent)
@@ -630,16 +634,16 @@ class Crawl(unittest.TestCase):
         EXP: what is written to stdout matches what was written to cfgpath
         """
         cfname = "%s/test_crawl_cfgdump_stdout.cfg" % self.testdir
-        self.write_cfg_file(cfname, self.cfg)
+        self.write_cfg_file(cfname, self.cdict)
         cmd = 'crawl cfgdump -c %s --to stdout' % cfname
         result = pexpect.run(cmd)
         # print(">>>\n%s\n<<<" % result)
-        for section in self.cfg.keys():
+        for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, result)
 
-            for item in self.cfg[section].keys():
+            for item in self.cdict[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cfg[section][item]), result)
+                                (item, self.cdict[section][item]), result)
         
     # --------------------------------------------------------------------------
     def test_crawl_fire_log_path(self):
@@ -656,7 +660,7 @@ class Crawl(unittest.TestCase):
         self.write_plugmod(plugdir, plugname)
         
         # add the plug module to the config
-        t = copy.deepcopy(self.cfg)
+        t = copy.deepcopy(self.cdict)
         t[plugname] = {}
         t[plugname]['frequency'] = '1m'
         self.write_cfg_file(cfname, t)
@@ -704,7 +708,7 @@ class Crawl(unittest.TestCase):
         """
         cfgpath = '%s/test_start.cfg' % self.testdir
         logpath = '%s/test_start.log' % self.testdir
-        self.write_cfg_file(cfgpath, self.cfg)
+        self.write_cfg_file(cfgpath, self.cdict)
         cmd = ('crawl start --log %s --cfg %s --context TEST'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
@@ -727,7 +731,7 @@ class Crawl(unittest.TestCase):
         """
         cfgpath = '%s/test_start.cfg' % self.testdir
         logpath = '%s/test_start.log' % self.testdir
-        self.write_cfg_file(cfgpath, self.cfg)
+        self.write_cfg_file(cfgpath, self.cdict)
         cmd = ('crawl start --log %s --cfg %s --context TEST'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
@@ -751,7 +755,7 @@ class Crawl(unittest.TestCase):
         """
         logpath = '%s/test_start.log' % self.testdir
         cfgpath = '%s/test_status.cfg' % self.testdir
-        self.write_cfg_file(cfgpath, self.cfg)
+        self.write_cfg_file(cfgpath, self.cdict)
         cmd = 'crawl status'
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), "The crawler is not running.")
@@ -789,7 +793,7 @@ class Crawl(unittest.TestCase):
         """
         logpath = '%s/test_start.log' % self.testdir
         cfgpath = '%s/test_start.cfg' % self.testdir
-        self.write_cfg_file(cfgpath, self.cfg)
+        self.write_cfg_file(cfgpath, self.cdict)
         cmd = ('crawl start --log %s --cfg %s --context TEST' %
                (logpath, cfgpath))
         result = pexpect.run(cmd)
@@ -819,9 +823,9 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         self.clear_env()
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.default_cfname
-        self.write_cfg_file(self.default_cfname, self.cfg)
+        self.write_cfg_file(self.default_cfname, self.cdict)
         os.chmod(self.default_cfname, 0000)
 
         got_exception = False
@@ -890,7 +894,7 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         self.clear_env()
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.default_cfname
         self.write_cfg_file(self.default_cfname, d)
         os.chmod(self.default_cfname, 0644)
@@ -924,7 +928,7 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0000)
@@ -995,7 +999,7 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0644)
@@ -1029,12 +1033,12 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0644)
 
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.exp_cfname
         self.write_cfg_file(self.exp_cfname, d)
         os.chmod(self.exp_cfname, 0000)
@@ -1061,7 +1065,7 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0644)
@@ -1090,12 +1094,12 @@ class Crawl(unittest.TestCase):
         get_config(reset=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.env_cfname
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0644)
 
-        d = copy.deepcopy(self.cfg)
+        d = copy.deepcopy(self.cdict)
         d['crawler']['filename'] = self.exp_cfname
         self.write_cfg_file(self.exp_cfname, d)
         os.chmod(self.exp_cfname, 0644)
@@ -1114,9 +1118,10 @@ class Crawl(unittest.TestCase):
         TEST: Call get_logger('', cfg) with an empty path and a config object
 
         EXP: Attempts to log to cfg.get('crawler', 'logpath')
+        !@! self.dict2cfg() being replaced by crawl_config.load_dict(t)
         """
         get_logger(reset=True)
-        t = copy.deepcopy(self.cfg)
+        t = copy.deepcopy(self.cdict)
         logpath = '%s/test_get_logger_config.log' % self.testdir
         t['crawler']['logpath'] = logpath
         if os.path.exists(logpath):
@@ -1171,8 +1176,11 @@ class Crawl(unittest.TestCase):
         
     # --------------------------------------------------------------------------
     def test_get_timeval(self):
+        """
+        !@! get_timeval() is becoming crawl_config.get_time()
+        """
         os.environ['CRAWL_LOG'] = '%s/test_get_timeval.log' % self.testdir
-        t = self.dict2cfg(copy.deepcopy(self.cfg))
+        t = self.dict2cfg(copy.deepcopy(self.cdict))
         result = get_timeval(t, 'plugin-A', 'frequency', 1900)
         self.assertEqual(type(result), int,
                          'type of get_timeval result should be %s but is %s (%s)'
@@ -1226,6 +1234,7 @@ class Crawl(unittest.TestCase):
               seconds in the indicated unit or 1 if unit not known
 
         EXP: expected return values encoded in umap
+        !@! map_time_unit() is turning into crawl_config.map_time_unit()
         """
         os.environ['CRAWL_LOG'] = '%s/test_map_time_unit.log' % self.testdir
         umap = {'s': 1, 'sec': 1, 'second': 1, 'seconds': 1,
@@ -1271,6 +1280,7 @@ class Crawl(unittest.TestCase):
     def dict2cfg(self, d):
         """
         Load the contents of a two layer dictionary into a ConfigParser object
+        !@! to be replaced by crawl_config.load_dict()
         """
         rval = ConfigParser.ConfigParser()
         for s in sorted(d.keys()):
@@ -1307,6 +1317,7 @@ class Crawl(unittest.TestCase):
         """
         Write a config file for testing. Put the 'crawler' section first.
         Complain if the 'crawler' section is not present.
+        !@! to be replaced by crawl_config.write()
         """
         if 'crawler' not in cfgdict.keys():
             raise StandardError("section 'crawler' missing from test config file")
