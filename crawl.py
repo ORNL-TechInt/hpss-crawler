@@ -94,7 +94,7 @@ def crl_fire(argv):
     if not cfg.has_section(o.plugname):
         print("No plugin named '%s' is defined")
     else:
-        plugdir = cfg.get('crawler', 'plugin_dir')
+        plugdir = cfg.get('crawler', 'plugin-dir')
         sys.path.append(plugdir)
         __import__(o.plugname)
         log.info('firing %s' % o.plugname)
@@ -245,6 +245,23 @@ def get_frequency(section, cfg):
     [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
     mult = map_time_unit(unit)
     rval = int(mag) * mult
+    return rval
+
+# ------------------------------------------------------------------------------
+def get_timeval(cfg, section, option, default):
+    """
+    Return the number of seconds indicated by the time spec, using default if
+    any errors or failures occur
+    """
+    try:
+        spec = cfg.get(section, option)
+        [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
+        mult = map_time_unit(unit)
+        rval = int(mag) * mult
+    except ConfigParser.NoOptionError:
+        rval = default
+    except ConfigParser.NoSectionError:
+        rval = default
     return rval
 
 # ------------------------------------------------------------------------------
@@ -399,68 +416,89 @@ def Crawl_cleanup():
 class CrawlDaemon(daemon.Daemon):
     # --------------------------------------------------------------------------
     def fire(self, plugin, cfg):
-        plugdir = cfg.get('crawler', 'plugin-dir')
-        if plugdir not in sys.path:
-            sys.path.append(plugdir)
-        if plugin not in sys.modules.keys():
-            __import__(plugin)
-        sys.modules[plugin].main(cfg)
-        
+        try:
+            plugdir = cfg.get('crawler', 'plugin-dir')
+            if plugdir not in sys.path:
+                sys.path.append(plugdir)
+            if plugin not in sys.modules.keys():
+                __import__(plugin)
+            sys.modules[plugin].main(cfg)
+        except:
+            tbstr = tb.format_exc()
+            for line in tbstr.split('\n'):
+                self.dlog(line)
+            
     # --------------------------------------------------------------------------
     def run(self):
         """
         This routine runs in the background as a daemon. Here's where
         we fire off plug-ins as appropriate.
         """
-        try:
-            exitfile = 'crawler.exit'
-            cfg = get_config()
-            for s in cfg.sections():
-                self.dlog('CONFIG: [%s]' % s)
-                for o in cfg.options(s):
-                    self.dlog('CONFIG: %s: %s' % (o, cfg.get(s, o)))
-
-            while True:
-                self.dlog('Check for exit')
-                if os.path.exists(exitfile):
-                    os.unlink(exitfile)
-                    self.dlog('crawler shutting down')
-                    break
-
-                #
-                # !@! Fire any plugins that are due
-                #
-                self.dlog('Check for plugins to fire')
+        keep_going = True
+        while keep_going:
+            try:
+                exitfile = 'crawler.exit'
+                cfg = get_config()
                 for s in cfg.sections():
-                    if s != 'crawler':
-                        self.dlog('considering whether to fire "%s"' % s)
-                        freq = get_frequency(s, cfg)
-                        # self.dlog('%s.frequency = %s' % (s, freq))
-                        try:
-                            last = cfg.getfloat(s, 'last_fired')
-                        except ConfigParser.NoOptionError:
-                            cfg.set(s, 'last_fired', '0.0')
-                            last = 0.0
-                        # self.dlog('last = %s'
-                        #           % time.strftime("%Y.%m%d %H:%M:%S",
-                        #                           time.localtime(last)))
+                    self.dlog('CONFIG: [%s]' % s)
+                    for o in cfg.options(s):
+                        self.dlog('CONFIG: %s: %s' % (o, cfg.get(s, o)))
 
-                        if freq < time.time() - last:
-                            self.dlog('TIME TO FIRE "%s"!!' % s)
-                            self.fire(s, cfg)
-                            last = time.time()
-                            cfg.set(s, 'last_fired', '%f' % last)
+                heartbeat = get_timeval(cfg, 'crawler', 'heartbeat', 10)
+                last_heartbeat = time.time() - heartbeat - 1
+                while True:
+                    #
+                    # Issue the heartbeat if it's time
+                    #
+                    if last_heartbeat < (time.time() - heartbeat):
+                        self.dlog('Crawling...')
+                        last_heartbeat = time.time()
 
-                #
-                # We cycle at one second so we can detect if the user asks us to
-                # stop or if the config file changes and needs to be reloaded
-                #
-                time.sleep(1.0)
-                
-        except:
-            tbstr = tb.format_exc()
-            for line in tbstr.split('\n'):
-                self.dlog(line)
+                    #
+                    # Check for the exit signal
+                    #
+                    if os.path.exists(exitfile):
+                        os.unlink(exitfile)
+                        self.dlog('crawler shutting down')
+                        keep_going = False
+                        break
+
+                    #
+                    # Fire any plugins that are due
+                    #
+                    for s in cfg.sections():
+                        if s != 'crawler':
+                            # self.dlog('considering whether to fire "%s"' % s)
+                            freq = get_frequency(s, cfg)
+                            # self.dlog('%s.frequency = %s' % (s, freq))
+                            try:
+                                last = cfg.getfloat(s, 'last_fired')
+                            except ConfigParser.NoOptionError:
+                                cfg.set(s, 'last_fired', '0.0')
+                                last = 0.0
+                            # self.dlog('last = %s'
+                            #           % time.strftime("%Y.%m%d %H:%M:%S",
+                            #                           time.localtime(last)))
+
+                            if freq < time.time() - last:
+                                self.dlog('Firing plugin "%s"!!' % s)
+                                self.fire(s, cfg)
+                                last = time.time()
+                                cfg.set(s, 'last_fired', '%f' % last)
+
+                    #
+                    # We cycle at one second so we can detect if the user asks
+                    # us to stop or if the config file changes and needs to be
+                    # reloaded
+                    #
+
+                    time.sleep(1.0)
+
+            except:
+                tbstr = tb.format_exc()
+                for line in tbstr.split('\n'):
+                    self.dlog(line)
+                keep_going = False
 
 # ------------------------------------------------------------------------------
 class Crawl(unittest.TestCase):
@@ -470,11 +508,11 @@ class Crawl(unittest.TestCase):
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
     default_logpath = '%s/test_default_hpss_crawl.log' % testdir
-    cfg = {'crawler': {'plugin_dir': '%s/plugins' % testdir,
+    cfg = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
                        'logpath': default_logpath,
                        'logsize': '5mb',
                        'logmax': '5',
-                       'e-mail_recipients':
+                       'e-mail-recipients':
                        'tbarron@ornl.gov, tusculum@gmail.com',
                        'trigger': '<command-line>'
                        },
@@ -631,6 +669,7 @@ class Crawl(unittest.TestCase):
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
 
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
@@ -653,6 +692,7 @@ class Crawl(unittest.TestCase):
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
 
         self.assertEqual(is_running(), True)
 
@@ -680,6 +720,7 @@ class Crawl(unittest.TestCase):
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
 
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
@@ -713,6 +754,7 @@ class Crawl(unittest.TestCase):
                (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
 
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
