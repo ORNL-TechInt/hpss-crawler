@@ -508,7 +508,7 @@ class CrawlTest(unittest.TestCase):
                          'tbarron@ornl.gov, tusculum@gmail.com',
                          'trigger': '<command-line>'
                          },
-             'plugin-A': {'frequency': '1h',
+             'plugin_A': {'frequency': '1h',
                           'operations': '15'
                           }
              }
@@ -682,7 +682,7 @@ class CrawlTest(unittest.TestCase):
         cfgpath = '%s/test_start.cfg' % self.testdir
         logpath = '%s/test_start.log' % self.testdir
         self.write_cfg_file(cfgpath, self.cdict)
-        self.write_plugmod('./plugins', 'plugin-A')
+        self.write_plugmod('./plugins', 'plugin_A')
         cmd = ('crawl start --log %s --cfg %s --context TEST'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
@@ -1162,49 +1162,49 @@ class CrawlTest(unittest.TestCase):
         """
         os.environ['CRAWL_LOG'] = '%s/test_get_timeval.log' % self.testdir
         t = self.dict2cfg(copy.deepcopy(self.cdict))
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(type(result), int,
                          'type of CrawlConfig.get_time result should be %s but is %s (%s)'
                          % ('int', type(result), str(result)))
         self.assertEqual(result, 3600,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin-A', 'frequency', '5')
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        t.set('plugin_A', 'frequency', '5')
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(result, 5,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin-A', 'frequency', '5min')
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        t.set('plugin_A', 'frequency', '5min')
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(result, 300,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
         
-        t.set('plugin-A', 'frequency', '3 days')
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        t.set('plugin_A', 'frequency', '3 days')
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(result, 3 * 24 * 3600,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
         
-        t.set('plugin-A', 'frequency', '2     w')
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        t.set('plugin_A', 'frequency', '2     w')
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(result, 2 * 7 * 24 * 3600,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
         
-        t.set('plugin-A', 'frequency', '4 months')
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        t.set('plugin_A', 'frequency', '4 months')
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(result, 4 * 30 * 24 * 3600,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
         
-        t.set('plugin-A', 'frequency', '8 y')
-        result = t.get_time('plugin-A', 'frequency', 1900)
+        t.set('plugin_A', 'frequency', '8 y')
+        result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(result, 8 * 365 * 24 * 3600,
                          'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin-A', 'frequency'), result))
+                         % (t.get('plugin_A', 'frequency'), result))
         
         del os.environ['CRAWL_LOG']
 

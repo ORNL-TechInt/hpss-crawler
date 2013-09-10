@@ -48,6 +48,8 @@ class CrawlPlugin(object):
         self.plugin_dir = cfg.get('crawler', 'plugin-dir')
         if self.plugin_dir not in sys.path:
             sys.path.append(self.plugin_dir)
+        log = get_logger()
+        log.info('sys.path = %s' % sys.path)
         if self.name not in sys.modules.keys():
             __import__(self.name)
         else:
