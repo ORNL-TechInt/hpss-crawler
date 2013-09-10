@@ -2,7 +2,7 @@
 """
 crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
-import ConfigParser
+import CrawlConfig
 import copy
 import daemon
 import glob
@@ -50,20 +50,14 @@ def crl_cfgdump(argv):
     if o.target == '':    o.target = 'stdout'
 
     cfg = get_config(o.config)
-
-    section_l = cfg.sections()
+    dumpstr = cfg.dump()
     
     if o.target == 'stdout':
-        for section in section_l:
-            print("[%s]" % section)
-            for option in cfg.options(section):
-                print("%s = %s" % (option, cfg.get(section, option)))
+        print dumpstr
     elif o.target == 'log':
         log = get_logger(o.logpath, cfg)
-        for section in section_l:
-            log.info("[%s]" % section)
-            for option in cfg.options(section):
-                log.info("%s = %s" % (option, cfg.get(section, option)))
+        for line in dumpstr.split("\n"):
+            log.info(line)
         
 # ------------------------------------------------------------------------------
 def crl_fire(argv):
@@ -201,11 +195,7 @@ def cfg_changed(cfg):
     Return True if the mtime on the configuration file is more recent than the
     'loadtime' option stored in the configuration itself.
     """
-    filename = cfg.get('crawler', 'filename')
-    loadtime = float(cfg.get('crawler', 'loadtime'))
-    s = os.stat(filename)
-    rval = (loadtime < s[stat.ST_MTIME])
-    return rval
+    return cfg.changed()
 
 # ---------------------------------------------------------------------------
 def contents(filepath, string=True):
@@ -224,11 +214,11 @@ def contents(filepath, string=True):
 def get_config(cfname='', reset=False):
     """
     Open the config file based on cfname, $CRAWL_CONF, or the default, in that
-    order. Construct a ConfigParser object, cache it, and return it. Subsequent
+    order. Construct a CrawlConfig object, cache it, and return it. Subsequent
     calls will retrieve the cached object unless reset=True, in which case the
     old object is destroyed and a new one is constructed.
 
-    Note that values in the default dict passed to ConfigParser.ConfigParser
+    Note that values in the default dict passed to CrawlConfig.CrawlConfig
     must be strings.
     """
     if reset:
@@ -249,11 +239,13 @@ def get_config(cfname='', reset=False):
         if cfname == '':
             cfname = 'crawl.cfg'
 
-        if not os.access(cfname, os.R_OK):
-            raise StandardError("%s does not exist or is not readable" % cfname)
-        rval = ConfigParser.ConfigParser({'fire': 'no',
-                                          'frequency': '3600',
-                                          'heartbeat': '10'})
+        if not os.path.exists(cfname):
+            raise StandardError("%s does not exist" % cfname)
+        elif not os.access(cfname, os.R_OK):
+            raise StandardError("%s is not readable" % cfname)
+        rval = CrawlConfig.CrawlConfig({'fire': 'no',
+                                        'frequency': '3600',
+                                        'heartbeat': '10'})
         rval.read(cfname)
         rval.set('crawler', 'filename', cfname)
         rval.set('crawler', 'loadtime', str(time.time()))
@@ -267,19 +259,8 @@ def get_timeval(cfg, section, option, default):
     Return the number of seconds indicated by the time spec, using default if
     any errors or failures occur
     """
-    try:
-        log = get_logger()
-        spec = cfg.get(section, option)
-        [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
-        mult = map_time_unit(unit)
-        rval = int(mag) * mult
-    except ConfigParser.NoOptionError as e:
-        rval = default
-        log.info(str(e) + '; using default value %d' % default)
-    except ConfigParser.NoSectionError as e:
-        rval = default
-        log.info(str(e) + '; using default value %d' % default)
-    return rval
+    log = get_logger()
+    return cfg.gettime(section, option, default, log)
 
 # ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False):
@@ -340,52 +321,6 @@ def is_running():
     return running
     
 # ------------------------------------------------------------------------------
-def map_time_unit(spec):
-    """
-    Map various duration specifications (and abbreviations) to the number of
-    seconds in the time period.
-    """
-    done = False
-    while not done:
-        try:
-            rval = map_time_unit._map[spec]
-            done = True
-        except AttributeError:
-            map_time_unit._map = {'': 1,
-                                  's': 1,
-                                  'sec': 1,
-                                  'second': 1,
-                                  'seconds': 1,
-                                  'm': 60,
-                                  'min': 60,
-                                  'minute': 60,
-                                  'minutes': 60,
-                                  'h': 3600,
-                                  'hr': 3600,
-                                  'hour': 3600,
-                                  'hours': 3600,
-                                  'd': 24 * 3600,
-                                  'day': 24 * 3600,
-                                  'days': 24 * 3600,
-                                  'w': 7 * 24 * 3600,
-                                  'week': 7 * 24 * 3600,
-                                  'weeks': 7 * 24 * 3600,
-                                  'month': 30 * 24 * 3600,
-                                  'months': 30 * 24 * 3600,
-                                  'y': 365 * 24 * 3600,
-                                  'year': 365 * 24 * 3600,
-                                  'years': 365 * 24 * 3600,
-                                  }
-            done = False
-        except KeyError:
-            l = get_logger()
-            l.info("Unknown time unit '%s', mult = 1" % spec)
-            rval = 1
-            done = True
-
-    return rval
-
-# ------------------------------------------------------------------------------
 def persistent_rm(path):
     """
     Try up to 10 times to remove a directory tree, sleeping after each attempt
@@ -407,8 +342,8 @@ def Crawl_setup():
     """
     Setup needed before running the tests.
     """
-    if not os.path.isdir(Crawl.testdir):
-        os.mkdir(Crawl.testdir)
+    if not os.path.isdir(CrawlTest.testdir):
+        os.mkdir(CrawlTest.testdir)
     
 # ------------------------------------------------------------------------------
 def Crawl_cleanup():
@@ -466,7 +401,7 @@ class CrawlDaemon(daemon.Daemon):
                     for o in cfg.options(s):
                         self.dlog('crawl: CONFIG: %s: %s' % (o, cfg.get(s, o)))
 
-                heartbeat = get_timeval(cfg, 'crawler', 'heartbeat', 10)
+                heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
                 while True:
                     #
                     # Issue the heartbeat if it's time
@@ -489,11 +424,12 @@ class CrawlDaemon(daemon.Daemon):
                     for s in cfg.sections():
                         if s != 'crawler':
                             firable = cfg.get(s, 'fire')
-                            if firable not in ['yes', 'y', 'true', 'on', 1]:
+                            if (firable not in cfg._boolean_states.keys() or
+                                not cfg._boolean_states[firable]):
                                 continue
                             
                             # self.dlog('crawl: considering whether to fire "%s"' % s)
-                            freq = get_timeval(cfg, s, 'frequency', 3600)
+                            freq = cfg.get_time(s, 'frequency', 3600)
                             # self.dlog('crawl: %s.frequency = %s' % (s, freq))
                             try:
                                 last = cfg.getfloat(s, 'last_fired')
@@ -516,7 +452,7 @@ class CrawlDaemon(daemon.Daemon):
                     # The first thing the outer loop does is to load the
                     # configuration
                     #
-                    if cfg_changed(cfg):
+                    if cfg.changed():
                         cfgname = cfg.get('crawler', 'filename')
                         get_config(reset=True)
                         break
@@ -535,7 +471,7 @@ class CrawlDaemon(daemon.Daemon):
                 keep_going = False
 
 # ------------------------------------------------------------------------------
-class Crawl(unittest.TestCase):
+class CrawlTest(unittest.TestCase):
 
     testdir = 'test.d'
     default_cfname = 'crawl.cfg'
@@ -555,10 +491,6 @@ class Crawl(unittest.TestCase):
                           }
              }
 
-    # --------------------------------------------------------------------------
-    def test_cfgcopy(self):
-        self.fail('under construction')
-        
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_log_nopath(self):
         """
@@ -624,7 +556,23 @@ class Crawl(unittest.TestCase):
         cmd = 'crawl cfgdump -c %s' % cfname
         result = pexpect.run(cmd)
         self.vassert_in("Traceback", result)
-        self.vassert_in("%s does not exist or is not readable" % cfname,
+        self.vassert_in("%s does not exist" % cfname,
+                        result)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_cfgdump_read(self):
+        """
+        TEST: "crawl cfgdump -c test.d/unreadable.cfg"
+        EXP: attempting to open an unreadable config file throws an error
+        """
+        cfname = '%s/unreadable.cfg' % self.testdir
+        open(cfname, 'w').close()
+        os.chmod(cfname, 0000)
+
+        cmd = 'crawl cfgdump -c %s' % cfname
+        result = pexpect.run(cmd)
+        self.vassert_in("Traceback", result)
+        self.vassert_in("%s is not readable" % cfname,
                         result)
 
     # --------------------------------------------------------------------------
@@ -660,11 +608,14 @@ class Crawl(unittest.TestCase):
         self.write_plugmod(plugdir, plugname)
         
         # add the plug module to the config
-        t = copy.deepcopy(self.cdict)
-        t[plugname] = {}
-        t[plugname]['frequency'] = '1m'
-        self.write_cfg_file(cfname, t)
-
+        t = CrawlConfig.CrawlConfig()
+        t.load_dict(self.cdict)
+        t.add_section(plugname)
+        t.set(plugname, 'frequency', '1m')
+        f = open(cfname, 'w')
+        t.crawl_write(f)
+        f.close()
+        
         # carry out the test
         cmd = ('crawl fire -c %s --plugin %s --logpath %s' %
                (cfname, plugname, lfname))
@@ -828,23 +779,24 @@ class Crawl(unittest.TestCase):
         self.write_cfg_file(self.default_cfname, self.cdict)
         os.chmod(self.default_cfname, 0000)
 
+        # test get_config with no argument
         got_exception = False
         try:
             cfg = get_config()
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
-                             self.default_cfname)
+                             '%s is not readable' % self.default_cfname)
         self.assertEqual(got_exception, True)
         
+        # test get_config with empty string argument
         got_exception = False
         try:
             cfg = get_config('')
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s is not readable' %
                              self.default_cfname)
         self.assertEqual(got_exception, True)
         
@@ -863,23 +815,25 @@ class Crawl(unittest.TestCase):
         if os.path.exists(self.default_cfname):
             os.unlink(self.default_cfname)
 
+        # test with no argument
         got_exception = False
         try:
             cfg = get_config()
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s does not exist' %
                              self.default_cfname)
         self.assertEqual(got_exception, True)
         
+        # test with empty string argument
         got_exception = False
         try:
             cfg = get_config('')
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s does not exist' %
                              self.default_cfname)
         self.assertEqual(got_exception, True)
         # tearDown will 'cd ..'
@@ -906,7 +860,8 @@ class Crawl(unittest.TestCase):
             got_exception = True
         self.assertEqual(got_exception, False)
         self.assertEqual(cfg.get('crawler', 'filename'), self.default_cfname)
-
+        self.assertEqual(cfg.filename, self.default_cfname)
+        
         got_exception = False
         try:
             cfg = get_config('')
@@ -914,7 +869,7 @@ class Crawl(unittest.TestCase):
             got_exception = True
         self.assertEqual(got_exception, False)
         self.assertEqual(cfg.get('crawler', 'filename'), self.default_cfname)
-        
+        self.assertEqual(cfg.filename, self.default_cfname)
         
     # --------------------------------------------------------------------------
     def test_get_config_env_noread(self):
@@ -939,7 +894,7 @@ class Crawl(unittest.TestCase):
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s is not readable' %
                              self.env_cfname)
         self.assertEqual(got_exception, True)
         
@@ -949,7 +904,7 @@ class Crawl(unittest.TestCase):
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s is not readable' %
                              self.env_cfname)
         self.assertEqual(got_exception, True)
 
@@ -974,7 +929,7 @@ class Crawl(unittest.TestCase):
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s does not exist' %
                              self.env_cfname)
         self.assertEqual(got_exception, True)
         
@@ -984,7 +939,7 @@ class Crawl(unittest.TestCase):
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s does not exist' %
                              self.env_cfname)
         self.assertEqual(got_exception, True)
 
@@ -1049,7 +1004,7 @@ class Crawl(unittest.TestCase):
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s is not readable' %
                              self.exp_cfname)
         self.assertEqual(got_exception, True)
 
@@ -1079,7 +1034,7 @@ class Crawl(unittest.TestCase):
         except StandardError as e:
             got_exception = True
             self.assertEqual(str(e),
-                             '%s does not exist or is not readable' %
+                             '%s does not exist' %
                              self.exp_cfname)
         self.assertEqual(got_exception, True)
 
@@ -1118,7 +1073,6 @@ class Crawl(unittest.TestCase):
         TEST: Call get_logger('', cfg) with an empty path and a config object
 
         EXP: Attempts to log to cfg.get('crawler', 'logpath')
-        !@! self.dict2cfg() being replaced by crawl_config.load_dict(t)
         """
         get_logger(reset=True)
         t = copy.deepcopy(self.cdict)
@@ -1129,7 +1083,9 @@ class Crawl(unittest.TestCase):
         self.assertEqual(os.path.exists(logpath), False,
                          '%s should not exist but does' % logpath)
 
-        lobj = get_logger('', self.dict2cfg(t))
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(t)
+        lobj = get_logger('', cfg)
 
         self.assertEqual(os.path.exists(logpath), True,
                          '%s should exist but does not' % logpath)
@@ -1177,52 +1133,54 @@ class Crawl(unittest.TestCase):
     # --------------------------------------------------------------------------
     def test_get_timeval(self):
         """
-        !@! get_timeval() is becoming crawl_config.get_time()
+        TEST: various calls to CrawlConfig.get_time()
+
+        EXP: correct number of seconds returned
         """
         os.environ['CRAWL_LOG'] = '%s/test_get_timeval.log' % self.testdir
         t = self.dict2cfg(copy.deepcopy(self.cdict))
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(type(result), int,
-                         'type of get_timeval result should be %s but is %s (%s)'
+                         'type of CrawlConfig.get_time result should be %s but is %s (%s)'
                          % ('int', type(result), str(result)))
         self.assertEqual(result, 3600,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
 
         t.set('plugin-A', 'frequency', '5')
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(result, 5,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
 
         t.set('plugin-A', 'frequency', '5min')
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(result, 300,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
         
         t.set('plugin-A', 'frequency', '3 days')
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(result, 3 * 24 * 3600,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
         
         t.set('plugin-A', 'frequency', '2     w')
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(result, 2 * 7 * 24 * 3600,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
         
         t.set('plugin-A', 'frequency', '4 months')
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(result, 4 * 30 * 24 * 3600,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
         
         t.set('plugin-A', 'frequency', '8 y')
-        result = get_timeval(t, 'plugin-A', 'frequency', 1900)
+        result = t.get_time('plugin-A', 'frequency', 1900)
         self.assertEqual(result, 8 * 365 * 24 * 3600,
-                         'get_timeval() got %s wrong: %d'
+                         'CrawlConfig.get_time() got %s wrong: %d'
                          % (t.get('plugin-A', 'frequency'), result))
         
         del os.environ['CRAWL_LOG']
@@ -1234,7 +1192,6 @@ class Crawl(unittest.TestCase):
               seconds in the indicated unit or 1 if unit not known
 
         EXP: expected return values encoded in umap
-        !@! map_time_unit() is turning into crawl_config.map_time_unit()
         """
         os.environ['CRAWL_LOG'] = '%s/test_map_time_unit.log' % self.testdir
         umap = {'s': 1, 'sec': 1, 'second': 1, 'seconds': 1,
@@ -1247,12 +1204,13 @@ class Crawl(unittest.TestCase):
                 'y': 365 * 24 * 3600, 'year': 365 * 24 * 3600,
                 'years': 365 * 24 * 3600,
                 }
+        cfg = CrawlConfig.CrawlConfig()
         for unit in umap.keys():
-            result = map_time_unit(unit)
+            result = cfg.map_time_unit(unit)
             self.assertEqual(result, umap[unit])
 
             unit += '_x'
-            result = map_time_unit(unit)
+            result = cfg.map_time_unit(unit)
             self.assertEqual(result, 1)
             
         del os.environ['CRAWL_LOG']
@@ -1282,11 +1240,8 @@ class Crawl(unittest.TestCase):
         Load the contents of a two layer dictionary into a ConfigParser object
         !@! to be replaced by crawl_config.load_dict()
         """
-        rval = ConfigParser.ConfigParser()
-        for s in sorted(d.keys()):
-            rval.add_section(s)
-            for o in sorted(d[s].keys()):
-                rval.set(s, o, d[s][o])
+        rval = CrawlConfig.CrawlConfig()
+        rval.load_dict(d)
         return rval
     
     # --------------------------------------------------------------------------
@@ -1317,25 +1272,24 @@ class Crawl(unittest.TestCase):
         """
         Write a config file for testing. Put the 'crawler' section first.
         Complain if the 'crawler' section is not present.
-        !@! to be replaced by crawl_config.write()
         """
-        if 'crawler' not in cfgdict.keys():
-            raise StandardError("section 'crawler' missing from test config file")
+        if (not isinstance(cfgdict, dict) and
+            not isinstance(cfgdict, CrawlConfig.CrawlConfig)):
+            
+            raise StandardError("cfgdict has invalid type %s" % type(cfgdict))
+        
+        elif isinstance(cfgdict, dict):
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.load_dict(cfgdict)
 
-        dname = os.path.dirname(fname)
-        if dname != '' and not os.path.exists(dname):
-            os.mkdir(dname)
+        elif isinstance(cfgdict, CrawlConfig.CrawlConfig):
+            cfg = cfgdict
+            
+        if 'crawler' not in cfg.sections():
+            raise StandardError("section 'crawler' missing from test config file")
         
         f = open(fname, 'w')
-        section_l = cfgdict.keys()
-        section_l.remove('crawler')
-        section_l = ['crawler'] + section_l
-
-        for section in section_l:
-            f.write("[%s]\n" % section)
-            for item in cfgdict[section].keys():
-                f.write("%s = %s\n" % (item, cfgdict[section][item]))
-            f.write("\n")
+        cfg.write(f)
         f.close()
 
     # ------------------------------------------------------------------------
@@ -1364,5 +1318,5 @@ class Crawl(unittest.TestCase):
 toolframe.tf_launch("crl",
                     setup_tests=Crawl_setup,
                     cleanup_tests=Crawl_cleanup,
-                    testclass='Crawl',
+                    testclass='CrawlTest',
                     logfile='crawl_test.log')
