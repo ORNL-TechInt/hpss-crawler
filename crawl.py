@@ -3,6 +3,7 @@
 crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import CrawlConfig
+import CrawlPlugin
 import copy
 import daemon
 import glob
@@ -392,6 +393,7 @@ class CrawlDaemon(daemon.Daemon):
         """
         keep_going = True
         cfgname = ''
+        plugin_d = {}
         while keep_going:
             try:
                 exitfile = 'crawler.exit'
@@ -400,7 +402,18 @@ class CrawlDaemon(daemon.Daemon):
                     self.dlog('crawl: CONFIG: [%s]' % s)
                     for o in cfg.options(s):
                         self.dlog('crawl: CONFIG: %s: %s' % (o, cfg.get(s, o)))
+                    if s == 'crawler':
+                        continue
+                    elif s in plugin_d.keys():
+                        plugin_d[s].reload(cfg)
+                    else:
+                        plugin_d[s] = CrawlPlugin.CrawlPlugin(s, cfg)
 
+                # remove any plugins that are not in the new configuration
+                for p in plugin_d.keys():
+                    if p not in cfg.sections():
+                        del plugin_d[p]
+                
                 heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
                 while True:
                     #
@@ -421,30 +434,39 @@ class CrawlDaemon(daemon.Daemon):
                     #
                     # Fire any plugins that are due
                     #
-                    for s in cfg.sections():
-                        if s != 'crawler':
-                            firable = cfg.get(s, 'fire')
-                            if (firable not in cfg._boolean_states.keys() or
-                                not cfg._boolean_states[firable]):
-                                continue
+                    try:
+                        for p in plugin_d.keys():
+                            if plugin_d[p].time_to_fire():
+                                plugin_d[p].fire()
+                    except:
+                        tbstr = tb.format_exc()
+                        for line in tbstr.split('\n'):
+                            self.dlog("crawl: '%s'" % line)
                             
-                            # self.dlog('crawl: considering whether to fire "%s"' % s)
-                            freq = cfg.get_time(s, 'frequency', 3600)
-                            # self.dlog('crawl: %s.frequency = %s' % (s, freq))
-                            try:
-                                last = cfg.getfloat(s, 'last_fired')
-                            except ConfigParser.NoOptionError:
-                                cfg.set(s, 'last_fired', '0.0')
-                                last = 0.0
-                            # self.dlog('crawl: last = %s'
-                            #           % time.strftime("%Y.%m%d %H:%M:%S",
-                            #                           time.localtime(last)))
+#                     for s in cfg.sections():
+#                         if s != 'crawler':
+#                             firable = cfg.get(s, 'fire')
+#                             if (firable not in cfg._boolean_states.keys() or
+#                                 not cfg._boolean_states[firable]):
+#                                 continue
+                            
+#                             # self.dlog('crawl: considering whether to fire "%s"' % s)
+#                             freq = cfg.get_time(s, 'frequency', 3600)
+#                             # self.dlog('crawl: %s.frequency = %s' % (s, freq))
+#                             try:
+#                                 last = cfg.getfloat(s, 'last_fired')
+#                             except ConfigParser.NoOptionError:
+#                                 cfg.set(s, 'last_fired', '0.0')
+#                                 last = 0.0
+#                             # self.dlog('crawl: last = %s'
+#                             #           % time.strftime("%Y.%m%d %H:%M:%S",
+#                             #                           time.localtime(last)))
 
-                            if freq < time.time() - last:
-                                self.dlog('crawl: Firing plugin "%s"' % s)
-                                self.fire(s, cfg)
-                                last = time.time()
-                                cfg.set(s, 'last_fired', '%f' % last)
+#                             if freq < time.time() - last:
+#                                 self.dlog('crawl: Firing plugin "%s"' % s)
+#                                 self.fire(s, cfg)
+#                                 last = time.time()
+#                                 cfg.set(s, 'last_fired', '%f' % last)
 
                     #
                     # If config file has changed, reload it by reseting the
@@ -660,6 +682,7 @@ class CrawlTest(unittest.TestCase):
         cfgpath = '%s/test_start.cfg' % self.testdir
         logpath = '%s/test_start.log' % self.testdir
         self.write_cfg_file(cfgpath, self.cdict)
+        self.write_plugmod('./plugins', 'plugin-A')
         cmd = ('crawl start --log %s --cfg %s --context TEST'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
