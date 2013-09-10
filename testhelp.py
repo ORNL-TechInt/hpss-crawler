@@ -161,7 +161,7 @@ def test_name(obj=None):
 # ---------------------------------------------------------------------------
 def run_tests(a, final, testlist, volume, logfile=None):
     mainmod = sys.modules['__main__']
-    if len(a) <= 1:
+    if len(a) == 1:
         suite = LoggingTestSuite(logfile=logfile)
         for (case, skip) in testlist:
             if skip_check(skip):
@@ -182,7 +182,8 @@ def run_tests(a, final, testlist, volume, logfile=None):
                 if final != '' and final in case:
                     break
 
-    result = unittest.TextTestRunner(verbosity=volume).run(suite)
+    if 0 < len(a):
+        result = unittest.TextTestRunner(verbosity=volume).run(suite)
     
 # ---------------------------------------------------------------------------
 class LoggingTestSuite(unittest.TestSuite):

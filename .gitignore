@@ -3,6 +3,7 @@ crawl
 DODO
 NOTES
 test.d
+CrawlConfig
 *.cfg
 *.log
 *.stderr

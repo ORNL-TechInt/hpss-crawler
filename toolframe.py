@@ -156,7 +156,7 @@ def tf_launch(prefix,
             tf_main(sys.argv, prefix=prefix)
 
 # ---------------------------------------------------------------------------
-def ez_launch(main = None, cleanup=None, test=None):
+def ez_launch(main = None, setup=None, cleanup=None, test=None):
     # pdb.set_trace()
     if len(sys.argv) == 1 and sys.argv[0] == '':
         return
@@ -173,9 +173,9 @@ def ez_launch(main = None, cleanup=None, test=None):
             if test == None:
                 unittest.main()
             else:
+                if setup != None:
+                    setup()
                 if not testhelp.main(sys.argv,test) and cleanup != None:
                     cleanup()
-        elif main == None:
-            raise StandardError("Pass your main routine to ez_launch")
-        else:
+        elif main != None:
             main(sys.argv)
