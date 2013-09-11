@@ -345,7 +345,10 @@ def Crawl_setup():
     """
     if not os.path.isdir(CrawlTest.testdir):
         os.mkdir(CrawlTest.testdir)
-    
+    unreadable = '%s/unreadable.cfg' % (CrawlTest.testdir)
+    if os.path.exists(unreadable):
+        os.unlink(unreadable)
+        
 # ------------------------------------------------------------------------------
 def Crawl_cleanup():
     """
@@ -496,6 +499,7 @@ class CrawlDaemon(daemon.Daemon):
 class CrawlTest(unittest.TestCase):
 
     testdir = 'test.d'
+    plugdir = '%s/plugins' % testdir
     default_cfname = 'crawl.cfg'
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
@@ -623,11 +627,11 @@ class CrawlTest(unittest.TestCase):
         """
         cfname = "%s/test_crawl_fire_log.cfg" % self.testdir
         lfname = "%s/test_crawl_fire.log" % self.testdir
-        plugdir = '%s/plugins' % self.testdir
+        # plugdir = '%s/plugins' % self.testdir
         plugname = 'plugin_1'
         
         # create a plug module
-        self.write_plugmod(plugdir, plugname)
+        self.write_plugmod(self.plugdir, plugname)
         
         # add the plug module to the config
         t = CrawlConfig.CrawlConfig()
@@ -649,7 +653,7 @@ class CrawlTest(unittest.TestCase):
         # test.d/plugins/plugin_1.py should exist
         if not plugname.endswith('.py'):
             plugname += '.py'
-        self.assertEqual(os.path.exists('%s/%s' % (plugdir, plugname)), True)
+        self.assertEqual(os.path.exists('%s/%s' % (self.plugdir, plugname)), True)
         
         # test.d/fired should exist and contain 'plugin plugin_1 fired'
         filename = '%s/fired' % self.testdir
@@ -682,7 +686,7 @@ class CrawlTest(unittest.TestCase):
         cfgpath = '%s/test_start.cfg' % self.testdir
         logpath = '%s/test_start.log' % self.testdir
         self.write_cfg_file(cfgpath, self.cdict)
-        self.write_plugmod('./plugins', 'plugin_A')
+        self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = ('crawl start --log %s --cfg %s --context TEST'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
