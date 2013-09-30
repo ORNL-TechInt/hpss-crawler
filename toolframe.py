@@ -71,7 +71,7 @@ import sys
 import testhelp
 import unittest
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def tf_main(args, prefix=None):
     if prefix == None:
         prefix = sys.modules['__main__'].prefix()
@@ -93,7 +93,7 @@ def tf_main(args, prefix=None):
             print(str(e))
             raise
 
-# ---------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 def tf_help(A, prefix=None):
     """help - show this list
 
@@ -129,7 +129,7 @@ def tf_help(A, prefix=None):
             print "   %s" % (docsum)
             
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def tf_launch(prefix,
               setup_tests=None,
               cleanup_tests=None,
@@ -155,8 +155,12 @@ def tf_launch(prefix,
         else:
             tf_main(sys.argv, prefix=prefix)
 
-# ---------------------------------------------------------------------------
-def ez_launch(main = None, setup=None, cleanup=None, test=None):
+# -----------------------------------------------------------------------------
+def ez_launch(main = None,
+              setup=None,
+              cleanup=None,
+              test=None,
+              logfile=''):
     # pdb.set_trace()
     if len(sys.argv) == 1 and sys.argv[0] == '':
         return
@@ -175,7 +179,8 @@ def ez_launch(main = None, setup=None, cleanup=None, test=None):
             else:
                 if setup != None:
                     setup()
-                if not testhelp.main(sys.argv,test) and cleanup != None:
+                keep = testhelp.main(sys.argv,test, logfile=logfile)
+                if not keep and cleanup != None:
                     cleanup()
         elif main != None:
             main(sys.argv)

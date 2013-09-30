@@ -446,31 +446,6 @@ class CrawlDaemon(daemon.Daemon):
                         for line in tbstr.split('\n'):
                             self.dlog("crawl: '%s'" % line)
                             
-#                     for s in cfg.sections():
-#                         if s != 'crawler':
-#                             firable = cfg.get(s, 'fire')
-#                             if (firable not in cfg._boolean_states.keys() or
-#                                 not cfg._boolean_states[firable]):
-#                                 continue
-                            
-#                             # self.dlog('crawl: considering whether to fire "%s"' % s)
-#                             freq = cfg.get_time(s, 'frequency', 3600)
-#                             # self.dlog('crawl: %s.frequency = %s' % (s, freq))
-#                             try:
-#                                 last = cfg.getfloat(s, 'last_fired')
-#                             except ConfigParser.NoOptionError:
-#                                 cfg.set(s, 'last_fired', '0.0')
-#                                 last = 0.0
-#                             # self.dlog('crawl: last = %s'
-#                             #           % time.strftime("%Y.%m%d %H:%M:%S",
-#                             #                           time.localtime(last)))
-
-#                             if freq < time.time() - last:
-#                                 self.dlog('crawl: Firing plugin "%s"' % s)
-#                                 self.fire(s, cfg)
-#                                 last = time.time()
-#                                 cfg.set(s, 'last_fired', '%f' % last)
-
                     #
                     # If config file has changed, reload it by reseting the
                     # cached config object and breaking out of the inner loop.
@@ -481,15 +456,16 @@ class CrawlDaemon(daemon.Daemon):
                         cfgname = cfg.get('crawler', 'filename')
                         get_config(reset=True)
                         break
-                    
+
                     #
-                    # We cycle at one second so we can detect if the user asks
-                    # us to stop or if the config file changes and needs to be
+                    # We once per second so we can detect if the user asks us to
+                    # stop or if the config file changes and needs to be
                     # reloaded
                     #
                     time.sleep(1.0)
 
             except:
+                # if we get an exception, write the traceback to the log file
                 tbstr = tb.format_exc()
                 for line in tbstr.split('\n'):
                     self.dlog("crawl: '%s'" % line)
