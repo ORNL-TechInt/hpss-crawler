@@ -12,6 +12,7 @@ from optparse import *
 
 tlogger = None
 
+# -----------------------------------------------------------------------------
 def main(args=None, filter=None, logfile=None):
     if args == None:
         args = sys.argv
@@ -52,7 +53,7 @@ def main(args=None, filter=None, logfile=None):
 
     return o.keep
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def all_tests(name, filter=None):
     '''
     Return a list of tests in the module <name>.
@@ -80,7 +81,7 @@ def all_tests(name, filter=None):
 
     return cases
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def expectVSgot(expected, got):
     try:
         assert(expected == got)
@@ -104,12 +105,12 @@ def expectVSgot(expected, got):
             print "GOT:      '%s'" % got
             raise e
         
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def get_logger():
     global tlogger
     return tlogger
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def into_test_dir():
     tdname = '_test.%d' % os.getpid()
     bname = os.path.basename(os.getcwd())
@@ -118,7 +119,7 @@ def into_test_dir():
         os.chdir(tdname)
     return tdname
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def keepfiles(value=None):
     """
     Return value of global value kf_flag. Optionally set it if value
@@ -136,7 +137,7 @@ def keepfiles(value=None):
 
     return rval
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def list_tests(a, final, testlist):
     if len(a) <= 1:
         for c in testlist:
@@ -151,14 +152,18 @@ def list_tests(a, final, testlist):
                 if final != '' and final in c[0]:
                     break
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def test_name(obj=None):
     """
     Return the caller's function name (with an optional class prefix).
     """
-    return str(obj).split()[0]
+    z = str(obj).split()
+    z.reverse()
+    rval = z[0].strip('()') + '.' + z[1]
+    return rval
+    # return str(obj).split()[0]
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def run_tests(a, final, testlist, volume, logfile=None):
     mainmod = sys.modules['__main__']
     if len(a) == 1:
@@ -185,7 +190,7 @@ def run_tests(a, final, testlist, volume, logfile=None):
     if 0 < len(a):
         result = unittest.TextTestRunner(verbosity=volume).run(suite)
     
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 class LoggingTestSuite(unittest.TestSuite):
     def __init__(self, tests=(), logfile=None):
         super(LoggingTestSuite, self).__init__(tests)
@@ -227,7 +232,7 @@ class LoggingTestSuite(unittest.TestSuite):
                 test(result)
         return result
         
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def show_stdout(value=None):
     """
     Return value of global value show_stdout. Optionally set it if
@@ -245,7 +250,7 @@ def show_stdout(value=None):
 
     return rval
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def skip_check(skipfunc):
     if skipfunc == None:
         return False
@@ -255,11 +260,11 @@ def skip_check(skipfunc):
         print "skipping %s" % skipfunc.replace('skip_', 'test_')
     return rval
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def touch(pathname):
     open(pathname, 'a').close()
 
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def write_file(filename, mode=0644, content=None):
     f = open(filename, 'w')
     if type(content) == str:
@@ -272,9 +277,9 @@ def write_file(filename, mode=0644, content=None):
     f.close()
     os.chmod(filename, mode)
                         
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 class TesthelpTest(unittest.TestCase):
-    # -----------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_all_tests(self):
         all = ['TesthelpTest.test_all_tests',
                'TesthelpTest.test_list_tests',
@@ -336,7 +341,7 @@ class TesthelpTest(unittest.TestCase):
             print "expected: '''\n%s'''" % expected
             print "got:      '''\n%s'''" % r
         
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 class UnderConstructionError(Exception):
     def __init__(self, value=""):
         if value == '':
@@ -346,7 +351,7 @@ class UnderConstructionError(Exception):
     def __str__(self):
         return repr(self.value)
     
-# ---------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 global d
 d = dir()
 if __name__ == '__main__':
