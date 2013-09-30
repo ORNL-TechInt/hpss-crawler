@@ -9,6 +9,7 @@ import re
 import shutil
 import stat
 import StringIO
+import sys
 import testhelp
 import time
 import toolframe
@@ -34,6 +35,8 @@ class CrawlConfig(ConfigParser.ConfigParser):
     def __init__(self, *args, **kwargs):
         self.filename = '<???>'
         self.loadtime = 0.0
+        m = sys.modules[__name__]
+        m.NoOptionError = m.ConfigParser.NoOptionError
         ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
         pass
     

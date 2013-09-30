@@ -160,6 +160,7 @@ def test_name(obj=None):
     z = str(obj).split()
     z.reverse()
     rval = z[0].strip('()') + '.' + z[1]
+    rval = rval.replace('__main__.', '')
     return rval
     # return str(obj).split()[0]
 
@@ -221,13 +222,13 @@ class LoggingTestSuite(unittest.TestSuite):
             if None != self._logger:
                 test(result)
                 if fails < len(result.failures):
-                    self._logger.info('%-30s >>> FAILED' % test_name(test))
+                    self._logger.info('%-50s >>> FAILED' % test_name(test))
                     fails = len(result.failures)
                 elif errs < len(result.errors):
-                    self._logger.info('%-30s >>> ERROR' % test_name(test))
+                    self._logger.info('%-50s >>> ERROR' % test_name(test))
                     errs = len(result.errors)
                 else:
-                    self._logger.info('%-25s PASSED' % test_name(test))
+                    self._logger.info('%-45s PASSED' % test_name(test))
             else:
                 test(result)
         return result
