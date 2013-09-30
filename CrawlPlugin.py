@@ -13,6 +13,7 @@ CrawlPlugin.py - Plugin class for HPSS integrity crawler
     will stay on the same schedule.
 
 """
+import copy
 import CrawlConfig
 import os
 import shutil
@@ -100,7 +101,19 @@ class CrawlPluginTest(unittest.TestCase):
         """
         The plugin should fire and self.last_fired should be set
         """
-        raise testhelp.UnderConstructionError()
+        pname = util.my_name()
+        self.make_plugin(pname)
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'fire', 'true')
+        p = CrawlPlugin(pname, c)
+            
+        p.fire()
+        self.assertEqual(os.path.exists('./%s' % (pname)), True)
+        self.assertEqual(util.contents('./%s' % (pname)),
+                         'my name is %s\n' % (pname))
 
     # -------------------------------------------------------------------------
     def test_init_fire_false(self):
@@ -157,32 +170,91 @@ class CrawlPluginTest(unittest.TestCase):
         """
         if frequency is set in config, plugin should match
         """
-        raise testhelp.UnderConstructionError()
+        pname = util.my_name()
+        self.make_plugin(pname)
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set(pname, 'frequency', '19')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'fire', 'false')
+        p = CrawlPlugin(pname, c)
+            
+        self.assertEqual(p.frequency, 19)
 
     # -------------------------------------------------------------------------
     def test_init_freq_unset(self):
         """
         if frequency not set in config, should be 3600 in plugin
         """
-        raise testhelp.UnderConstructionError()
+        pname = util.my_name()
+        self.make_plugin(pname)
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'fire', 'false')
+        p = CrawlPlugin(pname, c)
+            
+        self.assertEqual(p.frequency, 3600)
+
     # -------------------------------------------------------------------------
     def test_init_plugdir_inspath(self):
         """
         if plugin_dir set in config and in sys.path, sys.path should not change
         """
-        raise testhelp.UnderConstructionError()
+        if self.plugdir not in sys.path:
+            sys.path.append(self.plugdir)
+        pre = sys.path
+        pname = util.my_name()
+        self.make_plugin(pname)
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'fire', 'false')
+        p = CrawlPlugin(pname, c)
+        self.assertEqual(pre, sys.path)
+
     # -------------------------------------------------------------------------
     def test_init_plugdir_ninspath(self):
         """
         if plugin_dir set in config and not in sys.path, should be added to sys.path
         """
-        raise testhelp.UnderConstructionError()
+        if self.plugdir in sys.path:
+            sys.path.remove(self.plugdir)
+        pre = copy.copy(sys.path)
+        pname = util.my_name()
+        self.make_plugin(pname)
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'fire', 'false')
+        p = CrawlPlugin(pname, c)
+        self.assertNotEqual(pre, sys.path)
+
     # -------------------------------------------------------------------------
     def test_init_plugdir_unset(self):
         """
         if plugin_dir not set in config, should throw exception
         """
-        raise testhelp.UnderConstructionError()
+        if self.plugdir in sys.path:
+            sys.path.remove(self.plugdir)
+        pre = copy.copy(sys.path)
+        pname = util.my_name()
+        self.make_plugin(pname)
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set(pname, 'fire', 'false')
+        try:
+            p = CrawlPlugin(pname, c)
+            got_exception = False
+        except CrawlConfig.NoOptionError:
+            got_exception = True
+        self.assertEqual(got_exception, True)
+
     # -------------------------------------------------------------------------
     def test_init_plugin_inmod(self):
         """
@@ -263,11 +335,15 @@ class CrawlPluginTest(unittest.TestCase):
         if not os.path.isdir(self.plugdir):
             os.mkdir(self.plugdir)
         if not pname.endswith('.py'):
-            pname = pname + '.py'
-        f = open('%s/%s' % (self.plugdir, pname), 'w')
+            fname = pname + '.py'
+        else:
+            fname = pname
+        f = open('%s/%s' % (self.plugdir, fname), 'w')
         f.write("#!/bin/env python\n")
-        f.write("def main():\n")
-        f.write("    pass\n")
+        f.write("def main(cfg):\n")
+        f.write("    f = open('%s', 'w')\n" % (pname))
+        f.write("    f.write('my name is %s\\n')\n" % (pname))
+        f.write("    f.close()\n")
         
         f.close()
         
