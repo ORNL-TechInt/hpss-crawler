@@ -17,8 +17,12 @@ import ConfigParser
 import os
 import sys
 import time
+import toolframe
+import unittest
 
+# -----------------------------------------------------------------------------
 class CrawlPlugin(object):
+    # -------------------------------------------------------------------------
     def __init__(self, name, cfg):
         """
         Initialize this object.
@@ -27,6 +31,7 @@ class CrawlPlugin(object):
         self.last_fired = time.time() - self.frequency - 1
         super(CrawlPlugin, self).__init__()
 
+    # -------------------------------------------------------------------------
     def fire(self):
         """
         Run the plugin.
@@ -34,6 +39,7 @@ class CrawlPlugin(object):
         sys.modules[self.name].main(self.cfg)
         self.last_fired = time.time()
         
+    # -------------------------------------------------------------------------
     def init_cfg_data(self, cfg, name=''):
         """
         Read data we care about from the configuration.
@@ -41,10 +47,7 @@ class CrawlPlugin(object):
         self.cfg = cfg
         if name != '':
             self.name = name
-        try:
-            self.firable = cfg.getboolean(self.name, 'fire')
-        except ValueError, ConfigParser.NoOptionError:
-            self.firable = False
+        self.firable = cfg.getboolean(self.name, 'fire')
         self.frequency = cfg.get_time(self.name, 'frequency', 3600)
         self.plugin_dir = cfg.get('crawler', 'plugin-dir')
         if self.plugin_dir not in sys.path:
@@ -54,12 +57,14 @@ class CrawlPlugin(object):
         else:
             reload(sys.modules[self.name])
 
+    # -------------------------------------------------------------------------
     def reload(self, cfg):
         """
         Re-initialize this object from the configuration.
         """
         self.init_cfg_data(cfg)
         
+    # -------------------------------------------------------------------------
     def time_to_fire(self):
         """
         Return True or False, indicating whether it's time for this plugin to
@@ -67,3 +72,36 @@ class CrawlPlugin(object):
         """
         return(self.frequency < (time.time() - self.last_fired))
     
+
+# -----------------------------------------------------------------------------
+def CrawlPlugin_setup():
+    pass
+
+# -----------------------------------------------------------------------------
+def CrawlPlugin_teardown():
+    pass
+
+# -----------------------------------------------------------------------------
+class CrawlPluginTest(unittest.TestCase):
+    # -------------------------------------------------------------------------
+    def test_init(self):
+        pass
+
+    # -------------------------------------------------------------------------
+    def test_fire(self):
+        pass
+
+    # -------------------------------------------------------------------------
+    def test_reload(self):
+        pass
+    
+    # -------------------------------------------------------------------------
+    def test_time_to_fire(self):
+        pass
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    toolframe.ez_launch(setup=CrawlPlugin_setup,
+                        cleanup=CrawlPlugin_teardown,
+                        test='CrawlPluginTest',
+                        logfile='crawl_test.log')
