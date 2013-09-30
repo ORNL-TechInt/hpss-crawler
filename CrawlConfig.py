@@ -14,6 +14,7 @@ import time
 import toolframe
 import unittest
 
+# -----------------------------------------------------------------------------
 def main(argv):
     """
     Dummy main routine so we can use toolframe and testhelp
@@ -29,14 +30,14 @@ def main(argv):
     print("See the documentation for ConfigParser for more detail.")
     
 class CrawlConfig(ConfigParser.ConfigParser):
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         self.filename = '<???>'
         self.loadtime = 0.0
         ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
         pass
     
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def changed(self):
         """
         Return True if the file we were loaded from has changed since load time.
@@ -48,7 +49,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             rval = False
         return rval
     
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def dump(self, with_defaults=False):
         """
         Write the contents of the config except for the defaults to a string and
@@ -63,7 +64,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             rval = re.sub('\[DEFAULT\][^\[]*\[', '[', rval)
         return rval
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def get_time(self, section, option, default=None, logger=None):
         """
         Retrieve the value of section/option. It is assumed to be a duration
@@ -96,7 +97,18 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
         return rval
     
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    def getboolean(self, name, option):
+        try:
+            # rval = super(CrawlConfig, self).getboolean(name, option)
+            rval = ConfigParser.ConfigParser.getboolean(self, name, option)
+        except ValueError:
+            rval = False
+        except ConfigParser.NoOptionError:
+            rval = False
+        return rval
+    
+    # -------------------------------------------------------------------------
     def load_dict(self, dict, defaults=None):
         """
         Initialize the config from dict. If one of the keys in dict is
@@ -120,7 +132,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             for o in sorted(dict[s].keys()):
                 self.set(s, o, dict[s][o])
     
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def map_time_unit(self, spec):
         """
         1s         => 1
@@ -165,13 +177,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
         return rval
         
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def read(self, filename):
         ConfigParser.ConfigParser.read(self, filename)
         self.filename = filename
         self.loadtime = time.time()
         
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def crawl_write(self, fp):
         """
         Write the config material to fp with the 'crawler' section first. fp
@@ -192,17 +204,17 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 fp.write("%s = %s\n" % (item, self.get(section, item)))
             fp.write("\n")
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def CrawlConfig_setup():
     if not os.path.exists(CrawlConfigTest.testdir):
         os.mkdir(CrawlConfigTest.testdir)
     
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def CrawlConfig_teardown():
     if os.path.exists(CrawlConfigTest.testdir):
         shutil.rmtree(CrawlConfigTest.testdir)
     
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 class CrawlConfigTest(unittest.TestCase):
 
     testdir = 'test.d'
@@ -215,7 +227,7 @@ class CrawlConfigTest(unittest.TestCase):
                          'dog':  'bark',
                          'hen':  'cluck'}}
     
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_changed(self):
         """
         Routines exercised: __init__(), changed(), load_dict(), and
@@ -241,7 +253,7 @@ class CrawlConfigTest(unittest.TestCase):
         self.assertEqual(changeable.changed(), True)
         self.assertEqual(changeable.filename, cfgfile)
         
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_dump_nodef(self):
         """
         Routines exercised: __init__(), load_dict(), dump().
@@ -261,7 +273,7 @@ class CrawlConfigTest(unittest.TestCase):
         self.assertEqual("duck = quack" in dumpstr, True)
         self.assertEqual("hen = cluck" in dumpstr, True)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_dump_withdef(self):
         """
         Routines exercised: __init__(), load_dict(), dump().
@@ -283,7 +295,7 @@ class CrawlConfigTest(unittest.TestCase):
         self.assertEqual("duck = quack" in dumpstr, True)
         self.assertEqual("hen = cluck" in dumpstr, True)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_get_time(self):
         """
         Routines exercised: __init__(), load_dict(), get_time().
@@ -293,7 +305,20 @@ class CrawlConfigTest(unittest.TestCase):
         self.assertEqual(obj.get_time('crawler', 'heartbeat'), 3600)
         self.assertEqual(obj.get_time('crawler', 'frequency'), 300)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    def test_getboolean(self):
+        """
+        Routines exercised: getboolean().
+        """
+        obj = CrawlConfig()
+        obj.add_section('abc')
+        obj.set('abc', 'fire', 'True')
+        obj.set('abc', 'other', 'False')
+        self.assertEqual(obj.getboolean('abc', 'flip'), False)
+        self.assertEqual(obj.getboolean('abc', 'other'), False)
+        self.assertEqual(obj.getboolean('abc', 'fire'), True)
+        
+    # -------------------------------------------------------------------------
     def test_load_dict(self):
         """
         Routines exercised: __init__(), load_dict().
@@ -318,7 +343,7 @@ class CrawlConfigTest(unittest.TestCase):
         self.assertEqual('dog' in obj.options('sounds'), True)
         self.assertEqual('hen' in obj.options('sounds'), True)
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_map_time_unit(self):
         """
         Routines exercised: __init__(), map_time_unit().
@@ -348,8 +373,9 @@ class CrawlConfigTest(unittest.TestCase):
         self.assertEqual(obj.map_time_unit('year'), 365*24*3600)
         self.assertEqual(obj.map_time_unit('years'), 365*24*3600)
         
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(setup=CrawlConfig_setup ,
                         cleanup=CrawlConfig_teardown,
-                        test='CrawlConfigTest')
+                        test='CrawlConfigTest',
+                        logfile='crawl_test.log')
