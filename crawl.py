@@ -61,6 +61,32 @@ def crl_cfgdump(argv):
             log.info(line)
         
 # ------------------------------------------------------------------------------
+def crl_cleanup(argv):
+    """cleanup - remove any test directories left behind
+
+    usage: crawl cleanup
+
+    Looks for and removes /tmp/hpss-crawl.* recursively.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-n', '--dryrun',
+                 action='store_true', default=False, dest='dryrun',
+                 help='see what would happen')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug: pdb.set_trace()
+    
+    testdirs = glob.glob("/tmp/hpss-crawl.*")
+    for td in testdirs:
+        if o.dryrun:
+            print("would do 'shutil.rmtree(%s)'" % td)
+        else:
+            shutil.rmtree(td)
+
+# ------------------------------------------------------------------------------
 def crl_fire(argv):
     """fire - run a plugin
 
@@ -93,7 +119,7 @@ def crl_fire(argv):
         sys.path.append(plugdir)
         __import__(o.plugname)
         log.info('firing %s' % o.plugname)
-        sys.modules[o.plugname].main()
+        sys.modules[o.plugname].main(cfg)
     
 # ------------------------------------------------------------------------------
 def crl_log(argv):
@@ -120,6 +146,13 @@ def crl_start(argv):
     """start - if the crawler is not already running as a daemon, start it
 
     usage: crawl start
+
+    default config file: crawl.cfg, or
+                         $CRAWL_CONF, or
+                         -c <filename> on command line
+    default log file:    /var/log/crawl.log, or
+                         $CRAWL_LOG, or
+                         -l <filename> on command line
     """
     p = optparse.OptionParser()
     p.add_option('-c', '--cfg',
@@ -335,7 +368,7 @@ def persistent_rm(path):
             done = True
         except OSError as e:
             time.sleep(1.0)
-            print("Trying shutil.rmtree(%s) again..." % path)
+            print("Retry %d of 10: shutil.rmtree(%s)" % (retries, path))
             retries += 1
 
 # ------------------------------------------------------------------------------
@@ -343,11 +376,12 @@ def Crawl_setup():
     """
     Setup needed before running the tests.
     """
-    if not os.path.isdir(CrawlTest.testdir):
-        os.mkdir(CrawlTest.testdir)
-    unreadable = '%s/unreadable.cfg' % (CrawlTest.testdir)
-    if os.path.exists(unreadable):
-        os.unlink(unreadable)
+    if os.path.isdir(CrawlTest.testdir):
+        shutil.rmtree(os.path.dirname(CrawlTest.testdir))
+    os.makedirs(CrawlTest.testdir)
+    # unreadable = '%s/unreadable.cfg' % (CrawlTest.testdir)
+    # if os.path.exists(unreadable):
+    #     os.unlink(unreadable)
         
 # ------------------------------------------------------------------------------
 def Crawl_cleanup():
@@ -355,10 +389,10 @@ def Crawl_cleanup():
     Clean up after a sequence of tests.
     """
     if os.getcwd().endswith('/test.d'):
-        os.chdir('..')
+        os.chdir(launch_dir)
         
     if not testhelp.keepfiles():
-        flist = ['test.d']
+        flist = [os.path.dirname(CrawlTest.testdir)]
         for fspec in flist:
             for fname in glob.glob(fspec):
                 if os.path.isdir(fname):
@@ -410,7 +444,9 @@ class CrawlDaemon(daemon.Daemon):
                     elif s in plugin_d.keys():
                         plugin_d[s].reload(cfg)
                     else:
-                        plugin_d[s] = CrawlPlugin.CrawlPlugin(s, cfg)
+                        plugin_d[s] = CrawlPlugin.CrawlPlugin(name=s,
+                                                              cfg=cfg,
+                                                              logger=get_logger())
 
                 # remove any plugins that are not in the new configuration
                 for p in plugin_d.keys():
@@ -458,9 +494,9 @@ class CrawlDaemon(daemon.Daemon):
                         break
 
                     #
-                    # We once per second so we can detect if the user asks us to
-                    # stop or if the config file changes and needs to be
-                    # reloaded
+                    # We cycle once per second so we can detect if the user
+                    # asks us to stop or if the config file changes and needs
+                    # to be reloaded
                     #
                     time.sleep(1.0)
 
@@ -474,7 +510,7 @@ class CrawlDaemon(daemon.Daemon):
 # ------------------------------------------------------------------------------
 class CrawlTest(unittest.TestCase):
 
-    testdir = 'test.d'
+    testdir = '/tmp/hpss-crawl.%d/test.d' % os.getpid()
     plugdir = '%s/plugins' % testdir
     default_cfname = 'crawl.cfg'
     env_cfname = 'envcrawl.cfg'
@@ -671,7 +707,9 @@ class CrawlTest(unittest.TestCase):
 
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
-
+        self.assertEqual(os.path.exists(logpath), True)
+        self.assertEqual('leaving daemonize' in contents(logpath), True)
+        
         testhelp.touch('crawler.exit')
 
         time.sleep(1)
@@ -702,6 +740,86 @@ class CrawlTest(unittest.TestCase):
         time.sleep(1)
         self.assertEqual(is_running(), False)
         
+    # --------------------------------------------------------------------------
+    def test_crawl_start_cfg(self):
+        """
+        TEST: 'crawl start' should fire up a daemon crawler which will exit
+        when file 'crawler.exit' is touched. Verify that the correct config
+        file is loaded.
+        """
+        cfgpath = '%s/test_stcfg.cfg' % self.testdir
+        logpath = '%s/test_stcfg.log' % self.testdir
+        xdict = self.cdict
+        xdict['other_plugin'] = {'unplanned': 'silver',
+                                 'simple': 'check for this'}
+        self.write_cfg_file(cfgpath, xdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(self.plugdir, 'other_plugin')
+        cmd = ('crawl start --log %s --cfg %s --context TEST'
+               % (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(is_running(), True)
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+        self.assertEqual(os.path.exists(logpath), True)
+        self.assertEqual('crawl: CONFIG: [other_plugin]' in
+                         contents(logpath),
+                         True)
+        self.assertEqual('crawl: CONFIG: unplanned: silver' in
+                         contents(logpath),
+                         True)
+        self.assertEqual('crawl: CONFIG: simple: check for this' in
+                         contents(logpath),
+                         True)
+        
+        testhelp.touch('crawler.exit')
+
+        time.sleep(1)
+        self.assertEqual(is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+                
+    # --------------------------------------------------------------------------
+    def test_crawl_start_fire(self):
+        """
+        TEST: 'crawl start' should fire up a daemon crawler which will exit
+        when file 'crawler.exit' is touched. Verify that at least one plugin
+        fires and produces some output.
+        """
+        cfgpath = '%s/test_fire.cfg' % self.testdir
+        logpath = '%s/test_fire.log' % self.testdir
+        xdict = copy.deepcopy(self.cdict)
+        xdict['other'] = {'frequency': '1s', 'fire': 'true'}
+        xdict['crawler']['verbose'] = 'true'
+        del xdict['plugin_A']
+        self.write_cfg_file(cfgpath, xdict)
+        self.write_plugmod(self.plugdir, 'other')
+        cmd = ('crawl start --log %s --cfg %s --context TEST'
+               % (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(is_running(), True)
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+        self.assertEqual(os.path.exists(logpath), True)
+        self.assertEqual('leaving daemonize' in contents(logpath), True)
+        time.sleep(2)
+        self.assertEqual('firing plugin other' in contents(logpath), True,
+                         "Log file does not indicate plugin was fired")
+        self.assertEqual(os.path.exists('%s/fired' % self.testdir), True,
+                         "File %s/fired does not exist" % self.testdir)
+        self.assertEqual('plugin other fired\n',
+                         contents('%s/fired' % self.testdir),
+                         "Contents of %s/fired is not right" % self.testdir)
+        
+        testhelp.touch('crawler.exit')
+
+        time.sleep(1)
+        self.assertEqual(is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+                
     # --------------------------------------------------------------------------
     def test_crawl_status(self):
         """
@@ -1224,7 +1342,7 @@ class CrawlTest(unittest.TestCase):
             os.chdir(dirname)
         except OSError as e:
             if 'No such file or directory' in str(e):
-                os.mkdir(dirname)
+                os.makedirs(dirname)
                 os.chdir(dirname)
             else:
                 raise
@@ -1250,7 +1368,7 @@ class CrawlTest(unittest.TestCase):
     # --------------------------------------------------------------------------
     def tearDown(self):
         if os.getcwd().endswith('/test.d'):
-            os.chdir('..')
+            os.chdir(launch_dir)
 
     # --------------------------------------------------------------------------
     def vassert_in(self, expected, actual):
@@ -1310,14 +1428,15 @@ class CrawlTest(unittest.TestCase):
 
         f = open('%s/%s' % (plugdir, plugfname), 'w')
         f.write("#!/bin/env python\n")
-        f.write("def main():\n")
-        f.write("    q = open('test.d/fired', 'w')\n")
+        f.write("def main(cfg):\n")
+        f.write("    q = open('%s/fired', 'w')\n" % self.testdir)
         f.write(r"    q.write('plugin %s fired\n')" % plugname)
         f.write("\n")
         f.write("    q.close()\n")
         f.close()
         
 # ------------------------------------------------------------------------------
+launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 toolframe.tf_launch("crl",
                     setup_tests=Crawl_setup,
                     cleanup_tests=Crawl_cleanup,
