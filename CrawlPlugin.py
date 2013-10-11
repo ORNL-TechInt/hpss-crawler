@@ -27,12 +27,16 @@ import util
 # -----------------------------------------------------------------------------
 class CrawlPlugin(object):
     # -------------------------------------------------------------------------
-    def __init__(self, name, cfg):
+    def __init__(self, name=None, cfg=None, logger=None):
         """
         Initialize this object.
         """
+        assert(name != None)
+        assert(cfg != None)
         self.cfg = cfg
-        self.init_cfg_data(name)
+        self.log = logger
+        self.log.info("%s: Initializing plugin data" % name)
+        self.init_cfg_data(name, cfg)
         self.last_fired = time.time() - self.frequency - 1
         super(CrawlPlugin, self).__init__()
 
@@ -41,26 +45,33 @@ class CrawlPlugin(object):
         """
         Run the plugin.
         """
-        sys.modules[self.name].main(self.cfg)
-        self.last_fired = time.time()
-        
+        if self.firable:
+            self.log.info("%s: firing" % self.name)
+            sys.modules[self.name].main(self.cfg)
+            self.last_fired = time.time()
+        elif self.cfg.getboolean('crawler', 'verbose'):
+            self.log.info("%s: not firable" % self.name)
+            self.last_fired = time.time()
+
     # -------------------------------------------------------------------------
-    def init_cfg_data(self, name=''):
+    def init_cfg_data(self, name='', cfg=None):
         """
         Read data we care about from the configuration.
         """
         if name != '':
             self.name = name
+        if cfg != None:
+            self.cfg = cfg
         try:
-            x = self.cfg.get(self.name, 'fire')
-            if x.lower() in self.cfg._boolean_states.keys():
-                self.firable = self.cfg._boolean_states[x]
+            x = cfg.get(self.name, 'fire')
+            if x.lower() in cfg._boolean_states.keys():
+                self.firable = cfg._boolean_states[x]
             else:
                 self.firable = False
         except CrawlConfig.NoOptionError:
             self.firable = True
-        self.frequency = self.cfg.get_time(self.name, 'frequency', 3600)
-        self.plugin_dir = self.cfg.get('crawler', 'plugin-dir')
+        self.frequency = cfg.get_time(self.name, 'frequency', 3600)
+        self.plugin_dir = cfg.get('crawler', 'plugin-dir')
         if self.plugin_dir not in sys.path:
             sys.path.append(self.plugin_dir)
         if self.name not in sys.modules.keys():
@@ -73,7 +84,7 @@ class CrawlPlugin(object):
         """
         Re-initialize this object from the configuration.
         """
-        self.init_cfg_data(cfg)
+        self.init_cfg_data(cfg=cfg)
         
     # -------------------------------------------------------------------------
     def time_to_fire(self):

@@ -6,7 +6,6 @@ import time
 
 def main(cfg):
     clog = sys.modules['__main__'].get_logger()
-    clog.info("drill-instructor: FIRING")
     clog.info("drill-instructor: cwd = %s" % os.getcwd())
     hsi_prompt = "]:"
 
