@@ -507,7 +507,7 @@ class CrawlDaemon(daemon.Daemon):
                     self.dlog("crawl: '%s'" % line)
                 keep_going = False
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 class CrawlTest(unittest.TestCase):
 
     testdir = '/tmp/hpss-crawl.%d/test.d' % os.getpid()
