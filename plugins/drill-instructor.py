@@ -1,3 +1,4 @@
+import Checkable
 import ConfigParser
 import os
 import pexpect
@@ -9,31 +10,39 @@ def main(cfg):
     clog.info("drill-instructor: cwd = %s" % os.getcwd())
     hsi_prompt = "]:"
 
-    dicfg = ConfigParser.ConfigParser()
-    dicfg.read('plugins/drill-instructor.cfg')
+    clist = Checkable.get_list()  # returns a list of Checkable objects
+    if 0 == len(clist):
+        Checkable.ex_nihilo()     # start from scratch
+        clist = Checkable.get_list()
 
-    # dump drill-instructor config to log
-    for s in dicfg.sections():
-        clog.info("drill-instructor: [%s]" % s)
-        for o in dicfg.options(s):
-            clog.info("drill-instructor: %s = %s" % (o, dicfg.get(s, o)))
+    for item in clist:
+        item.check()
+
+#     dicfg = ConfigParser.ConfigParser()
+#     dicfg.read('plugins/drill-instructor.cfg')
+
+#     # dump drill-instructor config to log
+#     for s in dicfg.sections():
+#         clog.info("drill-instructor: [%s]" % s)
+#         for o in dicfg.options(s):
+#             clog.info("drill-instructor: %s = %s" % (o, dicfg.get(s, o)))
 
     
-    S = pexpect.spawn("/opt/public/bin/hsi")
-    S.logfile = f = open("hsi.out", 'a')
+#     S = pexpect.spawn("/opt/public/bin/hsi")
+#     S.logfile = f = open("hsi.out", 'a')
 
-    for s in dicfg.sections():
-        S.expect(hsi_prompt)
-        S.sendline("ls -X %s" % s)
+#     for s in dicfg.sections():
+#         S.expect(hsi_prompt)
+#         S.sendline("ls -X %s" % s)
 
-        dicfg.set(s, 'last-check', time.strftime("%Y.%m%d %H:%M:%S"))
+#         dicfg.set(s, 'last-check', time.strftime("%Y.%m%d %H:%M:%S"))
 
-    S.expect(hsi_prompt)
-    S.sendline("quit")
-    S.expect(pexpect.EOF)
+#     S.expect(hsi_prompt)
+#     S.sendline("quit")
+#     S.expect(pexpect.EOF)
 
-    dicfg.write(open('plugins/drill-instructor.cfg', 'w'))
+#     dicfg.write(open('plugins/drill-instructor.cfg', 'w'))
     
-    S.logfile.close()
-    S.close()
+#     S.logfile.close()
+#     S.close()
     
