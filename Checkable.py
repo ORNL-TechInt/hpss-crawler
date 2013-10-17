@@ -29,6 +29,12 @@ class Checkable(object):
         super(Checkable, self).__init__()
         
     # -------------------------------------------------------------------------
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__) and
+                (self.path == other.path) and
+                (self.type == other.type))
+
+    # -------------------------------------------------------------------------
     @classmethod
     def ex_nihilo(cls, filename='drill.db'):
         """
@@ -94,29 +100,65 @@ class Checkable(object):
     # -------------------------------------------------------------------------
     def persist(self):
         """
-        Update the object's entry in the database
+        Update the object's entry in the database.
+
+        There are two situations where we need to push data into the database.
+
+        1) We have found a new object to track and want to add it to the
+           database. However, if the path matches an entry already in the
+           database, we don't want to add a duplicate. Rather, we should update
+           the one already there. So this will usually be an insert but may
+           sometimes be an update by path. In this case, we'll have the
+           following incoming values:
+
+           rowid: None
+           path: ...
+           type: ...
+           last_check: 0
+
+        2) I have just checked an existing object and I want to update its
+           last_check time. In this case, we'll have the following incoming values:
+
+           rowid: != None
+           path: ...
+           type: ...
+           last_check: != 0
+
+        In any other case, we'll throw an exception.
         """
         try:
             db = sql.connect(self.dbname)
             cx = db.cursor()
 
-            if self.rowid != None:
-                cx.execute("""update checkables set path=?, type=?, last_check=?
-                                     where rowid=?""",
-                           (self.type, self.last_check, self.path, self.rowid))
-            else:
-                cx.execute("select rowid, path, type, last_check from checkables" +
-                           " where path = '%s'" % self.path)
+            if self.rowid != None and self.last_check != 0.0:
+                # Updating the check time for an existing object 
+                cx.execute("update checkables set last_check=? where rowid=?",
+                           (self.last_check, self.rowid))
+            elif self.rowid == None and self.last_check == 0.0:
+                # Adding (or perhaps updating) a new checkable
+                cx.execute("select * from checkables where path=?",
+                           (self.path,))
                 rows = cx.fetchall()
-                if 1 <= len(rows):
-                    self.rowid = rows[0][0]
-                    cx.execute("""update checkables set path=?, type=?, last_check=?
-                                     where rowid=?""",
-                               (self.path, self.type, self.last_check, self.rowid))
-                else:
+                if 0 == len(rows):
+                    # path not in db -- we insert it
                     cx.execute("""insert into checkables(path, type, last_check)
-                                   values(?, ?, ?)""",
+                                  values(?, ?, ?)""",
                                (self.path, self.type, self.last_check))
+                elif 1 == len(rows):
+                    # path is in db -- we update it
+                    cx.execute("""update checkables set type=?, last_check=?
+                                  where path=?""",
+                               (self.type, self.last_check, self.path))
+                else:
+                    raise StandardError("There seems to be more than one"
+                                        + " occurrence of '%s' in the database" %
+                                        self.path)
+            else:
+                raise StandardError("Invalid conditions: "
+                                    + "rowid = %s; " % str(self.rowid)
+                                    + "path = '%s'; " % self.path
+                                    + "type = '%s'; " % self.type
+                                    + "last_check = %f" % self.last_check)
 
             db.commit()
             db.close()
@@ -296,65 +338,209 @@ class CheckableTest(unittest.TestCase):
             self.assertEqual(item.last_check, testdata[idx][2])
     
     # -------------------------------------------------------------------------
-    def test_persist_dir_new(self):
+    def test_persist_dir_d(self):
         """
-        Calling .persist() on a new dir Checkable object should insert
-        the object's entry in the database
+        Send in a new directory with path matching a duplicate in database
+        (rowid == None, last_check == 0, type == 'd'). Exception should be
+        thrown.
         """
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
+        self.db_duplicates()
         x = Checkable.get_list(filename=self.testfile)
-        self.assertEqual(len(x), 1,
-                         "Expected 1 result, got %d" % len(x))
+        self.assertEqual(len(x), 3,
+                         "Expected 3 result, got %d" % len(x))
 
         foo = Checkable(path='/abc/def', type='d')
-        foo.persist()
+        try:
+            foo.persist()
+            got_exception = False
+        except StandardError, e:
+            self.assertEqual('There seems to be more than one' in str(e),
+                             True,
+                             "Got a StandardError but the message is wrong")
+            got_exception = True
+        except:
+            self.fail("Got unexpected exception: \"\"\"\n%s\n\"\"\"" %
+                      tb.format_exc())
 
         x = Checkable.get_list(filename=self.testfile)
-        self.assertEqual(len(x), 2,
-                         "Expected 2 results, got %d" % len(x))
-        self.assertEqual(x[1].path, '/abc/def',
-                         "Expected '/abc/def', got '%s'" % x[1].path)
-        self.assertEqual(x[1].type, 'd',
-                         "Expected 'd', got '%s'" % x[1].type)
-        self.assertEqual(x[1].last_check, 0,
-                         "Expected 0, got %d" % x[1].last_check)
+        self.assertEqual(len(x), 3,
+                         "Expected 3 results, got %d" % len(x))
+        self.assertEqual(foo in x, True,
+                         "Object foo not found in database")
+        root = Checkable(path='/', type='d')
+        self.assertEqual(root in x, True,
+                         "Object root not found in database")
     
     # -------------------------------------------------------------------------
-    def test_persist_dir_old(self):
+    def test_persist_dir_n(self):
         """
-        Calling .persist() on an old dir Checkable object should update
-        the object's entry in the database
+        Send in a new directory (rowid == None, last_check == 0, type == 'd',
+        path does not match). New record should be added.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_dir_p(self):
+        """
+        Send in a new directory with matching path (rowid == None, last_check
+        == 0, type == 'd'). Existing path should be updated.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_dir_v(self):
+        """
+        Send in an invalid directory (rowid != None, last_check == 0, type ==
+        'd') Exception should be thrown.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_dir_x(self):
+        """
+        Send in an existing directory with a new last_check time (rowid !=
+        None, path exists, type == 'd', last_check changed). Last check time
+        should be updated.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_file_d(self):
+        """
+        Send in a new file with path matching a duplicate in database (rowid ==
+        None, last_check == 0, type == 'f'). Exception should be thrown.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_file_n(self):
+        """
+        Send in a new file (rowid == None, last_check == 0, path does not
+        match, type == 'f'). New record should be added.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_file_p(self):
+        """
+        Send in a new file with matching path (rowid == None, last_check
+        == 0, type == 'f'). Existing path should be updated.
+        """
+        raise testhelp.UnderConstructionError('under construction')
+    
+    # -------------------------------------------------------------------------
+    def test_persist_file_v(self):
+        """
+        Send in an invalid file (rowid == None, last_check != 0, type == 'f')
+        Exception should be thrown.
         """
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
+        self.db_one_file()
         x = Checkable.get_list(filename=self.testfile)
-        self.assertEqual(len(x), 1,
-                         "Expected 1 result, got %d" % len(x))
+        self.expected(2, len(x))
+        self.expected("/home/tpb/TODO", x[1].path)
+        self.expected(0, x[1].last_check)
 
-        x[0].path += 'xyzzy'
-        x[0].last_check = now = time.time()
-        x[0].persist()
+        now = time.time()
+        x[1].last_check = now
+        try:
+            x[1].rowid = None
+            x[1].persist()
+        except StandardError, e:
+            self.assertEqual("Invalid conditions:" in str(e), True,
+                             "Got the wrong StandardError: "
+                             + '\n"""\n%s\n"""' % tb.format_exc())
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
 
         x = Checkable.get_list(filename=self.testfile)
-        self.assertEqual(len(x), 1,
-                         "Expected 1 result, got %d" % len(x))
-        self.assertEqual(x[0].path, '/xyzzy',
-                         "Expected '/abc/def', got '%s'" % x[0].path)
-        self.assertEqual(x[0].type, 'd',
-                         "Expected 'd', got '%s'" % x[0].type)
-        self.assertEqual(x[0].last_check, 'd',
-                         "Expected %d, got %d" % (now, x[0].last_check))
-    
+        self.expected(2, len(x))
+        self.expected("/home/tpb/TODO", x[1].path)
+        self.expected(0, x[1].last_check)
+
     # -------------------------------------------------------------------------
-    def test_persist_file(self):
+    def test_persist_file_x(self):
         """
-        Calling .persist() on a file Checkable object should insert or update
-        the object's entry in the database
+        Send in an existing file with a new last_check time (rowid != None,
+        path exists, type == 'f', last_check changed). Last check time should
+        be updated.
         """
-        raise testhelp.UnderConstructionError('under construction')
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        self.db_one_file()
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected("/home/tpb/TODO", x[1].path)
+        self.expected(0, x[1].last_check)
+
+        now = time.time()
+        x[1].last_check = now
+        try:
+            x[1].persist()
+        except:
+            self.fail("Got unexpected exception: \"\"\"\n%s\n\"\"\"" %
+                      tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
+
+    # -------------------------------------------------------------------------
+    def db_duplicates(self):
+        try:
+            db = sql.connect(self.testfile)
+            cx = db.cursor()
+            cx.execute("""insert into checkables(path, type, last_check)
+                                      values('/abc/def', 'd', 0)""")
+            cx.execute("""insert into checkables(path, type, last_check)
+                                      values('/abc/def', 'd', 0)""")
+            db.commit()
+            db.close()
+        except sql.Error, e:
+            print("SQLite Error: %s" % str(e))
+            
+    # -------------------------------------------------------------------------
+    def db_one_file(self):
+        try:
+            db = sql.connect(self.testfile)
+            cx = db.cursor()
+            cx.execute("""insert into checkables(path, type, last_check)
+                                      values('/home/tpb/TODO', 'f', 0)""")
+            db.commit()
+            db.close()
+        except sql.Error, e:
+            print("SQLite Error: %s" % str(e))
+            
+    # -------------------------------------------------------------------------
+    def expected(self, expval, actual):
+        msg = "Expected "
+        if type(expval) == int:
+            msg += "%d"
+        elif type(expval) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+
+        msg += ", got "
+        if type(actual) == int:
+            msg += "%d"
+        elif type(actual) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+        
+        self.assertEqual(expval, actual, msg % (expval, actual))
+
+    # -------------------------------------------------------------------------
+    def ymdhms(self, dt):
+        return time.strftime("%Y.%m%d.%H%M%S", time.localtime(dt))
     
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
