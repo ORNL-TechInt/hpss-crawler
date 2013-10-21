@@ -866,14 +866,17 @@ class CrawlTest(unittest.TestCase):
         logpath = '%s/test_start.log' % self.testdir
         cfgpath = '%s/test_start.cfg' % self.testdir
         self.write_cfg_file(cfgpath, self.cdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = ('crawl start --log %s --cfg %s --context TEST' %
                (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
 
-        self.assertEqual(is_running(), True)
-        self.assertEqual(os.path.exists('crawler_pid'), True)
+        self.assertEqual(is_running(), True,
+                         "Expected the crawler to be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True,
+                         "File 'crawler_pid' should exist but does not")
 
         cmd = 'crawl stop --log %s' % (logpath)
         result = pexpect.run(cmd)

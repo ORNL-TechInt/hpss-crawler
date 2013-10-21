@@ -10,14 +10,31 @@ def main(cfg):
     clog.info("drill-instructor: cwd = %s" % os.getcwd())
     hsi_prompt = "]:"
 
-    clist = Checkable.get_list()  # returns a list of Checkable objects
-    if 0 == len(clist):
-        Checkable.ex_nihilo()     # start from scratch
-        clist = Checkable.get_list()
+    try:
+        clist = Checkable.Checkable.get_list()  # returns a list of Checkable objects
+    except StandardError, e:
+        if 'Please call .ex_nihilo()' in str(e):
+            Checkable.Checkable.ex_nihilo()     # start from scratch
+            clist = Checkable.Checkable.get_list()
 
-    for item in clist:
-        item.check()
+    n_ops = int(cfg.get('drill-instructor', 'operations'))
+    try:
+        n_next = int(cfg.get('drill-instructor', 'next'))
+    except ConfigParser.NoOptionError:
+        n_next = 0
 
+    if n_next < len(clist):
+        for op in range(n_next):
+            item = clist.pop(0)
+        
+    for op in range(n_ops):
+        item = clist.pop(0)
+        clog.info("drill-instructor: [%d] checking %s" % (item.rowid, item.path))
+        n = item.check()
+        clog.info("drill-instructor: found %d items" % len(n))
+        
+    cfg.set('drill-instructor', 'next', str(clist[0].rowid))
+    
 #     dicfg = ConfigParser.ConfigParser()
 #     dicfg.read('plugins/drill-instructor.cfg')
 
