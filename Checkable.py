@@ -2,6 +2,8 @@
 
 import os
 import pdb
+import pexpect
+import re
 import sqlite3 as sql
 import stat
 import sys
@@ -57,6 +59,18 @@ class Checkable(object):
         except sql.Error, e:
             print("SQLite Error: %s" % str(e))
 
+    # -----------------------------------------------------------------------------
+    def fdparse(self, value):
+        rgx = ('(.)([r-][w-][x-]){3}(\s+\S+){3}(\s+\d+)(\s+\w{3}' +
+               '\s+\d+\s+[\d:]+)\s+(\S+)')
+        q = re.search(rgx, value)
+        if q:
+            (type, ign1, ign2, ign3, ign4, fname) = q.groups()
+            if type == '-': type = 'f'
+            return(type, fname)
+        else:
+            return None
+
     # -------------------------------------------------------------------------
     @classmethod
     def get_list(cls, filename='drill.db'):
@@ -89,13 +103,48 @@ class Checkable(object):
          - get a list of its contents if possible,
          - create a Checkable object for each item and persist it to the
            database
+         - return the list
         For a file:
          - if it's readable, decide whether to make it an official check
          - if so, do all the check steps for the file
          - update the time of last check
          - persist the object to the database
         """
-        pass
+        rval = []
+        hsi_prompt = "]:"
+        S = pexpect.spawn('hsi')
+        # S.logfile = sys.stdout
+        S.expect(hsi_prompt)
+
+        S.sendline("cd %s" % self.path)
+        S.expect(hsi_prompt)
+        if 'Not a directory' in S.before:
+            # run the checks on the file
+            pass
+        elif 'Access denied' in S.before:
+            # it's a directory but I don't have access to it
+            pass
+        else:
+            # it's a directory -- get the list
+            S.sendline("ls -l")
+            S.expect(hsi_prompt)
+
+            lines = S.before.split('\n')
+            for line in lines:
+                r = self.fdparse(line)
+                if None != r:
+                    fpath = '/'.join([self.path, r[1]])
+                    new = Checkable(path=fpath, type=r[0])
+                    new.persist()
+                    rval.append(new)
+
+        S.sendline("quit")
+        S.expect(pexpect.EOF)
+        S.close()
+
+        self.last_check = time.time()
+        self.persist()
+        return rval
 
     # -------------------------------------------------------------------------
     def persist(self):
@@ -169,6 +218,7 @@ class Checkable(object):
 class CheckableTest(unittest.TestCase):
     testfile = 'test.db'
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
+    testpath = '/home/tpb/TODO'
     
     # -------------------------------------------------------------------------
     def test_check_dir(self):
@@ -176,7 +226,25 @@ class CheckableTest(unittest.TestCase):
         Calling .check() on a directory should give us back a list of Checkable
         objects representing the entries in the directory
         """
-        raise testhelp.UnderConstructionError('under construction')
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        testdir='/home/tpb/hic_test'
+        self.db_add_one(path=testdir, type='d')
+        x = Checkable.get_list(filename=self.testfile)
+        
+        self.expected(2, len(x))
+        dirlist = x[1].check()
+
+        self.assertIn(Checkable(path=testdir + '/crawler.tar',
+                                type='f'), dirlist)
+        self.assertIn(Checkable(path=testdir + '/crawler.tar.idx',
+                                type='f'), dirlist)
+        self.assertIn(Checkable(path=testdir + '/subdir1',
+                                type='d'), dirlist)
+        self.assertIn(Checkable(path=testdir + '/subdir2',
+                                type='d'), dirlist)
+        # raise testhelp.UnderConstructionError('under construction')
     
     # -------------------------------------------------------------------------
     def test_check_file(self):
@@ -184,8 +252,26 @@ class CheckableTest(unittest.TestCase):
         Calling .check() on a file should execute the check actions for that
         file.
         """
-        raise testhelp.UnderConstructionError('under construction')
-    
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        testdir='/home/tpb/hic_test'
+        self.db_add_one(path=testdir, type='d')
+        self.db_add_one(path=testdir + '/crawler.tar', type='f')
+        self.db_add_one(path=testdir + '/crawler.tar.idx', type='f')
+
+        x = Checkable.get_list(filename=self.testfile)
+        checked = []
+        for item in [z for z in x if z.type == 'f']:
+            self.expected(0, item.last_check)
+            item.check()
+
+        x = Checkable.get_list(filename=self.testfile)
+        for item in [z for z in x if z.type == 'f']:
+            self.assertNotEqual(0, item.last_check,
+                                "Expected last_check to be updated but " +
+                                "it was not")
+
     # -------------------------------------------------------------------------
     def test_ctor(self):
         """
@@ -195,11 +281,8 @@ class CheckableTest(unittest.TestCase):
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
                              "Checkable object is missing %s method" % method)
-        self.assertEqual(x.path, '---',
-                         "Unspecified path should be '---', got '%s'" % x.path)
-        self.assertEqual(x.rowid, None,
-                         "For a Checkable that did not come out of the db, " +
-                         "rowid should be None")
+        self.expected('---', x.path)
+        self.expected(None, x.rowid)
 
     # -------------------------------------------------------------------------
     def test_ctor_args(self):
@@ -210,12 +293,9 @@ class CheckableTest(unittest.TestCase):
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
                          "Checkable object is missing %s method" % method)
-        self.assertEqual(x.path, '/one/two/three',
-                         "Path should be '/one/two/three', got '%s'" % x.path)
-        self.assertEqual(x.type, 'f',
-                         "Type should be 'f', got '%s'" % x.path)
-        self.assertEqual(x.last_check, 72,
-                         "last_check should be 72, got '%d'" % x.last_check)
+        self.expected('/one/two/three', x.path)
+        self.expected('f', x.type)
+        self.expected(72, x.last_check)
             
     # -------------------------------------------------------------------------
     def test_ctor_bad_args(self):
@@ -223,14 +303,16 @@ class CheckableTest(unittest.TestCase):
         Verify that the constructor accepts and sets path, type, and last_check
         """
         try:
-            got_exception = False
             x = Checkable(path_x='/one/two/three', type='f', last_check=72)
+            self.fail("Expected an exception but didn't get one.")
         except StandardError, e:
-            got_exception = True
+            self.assertEqual('Attribute path_x is invalid for Checkable'
+                             in str(e), True,
+                             "Got the wrong StandardError: "
+                             + '\n"""\n%s\n"""' % tb.format_exc())
         except Exception, e:
-            tb.print_exc()
-        self.assertEqual(got_exception, True,
-                         "Expected an exception but didn't get one.")
+            self.fail("Expected a StandardError but got this instead:"
+                      + '\n"""\n%s\n"""' % tb.format_exc())
             
     # -------------------------------------------------------------------------
     def test_ex_nihilo_scratch(self):
@@ -248,21 +330,13 @@ class CheckableTest(unittest.TestCase):
         cx = db.cursor()
         cx.execute('select * from checkables')
         rows = cx.fetchall()
-        self.assertEqual(len(rows), 1,
-                         "Expected 1 row in table checkables, found %d" %
-                         len(rows))
+        self.expected(1, len(rows))
         cx.execute('select max(rowid) from checkables')
         max_id = cx.fetchone()[0]
-        self.assertEqual(max_id, 1,
-                         "Expected last row id to be 1, but is %d" %
-                         max_id)
-        self.assertEqual(rows[0][1], '/',
-                         "Expected path '/' but got '%s' instead" % rows[0][1])
-        self.assertEqual(rows[0][2], 'd',
-                         "Expected type 'd' but got '%s' instead" % rows[0][2])
-        self.assertEqual(rows[0][3], 0,
-                         "Expected last_check to be 0 but got '%s' instead" %
-                         rows[0][3])
+        self.expected(1, max_id)
+        self.expected('/', rows[0][1])
+        self.expected('d', rows[0][2])
+        self.expected(0, rows[0][3])
         
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
@@ -279,13 +353,74 @@ class CheckableTest(unittest.TestCase):
         Checkable.ex_nihilo(filename=self.testfile)
 
         p = os.stat(self.testfile)
-        self.assertEqual(p[stat.ST_MTIME], newtime,
-                         "The mtime on the db file should be %d but is %d" %
-                         (newtime, p[stat.ST_MTIME]))
-        self.assertEqual(p[stat.ST_SIZE], 0,
-                         "The size of the db file should be 0 but is %d" %
-                         (p[stat.ST_SIZE]))
-
+        self.expected(self.ymdhms(newtime), self.ymdhms(p[stat.ST_MTIME]))
+        self.expected(0, p[stat.ST_SIZE])
+        
+    # -------------------------------------------------------------------------
+    def test_fdparse_ldr(self):
+        """
+        Parse an ls -l line from hsi where we're looking at a directory with a
+        recent date (no year). fdparse() should return type='d', path=<file
+        path>.
+        """
+        n = Checkable(path='xyx', type='d')
+        line = ('drwx------    2 tpb       ccsstaff         ' +
+                '512 Oct 17 13:54 subdir1')
+        (t,f) = n.fdparse(line)
+        self.expected('d', t)
+        self.expected('subdir1', f)
+    
+    # -------------------------------------------------------------------------
+    def test_fdparse_ldy(self):
+        """
+        Parse an ls -l line from hsi where we're looking at a directory with a year
+        in the date. fdparse() should return type='d', path=<file path>.
+        """
+        n = Checkable(path='xyx', type='d')
+        line = ('drwxr-xr-x    2 tpb       ccsstaff         ' +
+                '512 Dec 17  2004 incase')
+        (t,f) = n.fdparse(line)
+        self.expected('d', t)
+        self.expected('incase', f)
+    
+    # -------------------------------------------------------------------------
+    def test_fdparse_lfr(self):
+        """
+        Parse an ls -l line from hsi where we're looking at a file with a
+        recent date (no year). fdparse() should return type='f', path=<file
+        path>.
+        """
+        n = Checkable(path='xyx', type='d')
+        line = ('-rw-------    1 tpb       ccsstaff     ' +
+                '1720832 Oct 17 13:56 crawler.tar')
+        (t,f) = n.fdparse(line)
+        self.expected('f', t)
+        self.expected('crawler.tar', f)
+    
+    # -------------------------------------------------------------------------
+    def test_fdparse_lfy(self):
+        """
+        Parse an ls -l line from hsi where we're looking at a file with a year
+        in the date. fdparse() should return type='f', path=<file path>.
+        """
+        n = Checkable(path='xyx', type='d')
+        line = ('-rw-------    1 tpb       ccsstaff        4896' +
+                ' Dec 30  2011 pytest.tar.idx')
+        (t,f) = n.fdparse(line)
+        self.expected('f', t)
+        self.expected('pytest.tar.idx', f)
+    
+    # -------------------------------------------------------------------------
+    def test_fdparse_nomatch(self):
+        """
+        Parse an ls -l line from hsi that does not describe a file or directory
+        in the date. fdparse() should return None.
+        """
+        n = Checkable(path='xyx', type='d')
+        line = '/home/tpb/cli_test:'
+        z = n.fdparse(line)
+        self.expected(None, z)
+    
     # -------------------------------------------------------------------------
     def test_get_list_nosuch(self):
         """
@@ -294,18 +429,15 @@ class CheckableTest(unittest.TestCase):
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
         try:
-            got_exception = False
             Checkable.get_list(filename=self.testfile)
+            self.fail("Expected an exception but didn't get one.")
         except StandardError, e:
-            got_exception = True
-            self.assertEqual(str(e), "Please call .ex_nihilo() first",
-                             "Expected 'Please call .ex_nihilo() first'," +
-                             " got '%s'" % str(e))
+            self.assertEqual("Please call .ex_nihilo() first" in str(e), True,
+                             "Got the wrong StandardError: "
+                             + '\n"""\n%s\n"""' % tb.format_exc())
         except Exception, e:
-            raise StandardError("Not the expected exception: " +
-                                "\"\"\"\n%s\"\"\"" % tb.format_exc())
-        self.assertEqual(got_exception, True,
-                         "Expected an exception but didn't get one.")
+            self.fail("Expected a StandardError but got this instead:"
+                      + '\n"""\n%s\n"""' % tb.format_exc())
     
     # -------------------------------------------------------------------------
     def test_get_list_known(self):
@@ -330,12 +462,12 @@ class CheckableTest(unittest.TestCase):
         db.commit()
         x = Checkable.get_list(self.testfile)
 
-        self.assertEqual(len(x), 5,
-                         "List should contain 5 entries, has %d" % len(x))
+        self.expected(5, len(x))
+
         for idx, item in enumerate(x):
-            self.assertEqual(item.path, testdata[idx][0])
-            self.assertEqual(item.type, testdata[idx][1])
-            self.assertEqual(item.last_check, testdata[idx][2])
+            self.expected(testdata[idx][0], item.path)
+            self.expected(testdata[idx][1], item.type)
+            self.expected(testdata[idx][2], item.last_check)
     
     # -------------------------------------------------------------------------
     def test_persist_dir_d(self):
@@ -349,25 +481,22 @@ class CheckableTest(unittest.TestCase):
         Checkable.ex_nihilo(filename=self.testfile)
         self.db_duplicates()
         x = Checkable.get_list(filename=self.testfile)
-        self.assertEqual(len(x), 3,
-                         "Expected 3 result, got %d" % len(x))
+        self.expected(3, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
         try:
             foo.persist()
-            got_exception = False
+            self.fail("Expected an exception but didn't get one.")
         except StandardError, e:
-            self.assertEqual('There seems to be more than one' in str(e),
-                             True,
-                             "Got a StandardError but the message is wrong")
-            got_exception = True
+            self.assertEqual('There seems to be more than one' in str(e), True,
+                             "Got the wrong StandardError: "
+                             + '\n"""\n%s\n"""' % tb.format_exc())
         except:
-            self.fail("Got unexpected exception: \"\"\"\n%s\n\"\"\"" %
-                      tb.format_exc())
+            self.fail("Expected a StandardError but got this instead:"
+                      + '\n"""\n%s\n"""' % tb.format_exc())
 
         x = Checkable.get_list(filename=self.testfile)
-        self.assertEqual(len(x), 3,
-                         "Expected 3 results, got %d" % len(x))
+        self.expected(3, len(x))
         self.assertEqual(foo in x, True,
                          "Object foo not found in database")
         root = Checkable(path='/', type='d')
@@ -380,7 +509,26 @@ class CheckableTest(unittest.TestCase):
         Send in a new directory (rowid == None, last_check == 0, type == 'd',
         path does not match). New record should be added.
         """
-        raise testhelp.UnderConstructionError('under construction')
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(1, len(x))
+
+        foo = Checkable(path='/abc/def', type='d')
+        try:
+            foo.persist()
+        except:
+            self.fail("Got unexpected exception:"
+                      + '\n"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.assertEqual(foo in x, True,
+                         "Object foo not found in database")
+        root = Checkable(path='/', type='d')
+        self.assertEqual(root in x, True,
+                         "Object root not found in database")
     
     # -------------------------------------------------------------------------
     def test_persist_dir_p(self):
@@ -388,16 +536,73 @@ class CheckableTest(unittest.TestCase):
         Send in a new directory with matching path (rowid == None, last_check
         == 0, type == 'd'). Existing path should be updated.
         """
-        raise testhelp.UnderConstructionError('under construction')
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+
+        now = time.time()
+        self.db_add_one(path=self.testpath, type='d', last_check=now)
+        
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected(now, x[1].last_check)
+
+        x[1].last_check = 0
+        try:
+            x[1].rowid = None
+            x[1].persist()
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected('d', x[1].type)
+        self.expected(0, x[1].last_check)
+    
+        # raise testhelp.UnderConstructionError('under construction')
     
     # -------------------------------------------------------------------------
     def test_persist_dir_v(self):
         """
         Send in an invalid directory (rowid != None, last_check == 0, type ==
-        'd') Exception should be thrown.
+        'd'). Exception should be thrown.
         """
-        raise testhelp.UnderConstructionError('under construction')
-    
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        now = time.time()
+        self.db_add_one(path='/home', type='d', last_check=now)
+
+        x = Checkable.get_list(filename=self.testfile)
+
+        self.expected(2, len(x))
+        self.assertIn(Checkable(path='/', type='d'), x)
+        self.assertIn(Checkable(path='/home', type='d'), x)
+                      
+        x[0].last_check = now = time.time()
+        x[0].persist()
+        
+        x[0].last_check = 0
+        try:
+            x[0].persist()
+            self.fail("Expected an exception but didn't get one.")
+        except StandardError, e:
+            self.assertEqual("Invalid conditions:" in str(e), True,
+                             "Got the wrong StandardError: "
+                             + '\n"""\n%s\n"""' % tb.format_exc())
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.assertIn(Checkable(path='/', type='d'), x)
+        self.assertIn(Checkable(path='/home', type='d'), x)
+        self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
+        
     # -------------------------------------------------------------------------
     def test_persist_dir_x(self):
         """
@@ -405,23 +610,92 @@ class CheckableTest(unittest.TestCase):
         None, path exists, type == 'd', last_check changed). Last check time
         should be updated.
         """
-        raise testhelp.UnderConstructionError('under construction')
-    
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(1, len(x))
+        self.expected(0, x[0].last_check)
+
+        x[0].last_check = now = time.time()
+        try:
+            x[0].persist()
+        except:
+            self.fail("Got an unexpected exception:" 
+                      + '\n"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(1, len(x))
+        self.expected('/', x[0].path)
+        self.expected('d', x[0].type)
+        self.expected(now, x[0].last_check)
+            
     # -------------------------------------------------------------------------
     def test_persist_file_d(self):
         """
         Send in a new file with path matching a duplicate in database (rowid ==
         None, last_check == 0, type == 'f'). Exception should be thrown.
         """
-        raise testhelp.UnderConstructionError('under construction')
-    
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        self.db_add_one(path=self.testpath, type='f')
+        self.db_add_one(path=self.testpath, type='f')
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(3, len(x))
+        self.assertEqual(x[1], x[2],
+                         "There should be a duplicate entry in the database.")
+        
+        foo = Checkable(path=self.testpath, type='f')
+        try:
+            foo.persist()
+            self.fail("Expected an exception but didn't get one.")
+        except StandardError, e:
+            self.assertEqual('There seems to be more than one' in str(e), True,
+                             "Got the wrong StandardError: "
+                             + '\n"""\n%s\n"""' % tb.format_exc())
+        except:
+            self.fail("Expected a StandardError but got this instead:"
+                      + '\n"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(3, len(x))
+        self.assertEqual(foo in x, True,
+                         "Object foo not found in database")
+        root = Checkable(path='/', type='d')
+        self.assertEqual(root in x, True,
+                         "Object root not found in database")
+        self.assertEqual(x[1], x[2],
+                         "There should be a duplicate entry in the database.")
+        
     # -------------------------------------------------------------------------
     def test_persist_file_n(self):
         """
         Send in a new file (rowid == None, last_check == 0, path does not
         match, type == 'f'). New record should be added.
         """
-        raise testhelp.UnderConstructionError('under construction')
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(1, len(x))
+        self.expected("/", x[0].path)
+        self.expected(0, x[0].last_check)
+
+        foo = Checkable(path=self.testpath, type='f')
+        try:
+            foo.persist()
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected(0, x[1].last_check)
     
     # -------------------------------------------------------------------------
     def test_persist_file_p(self):
@@ -429,7 +703,28 @@ class CheckableTest(unittest.TestCase):
         Send in a new file with matching path (rowid == None, last_check
         == 0, type == 'f'). Existing path should be updated.
         """
-        raise testhelp.UnderConstructionError('under construction')
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        now = time.time()
+        self.db_add_one(last_check=now)
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected(now, x[1].last_check)
+
+        x[1].last_check = 0
+        try:
+            x[1].rowid = None
+            x[1].persist()
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected(0, x[1].last_check)
     
     # -------------------------------------------------------------------------
     def test_persist_file_v(self):
@@ -440,10 +735,10 @@ class CheckableTest(unittest.TestCase):
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
-        self.db_one_file()
+        self.db_add_one()
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
-        self.expected("/home/tpb/TODO", x[1].path)
+        self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
 
         now = time.time()
@@ -461,7 +756,7 @@ class CheckableTest(unittest.TestCase):
 
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
-        self.expected("/home/tpb/TODO", x[1].path)
+        self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
 
     # -------------------------------------------------------------------------
@@ -474,10 +769,10 @@ class CheckableTest(unittest.TestCase):
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
-        self.db_one_file()
+        self.db_add_one()
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
-        self.expected("/home/tpb/TODO", x[1].path)
+        self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
 
         now = time.time()
@@ -507,12 +802,13 @@ class CheckableTest(unittest.TestCase):
             print("SQLite Error: %s" % str(e))
             
     # -------------------------------------------------------------------------
-    def db_one_file(self):
+    def db_add_one(self, path=testpath, type='f', last_check=0):
         try:
             db = sql.connect(self.testfile)
             cx = db.cursor()
             cx.execute("""insert into checkables(path, type, last_check)
-                                      values('/home/tpb/TODO', 'f', 0)""")
+                                      values(?, ?, ?)""",
+                       (path, type, last_check))
             db.commit()
             db.close()
         except sql.Error, e:
