@@ -513,14 +513,56 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         time_to_fire() should return False if time.time() - last_fired <= freq
         """
-        raise testhelp.UnderConstructionError()
+        # set up the plugin
+        if self.plugdir not in sys.path:
+            sys.path.insert(0, self.plugdir)
+        pre = sys.path
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # create the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'frequency', '72')
+        
+        # instantiate the plugin object
+        p = CrawlPlugin(pname, c)
+        
+        # time_to_fire() should return False
+        p.last_fired = time.time()
+        self.assertFalse(p.time_to_fire(),
+                         "p.time_to_fire() returned True when it" +
+                         " should have been False")
 
     # -------------------------------------------------------------------------
     def test_time_to_fire_true(self):
         """
         time_to_fire() should return True if freq < time.time() - last_fired
         """
-        raise testhelp.UnderConstructionError()
+        # set up the plugin
+        if self.plugdir not in sys.path:
+            sys.path.insert(0, self.plugdir)
+        pre = sys.path
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # create the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'frequency', '72')
+
+        # instantiate the plugin object
+        p = CrawlPlugin(pname, c)
+
+        # time_to_fire() should return True
+        p.last_fired = time.time() - 73
+        self.assertTrue(p.time_to_fire(),
+                        "p.time_to_fire() returned False when it" +
+                        " should have been True")
 
     # -------------------------------------------------------------------------
     def make_plugin(self, pname, pdir=None):
