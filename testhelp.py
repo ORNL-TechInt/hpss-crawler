@@ -234,6 +234,29 @@ class LoggingTestSuite(unittest.TestSuite):
         return result
         
 # -----------------------------------------------------------------------------
+class HelpedTestCase(unittest.TestCase):
+
+    # -------------------------------------------------------------------------
+    def expected(self, expval, actual):
+        msg = "Expected "
+        if type(expval) == int:
+            msg += "%d"
+        elif type(expval) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+
+        msg += ", got "
+        if type(actual) == int:
+            msg += "%d"
+        elif type(actual) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+        
+        self.assertEqual(expval, actual, msg % (expval, actual))
+    
+# -----------------------------------------------------------------------------
 def show_stdout(value=None):
     """
     Return value of global value show_stdout. Optionally set it if
