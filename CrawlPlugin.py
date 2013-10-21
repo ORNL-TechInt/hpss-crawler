@@ -16,11 +16,13 @@ CrawlPlugin.py - Plugin class for HPSS integrity crawler
 import copy
 import CrawlConfig
 import os
+import re
 import shutil
 import sys
 import testhelp
 import time
 import toolframe
+import traceback as tb
 import unittest
 import util
 
@@ -35,22 +37,30 @@ class CrawlPlugin(object):
         assert(cfg != None)
         self.cfg = cfg
         self.log = logger
-        self.log.info("%s: Initializing plugin data" % name)
+        self.clog("%s: Initializing plugin data" % name)
         self.init_cfg_data(name, cfg)
         self.last_fired = time.time() - self.frequency - 1
         super(CrawlPlugin, self).__init__()
 
+    # -------------------------------------------------------------------------
+    def clog(self, *args):
+        """
+        Conditional log. Only try to log if the logger is defined
+        """
+        if self.log:
+            self.log.info(*args)
+            
     # -------------------------------------------------------------------------
     def fire(self):
         """
         Run the plugin.
         """
         if self.firable:
-            self.log.info("%s: firing" % self.name)
+            self.clog("%s: firing" % self.name)
             sys.modules[self.name].main(self.cfg)
             self.last_fired = time.time()
         elif self.cfg.getboolean('crawler', 'verbose'):
-            self.log.info("%s: not firable" % self.name)
+            self.clog("%s: not firable" % self.name)
             self.last_fired = time.time()
 
     # -------------------------------------------------------------------------
@@ -77,6 +87,10 @@ class CrawlPlugin(object):
         if self.name not in sys.modules.keys():
             __import__(self.name)
         else:
+            filename = re.sub("\.pyc?", ".pyc",
+                              sys.modules[self.name].__file__)
+            if os.path.exists(filename):
+                os.unlink(filename)
             reload(sys.modules[self.name])
 
     # -------------------------------------------------------------------------
@@ -101,10 +115,14 @@ def CrawlPlugin_setup():
 
 # -----------------------------------------------------------------------------
 def CrawlPlugin_teardown():
-    shutil.rmtree('test_plugins')
+    if os.path.exists('test_plugins'):
+        shutil.rmtree('test_plugins')
+
+    if os.path.exists('test_plugins_alt'):
+        shutil.rmtree('test_plugins_alt')
 
 # -----------------------------------------------------------------------------
-class CrawlPluginTest(unittest.TestCase):
+class CrawlPluginTest(testhelp.HelpedTestCase):
     plugdir = 'test_plugins'
     
     # -------------------------------------------------------------------------
@@ -122,9 +140,10 @@ class CrawlPluginTest(unittest.TestCase):
         p = CrawlPlugin(pname, c)
             
         p.fire()
-        self.assertEqual(os.path.exists('./%s' % (pname)), True)
-        self.assertEqual(util.contents('./%s' % (pname)),
-                         'my name is %s\n' % (pname))
+        filename = "./%s/%s" % (self.plugdir, pname)
+        self.assertEqual(os.path.exists(filename), True,
+                         "File '%s' should exist but does not" % (filename))
+        self.expected('my name is %s\n' % (pname), util.contents(filename))
 
     # -------------------------------------------------------------------------
     def test_init_fire_false(self):
@@ -141,8 +160,13 @@ class CrawlPluginTest(unittest.TestCase):
         c.set(pname, 'fire', 'false')
         p = CrawlPlugin(pname, c)
             
-        self.assertEqual(p.firable, False)
-
+        self.assertEqual(p.firable, False,
+                         "p.firable should be False, is True")
+        p.fire()
+        filename = "%s/%s" % (self.plugdir, pname)
+        self.assertEqual(os.path.exists(filename), False,
+                         "'%s' should not exist, but does" % (filename))
+        
     # -------------------------------------------------------------------------
     def test_init_fire_true(self):
         """
@@ -158,7 +182,12 @@ class CrawlPluginTest(unittest.TestCase):
         c.set(pname, 'fire', 'true')
         p = CrawlPlugin(pname, c)
             
-        self.assertEqual(p.firable, True)
+        self.assertEqual(p.firable, True,
+                         "p.firable should be True, is False")
+        p.fire()
+        filename = "%s/%s" % (self.plugdir, pname)
+        self.assertEqual(os.path.exists(filename), True,
+                         "'%s' should exist but does not" % (filename))
         
     # -------------------------------------------------------------------------
     def test_init_fire_unset(self):
@@ -174,7 +203,8 @@ class CrawlPluginTest(unittest.TestCase):
         c.set('crawler', 'plugin-dir', self.plugdir)
         p = CrawlPlugin(pname, c)
             
-        self.assertEqual(p.firable, True)
+        self.assertEqual(p.firable, True,
+                         "p.firable should be True but is not")
         
     # -------------------------------------------------------------------------
     def test_init_freq_set(self):
@@ -190,9 +220,9 @@ class CrawlPluginTest(unittest.TestCase):
         c.set('crawler', 'plugin-dir', self.plugdir)
         c.set(pname, 'fire', 'false')
         p = CrawlPlugin(pname, c)
-            
-        self.assertEqual(p.frequency, 19)
 
+        self.expected(19, p.frequency)
+        
     # -------------------------------------------------------------------------
     def test_init_freq_unset(self):
         """
@@ -207,7 +237,7 @@ class CrawlPluginTest(unittest.TestCase):
         c.set(pname, 'fire', 'false')
         p = CrawlPlugin(pname, c)
             
-        self.assertEqual(p.frequency, 3600)
+        self.expected(3600, p.frequency)
 
     # -------------------------------------------------------------------------
     def test_init_plugdir_inspath(self):
@@ -225,7 +255,7 @@ class CrawlPluginTest(unittest.TestCase):
         c.set('crawler', 'plugin-dir', self.plugdir)
         c.set(pname, 'fire', 'false')
         p = CrawlPlugin(pname, c)
-        self.assertEqual(pre, sys.path)
+        self.expected(pre, sys.path)
 
     # -------------------------------------------------------------------------
     def test_init_plugdir_ninspath(self):
@@ -243,7 +273,11 @@ class CrawlPluginTest(unittest.TestCase):
         c.set('crawler', 'plugin-dir', self.plugdir)
         c.set(pname, 'fire', 'false')
         p = CrawlPlugin(pname, c)
-        self.assertNotEqual(pre, sys.path)
+        self.assertNotEqual(pre, sys.path,
+                            "pre and sys.path should not be equal, but are")
+        self.assertIn(self.plugdir, sys.path,
+                      "sys.path should contain '%s' but does not" %
+                      self.plugdir)
 
     # -------------------------------------------------------------------------
     def test_init_plugdir_unset(self):
@@ -261,71 +295,209 @@ class CrawlPluginTest(unittest.TestCase):
         c.set(pname, 'fire', 'false')
         try:
             p = CrawlPlugin(pname, c)
-            got_exception = False
+            self.fail("Expected exception but didn't get one")
         except CrawlConfig.NoOptionError:
-            got_exception = True
-        self.assertEqual(got_exception, True)
+            pass
+        except Exception, e:
+            self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_init_plugin_inmod(self):
         """
         if plugin does exist and is in module list, should be reloaded
         """
+        # set up dir, plugin name, create plugin
+        if self.plugdir not in sys.path:
+            sys.path.append(self.plugdir)
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # get it into the module list, remove the .pyc file
+        __import__(pname)
+        self.assertIn(pname, sys.modules.keys())
+
+        # update the plugin so we can tell whether it gets reloaded
+        f = open('%s/%s.py' % (self.plugdir, pname), 'a')
+        f.write("\n")
+        f.write("def added():\n")
+        f.write("    pass\n")
+        f.close()
+
+        # set up the config
         c = CrawlConfig.CrawlConfig()
-        c.set('test_init', 'frequency', '19')
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set(pname, 'frequency', '19')
         c.set('crawler', 'plugin-dir', 'plugins')
+
+        # initializing a plugin object should reload the plugin
         try:
-            p = CrawlPlugin.CrawlPlugin('test_init', c)
-            import_failed = False
+            p = CrawlPlugin(pname, c)
+            self.assertIn('added', dir(sys.modules[pname]))
         except ImportError:
-            import_failed = True
-            
-        self.assertEqual(p.firable, True)
-        self.assertEqual(p.frequency, 19)
-        self.assertEqual(import_failed, True)
-        
-        raise testhelp.UnderConstructionError()
+            self.fail("Expected import to succeed but it did not.")
+        except Exception, e:
+            self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_init_plugin_ninmod(self):
         """
         if plugin does exists and not in module list, should be imported
         """
-        raise testhelp.UnderConstructionError()
+        # set up dir, plugin name, create plugin
+        if self.plugdir not in sys.path:
+            sys.path.append(self.plugdir)
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # set up the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set(pname, 'frequency', '19')
+        c.set('crawler', 'plugin-dir', 'plugins')
+
+        # initializing a plugin object should import the plugin
+        try:
+            p = CrawlPlugin(pname, c)
+        except ImportError:
+            self.fail("Expected import to succeed but it did not.")
+        except Exception, e:
+            self.fail("Got unexpected exception: %s" % tb.format_exc())
+
     # -------------------------------------------------------------------------
     def test_init_plugin_nosuch(self):
         """
         if plugin does not exist, should get ImportError
         """
-        raise testhelp.UnderConstructionError()
+        # set up dir, plugin name, create plugin
+        if self.plugdir not in sys.path:
+            sys.path.append(self.plugdir)
+        pname = util.my_name()
+        # self.make_plugin(pname)
+
+        # set up the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set(pname, 'frequency', '19')
+        c.set('crawler', 'plugin-dir', 'plugins')
+
+        # initializing a plugin object should import the plugin
+        try:
+            p = CrawlPlugin(pname, c)
+            self.fail("Expected import to fail but it did not.")
+        except ImportError:
+            pass
+        except Exception, e:
+            self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_reload_fire(self):
         """
         Update fire
         """
-        raise testhelp.UnderConstructionError()
+        # set up the plugin
+        if self.plugdir not in sys.path:
+            sys.path.append(self.plugdir)
+        pre = sys.path
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # create the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'fire', 'false')
+
+        # instantiate the plugin object
+        p = CrawlPlugin(pname, c)
+        self.assertEqual(p.firable, False,
+                         "Expected p.firable() to be false")
+
+        # change the config
+        c.set(pname, 'fire', 'true')
+
+        # re-init the plugin object
+        p.reload(c)
+        self.assertEqual(p.firable, True,
+                         "Expected p.firables() to be true")
     
     # -------------------------------------------------------------------------
     def test_reload_freq(self):
         """
         Update frequency
         """
-        raise testhelp.UnderConstructionError()
-    
+        # set up the plugin
+        if self.plugdir not in sys.path:
+            sys.path.append(self.plugdir)
+        pre = sys.path
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # create the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'frequency', '72')
+
+        # instantiate the plugin object
+        p = CrawlPlugin(pname, c)
+        self.expected(72, p.frequency)
+
+        # change the config
+        c.set(pname, 'frequency', '19')
+
+        # re-init the plugin object
+        p.reload(c)
+        self.expected(19, p.frequency)
+        
     # -------------------------------------------------------------------------
     def test_reload_plugdir(self):
         """
         Update plugdir
+
+        If the plugdir changes, do we unload all the plugins currently loaded
+        from the old dir? No, just the one being reloaded.
         """
-        raise testhelp.UnderConstructionError()
-    
-    # -------------------------------------------------------------------------
-    def test_reload_plugdir(self):
-        """
-        Update plugin
-        """
-        raise testhelp.UnderConstructionError()
+        # set up the plugin
+        if self.plugdir not in sys.path:
+            sys.path.insert(0, self.plugdir)
+        pre = sys.path
+        pname = util.my_name()
+        self.make_plugin(pname)
+
+        # create the config
+        c = CrawlConfig.CrawlConfig()
+        c.add_section(pname)
+        c.add_section('crawler')
+        c.set('crawler', 'plugin-dir', self.plugdir)
+        c.set(pname, 'frequency', '72')
+
+        # instantiate the plugin object
+        p = CrawlPlugin(pname, c)
+        self.expected(self.plugdir, p.plugin_dir)
+        self.assertRegexpMatches('%s/%s.pyc?' % (self.plugdir, pname),
+                                 sys.modules[pname].__file__)
+        
+        # alternate plugin in alternate directory
+        apdir = self.plugdir + "_alt"
+        if apdir not in sys.path:
+            sys.path.insert(0, apdir)
+        self.make_plugin(pname, pdir=apdir)
+        
+        # change the config
+        c.set('crawler', 'plugin-dir', apdir)
+
+        # re-init the plugin object
+        p.reload(c)
+        self.expected(apdir, p.plugin_dir)
+        self.assertRegexpMatches('%s/%s.pyc?' % (apdir, pname),
+                                 sys.modules[pname].__file__)
+        
+        # raise testhelp.UnderConstructionError()
     
     # -------------------------------------------------------------------------
     def test_time_to_fire_false(self):
@@ -342,9 +514,11 @@ class CrawlPluginTest(unittest.TestCase):
         raise testhelp.UnderConstructionError()
 
     # -------------------------------------------------------------------------
-    def make_plugin(self, pname):
-        if not os.path.isdir(self.plugdir):
-            os.mkdir(self.plugdir)
+    def make_plugin(self, pname, pdir=None):
+        if None == pdir:
+            pdir = self.plugdir
+        if not os.path.isdir(pdir):
+            os.mkdir(pdir)
         if not pname.endswith('.py'):
             fname = pname + '.py'
         else:
@@ -352,7 +526,7 @@ class CrawlPluginTest(unittest.TestCase):
         f = open('%s/%s' % (self.plugdir, fname), 'w')
         f.write("#!/bin/env python\n")
         f.write("def main(cfg):\n")
-        f.write("    f = open('%s', 'w')\n" % (pname))
+        f.write("    f = open('%s/%s', 'w')\n" % (pdir, pname))
         f.write("    f.write('my name is %s\\n')\n" % (pname))
         f.write("    f.close()\n")
         
