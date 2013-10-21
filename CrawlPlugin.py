@@ -81,17 +81,26 @@ class CrawlPlugin(object):
         except CrawlConfig.NoOptionError:
             self.firable = True
         self.frequency = cfg.get_time(self.name, 'frequency', 3600)
-        self.plugin_dir = cfg.get('crawler', 'plugin-dir')
-        if self.plugin_dir not in sys.path:
-            sys.path.append(self.plugin_dir)
-        if self.name not in sys.modules.keys():
-            __import__(self.name)
-        else:
+
+        try:
+            old_pdir = self.plugin_dir
+        except AttributeError:
+            old_pdir = None
+        pdir = cfg.get('crawler', 'plugin-dir')
+        if pdir not in sys.path:
+            sys.path.insert(0, pdir)
+
+        if self.name in sys.modules.keys():
             filename = re.sub("\.pyc?", ".pyc",
                               sys.modules[self.name].__file__)
             if os.path.exists(filename):
                 os.unlink(filename)
-            reload(sys.modules[self.name])
+
+            del sys.modules[self.name]
+            
+        __import__(self.name)
+
+        self.plugin_dir = cfg.get('crawler', 'plugin-dir')
 
     # -------------------------------------------------------------------------
     def reload(self, cfg):
@@ -328,7 +337,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         c.add_section(pname)
         c.add_section('crawler')
         c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', 'plugins')
+        c.set('crawler', 'plugin-dir', self.plugdir)
 
         # initializing a plugin object should reload the plugin
         try:
@@ -523,7 +532,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
             fname = pname + '.py'
         else:
             fname = pname
-        f = open('%s/%s' % (self.plugdir, fname), 'w')
+        f = open('%s/%s' % (pdir, fname), 'w')
         f.write("#!/bin/env python\n")
         f.write("def main(cfg):\n")
         f.write("    f = open('%s/%s', 'w')\n" % (pdir, pname))
