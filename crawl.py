@@ -806,7 +806,7 @@ class CrawlTest(unittest.TestCase):
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual('leaving daemonize' in contents(logpath), True)
         time.sleep(2)
-        self.assertEqual('firing plugin other' in contents(logpath), True,
+        self.assertEqual('other: firing' in contents(logpath), True,
                          "Log file does not indicate plugin was fired")
         self.assertEqual(os.path.exists('%s/fired' % self.testdir), True,
                          "File %s/fired does not exist" % self.testdir)
@@ -1437,6 +1437,22 @@ class CrawlTest(unittest.TestCase):
         f.write("\n")
         f.write("    q.close()\n")
         f.close()
+        
+    # ------------------------------------------------------------------------
+    def tearDown(self):
+        if is_running():
+            testhelp.touch('crawler.exit')
+            time.sleep(1.0)
+            
+        if is_running():
+            result = pexpect.run("ps -ef")
+            for line in result.split("\n"):
+                if 'crawl start' in line:
+                    pid = line.split()[1]
+                    print("pid = %s <- kill this" % pid)
+
+        if os.path.exists('crawler_pid'):
+            os.unlink('crawler_pid')
         
 # ------------------------------------------------------------------------------
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
