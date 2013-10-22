@@ -316,6 +316,7 @@ class TesthelpTest(unittest.TestCase):
         l = all_tests('__main__', 'helpTest').sort()
         expectVSgot(all, l)
 
+    # -------------------------------------------------------------------------
     def test_list_tests(self):
         tlist = ['one', 'two', 'three', 'four', 'five']
         self.redirected_list_test([],
@@ -331,6 +332,7 @@ class TesthelpTest(unittest.TestCase):
                                   tlist,
                                   "one\nthree\nfive\n")
 
+    # -------------------------------------------------------------------------
     def redirected_list_test(self, args, final, testlist, expected):
         s = StringIO.StringIO()
         save_stdout = sys.stdout
@@ -340,14 +342,18 @@ class TesthelpTest(unittest.TestCase):
 
         r = s.getvalue()
         s.close()
-        assert(r == expected)
+        self.assertEqual(expected, r,
+                         "Expected '%s', got '%s'" %
+                         (expected, r))
 
+    # -------------------------------------------------------------------------
     def test_expected_vs_got(self):
         self.redirected_evg('', '', '')
         self.redirected_evg('one', 'two',
                             "EXPECTED: 'one'\n" +
                             "GOT:      'two'\n")
 
+    # -------------------------------------------------------------------------
     def redirected_evg(self, exp, got, expected):
         s = StringIO.StringIO()
         save_stdout = sys.stdout
