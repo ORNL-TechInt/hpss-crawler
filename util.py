@@ -3,6 +3,7 @@
 import pdb
 import sys
 import testhelp
+import toolframe
 import unittest
 
 # -----------------------------------------------------------------------------
@@ -44,7 +45,5 @@ class UtilTest(unittest.TestCase):
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    if '-d' in sys.argv:
-        sys.argv.remove('-d')
-        pdb.set_trace()
-    testhelp.main(sys.argv)
+    toolframe.ez_launch(test='UtilTest',
+                        logfile='crawl_test.log')
