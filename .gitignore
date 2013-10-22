@@ -1,3 +1,4 @@
+all_tests
 cmsg
 crawl
 DODO
@@ -5,13 +6,16 @@ NOTES
 test.d
 CrawlConfig
 *.cfg
+*.db
 *.log
 *.stderr
 *.stdout
+*.out
 *.py[cod]
 *~
 \#*
 .#*
+plugins/*
 
 # C extensions
 *.so

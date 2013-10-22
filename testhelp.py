@@ -8,6 +8,7 @@ import socket
 import sys
 import unittest
 import StringIO
+import toolframe
 
 from optparse import *
 
@@ -166,14 +167,15 @@ def test_name(obj=None):
     # return str(obj).split()[0]
 
 # -----------------------------------------------------------------------------
-def run_tests(a, final, testlist, volume, logfile=None):
-    mainmod = sys.modules['__main__']
+def run_tests(a, final, testlist, volume, logfile=None, module=None):
+    if module == None:
+        module = sys.modules['__main__']
     if len(a) == 1:
         suite = LoggingTestSuite(logfile=logfile)
         for (case, skip) in testlist:
             if skip_check(skip):
                 continue
-            s = unittest.TestLoader().loadTestsFromName(case, mainmod)
+            s = unittest.TestLoader().loadTestsFromName(case, module)
             suite.addTests(s)
             if final != '' and final in case:
                 break
@@ -184,7 +186,7 @@ def run_tests(a, final, testlist, volume, logfile=None):
                 if skip_check(skip):
                     continue
                 if arg in case:
-                    s = unittest.TestLoader().loadTestsFromName(case, mainmod)
+                    s = unittest.TestLoader().loadTestsFromName(case, module)
                     suite.addTests(s)
                 if final != '' and final in case:
                     break
@@ -386,7 +388,9 @@ class UnderConstructionError(Exception):
 global d
 d = dir()
 if __name__ == '__main__':
-    if '-d' in sys.argv:
-        sys.argv.remove('-d')
-        pdb.set_trace()
-    main(sys.argv)
+    toolframe.ez_launch(test='TesthelpTest',
+                        logfile='crawl_test.log')
+#     if '-d' in sys.argv:
+#         sys.argv.remove('-d')
+#         pdb.set_trace()
+#     main(sys.argv)
