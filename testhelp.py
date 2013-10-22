@@ -390,7 +390,3 @@ d = dir()
 if __name__ == '__main__':
     toolframe.ez_launch(test='TesthelpTest',
                         logfile='crawl_test.log')
-#     if '-d' in sys.argv:
-#         sys.argv.remove('-d')
-#         pdb.set_trace()
-#     main(sys.argv)
