@@ -131,10 +131,13 @@ def tf_help(A, prefix=None):
 
 # -----------------------------------------------------------------------------
 def tf_launch(prefix,
+              modname,
               setup_tests=None,
               cleanup_tests=None,
               testclass='',
               logfile=''):
+    if '__main__' != modname:
+        return
     if len(sys.argv) == 1 and sys.argv[0] == '':
         return
     sname = sys.argv[0]

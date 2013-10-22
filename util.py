@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import pdb
 import sys
 import testhelp
@@ -27,6 +28,7 @@ def my_name():
 class UtilTest(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_content(self):
+        print os.getcwd()
         x = contents('./util.py')
         self.assertEqual(type(x), str,
                          "Expected a string but got a %s" % type(x))

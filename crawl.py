@@ -372,7 +372,7 @@ def persistent_rm(path):
             retries += 1
 
 # ------------------------------------------------------------------------------
-def Crawl_setup():
+def setUpModule():
     """
     Setup needed before running the tests.
     """
@@ -384,13 +384,10 @@ def Crawl_setup():
     #     os.unlink(unreadable)
         
 # ------------------------------------------------------------------------------
-def Crawl_cleanup():
+def tearDownModule():
     """
     Clean up after a sequence of tests.
     """
-    if os.getcwd().endswith('/test.d'):
-        os.chdir(launch_dir)
-        
     if not testhelp.keepfiles():
         flist = [os.path.dirname(CrawlTest.testdir)]
         for fspec in flist:
@@ -402,6 +399,8 @@ def Crawl_cleanup():
 
     if is_running():
         testhelp.touch('crawler.exit')
+
+    os.chdir(launch_dir)
 
 # ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
@@ -1457,7 +1456,8 @@ class CrawlTest(unittest.TestCase):
 # ------------------------------------------------------------------------------
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 toolframe.tf_launch("crl",
-                    setup_tests=Crawl_setup,
-                    cleanup_tests=Crawl_cleanup,
+                    __name__,
+                    setup_tests=setUpModule,
+                    cleanup_tests=tearDownModule,
                     testclass='CrawlTest',
                     logfile='crawl_test.log')
