@@ -10,11 +10,16 @@ def main(cfg):
     clog.info("drill-instructor: cwd = %s" % os.getcwd())
     hsi_prompt = "]:"
 
+    plugdir = cfg.get('crawler', 'plugin-dir')
+    dicfg = CrawlConfig.CrawlConfig()
+    dicfg.read('%s/drill-instructor.cfg' % plugdir)
+    dataroot = dicfg.get('drill-instructor', 'dataroot')
+
     try:
         clist = Checkable.Checkable.get_list()  # returns a list of Checkable objects
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
-            Checkable.Checkable.ex_nihilo()     # start from scratch
+            Checkable.Checkable.ex_nihilo(dataroot)     # start from scratch
             clist = Checkable.Checkable.get_list()
 
     n_ops = int(cfg.get('drill-instructor', 'operations'))
