@@ -142,15 +142,15 @@ def keepfiles(value=None):
 def list_tests(a, final, testlist):
     if len(a) <= 1:
         for c in testlist:
-            print c[0]
-            if final != '' and final in c[0]:
+            print c
+            if final != '' and final in c:
                 break
     else:
         for arg in a[1:]:
             for c in testlist:
-                if arg in c[0]:
-                    print c[0]
-                if final != '' and final in c[0]:
+                if arg in c:
+                    print c
+                if final != '' and final in c:
                     break
 
 # -----------------------------------------------------------------------------

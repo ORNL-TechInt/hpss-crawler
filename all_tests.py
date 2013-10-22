@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import pexpect
 for script in ['crawl.py',
                'Checkable.py',
@@ -8,4 +9,4 @@ for script in ['crawl.py',
                'util.py',
               ]:
     print("%s:" % script)
-    print pexpect.run(script),
+    os.system(script)

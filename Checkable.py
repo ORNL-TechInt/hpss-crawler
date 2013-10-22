@@ -9,6 +9,7 @@ import stat
 import sys
 import testhelp
 import time
+import toolframe
 import traceback as tb
 import unittest
 
@@ -38,7 +39,7 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def ex_nihilo(cls, filename='drill.db'):
+    def ex_nihilo(cls, filename='drill.db', dataroot='/'):
         """
         Start from scratch. The first thing we want to do is to add "/" to the
         queue, then take that Checkable object and call its .check() method.
@@ -53,7 +54,8 @@ class Checkable(object):
                                                       type text,
                                                       last_check int)""")
                 cx.execute("""insert into checkables(path, type, last_check)
-                                          values('/', 'd', 0)""")
+                                          values(?, ?, ?)""",
+                           (dataroot, 'd', 0))
                 db.commit()
                 db.close()
         except sql.Error, e:
@@ -840,8 +842,10 @@ class CheckableTest(unittest.TestCase):
     
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    if '-d' in sys.argv:
-        sys.argv.remove('-d')
-        pdb.set_trace()
-    testhelp.main(sys.argv)
+    toolframe.ez_launch(test='CheckableTest',
+                        logfile='crawl_test.log')
+#     if '-d' in sys.argv:
+#         sys.argv.remove('-d')
+#         pdb.set_trace()
+#     testhelp.main(sys.argv)
     
