@@ -192,8 +192,12 @@ def run_tests(a, final, testlist, volume, logfile=None, module=None):
                     break
 
     if 0 < len(a):
+        if 'setUpModule' in dir(module):
+            module.setUpModule()
         result = unittest.TextTestRunner(verbosity=volume).run(suite)
-    
+        if 'tearDownModule' in dir(module):
+            module.tearDownModule()
+
 # -----------------------------------------------------------------------------
 class LoggingTestSuite(unittest.TestSuite):
     def __init__(self, tests=(), logfile=None):
@@ -206,14 +210,15 @@ class LoggingTestSuite(unittest.TestSuite):
         self._logger = logging.getLogger('TestSuite')
         self._logger.setLevel(logging.INFO)
         host = socket.gethostname().split('.')[0]
-        fh = logging.handlers.RotatingFileHandler(logfile,
-                                                  maxBytes=10*1024*1024,
-                                                  backupCount=5)
-        strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
-        fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
-        fh.setFormatter(fmt)
+        if self._logger.handlers == []:
+            fh = logging.handlers.RotatingFileHandler(logfile,
+                                                      maxBytes=10*1024*1024,
+                                                      backupCount=5)
+            strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
+            fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
+            fh.setFormatter(fmt)
 
-        self._logger.addHandler(fh)
+            self._logger.addHandler(fh)
         self._logger.info('-' * (55 - len(host)))
 
     def run(self, result):
