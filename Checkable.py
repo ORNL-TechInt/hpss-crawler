@@ -844,8 +844,4 @@ class CheckableTest(unittest.TestCase):
 if __name__ == '__main__':
     toolframe.ez_launch(test='CheckableTest',
                         logfile='crawl_test.log')
-#     if '-d' in sys.argv:
-#         sys.argv.remove('-d')
-#         pdb.set_trace()
-#     testhelp.main(sys.argv)
     
