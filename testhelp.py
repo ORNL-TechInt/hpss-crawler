@@ -1,7 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import logging, logging.handlers
 import os
+import pdb
 import pexpect
 import socket
 import sys
@@ -379,4 +380,7 @@ class UnderConstructionError(Exception):
 global d
 d = dir()
 if __name__ == '__main__':
+    if '-d' in sys.argv:
+        sys.argv.remove('-d')
+        pdb.set_trace()
     main(sys.argv)

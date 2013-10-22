@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
 toolframe - creating a script with commandline-callable subfunctions
 
