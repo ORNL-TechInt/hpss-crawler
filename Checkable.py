@@ -20,12 +20,13 @@ class Checkable(object):
     def __init__(self, *args, **kwargs):
         self.dbname = Checkable.dbname
         self.path = '---'
-        self.last_check = 0
         self.type = '-'
+        self.checksum = ''
+        self.last_check = 0
         self.rowid = None
         self.args = args
         for k in kwargs:
-            if k not in ['rowid', 'path', 'type', 'last_check']:
+            if k not in ['rowid', 'path', 'type', 'checksum', 'last_check']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
@@ -52,10 +53,12 @@ class Checkable(object):
                 cx.execute("""create table checkables(id int primary key,
                                                       path text,
                                                       type text,
+                                                      checksum text,
                                                       last_check int)""")
-                cx.execute("""insert into checkables(path, type, last_check)
-                                          values(?, ?, ?)""",
-                           (dataroot, 'd', 0))
+                cx.execute("""insert into checkables(path, type, checksum,
+                                                     last_check)
+                                          values(?, ?, ?, ?)""",
+                           (dataroot, 'd', '', 0))
                 db.commit()
                 db.close()
         except sql.Error, e:
@@ -86,12 +89,12 @@ class Checkable(object):
                 raise StandardError("Please call .ex_nihilo() first")
             db = sql.connect(filename)
             cx = db.cursor()
-            cx.execute('select rowid, path, type, last_check' +
+            cx.execute('select rowid, path, type, checksum, last_check' +
                        ' from checkables order by rowid')
             rows = cx.fetchall()
             for row in rows:
                 new = Checkable(rowid=row[0], path=row[1], type=row[2],
-                                last_check=row[3])
+                                checksum=row[3], last_check=row[4])
                 rval.append(new)
             db.close()
             return rval
@@ -192,14 +195,18 @@ class Checkable(object):
                 rows = cx.fetchall()
                 if 0 == len(rows):
                     # path not in db -- we insert it
-                    cx.execute("""insert into checkables(path, type, last_check)
-                                  values(?, ?, ?)""",
-                               (self.path, self.type, self.last_check))
+                    cx.execute("""insert into checkables(path, type, checksum,
+                                                         last_check)
+                                  values(?, ?, ?, ?)""",
+                               (self.path, self.type, self.checksum,
+                                self.last_check))
                 elif 1 == len(rows):
                     # path is in db -- we update it
-                    cx.execute("""update checkables set type=?, last_check=?
+                    cx.execute("""update checkables set type=?, checksum=?,
+                                                        last_check=?
                                   where path=?""",
-                               (self.type, self.last_check, self.path))
+                               (self.type, self.checksum, self.last_check,
+                                self.path))
                 else:
                     raise StandardError("There seems to be more than one"
                                         + " occurrence of '%s' in the database" %
@@ -222,7 +229,7 @@ def tearDownModule():
         os.unlink(CheckableTest.testfile)
 
 # -----------------------------------------------------------------------------
-class CheckableTest(unittest.TestCase):
+class CheckableTest(testhelp.HelpedTestCase):
     testfile = 'test.db'
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
     testpath = '/home/tpb/TODO'
@@ -327,23 +334,36 @@ class CheckableTest(unittest.TestCase):
         If the database file does not already exist, calling ex_nihilo() should
         create it.
         """
+        # make sure the .db file does not exist
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
+
+        # this call should create it
         Checkable.ex_nihilo(filename=self.testfile)
+
+        # check that it exists
         self.assertEqual(os.path.exists(self.testfile), True,
                          "File '%s' should be created by ex_nihilo()" %
                          (self.testfile))
+
+        # assuming it does, look inside and make sure the checkables table got
+        # initialized correctly
         db = sql.connect(self.testfile)
         cx = db.cursor()
+
+        # there should be one row
         cx.execute('select * from checkables')
         rows = cx.fetchall()
         self.expected(1, len(rows))
+
+        # the one row should reference the root directory
         cx.execute('select max(rowid) from checkables')
         max_id = cx.fetchone()[0]
         self.expected(1, max_id)
         self.expected('/', rows[0][1])
         self.expected('d', rows[0][2])
-        self.expected(0, rows[0][3])
+        self.expected('', rows[0][3])
+        self.expected(0, rows[0][4])
         
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
@@ -351,14 +371,20 @@ class CheckableTest(unittest.TestCase):
         If the database file does already exist, calling ex_nihilo() should do
         nothing.
         """
+        # make sure the .db file does not exist
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
+
+        # create a dummy .db file and set its mtime back by 500 seconds
         testhelp.touch(self.testfile)
         s = os.stat(self.testfile)
         newtime = s[stat.ST_MTIME] - 500
         os.utime(self.testfile, (s[stat.ST_ATIME], newtime))
+
+        # call the test target routine
         Checkable.ex_nihilo(filename=self.testfile)
 
+        # verify that the file's mtime is unchanged and its size is 0
         p = os.stat(self.testfile)
         self.expected(self.ymdhms(newtime), self.ymdhms(p[stat.ST_MTIME]))
         self.expected(0, p[stat.ST_SIZE])
@@ -454,16 +480,17 @@ class CheckableTest(unittest.TestCase):
         """
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
-        testdata = [('/', 'd', 0),
-                    ('/abc', 'd', 17),
-                    ('/xyz', 'f', 92),
-                    ('/abc/foo', 'f', 0),
-                    ('/abc/bar', 'f', time.time())]
+        testdata = [('/', 'd', '', 0),
+                    ('/abc', 'd', '', 17),
+                    ('/xyz', 'f', '', 92),
+                    ('/abc/foo', 'f', '', 0),
+                    ('/abc/bar', 'f', '', time.time())]
                     
         Checkable.ex_nihilo(filename=self.testfile)
         db = sql.connect(self.testfile)
         cx = db.cursor()
-        cx.executemany("insert into checkables(path, type, last_check) values(?, ?, ?)",
+        cx.executemany("insert into checkables(path, type, checksum, last_check)" +
+                       " values(?, ?, ?, ?)",
                        testdata[1:])
             
         db.commit()
@@ -474,7 +501,8 @@ class CheckableTest(unittest.TestCase):
         for idx, item in enumerate(x):
             self.expected(testdata[idx][0], item.path)
             self.expected(testdata[idx][1], item.type)
-            self.expected(testdata[idx][2], item.last_check)
+            self.expected(testdata[idx][2], item.checksum)
+            self.expected(testdata[idx][3], item.last_check)
     
     # -------------------------------------------------------------------------
     def test_persist_dir_d(self):
@@ -690,6 +718,7 @@ class CheckableTest(unittest.TestCase):
         x = Checkable.get_list(filename=self.testfile)
         self.expected(1, len(x))
         self.expected("/", x[0].path)
+        self.expected("", x[0].checksum)
         self.expected(0, x[0].last_check)
 
         foo = Checkable(path=self.testpath, type='f')
@@ -799,47 +828,30 @@ class CheckableTest(unittest.TestCase):
         try:
             db = sql.connect(self.testfile)
             cx = db.cursor()
-            cx.execute("""insert into checkables(path, type, last_check)
-                                      values('/abc/def', 'd', 0)""")
-            cx.execute("""insert into checkables(path, type, last_check)
-                                      values('/abc/def', 'd', 0)""")
+            cx.execute("""insert into checkables(path, type, checksum,
+                                                 last_check)
+                                      values('/abc/def', 'd', '', 0)""")
+            cx.execute("""insert into checkables(path, type, checksum,
+                                                 last_check)
+                                      values('/abc/def', 'd', '', 0)""")
             db.commit()
             db.close()
         except sql.Error, e:
             print("SQLite Error: %s" % str(e))
             
     # -------------------------------------------------------------------------
-    def db_add_one(self, path=testpath, type='f', last_check=0):
+    def db_add_one(self, path=testpath, type='f', checksum='', last_check=0):
         try:
             db = sql.connect(self.testfile)
             cx = db.cursor()
-            cx.execute("""insert into checkables(path, type, last_check)
-                                      values(?, ?, ?)""",
-                       (path, type, last_check))
+            cx.execute("""insert into checkables(path, type, checksum,
+                                                 last_check)
+                                      values(?, ?, ?, ?)""",
+                       (path, type, checksum, last_check))
             db.commit()
             db.close()
         except sql.Error, e:
             print("SQLite Error: %s" % str(e))
-            
-    # -------------------------------------------------------------------------
-    def expected(self, expval, actual):
-        msg = "Expected "
-        if type(expval) == int:
-            msg += "%d"
-        elif type(expval) == float:
-            msg += "%g"
-        else:
-            msg += "'%s'"
-
-        msg += ", got "
-        if type(actual) == int:
-            msg += "%d"
-        elif type(actual) == float:
-            msg += "%g"
-        else:
-            msg += "'%s'"
-        
-        self.assertEqual(expval, actual, msg % (expval, actual))
 
     # -------------------------------------------------------------------------
     def ymdhms(self, dt):
