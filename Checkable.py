@@ -129,6 +129,14 @@ class Checkable(object):
 
         The value of odds indicates the likelihood with which we should check
         files: 1 in odds
+
+        potential outcomes
+         1 read a directory, returning a list of the contents
+         2 tried to read a directory but it was not accessible
+         3 skipped a non-directory file
+         4 fetched and checksummed a non-directory file
+         5 fetched a checksummed file and matched its checksum
+         6 fetched a checksummed file and the checksum match failed
         """
         rval = []
         hsi_prompt = "]:"
@@ -147,24 +155,34 @@ class Checkable(object):
                 m = hashlib.md5()
                 m.update(util.contents(localname))
                 filesum =  ''.join(["%02x" % ord(i) for i in m.digest()])
-#                 if self.checksum != filesum:
-#                     Alert("Recorded checksum '%s' " % self.checksum +
-#                           "does not match computed checksum '%s' " + filesum
-#                           "for file %s" % self.path)
-            elif random.randrange(int(odds)) <= 1:
+                if self.checksum != filesum:
+                    # outcome 6
+                    rval = Alert("Recorded checksum '%s' " % self.checksum +
+                                 "does not match computed " +
+                                 "checksum '%s' " + filesum +
+                                 "for file %s" % self.path)
+                else:
+                    # outcome 5
+                    rval = "matched"
+            elif 0 < odds and random.randrange(int(odds)) <= 1:
+                # outcome 4
                 localname = "/tmp/" + os.path.basename(self.path)
                 S.sendline("get %s : %s" % (localname, self.path))
                 S.expect(hsi_prompt)
                 m = hashlib.md5()
                 m.update(util.contents(localname))
                 self.checksum = ''.join(["%02x" % ord(i) for i in m.digest()])
-                # os.unlink(localname)
-                rval.append(self)
+                os.unlink(localname)
+                rval = self
+            else:
+                # outcome 3
+                rval = 'skipped'
         elif 'Access denied' in S.before:
-            # it's a directory but I don't have access to it
-            pass
+            # it's a directory but I don't have access to it -- outcome 2
+            rval = 'access denied'
         else:
-            # it's a directory -- get the list
+            # it's a directory -- get the list. this is outcome 1 from above --
+            # we fill in rval with the list of the directory's contents
             S.sendline("ls -l")
             S.expect(hsi_prompt)
 
@@ -284,7 +302,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable.get_list(filename=self.testfile)
         
         self.expected(2, len(x))
-        dirlist = x[1].check()
+        dirlist = x[1].check(50)
 
         self.assertIn(Checkable(path=testdir + '/crawler.tar',
                                 type='f'), dirlist)
@@ -314,7 +332,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         checked = []
         for item in [z for z in x if z.type == 'f']:
             self.expected(0, item.last_check)
-            item.check()
+            item.check(-1)
 
         x = Checkable.get_list(filename=self.testfile)
         for item in [z for z in x if z.type == 'f']:
