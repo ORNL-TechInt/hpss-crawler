@@ -8,14 +8,15 @@ import time
 
 def main(cfg):
     clog = sys.modules['__main__'].get_logger()
-    clog.info("drill-instructor: cwd = %s" % os.getcwd())
+    # clog.info("drill-instructor: cwd = %s" % os.getcwd())
     hsi_prompt = "]:"
 
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = cfg.get('drill-instructor', 'dataroot')
     dbfilename = cfg.get('drill-instructor', 'dbfile')
-    clog.info("drill-instructor: dataroot = %s" % dataroot)
-    clog.info("drill-instructor: dbfile = %s" % dbfilename)
+    odds = cfg.get('drill-instructor', 'odds')
+    # clog.info("drill-instructor: dataroot = %s" % dataroot)
+    # clog.info("drill-instructor: dbfile = %s" % dbfilename)
     
     try:
         clist = Checkable.Checkable.get_list()
@@ -34,11 +35,13 @@ def main(cfg):
             item = clist.pop(0)
             clog.info("drill-instructor: [%d] checking %s" %
                       (item.rowid, item.path))
-            ilist = item.check()
+            ilist = item.check(odds)
             if item.type == 'f':
                 clog.info("drill-instructor: file %s: '%s'" % (item.path,
                                                                item.checksum))
             else:
                 clog.info("drill-instructor: in %s, found:" % item.path)
                 for n in ilist:
-                    clog.info("drill-instructor: >>> %s" % (n.path))
+                    clog.info("drill-instructor: >>> %s %s %s %f" %
+                              (n.path, n.type, n.checksum,
+                               n.last_check))
