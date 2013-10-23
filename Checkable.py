@@ -329,6 +329,67 @@ class CheckableTest(testhelp.HelpedTestCase):
                       + '\n"""\n%s\n"""' % tb.format_exc())
             
     # -------------------------------------------------------------------------
+    def test_ex_nihilo_drspec(self):
+        """
+        If the database file does not already exist, calling ex_nihilo() should
+        create it. For this test, we specify and verify a dataroot value.
+        """
+        # make sure the .db file does not exist
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+
+        # this call should create it
+        Checkable.ex_nihilo(filename=self.testfile, dataroot="/home/somebody")
+
+        # check that it exists
+        self.assertEqual(os.path.exists(self.testfile), True,
+                         "File '%s' should be created by ex_nihilo()" %
+                         (self.testfile))
+
+        # assuming it does, look inside and make sure the checkables table got
+        # initialized correctly
+        db = sql.connect(self.testfile)
+        cx = db.cursor()
+
+        # there should be one row
+        cx.execute('select * from checkables')
+        rows = cx.fetchall()
+        self.expected(1, len(rows))
+
+        # the one row should reference the root directory
+        cx.execute('select max(rowid) from checkables')
+        max_id = cx.fetchone()[0]
+        self.expected(1, max_id)
+        self.expected('/home/somebody', rows[0][1])
+        self.expected('d', rows[0][2])
+        self.expected('', rows[0][3])
+        self.expected(0, rows[0][4])
+        
+    # -------------------------------------------------------------------------
+    def test_ex_nihilo_exist(self):
+        """
+        If the database file does already exist, calling ex_nihilo() should do
+        nothing.
+        """
+        # make sure the .db file does not exist
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+
+        # create a dummy .db file and set its mtime back by 500 seconds
+        testhelp.touch(self.testfile)
+        s = os.stat(self.testfile)
+        newtime = s[stat.ST_MTIME] - 500
+        os.utime(self.testfile, (s[stat.ST_ATIME], newtime))
+
+        # call the test target routine
+        Checkable.ex_nihilo(filename=self.testfile)
+
+        # verify that the file's mtime is unchanged and its size is 0
+        p = os.stat(self.testfile)
+        self.expected(self.ymdhms(newtime), self.ymdhms(p[stat.ST_MTIME]))
+        self.expected(0, p[stat.ST_SIZE])
+        
+    # -------------------------------------------------------------------------
     def test_ex_nihilo_scratch(self):
         """
         If the database file does not already exist, calling ex_nihilo() should
@@ -364,30 +425,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('d', rows[0][2])
         self.expected('', rows[0][3])
         self.expected(0, rows[0][4])
-        
-    # -------------------------------------------------------------------------
-    def test_ex_nihilo_exist(self):
-        """
-        If the database file does already exist, calling ex_nihilo() should do
-        nothing.
-        """
-        # make sure the .db file does not exist
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
-
-        # create a dummy .db file and set its mtime back by 500 seconds
-        testhelp.touch(self.testfile)
-        s = os.stat(self.testfile)
-        newtime = s[stat.ST_MTIME] - 500
-        os.utime(self.testfile, (s[stat.ST_ATIME], newtime))
-
-        # call the test target routine
-        Checkable.ex_nihilo(filename=self.testfile)
-
-        # verify that the file's mtime is unchanged and its size is 0
-        p = os.stat(self.testfile)
-        self.expected(self.ymdhms(newtime), self.ymdhms(p[stat.ST_MTIME]))
-        self.expected(0, p[stat.ST_SIZE])
         
     # -------------------------------------------------------------------------
     def test_fdparse_ldr(self):

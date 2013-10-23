@@ -13,13 +13,16 @@ def main(cfg):
 
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = cfg.get('drill-instructor', 'dataroot')
+    dbfilename = cfg.get('drill-instructor', 'dbfile')
     clog.info("drill-instructor: dataroot = %s" % dataroot)
+    clog.info("drill-instructor: dbfile = %s" % dbfilename)
     
     try:
         clist = Checkable.Checkable.get_list()  # returns a list of Checkable objects
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
-            Checkable.Checkable.ex_nihilo(dataroot=dataroot)     # start from scratch
+            Checkable.Checkable.ex_nihilo(filename=dbfilename,
+                                          dataroot=dataroot)
             clist = Checkable.Checkable.get_list()
 
     n_ops = int(cfg.get('drill-instructor', 'operations'))
