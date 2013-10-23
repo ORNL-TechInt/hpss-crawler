@@ -217,6 +217,11 @@ class Checkable(object):
             print("SQLite Error: %s" % str(e))
 
 # -----------------------------------------------------------------------------
+def tearDownModule():
+    if os.path.exists(CheckableTest.testfile):
+        os.unlink(CheckableTest.testfile)
+
+# -----------------------------------------------------------------------------
 class CheckableTest(unittest.TestCase):
     testfile = 'test.db'
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']

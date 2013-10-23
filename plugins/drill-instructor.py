@@ -1,5 +1,6 @@
 import Checkable
 import ConfigParser
+import CrawlConfig
 import os
 import pexpect
 import sys
@@ -14,7 +15,8 @@ def main(cfg):
     dicfg = CrawlConfig.CrawlConfig()
     dicfg.read('%s/drill-instructor.cfg' % plugdir)
     dataroot = dicfg.get('drill-instructor', 'dataroot')
-
+    clog.info("drill-instructor: dataroot = %s" % dataroot)
+    
     try:
         clist = Checkable.Checkable.get_list()  # returns a list of Checkable objects
     except StandardError, e:
