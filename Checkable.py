@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+import hashlib
 import os
 import pdb
 import pexpect
+import random
 import re
 import sqlite3 as sql
 import stat
@@ -12,6 +14,7 @@ import time
 import toolframe
 import traceback as tb
 import unittest
+import util
 
 # -----------------------------------------------------------------------------
 class Checkable(object):
@@ -32,6 +35,14 @@ class Checkable(object):
             setattr(self, k, kwargs[k])
         super(Checkable, self).__init__()
         
+    # -------------------------------------------------------------------------
+    def __repr__(self):
+        return("Checkable(rowid=%s, " % str(self.rowid) +
+               "path='%s', " % self.path +
+               "type='%s', " % self.type +
+               "checksum='%s', " % self.checksum +
+               "last_check=%f)" % self.last_check)
+
     # -------------------------------------------------------------------------
     def __eq__(self, other):
         return (isinstance(other, self.__class__) and
@@ -103,7 +114,7 @@ class Checkable(object):
             raise
 
     # -------------------------------------------------------------------------
-    def check(self):
+    def check(self, odds):
         """
         For a directory:
          - get a list of its contents if possible,
@@ -115,6 +126,9 @@ class Checkable(object):
          - if so, do all the check steps for the file
          - update the time of last check
          - persist the object to the database
+
+        The value of odds indicates the likelihood with which we should check
+        files: 1 in odds
         """
         rval = []
         hsi_prompt = "]:"
@@ -126,16 +140,25 @@ class Checkable(object):
         S.expect(hsi_prompt)
         if 'Not a directory' in S.before:
             # run the checks on the file
-            if random.randrange(10) <= 1:
+            if self.checksum != '':
                 localname = "/tmp/" + os.path.basename(self.path)
                 S.sendline("get %s : %s" % (localname, self.path))
                 S.expect(hsi_prompt)
                 m = hashlib.md5()
                 m.update(util.contents(localname))
-                for i in m.digest():
-                    h += "%02x" % ord(i)
-                self.checksum = h
-                os.unlink(localname)
+                filesum =  ''.join(["%02x" % ord(i) for i in m.digest()])
+#                 if self.checksum != filesum:
+#                     Alert("Recorded checksum '%s' " % self.checksum +
+#                           "does not match computed checksum '%s' " + filesum
+#                           "for file %s" % self.path)
+            elif random.randrange(int(odds)) <= 1:
+                localname = "/tmp/" + os.path.basename(self.path)
+                S.sendline("get %s : %s" % (localname, self.path))
+                S.expect(hsi_prompt)
+                m = hashlib.md5()
+                m.update(util.contents(localname))
+                self.checksum = ''.join(["%02x" % ord(i) for i in m.digest()])
+                # os.unlink(localname)
                 rval.append(self)
         elif 'Access denied' in S.before:
             # it's a directory but I don't have access to it
@@ -197,8 +220,9 @@ class Checkable(object):
 
             if self.rowid != None and self.last_check != 0.0:
                 # Updating the check time for an existing object 
-                cx.execute("update checkables set last_check=? where rowid=?",
-                           (self.last_check, self.rowid))
+                cx.execute("update checkables set last_check=?, checksum=? " +
+                           "where rowid=?",
+                           (self.last_check, self.checksum, self.rowid))
             elif self.rowid == None and self.last_check == 0.0:
                 # Adding (or perhaps updating) a new checkable
                 cx.execute("select * from checkables where path=?",
@@ -308,6 +332,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertEqual(method in dir(x), True,
                              "Checkable object is missing %s method" % method)
         self.expected('---', x.path)
+        self.expected(0, x.last_check)
         self.expected(None, x.rowid)
 
     # -------------------------------------------------------------------------
@@ -527,32 +552,71 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .get_list() should give us back a list of Checkable objects
         representing what is in the table
         """
+        # make sure the .db file does not exist
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
+
+        # create some test data
         testdata = [('/', 'd', '', 0),
                     ('/abc', 'd', '', 17),
                     ('/xyz', 'f', '', 92),
-                    ('/abc/foo', 'f', '', 0),
+                    ('/abc/foo', 'f', '', 5),
                     ('/abc/bar', 'f', '', time.time())]
-                    
+
+        # testdata has to be sorted by last_check since that's the way get_list
+        # will order the list it returns
+        testdata.sort(key=lambda x : x[3])
+
+        # create the .db file
         Checkable.ex_nihilo(filename=self.testfile)
+
+        # put the test data into the database
         db = sql.connect(self.testfile)
         cx = db.cursor()
         cx.executemany("insert into checkables(path, type, checksum, last_check)" +
                        " values(?, ?, ?, ?)",
                        testdata[1:])
-            
         db.commit()
+
+        # run the target routine
         x = Checkable.get_list(self.testfile)
 
-        self.expected(5, len(x))
+        # we should have gotten back the same number of records as went into
+        # the database
+        self.expected(len(testdata), len(x))
 
+        # verify that the data from the database matches the testdata that was
+        # inserted
         for idx, item in enumerate(x):
             self.expected(testdata[idx][0], item.path)
             self.expected(testdata[idx][1], item.type)
             self.expected(testdata[idx][2], item.checksum)
             self.expected(testdata[idx][3], item.last_check)
     
+    # -------------------------------------------------------------------------
+    def test_persist_checksum(self):
+        """
+        Verify that checksum gets stored by persist().
+        """
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        testpath = 'Checkable.py'
+        Checkable.ex_nihilo(filename=self.testfile, dataroot=testpath)
+
+        when = time.time()
+        
+        x = Checkable.get_list(filename=self.testfile)
+        m = hashlib.md5()
+        m.update(util.contents(testpath))
+        csum = ''.join(["%02x" % ord(i) for i in m.digest()])
+        x[0].checksum = csum
+        x[0].last_check = when
+        x[0].persist()
+
+        y = Checkable.get_list(filename=self.testfile)
+        self.expected(csum, y[0].checksum)
+        self.expected(when, y[0].last_check)
+
     # -------------------------------------------------------------------------
     def test_persist_dir_d(self):
         """
