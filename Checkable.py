@@ -90,7 +90,7 @@ class Checkable(object):
             db = sql.connect(filename)
             cx = db.cursor()
             cx.execute('select rowid, path, type, checksum, last_check' +
-                       ' from checkables order by rowid')
+                       ' from checkables order by last_check')
             rows = cx.fetchall()
             for row in rows:
                 new = Checkable(rowid=row[0], path=row[1], type=row[2],
@@ -100,6 +100,7 @@ class Checkable(object):
             return rval
         except sql.Error, e:
             print("SQLite Error: %s" % str(e))
+            raise
 
     # -------------------------------------------------------------------------
     def check(self):
@@ -117,7 +118,7 @@ class Checkable(object):
         """
         rval = []
         hsi_prompt = "]:"
-        S = pexpect.spawn('hsi')
+        S = pexpect.spawn('hsi -q', timeout=300)
         # S.logfile = sys.stdout
         S.expect(hsi_prompt)
 
@@ -125,7 +126,17 @@ class Checkable(object):
         S.expect(hsi_prompt)
         if 'Not a directory' in S.before:
             # run the checks on the file
-            pass
+            if random.randrange(10) <= 1:
+                localname = "/tmp/" + os.path.basename(self.path)
+                S.sendline("get %s : %s" % (localname, self.path))
+                S.expect(hsi_prompt)
+                m = hashlib.md5()
+                m.update(util.contents(localname))
+                for i in m.digest():
+                    h += "%02x" % ord(i)
+                self.checksum = h
+                os.unlink(localname)
+                rval.append(self)
         elif 'Access denied' in S.before:
             # it's a directory but I don't have access to it
             pass
@@ -216,6 +227,7 @@ class Checkable(object):
                                     + "rowid = %s; " % str(self.rowid)
                                     + "path = '%s'; " % self.path
                                     + "type = '%s'; " % self.type
+                                    + "checksum = '%s'; " % self.checksum
                                     + "last_check = %f" % self.last_check)
 
             db.commit()

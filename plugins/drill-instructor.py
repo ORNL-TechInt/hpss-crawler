@@ -18,31 +18,26 @@ def main(cfg):
     clog.info("drill-instructor: dbfile = %s" % dbfilename)
     
     try:
-        clist = Checkable.Checkable.get_list()  # returns a list of Checkable objects
+        clist = Checkable.Checkable.get_list()
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
             Checkable.Checkable.ex_nihilo(filename=dbfilename,
                                           dataroot=dataroot)
             clist = Checkable.Checkable.get_list()
+        else:
+            raise
 
     n_ops = int(cfg.get('drill-instructor', 'operations'))
-    try:
-        n_next = int(cfg.get('drill-instructor', 'next'))
-    except ConfigParser.NoOptionError:
-        n_next = 0
-
-    if n_next < len(clist):
-        for op in range(n_next):
-            item = clist.pop(0)
         
     for op in range(n_ops):
-        item = clist.pop(0)
-        clog.info("drill-instructor: [%d] checking %s" % (item.rowid, item.path))
-        n = item.check()
-        clog.info("drill-instructor: found %d items" % len(n))
+        if 0 < len(clist):
+            item = clist.pop(0)
+            clog.info("drill-instructor: [%d] checking %s" %
+                      (item.rowid, item.path))
+            ilist = item.check()
+            for n in ilist:
+                clog.info("drill-instructor: found '%s'" % (n.path))
         
-    cfg.set('drill-instructor', 'next', str(clist[0].rowid))
-    
 #     dicfg = ConfigParser.ConfigParser()
 #     dicfg.read('plugins/drill-instructor.cfg')
 
