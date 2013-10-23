@@ -35,34 +35,10 @@ def main(cfg):
             clog.info("drill-instructor: [%d] checking %s" %
                       (item.rowid, item.path))
             ilist = item.check()
-            for n in ilist:
-                clog.info("drill-instructor: found '%s'" % (n.path))
-        
-#     dicfg = ConfigParser.ConfigParser()
-#     dicfg.read('plugins/drill-instructor.cfg')
-
-#     # dump drill-instructor config to log
-#     for s in dicfg.sections():
-#         clog.info("drill-instructor: [%s]" % s)
-#         for o in dicfg.options(s):
-#             clog.info("drill-instructor: %s = %s" % (o, dicfg.get(s, o)))
-
-    
-#     S = pexpect.spawn("/opt/public/bin/hsi")
-#     S.logfile = f = open("hsi.out", 'a')
-
-#     for s in dicfg.sections():
-#         S.expect(hsi_prompt)
-#         S.sendline("ls -X %s" % s)
-
-#         dicfg.set(s, 'last-check', time.strftime("%Y.%m%d %H:%M:%S"))
-
-#     S.expect(hsi_prompt)
-#     S.sendline("quit")
-#     S.expect(pexpect.EOF)
-
-#     dicfg.write(open('plugins/drill-instructor.cfg', 'w'))
-    
-#     S.logfile.close()
-#     S.close()
-    
+            if item.type == 'f':
+                clog.info("drill-instructor: file %s: '%s'" % (item.path,
+                                                               item.checksum))
+            else:
+                clog.info("drill-instructor: in %s, found:" % item.path)
+                for n in ilist:
+                    clog.info("drill-instructor: >>> %s" % (n.path))
