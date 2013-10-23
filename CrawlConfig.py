@@ -208,12 +208,12 @@ class CrawlConfig(ConfigParser.ConfigParser):
             fp.write("\n")
 
 # -----------------------------------------------------------------------------
-def CrawlConfig_setup():
+def setUpModule():
     if not os.path.exists(CrawlConfigTest.testdir):
         os.mkdir(CrawlConfigTest.testdir)
     
 # -----------------------------------------------------------------------------
-def CrawlConfig_teardown():
+def tearDownModule():
     if os.path.exists(CrawlConfigTest.testdir):
         shutil.rmtree(CrawlConfigTest.testdir)
     
@@ -378,7 +378,5 @@ class CrawlConfigTest(unittest.TestCase):
         
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    toolframe.ez_launch(setup=CrawlConfig_setup ,
-                        cleanup=CrawlConfig_teardown,
-                        test='CrawlConfigTest',
+    toolframe.ez_launch(test='CrawlConfigTest',
                         logfile='crawl_test.log')

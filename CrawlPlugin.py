@@ -116,14 +116,9 @@ class CrawlPlugin(object):
         fire.
         """
         return(self.frequency < (time.time() - self.last_fired))
-    
 
 # -----------------------------------------------------------------------------
-def CrawlPlugin_setup():
-    pass
-
-# -----------------------------------------------------------------------------
-def CrawlPlugin_teardown():
+def tearDownModule():
     if os.path.exists('test_plugins'):
         shutil.rmtree('test_plugins')
 
@@ -585,7 +580,5 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    toolframe.ez_launch(setup=CrawlPlugin_setup,
-                        cleanup=CrawlPlugin_teardown,
-                        test='CrawlPluginTest',
+    toolframe.ez_launch(test='CrawlPluginTest',
                         logfile='crawl_test.log')
