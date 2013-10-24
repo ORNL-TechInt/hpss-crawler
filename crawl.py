@@ -434,7 +434,9 @@ class CrawlDaemon(daemon.Daemon):
             try:
                 exitfile = 'crawler.exit'
                 cfg = get_config(cfgname)
-                for s in cfg.sections():
+                pluglstr = cfg.get('crawler', 'plugins')
+                pluglist = [x.strip() for x in pluglstr.split(',')]
+                for s in pluglist:
                     self.dlog('crawl: CONFIG: [%s]' % s)
                     for o in cfg.options(s):
                         self.dlog('crawl: CONFIG: %s: %s' % (o, cfg.get(s, o)))
@@ -521,7 +523,8 @@ class CrawlTest(unittest.TestCase):
                          'logmax': '5',
                          'e-mail-recipients':
                          'tbarron@ornl.gov, tusculum@gmail.com',
-                         'trigger': '<command-line>'
+                         'trigger': '<command-line>',
+                         'plugins': 'plugin_A',
                          },
              'plugin_A': {'frequency': '1h',
                           'operations': '15'
@@ -749,6 +752,7 @@ class CrawlTest(unittest.TestCase):
         cfgpath = '%s/test_stcfg.cfg' % self.testdir
         logpath = '%s/test_stcfg.log' % self.testdir
         xdict = self.cdict
+        xdict['crawler']['plugins'] = 'plugin_A, other_plugin'
         xdict['other_plugin'] = {'unplanned': 'silver',
                                  'simple': 'check for this'}
         self.write_cfg_file(cfgpath, xdict)
@@ -763,15 +767,18 @@ class CrawlTest(unittest.TestCase):
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
-        self.assertEqual('crawl: CONFIG: [other_plugin]' in
-                         contents(logpath),
-                         True)
+        self.assertEqual('crawl: CONFIG: [other_plugin]' in contents(logpath),
+                         True,
+                         "Expected 'other_plugin' in log file not found")
         self.assertEqual('crawl: CONFIG: unplanned: silver' in
                          contents(logpath),
-                         True)
+                         True,
+                         "Expected 'unplanned: silver' in log file not found")
         self.assertEqual('crawl: CONFIG: simple: check for this' in
                          contents(logpath),
-                         True)
+                         True,
+                         "Expected 'simple: check for this' " +
+                         "in log file not found")
         
         testhelp.touch('crawler.exit')
 
@@ -791,6 +798,7 @@ class CrawlTest(unittest.TestCase):
         xdict = copy.deepcopy(self.cdict)
         xdict['other'] = {'frequency': '1s', 'fire': 'true'}
         xdict['crawler']['verbose'] = 'true'
+        xdict['crawler']['plugins'] = 'other'
         del xdict['plugin_A']
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'other')
@@ -800,7 +808,8 @@ class CrawlTest(unittest.TestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
 
-        self.assertEqual(is_running(), True)
+        self.assertEqual(is_running(), True,
+                         "Expected crawler to still be running but it isn't")
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual('leaving daemonize' in contents(logpath), True)
@@ -819,6 +828,40 @@ class CrawlTest(unittest.TestCase):
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
                 
+    # --------------------------------------------------------------------------
+    def test_crawl_start_nonplugin_sections(self):
+        """
+        TEST: 'crawl start' should fire up a daemon crawler which will exit
+        when file 'crawler.exit' is touched. Verify that a config file with
+        non-plugin sections works properly. Sections that are not listed with
+        the 'plugin' option in the 'crawler' section should not be loaded as
+        plugins.
+        """
+        cfgpath = '%s/test_nonplugin.cfg' % self.testdir
+        logpath = '%s/test_nonplugin.log' % self.testdir
+        xdict = copy.deepcopy(self.cdict)
+        xdict['alerts'] = {}
+        xdict['alerts']['email'] = 'one@somewhere.com, two@elsewhere.org'
+        xdict['alerts']['log'] = '!!!ALERT!!! %s'
+
+        self.write_cfg_file(cfgpath, xdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        
+        cmd = ('crawl start --log %s --cfg %s --context TEST' %
+               (logpath, cfgpath))
+        result = pexpect.run(cmd)
+
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+        
+        testhelp.touch('crawler.exit')
+        time.sleep(1)
+        self.vassert_nin("Traceback", contents(logpath))
+        self.assertEqual(is_running(), False,
+                         "crawler is still running unexpectedly")
+        self.assertEqual(os.path.exists('crawler_pid'), False,
+                         "crawler_pid is hanging around after it should be gone")
+
     # --------------------------------------------------------------------------
     def test_crawl_status(self):
         """
@@ -1457,7 +1500,5 @@ class CrawlTest(unittest.TestCase):
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 toolframe.tf_launch("crl",
                     __name__,
-                    setup_tests=setUpModule,
-                    cleanup_tests=tearDownModule,
                     testclass='CrawlTest',
                     logfile='crawl_test.log')

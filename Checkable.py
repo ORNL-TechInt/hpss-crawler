@@ -254,12 +254,10 @@ class Checkable(object):
                                (self.path, self.type, self.checksum,
                                 self.last_check))
                 elif 1 == len(rows):
-                    # path is in db -- we update it
-                    cx.execute("""update checkables set type=?, checksum=?,
-                                                        last_check=?
+                    # path is in db -- we update type in case it has changed
+                    cx.execute("""update checkables set type=?
                                   where path=?""",
-                               (self.type, self.checksum, self.last_check,
-                                self.path))
+                               (self.type, self.path))
                 else:
                     raise StandardError("There seems to be more than one"
                                         + " occurrence of '%s' in the database" %

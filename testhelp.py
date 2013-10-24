@@ -36,6 +36,8 @@ def main(args=None, filter=None, logfile=None):
                  help='louder')
     (o, a) = p.parse_args(args)
 
+    keepfiles(o.keep)
+    
     if o.verbose:
         volume = 2
     elif o.quiet:

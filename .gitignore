@@ -1,6 +1,7 @@
 all_tests
 cmsg
 crawl
+crawler_pid
 DODO
 NOTES
 test.d
