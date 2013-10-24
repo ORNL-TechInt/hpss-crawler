@@ -7,20 +7,24 @@ import sqlite3 as sql
 import sys
 import time
 
+# -----------------------------------------------------------------------------
 def main(cfg):
+    # Get stuff we need -- the logger object, hsi prompt string, dataroot,
+    # etc.
     clog = sys.modules['__main__'].get_logger()
-    # clog.info("drill-instructor: cwd = %s" % os.getcwd())
     hsi_prompt = "]:"
-
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = cfg.get('drill-instructor', 'dataroot')
     dbfilename = cfg.get('drill-instructor', 'dbfile')
     odds = cfg.get('drill-instructor', 'odds')
-    # clog.info("drill-instructor: dataroot = %s" % dataroot)
-    # clog.info("drill-instructor: dbfile = %s" % dbfilename)
+    n_ops = int(cfg.get('drill-instructor', 'operations'))
 
+    # Initialize our statistics
     (t_checksums, t_matches, t_failures) = get_stats(dbfilename)
     (checksums, matches, failures) = (0, 0, 0)
+
+    # Fetch the list of HPSS objects that we're looking at from the
+    # sqlite database
     try:
         clist = Checkable.Checkable.get_list()
     except StandardError, e:
@@ -31,18 +35,32 @@ def main(cfg):
         else:
             raise
 
-    n_ops = int(cfg.get('drill-instructor', 'operations'))
-        
+    # We're going to process n_ops things in the HPSS namespace
     for op in range(n_ops):
+        # if the list from the database is empty, there's nothing to do
         if 0 < len(clist):
+            # but it's not, so grab the first item and check it
             item = clist.pop(0)
             clog.info("drill-instructor: [%d] checking %s" %
                       (item.rowid, item.path))
             ilist = item.check(odds)
+
+            # There are six expected outcomes that check can return:
+            #  'matched' => a checksum was verified
+            #  'skipped' => a file was skipped
+            #  'access denied' => encountered a directory where we don't have
+            #                     permission to go
+            #  <list of Checkables> => read a directory, generated a Checkable
+            #                          for each entry
+            #  <Checkable> => a file checksummed was collected
+            #  <Alert> => a file checksum did not match and an Alert was
+            #             generated
+            #  ...     => unexpected cases
             if type(ilist) == str:
                 if ilist == "matched":
                     matches += 1
-                    clog.info("drill-instructor: %s checksums matched" % item.path)
+                    clog.info("drill-instructor: %s checksums matched" %
+                              item.path)
                 elif ilist == "skipped":
                     clog.info("drill-instructor: %s skipped" % item.path)
                 elif ilist == "access denied":
@@ -69,6 +87,7 @@ def main(cfg):
                 clog.info("drill-instructor: unexpected return val from " +
                           "Checkable.check: %s: %r" % (type(ilist), ilist))
 
+    # Report the statistics in the log
     clog.info("drill-instructor: files checksummed: %d; " % checksums +
               "checksums matched: %d; " % matches +
               "failures: %d" % failures)
@@ -78,6 +97,8 @@ def main(cfg):
     clog.info("drill-instructor: totals checksummed: %d; " % t_checksums +
               "matches: %d; " % t_matches +
               "failures: %d" % t_failures)
+
+    # Record the current totals in the database
     update_stats(dbfilename, (t_checksums, t_matches, t_failures))
 
 # -----------------------------------------------------------------------------
