@@ -254,10 +254,14 @@ class Checkable(object):
                                (self.path, self.type, self.checksum,
                                 self.last_check))
                 elif 1 == len(rows):
-                    # path is in db -- we update type in case it has changed
-                    cx.execute("""update checkables set type=?
-                                  where path=?""",
-                               (self.type, self.path))
+                    # path is in db -- if type has changed, reset last_check
+                    # and checksum. Otherwise, leave it alone
+                    if self.type != rows[0][2]:
+                        cx.execute("""update checkables set type=?,
+                                                            last_check=?,
+                                                            checksum=?
+                                      where path=?""",
+                                   (self.type, 0, '', self.path))
                 else:
                     raise StandardError("There seems to be more than one"
                                         + " occurrence of '%s' in the database" %
@@ -634,7 +638,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(when, y[0].last_check)
 
     # -------------------------------------------------------------------------
-    def test_persist_dir_d(self):
+    def test_persist_dir_duplicate(self):
         """
         Send in a new directory with path matching a duplicate in database
         (rowid == None, last_check == 0, type == 'd'). Exception should be
@@ -668,7 +672,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                          "Object root not found in database")
     
     # -------------------------------------------------------------------------
-    def test_persist_dir_n(self):
+    def test_persist_dir_new(self):
         """
         Send in a new directory (rowid == None, last_check == 0, type == 'd',
         path does not match). New record should be added.
@@ -695,17 +699,18 @@ class CheckableTest(testhelp.HelpedTestCase):
                          "Object root not found in database")
     
     # -------------------------------------------------------------------------
-    def test_persist_dir_p(self):
+    def test_persist_dir_exist_dd(self):
         """
         Send in a new directory with matching path (rowid == None, last_check
-        == 0, type == 'd'). Existing path should be updated.
+        == 0, type == 'd'). Existing path should not be updated.
         """
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
 
         now = time.time()
-        self.db_add_one(path=self.testpath, type='d', last_check=now)
+        self.db_add_one(path=self.testpath, type='d', checksum='abc',
+                        last_check=now)
         
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
@@ -713,6 +718,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(now, x[1].last_check)
 
         x[1].last_check = 0
+        x[1].checksum = ''
         try:
             x[1].rowid = None
             x[1].persist()
@@ -724,12 +730,47 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('d', x[1].type)
-        self.expected(0, x[1].last_check)
-    
-        # raise testhelp.UnderConstructionError('under construction')
+        self.expected(now, x[1].last_check)
+        self.expected('abc', x[1].checksum)
     
     # -------------------------------------------------------------------------
-    def test_persist_dir_v(self):
+    def test_persist_dir_exist_fd(self):
+        """
+        Send in a new directory with matching path (rowid == None, last_check
+        == 0, type == 'f'), changing type (f -> d). Existing path should be
+        updated.
+        """
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+
+        now = time.time()
+        self.db_add_one(path=self.testpath, type='f', checksum='abc',
+                        last_check=now)
+        
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected(now, x[1].last_check)
+
+        x[1].last_check = 0
+        try:
+            x[1].rowid = None
+            x[1].type = 'd'
+            x[1].persist()
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected('d', x[1].type)
+        self.expected(0, x[1].last_check)
+        self.expected('', x[1].checksum)
+    
+    # -------------------------------------------------------------------------
+    def test_persist_dir_invalid(self):
         """
         Send in an invalid directory (rowid != None, last_check == 0, type ==
         'd'). Exception should be thrown.
@@ -768,7 +809,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
         
     # -------------------------------------------------------------------------
-    def test_persist_dir_x(self):
+    def test_persist_dir_update(self):
         """
         Send in an existing directory with a new last_check time (rowid !=
         None, path exists, type == 'd', last_check changed). Last check time
@@ -796,7 +837,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(now, x[0].last_check)
             
     # -------------------------------------------------------------------------
-    def test_persist_file_d(self):
+    def test_persist_file_duplicate(self):
         """
         Send in a new file with path matching a duplicate in database (rowid ==
         None, last_check == 0, type == 'f'). Exception should be thrown.
@@ -835,7 +876,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                          "There should be a duplicate entry in the database.")
         
     # -------------------------------------------------------------------------
-    def test_persist_file_n(self):
+    def test_persist_file_new(self):
         """
         Send in a new file (rowid == None, last_check == 0, path does not
         match, type == 'f'). New record should be added.
@@ -863,7 +904,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, x[1].last_check)
     
     # -------------------------------------------------------------------------
-    def test_persist_file_p(self):
+    def test_persist_file_exist_df(self):
         """
         Send in a new file with matching path (rowid == None, last_check
         == 0, type == 'f'). Existing path should be updated.
@@ -872,7 +913,39 @@ class CheckableTest(testhelp.HelpedTestCase):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         now = time.time()
-        self.db_add_one(last_check=now)
+        self.db_add_one(last_check=now, type='d')
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected(now, x[1].last_check)
+
+        x[1].last_check = 0
+        try:
+            x[1].rowid = None
+            x[1].type = 'f'
+            x[1].persist()
+        except:
+            self.fail("Got unexpected exception: "
+                      + '"""\n%s\n"""' % tb.format_exc())
+
+        x = Checkable.get_list(filename=self.testfile)
+        self.expected(2, len(x))
+        self.expected(self.testpath, x[1].path)
+        self.expected('f', x[1].type)
+        self.expected(0, x[1].last_check)
+        self.expected('', x[1].checksum)
+    
+    # -------------------------------------------------------------------------
+    def test_persist_file_exist_ff(self):
+        """
+        Send in a new file with matching path (rowid == None, last_check
+        == 0, type == 'f'). Existing path should not be updated.
+        """
+        if os.path.exists(self.testfile):
+            os.unlink(self.testfile)
+        Checkable.ex_nihilo(filename=self.testfile)
+        now = time.time()
+        self.db_add_one(last_check=now, type='f', checksum='abc')
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
@@ -889,10 +962,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
-        self.expected(0, x[1].last_check)
+        self.expected('f', x[1].type)
+        self.expected(now, x[1].last_check)
+        self.expected('abc', x[1].checksum)
     
     # -------------------------------------------------------------------------
-    def test_persist_file_v(self):
+    def test_persist_file_invalid(self):
         """
         Send in an invalid file (rowid == None, last_check != 0, type == 'f')
         Exception should be thrown.
