@@ -38,10 +38,11 @@ import socket
 # -----------------------------------------------------------------------------
 class Alert(object):
     # -------------------------------------------------------------------------
-    def __init__(self, msg='unspecified alert', caller=''):
+    def __init__(self, msg='unspecified alert', caller='', dispatch=True):
         self.msg = msg
         self.caller = caller
-        self.dispatch()
+        if dispatch:
+            self.dispatch()
         
     # -------------------------------------------------------------------------
     def dispatch(self):
