@@ -9,6 +9,7 @@ import sys
 import unittest
 import StringIO
 import toolframe
+import util
 
 from optparse import *
 
@@ -110,11 +111,6 @@ def expectVSgot(expected, got):
             raise e
         
 # -----------------------------------------------------------------------------
-def get_logger():
-    global tlogger
-    return tlogger
-
-# -----------------------------------------------------------------------------
 def into_test_dir():
     tdname = '_test.%d' % os.getpid()
     bname = os.path.basename(os.getcwd())
@@ -202,27 +198,14 @@ def run_tests(a, final, testlist, volume, logfile=None, module=None):
 
 # -----------------------------------------------------------------------------
 class LoggingTestSuite(unittest.TestSuite):
+    # -------------------------------------------------------------------------
     def __init__(self, tests=(), logfile=None):
         super(LoggingTestSuite, self).__init__(tests)
         self._logger = None
         if None != logfile:
-            self.setup_logging(logfile)
-
-    def setup_logging(self, logfile):
-        self._logger = logging.getLogger('TestSuite')
-        self._logger.setLevel(logging.INFO)
-        host = socket.gethostname().split('.')[0]
-        if self._logger.handlers == []:
-            fh = logging.handlers.RotatingFileHandler(logfile,
-                                                      maxBytes=10*1024*1024,
-                                                      backupCount=5)
-            strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
-            fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
-            fh.setFormatter(fmt)
-
-            self._logger.addHandler(fh)
-        self._logger.info('-' * (55 - len(host)))
-
+            self._logger = util.setup_logging(logfile, 'TestSuite')
+            
+    # -------------------------------------------------------------------------
     def run(self, result):
         errs = 0
         fails = 0

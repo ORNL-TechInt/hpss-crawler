@@ -45,53 +45,43 @@ following:
 History
    2011.0209   inception
    2011.0304   figured out to pass routine main to ez_launch
-   
-Copyright (C) 2011 - <the end of time>  Tom Barron
-  tom.barron@comcast.net
-  177 Crossroads Blvd
-  Oak Ridge, TN  37830
-
-This software is licensed under the CC-GNU GPL. For the full text of
-the license, see http://creativecommons.org/licenses/GPL/2.0/
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
 """
 import os
 import pdb
 import re
 import sys
 import testhelp
+import traceback as tb
 import unittest
 
 # -----------------------------------------------------------------------------
 def tf_main(args, prefix=None):
+    mainmod = sys.modules['__main__']
     if prefix == None:
-        prefix = sys.modules['__main__'].prefix()
+        prefix = mainmod.prefix()
     if len(args) < 2:
         tf_help([], prefix=prefix)
     elif args[1] == "help":
         tf_help(args[2:], prefix=prefix)
     else:
         try:
-            eval("sys.modules['__main__'].%s_%s(args[2:])" % (prefix, args[1]))
+            method = getattr(mainmod, "%s_%s" % (prefix, args[1]))
+            method(args[2:])
         except IndexError, e:
-            print(str(e))
-            tf_help([], prefix=prefix)
+            if len(a) < 2:
+                print(str(e))
+                tf_help([], prefix=prefix)
+            else:
+                tb.print_exc()
         except NameError, e:
-            print(str(e))
-            print("unrecognized subfunction: %s" % args[1])
-            tf_help([], prefix=prefix)
+            if args[1] not in dir(mainmod):
+                print(str(e))
+                print("unrecognized subfunction: %s" % args[1])
+                tf_help([], prefix=prefix)
+            else:
+                tb.print_exc()
         except Exception, e:
-            print(str(e))
-            raise
+            tb.print_exc()
 
 # ----------------------------------------------------------------------------
 def tf_help(A, prefix=None):

@@ -15,9 +15,6 @@ def tearDownModule():
     pass
 
 # -----------------------------------------------------------------------------
-def get_logger():
-    
-# -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init(self):
@@ -32,7 +29,12 @@ class AlertTest(testhelp.HelpedTestCase):
         self.assertIn('dispatch', dir(x))
 
     # -------------------------------------------------------------------------
-    def test_log(self):
+    def test_alert_log(self):
+        raise testhelp.UnderConstructionError()
+    
+    # -------------------------------------------------------------------------
+    def test_next(self):
+        self.fail("Alert needs more tests")
         
 if __name__ == '__main__':
     toolframe.ez_launch(test='AlertTest',
