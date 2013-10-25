@@ -379,6 +379,8 @@ def setUpModule():
     if os.path.isdir(CrawlTest.testdir):
         shutil.rmtree(os.path.dirname(CrawlTest.testdir))
     os.makedirs(CrawlTest.testdir)
+    if not os.path.islink('crawl'):
+        os.symlink('crawl.py', 'crawl')
     # unreadable = '%s/unreadable.cfg' % (CrawlTest.testdir)
     # if os.path.exists(unreadable):
     #     os.unlink(unreadable)
