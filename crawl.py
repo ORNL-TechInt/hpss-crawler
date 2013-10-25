@@ -22,6 +22,7 @@ import time
 import toolframe
 import traceback as tb
 import unittest
+import util
 
 # ------------------------------------------------------------------------------
 def crl_cfgdump(argv):
@@ -43,7 +44,7 @@ def crl_cfgdump(argv):
                  action='store', default='', dest='logpath',
                  help='specify where to send the output')
     (o, a) = p.parse_args(argv)
-    
+
     if o.debug: pdb.set_trace()
 
 
@@ -52,14 +53,14 @@ def crl_cfgdump(argv):
 
     cfg = get_config(o.config)
     dumpstr = cfg.dump()
-    
+
     if o.target == 'stdout':
         print dumpstr
     elif o.target == 'log':
-        log = get_logger(o.logpath, cfg)
+        log = util.get_logger(o.logpath, cfg)
         for line in dumpstr.split("\n"):
             log.info(line)
-        
+
 # ------------------------------------------------------------------------------
 def crl_cleanup(argv):
     """cleanup - remove any test directories left behind
@@ -110,7 +111,7 @@ def crl_fire(argv):
     if o.debug: pdb.set_trace()
 
     cfg = get_config(o.config)
-    log = get_logger(o.logpath, cfg)
+    log = util.get_logger(o.logpath, cfg)
 
     if not cfg.has_section(o.plugname):
         print("No plugin named '%s' is defined")
@@ -138,7 +139,7 @@ def crl_log(argv):
     
     if o.debug: pdb.set_trace()
     
-    log = get_logger(o.logfile)
+    log = util.get_logger(o.logfile)
     log.info(" ".join(a))
 
 # ------------------------------------------------------------------------------
@@ -179,7 +180,7 @@ def crl_start(argv):
         # Initialize the configuration
         #
         cfg = get_config(o.config)
-        log = get_logger(o.logfile, cfg)
+        log = util.get_logger(o.logfile, cfg)
         crawler = CrawlDaemon('crawler_pid',
                               stdout="crawler.stdout",
                               stderr="crawler.stderr",
@@ -293,54 +294,8 @@ def get_timeval(cfg, section, option, default):
     Return the number of seconds indicated by the time spec, using default if
     any errors or failures occur
     """
-    log = get_logger()
+    log = util.get_logger()
     return cfg.gettime(section, option, default, log)
-
-# ------------------------------------------------------------------------------
-def get_logger(cmdline='', cfg=None, reset=False):
-    """
-    Return the logging object for this process. Instantiate it if it
-    does not exist already.
-    """
-    if reset:
-        try:
-            del get_logger._logger
-        except AttributeError:
-            pass
-        return
-
-    envval = os.getenv('CRAWL_LOG')
-
-    if cmdline != '':
-        filename = cmdline
-    elif cfg != None:
-        try:
-            filename = cfg.get('crawler', 'logpath')
-        except:
-            pass
-    elif envval != None:
-        filename = envval
-    else:
-        filename = '/var/log/crawl.log'
-        
-    try:
-        rval = get_logger._logger
-    except AttributeError:
-        get_logger._logger = logging.getLogger('Integrity')
-        get_logger._logger.setLevel(logging.INFO)
-        host = socket.gethostname().split('.')[0]
-        fh = logging.handlers.RotatingFileHandler(filename,
-                                                  maxBytes=10*1024*1024,
-                                                  backupCount=5)
-        strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
-        fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
-        fh.setFormatter(fmt)
-
-        get_logger._logger.addHandler(fh)
-        get_logger._logger.info('-' * (55 - len(host)))
-        rval = get_logger._logger
-
-    return rval
 
 # ------------------------------------------------------------------------------
 def is_running():
@@ -381,9 +336,6 @@ def setUpModule():
     os.makedirs(CrawlTest.testdir)
     if not os.path.islink('crawl'):
         os.symlink('crawl.py', 'crawl')
-    # unreadable = '%s/unreadable.cfg' % (CrawlTest.testdir)
-    # if os.path.exists(unreadable):
-    #     os.unlink(unreadable)
         
 # ------------------------------------------------------------------------------
 def tearDownModule():
@@ -448,8 +400,8 @@ class CrawlDaemon(daemon.Daemon):
                         plugin_d[s].reload(cfg)
                     else:
                         plugin_d[s] = CrawlPlugin.CrawlPlugin(name=s,
-                                                              cfg=cfg,
-                                                              logger=get_logger())
+                                                 cfg=cfg,
+                                                 logger=util.get_logger())
 
                 # remove any plugins that are not in the new configuration
                 for p in plugin_d.keys():
@@ -693,7 +645,7 @@ class CrawlTest(unittest.TestCase):
         self.vassert_in(msg, contents(lfname))
         
     # --------------------------------------------------------------------------
-    def test_crawl_start(self):
+    def test_crawl_start_x(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
         when file 'crawler.exit' is touched. Verify that crawler_pid exists
@@ -709,7 +661,8 @@ class CrawlTest(unittest.TestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
 
-        self.assertEqual(is_running(), True)
+        self.assertEqual(is_running(), True,
+                         "Expected crawler to still be running but it is not")
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual('leaving daemonize' in contents(logpath), True)
@@ -728,13 +681,15 @@ class CrawlTest(unittest.TestCase):
         cfgpath = '%s/test_start.cfg' % self.testdir
         logpath = '%s/test_start.log' % self.testdir
         self.write_cfg_file(cfgpath, self.cdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = ('crawl start --log %s --cfg %s --context TEST'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
 
-        self.assertEqual(is_running(), True)
+        self.assertEqual(is_running(), True,
+                         "Expected crawler to be running but it is not")
 
         result = pexpect.run(cmd)
         self.assertEqual('crawler_pid exists' in result, True)
@@ -1242,7 +1197,7 @@ class CrawlTest(unittest.TestCase):
 
         EXP: Attempts to log to cfg.get('crawler', 'logpath')
         """
-        get_logger(reset=True)
+        util.get_logger(reset=True)
         t = copy.deepcopy(self.cdict)
         logpath = '%s/test_get_logger_config.log' % self.testdir
         t['crawler']['logpath'] = logpath
@@ -1253,7 +1208,7 @@ class CrawlTest(unittest.TestCase):
 
         cfg = CrawlConfig.CrawlConfig()
         cfg.load_dict(t)
-        lobj = get_logger('', cfg)
+        lobj = util.get_logger('', cfg)
 
         self.assertEqual(os.path.exists(logpath), True,
                          '%s should exist but does not' % logpath)
@@ -1266,10 +1221,10 @@ class CrawlTest(unittest.TestCase):
 
         EXP: Attempts to log to '/var/log/crawl.log'
         """
-        get_logger(reset=True)
+        util.get_logger(reset=True)
         got_exception = False
         try:
-            lobj = get_logger()
+            lobj = util.get_logger()
         except IOError as e:
             self.assertEqual('Permission denied' in str(e), True)
             self.assertEqual('/var/log/crawl.log' in str(e), True)
@@ -1288,13 +1243,13 @@ class CrawlTest(unittest.TestCase):
 
         EXP: Attempts to log to pathname
         """
-        get_logger(reset=True)
+        util.get_logger(reset=True)
         logpath = '%s/test_get_logger_path.log' % self.testdir
         if os.path.exists(logpath):
             os.unlink(logpath)
         self.assertEqual(os.path.exists(logpath), False,
                          '%s should not exist but does' % logpath)
-        lobj = get_logger(logpath)
+        lobj = util.get_logger(logpath)
         self.assertEqual(os.path.exists(logpath), True,
                          '%s should exist but does not' % logpath)
         
@@ -1413,11 +1368,6 @@ class CrawlTest(unittest.TestCase):
         return rval
     
     # --------------------------------------------------------------------------
-    def tearDown(self):
-        if os.getcwd().endswith('/test.d'):
-            os.chdir(launch_dir)
-
-    # --------------------------------------------------------------------------
     def vassert_in(self, expected, actual):
         """
         If expected does not occur in actual, report it as an error.
@@ -1484,6 +1434,9 @@ class CrawlTest(unittest.TestCase):
         
     # ------------------------------------------------------------------------
     def tearDown(self):
+        if os.getcwd().endswith('/test.d'):
+            os.chdir(launch_dir)
+
         if is_running():
             testhelp.touch('crawler.exit')
             time.sleep(1.0)
@@ -1497,7 +1450,10 @@ class CrawlTest(unittest.TestCase):
 
         if os.path.exists('crawler_pid'):
             os.unlink('crawler_pid')
-        
+
+        if os.path.exists('crawler.exit'):
+            os.unlink('crawler.exit')
+
 # ------------------------------------------------------------------------------
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 toolframe.tf_launch("crl",
