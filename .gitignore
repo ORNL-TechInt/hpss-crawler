@@ -2,6 +2,7 @@ all_tests
 cmsg
 crawl
 crawler_pid
+crawler.exit
 DODO
 NOTES
 test.d
