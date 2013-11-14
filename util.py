@@ -20,17 +20,73 @@ def contents(filename):
     return rval
 
 # ------------------------------------------------------------------------------
-def get_logger(cmdline='', cfg=None, reset=False):
+def get_config(cfname='', reset=False):
     """
-    Return the logging object for this process. Instantiate it if it
-    does not exist already.
+    Open the config file based on cfname, $CRAWL_CONF, or the default, in that
+    order. Construct a CrawlConfig object, cache it, and return it. Subsequent
+    calls will retrieve the cached object unless reset=True, in which case the
+    old object is destroyed and a new one is constructed.
+
+    Note that values in the default dict passed to CrawlConfig.CrawlConfig
+    must be strings.
     """
     if reset:
         try:
+            del get_config._config
+        except AttributeError:
+            pass
+    
+    try:
+        rval = get_config._config
+    except AttributeError:
+        if cfname == '':
+            envval = os.getenv('CRAWL_CONF')
+            if None != envval:
+                cfname = envval
+    
+        if cfname == '':
+            cfname = 'crawl.cfg'
+
+        if not os.path.exists(cfname):
+            raise StandardError("%s does not exist" % cfname)
+        elif not os.access(cfname, os.R_OK):
+            raise StandardError("%s is not readable" % cfname)
+        rval = CrawlConfig.CrawlConfig({'fire': 'no',
+                                        'frequency': '3600',
+                                        'heartbeat': '10'})
+        rval.read(cfname)
+        rval.set('crawler', 'filename', cfname)
+        rval.set('crawler', 'loadtime', str(time.time()))
+        get_config._config = rval
+        
+    return rval
+
+# ------------------------------------------------------------------------------
+def get_logger(cmdline='', cfg=None, reset=False, soft=False):
+    """
+    Return the logging object for this process. Instantiate it if it
+    does not exist already.
+
+    cmdline contains the log file name from the command line if one was
+    specified.
+
+    cfg contains a configuration object or None.
+
+    reset == True means that the caller wants to close any currently open log
+    file and open a new one rather than returning the one that's already open.
+
+    soft == True means that if a logger does not exist, we don't want to open
+    one but return None instead. Normally, if a logger does not exist, we
+    create it.
+    """
+    if reset:
+        try:
+            l = get_logger._logger
+            for h in l.handlers:
+                h.close()
             del get_logger._logger
         except AttributeError:
             pass
-        return
 
     envval = os.getenv('CRAWL_LOG')
 
@@ -49,6 +105,8 @@ def get_logger(cmdline='', cfg=None, reset=False):
     try:
         rval = get_logger._logger
     except AttributeError:
+        if soft:
+            return None
         get_logger._logger = setup_logging(filename, 'crawl')
         rval = get_logger._logger
 

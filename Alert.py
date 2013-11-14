@@ -32,23 +32,33 @@ unit-testing/
 """
 import CrawlConfig
 import email.mime.text
+import os
 import smtplib
 import socket
+import sys
+import util
 
 # -----------------------------------------------------------------------------
 class Alert(object):
     # -------------------------------------------------------------------------
-    def __init__(self, msg='unspecified alert', caller='', dispatch=True):
+    def __init__(self, msg='unspecified alert', caller='', dispatch=True,
+                 cfg=None):
         self.msg = msg
         self.caller = caller
+        self.cfg = cfg
         if dispatch:
             self.dispatch()
         
     # -------------------------------------------------------------------------
     def dispatch(self):
-        mainmod = sys.modules['__main__']
-        cfg = mainmod.get_config()
-        log = mainmod.get_logger()
+        # mainmod = sys.modules['__main__']
+        # cfg = mainmod.get_config()
+        # log = mainmod.get_logger()
+        if self.cfg is not None:
+            cfg = self.cfg
+        else:
+            cfg = util.get_config()
+        log = util.get_logger()
         if self.caller != '':
             section = cfg.get(self.caller, 'alerts')
         else:
@@ -75,12 +85,15 @@ class Alert(object):
                     payload['To'] = addrs
                     s = smtplib.SMTP(hostname)
                     s.sendmail(sender, addrlist, payload.as_string())
+                    log.info("sent mail to %s", addrlist)
                     done = True
                     
                 elif opt == 'shell':
                     # run the program
                     cmd = cfg.get(section, 'shell')
-                    log.info("would run: '%s'" % cmd)
+                    cmdline = '%s %s' % (cmd, self.msg)
+                    os.system(cmdline)
+                    log.info("ran: '%s'" % (cmdline))
                     done = True
                     
                 elif opt == 'use':
