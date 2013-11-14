@@ -9,6 +9,7 @@ import testhelp
 def main(args):
     logfile = 'crawl_test.log'
     for modname in ['crawl',
+                    'AlertTest',
                     'Checkable',
                     'CrawlConfig',
                     'CrawlPlugin',
