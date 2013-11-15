@@ -21,15 +21,24 @@ class Checkable(object):
     dbname = ''
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
+        """
+        Initialize a Checkable object.
+        """
         self.dbname = Checkable.dbname
         self.path = '---'
         self.type = '-'
         self.checksum = ''
+        # self.cos = ''
         self.last_check = 0
         self.rowid = None
         self.args = args
         for k in kwargs:
-            if k not in ['rowid', 'path', 'type', 'checksum', 'last_check']:
+            if k not in ['rowid',
+                         'path',
+                         'type',
+                         'checksum',
+                         # 'cos',
+                         'last_check']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
@@ -37,14 +46,22 @@ class Checkable(object):
         
     # -------------------------------------------------------------------------
     def __repr__(self):
+        """
+        Return a human-readable representation of a Checkable object.
+        """
         return("Checkable(rowid=%s, " % str(self.rowid) +
                "path='%s', " % self.path +
                "type='%s', " % self.type +
+               "cos='%s', " % self.cos +
                "checksum='%s', " % self.checksum +
                "last_check=%f)" % self.last_check)
 
     # -------------------------------------------------------------------------
     def __eq__(self, other):
+        """
+        Two Checkable objects are equal if they are both instances of Checkable
+        and their path and type members are equal.
+        """
         return (isinstance(other, self.__class__) and
                 (self.path == other.path) and
                 (self.type == other.type))
@@ -55,6 +72,8 @@ class Checkable(object):
         """
         Start from scratch. The first thing we want to do is to add "/" to the
         queue, then take that Checkable object and call its .check() method.
+
+        !@! test?
         """
         Checkable.dbname = filename
         try:
@@ -65,9 +84,10 @@ class Checkable(object):
                                                       path text,
                                                       type text,
                                                       checksum text,
+                                                      cos text,
                                                       last_check int)""")
                 cx.execute("""insert into checkables(path, type, checksum,
-                                                     last_check)
+                                                     cos, last_check)
                                           values(?, ?, ?, ?)""",
                            (dataroot, 'd', '', 0))
                 db.commit()
@@ -77,6 +97,25 @@ class Checkable(object):
 
     # -----------------------------------------------------------------------------
     def fdparse(self, value):
+        """
+        Parse a file or directory name and type ('f' or 'd') from hsi output.
+        Return the two values in a tuple if successful, or None if not.
+        
+        !@! update this to parse the cos from ls -P output and return that as
+        well. Note that directories do not have a cos.
+
+        In "ls -P" output, directory lines look like
+
+            DIRECTORY       /home/tpb/bearcat
+
+        File lines look like (cos is '5081')
+
+            FILE    /home/tpb/halloy_test   111670  111670  3962+300150
+                X0352700        5081    0       1  01/29/2004       15:25:02
+                03/19/2012      13:09:50
+
+        !@! test?
+        """
         rgx = ('(.)([r-][w-][x-]){3}(\s+\S+){3}(\s+\d+)(\s+\w{3}' +
                '\s+\d+\s+[\d:]+)\s+(\S+)')
         q = re.search(rgx, value)
@@ -92,6 +131,8 @@ class Checkable(object):
     def get_list(cls, filename='drill.db'):
         """
         Return the current list of checkables.
+
+        !@! test?
         """
         Checkable.dbname = filename
         rval = []
@@ -100,12 +141,17 @@ class Checkable(object):
                 raise StandardError("Please call .ex_nihilo() first")
             db = sql.connect(filename)
             cx = db.cursor()
-            cx.execute('select rowid, path, type, checksum, last_check' +
+            cx.execute('select rowid, path, type, checksum, cos, last_check' +
                        ' from checkables order by last_check')
             rows = cx.fetchall()
             for row in rows:
-                new = Checkable(rowid=row[0], path=row[1], type=row[2],
-                                checksum=row[3], last_check=row[4])
+                # !@! have to update Checkable ctor to accept cos
+                new = Checkable(rowid=row[0],
+                                path=row[1],
+                                type=row[2],
+                                checksum=row[3],
+                                # cos=row[4],
+                                last_check=row[5])
                 rval.append(new)
             db.close()
             return rval
@@ -137,6 +183,8 @@ class Checkable(object):
          4 fetched and checksummed a non-directory file
          5 fetched a checksummed file and matched its checksum
          6 fetched a checksummed file and the checksum match failed
+
+        !@! test?
         """
         rval = []
         hsi_prompt = "]:"
@@ -183,6 +231,10 @@ class Checkable(object):
         else:
             # it's a directory -- get the list. this is outcome 1 from above --
             # we fill in rval with the list of the directory's contents
+
+            # !@! replace "ls -l" with "ls -P"; result will have to be parsed
+            # differently
+
             S.sendline("ls -l")
             S.expect(hsi_prompt)
 
@@ -231,6 +283,8 @@ class Checkable(object):
            last_check: != 0
 
         In any other case, we'll throw an exception.
+
+        !@! test?
         """
         try:
             db = sql.connect(self.dbname)
@@ -238,9 +292,14 @@ class Checkable(object):
 
             if self.rowid != None and self.last_check != 0.0:
                 # Updating the check time for an existing object 
-                cx.execute("update checkables set last_check=?, checksum=? " +
+                cx.execute("update checkables set last_check=?," +
+                           "checksum=?," +
+                           "cos=?"
                            "where rowid=?",
-                           (self.last_check, self.checksum, self.rowid))
+                           (self.last_check,
+                            self.checksum,
+                            self.cos,
+                            self.rowid))
             elif self.rowid == None and self.last_check == 0.0:
                 # Adding (or perhaps updating) a new checkable
                 cx.execute("select * from checkables where path=?",
@@ -248,10 +307,16 @@ class Checkable(object):
                 rows = cx.fetchall()
                 if 0 == len(rows):
                     # path not in db -- we insert it
-                    cx.execute("""insert into checkables(path, type, checksum,
+                    cx.execute("""insert into checkables(path,
+                                                         type,
+                                                         checksum,
+                                                         cos,
                                                          last_check)
                                   values(?, ?, ?, ?)""",
-                               (self.path, self.type, self.checksum,
+                               (self.path,
+                                self.type,
+                                self.checksum,
+                                self.cos,
                                 self.last_check))
                 elif 1 == len(rows):
                     # path is in db -- if type has changed, reset last_check
@@ -259,9 +324,10 @@ class Checkable(object):
                     if self.type != rows[0][2]:
                         cx.execute("""update checkables set type=?,
                                                             last_check=?,
+                                                            cos=?,
                                                             checksum=?
                                       where path=?""",
-                                   (self.type, 0, '', self.path))
+                                   (self.type, 0, '', '', self.path))
                 else:
                     raise StandardError("There seems to be more than one"
                                         + " occurrence of '%s' in the database" %
@@ -355,13 +421,17 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertEqual(method in dir(x), True,
                              "Checkable object is missing %s method" % method)
         self.expected('---', x.path)
+        self.expected('-', x.type)
+        self.expected('', x.checksum)
+        self.expected('', x.cos)
         self.expected(0, x.last_check)
         self.expected(None, x.rowid)
 
     # -------------------------------------------------------------------------
     def test_ctor_args(self):
         """
-        Verify that the constructor accepts and sets path, type, and last_check
+        Verify that the constructor accepts and sets rowid, path, type,
+        checksum, cos, and last_check
         """
         x = Checkable(path='/one/two/three', type='f', last_check=72)
         for method in self.methods:
@@ -374,7 +444,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_ctor_bad_args(self):
         """
-        Verify that the constructor accepts and sets path, type, and last_check
+        Verify that the constructor rejects invalid arguments
         """
         try:
             x = Checkable(path_x='/one/two/three', type='f', last_check=72)
@@ -388,6 +458,63 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.fail("Expected a StandardError but got this instead:"
                       + '\n"""\n%s\n"""' % tb.format_exc())
             
+    # -------------------------------------------------------------------------
+    def test_eq(self):
+        """
+        Two (Checkable) objects should be equal iff both are instances of class
+        Checkable and their path and type attributes are equal.
+        """
+        now = time.time()
+        a = Checkable(rowid=92,
+                      path='/foo/bar',
+                      type='f',
+                      checksum='12345',
+                      cos='9283',
+                      last_check=now)
+        b = Checkable(rowid=97,
+                      path='/foo/bar',
+                      type='f',
+                      checksum='something else',
+                      cos='23743',
+                      last_check=now + 23)
+        c = Checkable(rowid=43,
+                      path='/foo/bar',
+                      type='d',
+                      checksum='7777',
+                      cos='2843',
+                      last_check=now - 32)
+        d = Checkable(rowid=18,
+                      path='/foo/fiddle',
+                      type='f',
+                      checksum='1234591',
+                      cos='9222',
+                      last_check=now + 10132)
+        e = lambda: None
+        setattr(e, 'path', '/foo/bar')
+        setattr(e, 'type', 'f')
+        f = Checkable(rowid=49,
+                      path='/foo/fiddle',
+                      type='d',
+                      checksum='77sd7',
+                      cos='739',
+                      last_check=now-19)
+        self.assertEqual(a, b,
+                         "'%s' and '%s' should be equal" % (a, b))
+        self.assertNotEqual(a, c,
+                            "'%s' and '%s' should not be equal" % (a, c))
+        self.assertNotEqual(a, d,
+                            "'%s' and '%s' should not be equal" % (a, d))
+        self.assertNotEqual(a, e,
+                            "'%s' and '%s' should not be equal" % (a, e))
+        self.assertNotEqual(c, d,
+                            "'%s' and '%s' should not be equal" % (c, d))
+        self.assertNotEqual(c, e,
+                            "'%s' and '%s' should not be equal" % (c, e))
+        self.assertNotEqual(d, e,
+                            "'%s' and '%s' should not be equal" % (d, e))
+        self.assertNotEqual(e, f,
+                            "'%s' and '%s' should not be equal" % (e, f))
+
     # -------------------------------------------------------------------------
     def test_ex_nihilo_drspec(self):
         """
@@ -419,12 +546,17 @@ class CheckableTest(testhelp.HelpedTestCase):
         # the one row should reference the root directory
         cx.execute('select max(rowid) from checkables')
         max_id = cx.fetchone()[0]
-        self.expected(1, max_id)
-        self.expected('/home/somebody', rows[0][1])
-        self.expected('d', rows[0][2])
-        self.expected('', rows[0][3])
-        self.expected(0, rows[0][4])
-        
+        self.expected(1, max_id)                       # id
+        self.expected('/home/somebody', rows[0][1])    # path
+        self.expected('d', rows[0][2])                 # type
+        self.expected('', rows[0][3])                  # checksum
+        self.expected(0, rows[0][4])                   # last_check
+
+        # !@! this test should fail with cos implemented until we remove the
+        # preceding line and uncomment the following two
+        # self.expected('', rows[0][4])                  # cos
+        # self.expected(0, rows[0][5])                   # last_check
+
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
         """
@@ -480,11 +612,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         # the one row should reference the root directory
         cx.execute('select max(rowid) from checkables')
         max_id = cx.fetchone()[0]
-        self.expected(1, max_id)
-        self.expected('/', rows[0][1])
-        self.expected('d', rows[0][2])
-        self.expected('', rows[0][3])
-        self.expected(0, rows[0][4])
+        self.expected(1, max_id)           # id
+        self.expected('/', rows[0][1])     # path
+        self.expected('d', rows[0][2])     # type
+        self.expected('', rows[0][3])      # checksum
+        self.expected(0, rows[0][4])       # last_check
+        # !@! this test should fail until we remove the preceding line and
+        # uncomment the following two
+        # self.expected('', rows[0][4])      # cos
+        # self.expected(0, rows[0][5])       # last_check
         
     # -------------------------------------------------------------------------
     def test_fdparse_ldr(self):
@@ -492,6 +628,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         Parse an ls -l line from hsi where we're looking at a directory with a
         recent date (no year). fdparse() should return type='d', path=<file
         path>.
+
+        !@! update this to test "ls -X" output
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwx------    2 tpb       ccsstaff         ' +
@@ -505,6 +643,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Parse an ls -l line from hsi where we're looking at a directory with a year
         in the date. fdparse() should return type='d', path=<file path>.
+
+        !@! update this to test 'ls -X' output
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwxr-xr-x    2 tpb       ccsstaff         ' +
@@ -519,6 +659,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         Parse an ls -l line from hsi where we're looking at a file with a
         recent date (no year). fdparse() should return type='f', path=<file
         path>.
+
+        !@! update this to test "ls -X" output
         """
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff     ' +
@@ -530,8 +672,10 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_fdparse_lfy(self):
         """
-        Parse an ls -l line from hsi where we're looking at a file with a year
+        Parse an ls -X line from hsi where we're looking at a file with a year
         in the date. fdparse() should return type='f', path=<file path>.
+
+        !@! update this to test "ls -X" output
         """
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff        4896' +
@@ -543,7 +687,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_fdparse_nomatch(self):
         """
-        Parse an ls -l line from hsi that does not describe a file or directory
+        Parse an ls -X line from hsi that does not describe a file or directory
         in the date. fdparse() should return None.
         """
         n = Checkable(path='xyx', type='d')
@@ -579,16 +723,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
 
-        # create some test data
-        testdata = [('/', 'd', '', 0),
-                    ('/abc', 'd', '', 17),
-                    ('/xyz', 'f', '', 92),
-                    ('/abc/foo', 'f', '', 5),
-                    ('/abc/bar', 'f', '', time.time())]
+        # create some test data (path, type, checksum, cos, last_check)
+        testdata = [('/', 'd', '', '', 0),
+                    ('/abc', 'd', '', '', 17),
+                    ('/xyz', 'f', '', '', 92),
+                    ('/abc/foo', 'f', '', '', 5),
+                    ('/abc/bar', 'f', '', '', time.time())]
 
         # testdata has to be sorted by last_check since that's the way get_list
         # will order the list it returns
-        testdata.sort(key=lambda x : x[3])
+        testdata.sort(key=lambda x : x[4])
 
         # create the .db file
         Checkable.ex_nihilo(filename=self.testfile)
@@ -596,8 +740,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         # put the test data into the database
         db = sql.connect(self.testfile)
         cx = db.cursor()
-        cx.executemany("insert into checkables(path, type, checksum, last_check)" +
-                       " values(?, ?, ?, ?)",
+        cx.executemany("""insert into checkables(path,
+                                                 type,
+                                                 checksum,
+                                                 cos,
+                                                 last_check)
+                                      values(?, ?, ?, ?, ?)""",
                        testdata[1:])
         db.commit()
 
@@ -614,7 +762,8 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.expected(testdata[idx][0], item.path)
             self.expected(testdata[idx][1], item.type)
             self.expected(testdata[idx][2], item.checksum)
-            self.expected(testdata[idx][3], item.last_check)
+            self.expected(testdata[idx][3], item.cos)
+            self.expected(testdata[idx][4], item.last_check)
     
     # -------------------------------------------------------------------------
     def test_persist_checksum(self):
@@ -1035,30 +1184,63 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
 
     # -------------------------------------------------------------------------
+    def test_repr(self):
+        """
+        Verify the output of the __repr__() method
+        """
+        now = time.time()
+        exp = ("Checkable(rowid=17, " +
+               "path='/abc/def', " +
+               "type='d', " +
+               "cos='9999', " +
+               "checksum='flibbertygibbet', " + 
+               "last_check=%f" % now)
+                    
+        x = Checkable(rowid=17, path='/abc/def', type='d',
+                      checksum='flibbertygibbet', cos='9999',
+                      last_check=now)
+        self.expected(exp, x.__repr__())
+                        
+    # -------------------------------------------------------------------------
     def db_duplicates(self):
         try:
             db = sql.connect(self.testfile)
             cx = db.cursor()
-            cx.execute("""insert into checkables(path, type, checksum,
-                                                 last_check)
-                                      values('/abc/def', 'd', '', 0)""")
-            cx.execute("""insert into checkables(path, type, checksum,
-                                                 last_check)
-                                      values('/abc/def', 'd', '', 0)""")
+            sqlcmd = """insert into checkables(path,
+                                               type,
+                                               checksum,
+                                               cos,
+                                               last_check)
+                                      values('/abc/def', 'd', '', '', 0)"""
+            cx.execute(sqlcmd)
+            cx.execute(sqlcmd)
+
             db.commit()
             db.close()
         except sql.Error, e:
             print("SQLite Error: %s" % str(e))
             
     # -------------------------------------------------------------------------
-    def db_add_one(self, path=testpath, type='f', checksum='', last_check=0):
+    def db_add_one(self,
+                   path=testpath,
+                   type='f',
+                   checksum='',
+                   cos='',
+                   last_check=0):
+        """
+        Add one record to the database. All arguments except self are optional.
+        !@! review calls to db_add_one and add cos where appropriate
+        """
         try:
             db = sql.connect(self.testfile)
             cx = db.cursor()
-            cx.execute("""insert into checkables(path, type, checksum,
+            cx.execute("""insert into checkables(path,
+                                                 type,
+                                                 checksum,
+                                                 cose
                                                  last_check)
-                                      values(?, ?, ?, ?)""",
-                       (path, type, checksum, last_check))
+                                      values(?, ?, ?, ?, ?)""",
+                       (path, type, checksum, cos, last_check))
             db.commit()
             db.close()
         except sql.Error, e:
