@@ -1197,7 +1197,7 @@ class CrawlTest(unittest.TestCase):
 
         EXP: Attempts to log to cfg.get('crawler', 'logpath')
         """
-        util.get_logger(reset=True)
+        util.get_logger(reset=True, soft=True)
         t = copy.deepcopy(self.cdict)
         logpath = '%s/test_get_logger_config.log' % self.testdir
         t['crawler']['logpath'] = logpath
@@ -1221,7 +1221,7 @@ class CrawlTest(unittest.TestCase):
 
         EXP: Attempts to log to '/var/log/crawl.log'
         """
-        util.get_logger(reset=True)
+        util.get_logger(reset=True, soft=True)
         got_exception = False
         try:
             lobj = util.get_logger()
@@ -1243,7 +1243,7 @@ class CrawlTest(unittest.TestCase):
 
         EXP: Attempts to log to pathname
         """
-        util.get_logger(reset=True)
+        util.get_logger(reset=True, soft=True)
         logpath = '%s/test_get_logger_path.log' % self.testdir
         if os.path.exists(logpath):
             os.unlink(logpath)

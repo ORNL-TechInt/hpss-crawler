@@ -279,7 +279,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         p = CrawlPlugin(pname, c)
         self.assertNotEqual(pre, sys.path,
                             "pre and sys.path should not be equal, but are")
-        self.assertIn(self.plugdir, sys.path,
+        self.assertTrue(self.plugdir in sys.path,
                       "sys.path should contain '%s' but does not" %
                       self.plugdir)
 
@@ -318,7 +318,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
         # get it into the module list, remove the .pyc file
         __import__(pname)
-        self.assertIn(pname, sys.modules.keys())
+        self.assertTrue(pname in sys.modules.keys(),
+                        "%s not found in %s" % (pname, sys.modules.keys()))
 
         # update the plugin so we can tell whether it gets reloaded
         f = open('%s/%s.py' % (self.plugdir, pname), 'a')
@@ -337,7 +338,9 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # initializing a plugin object should reload the plugin
         try:
             p = CrawlPlugin(pname, c)
-            self.assertIn('added', dir(sys.modules[pname]))
+            self.assertTrue('added' in dir(sys.modules[pname]),
+                            "expected 'added' in " +
+                            "dir(sys.modules[%s]) not found" % (pname))
         except ImportError:
             self.fail("Expected import to succeed but it did not.")
         except Exception, e:
@@ -483,8 +486,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # instantiate the plugin object
         p = CrawlPlugin(pname, c)
         self.expected(self.plugdir, p.plugin_dir)
-        self.assertRegexpMatches('%s/%s.pyc?' % (self.plugdir, pname),
-                                 sys.modules[pname].__file__)
+        rgx = '%s/%s.pyc?' % (self.plugdir, pname)
+        self.assertTrue(re.findall(rgx, 
+                                   sys.modules[pname].__file__),
+                        "expected '%s' to match '%s'" %
+                        (rgx, sys.modules[pname].__file__))
         
         # alternate plugin in alternate directory
         apdir = self.plugdir + "_alt"
@@ -498,8 +504,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # re-init the plugin object
         p.reload(c)
         self.expected(apdir, p.plugin_dir)
-        self.assertRegexpMatches('%s/%s.pyc?' % (apdir, pname),
-                                 sys.modules[pname].__file__)
+        rgx = '%s/%s.pyc?' % (apdir, pname)
+        self.assertTrue(re.findall(rgx, sys.modules[pname].__file__),
+                        "expected '%s' to match sys.modules[%s].__file__" %
+                        (rgx, pname))
+                                 
         
         # raise testhelp.UnderConstructionError()
     
