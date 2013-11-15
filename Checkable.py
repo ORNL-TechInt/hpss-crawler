@@ -306,15 +306,18 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(2, len(x))
         dirlist = x[1].check(50)
 
-        self.assertIn(Checkable(path=testdir + '/crawler.tar',
-                                type='f'), dirlist)
-        self.assertIn(Checkable(path=testdir + '/crawler.tar.idx',
-                                type='f'), dirlist)
-        self.assertIn(Checkable(path=testdir + '/subdir1',
-                                type='d'), dirlist)
-        self.assertIn(Checkable(path=testdir + '/subdir2',
-                                type='d'), dirlist)
-        # raise testhelp.UnderConstructionError('under construction')
+        c = Checkable(path=testdir + '/crawler.tar', type='f')
+        self.assertTrue(c in dirlist,
+                        "expected to find %s in %s" % (c, dirlist))
+        c = Checkable(path=testdir + '/crawler.tar.idx', type='f')
+        self.assertTrue(c in dirlist,
+                        "expected to find %s in %s" % (c, dirlist))
+        c = Checkable(path=testdir + '/subdir1', type='d')
+        self.assertTrue(c in dirlist,
+                        "expected to find %s in %s" % (c, dirlist))
+        c = Checkable(path=testdir + '/subdir2', type='d')
+        self.assertTrue(c in dirlist,
+                        "expected to find %s in %s" % (c, dirlist))
     
     # -------------------------------------------------------------------------
     def test_check_file(self):
@@ -784,8 +787,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable.get_list(filename=self.testfile)
 
         self.expected(2, len(x))
-        self.assertIn(Checkable(path='/', type='d'), x)
-        self.assertIn(Checkable(path='/home', type='d'), x)
+        c = Checkable(path='/', type='d')
+        self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
+        c = Checkable(path='/home', type='d')
+        self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
                       
         x[0].last_check = now = time.time()
         x[0].persist()
@@ -804,8 +809,10 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
-        self.assertIn(Checkable(path='/', type='d'), x)
-        self.assertIn(Checkable(path='/home', type='d'), x)
+        c = Checkable(path='/', type='d')
+        self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
+        Checkable(path='/home', type='d')
+        self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
         self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
         
     # -------------------------------------------------------------------------

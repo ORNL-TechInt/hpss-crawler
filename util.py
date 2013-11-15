@@ -158,7 +158,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(type(x), str,
                          "Expected a string but got a %s" % type(x))
         expected = 'def contents('
-        self.assertIn(expected, x,
+        self.assertTrue(expected in x,
                       "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
                       (expected, x))
 
