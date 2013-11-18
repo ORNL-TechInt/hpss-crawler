@@ -94,13 +94,11 @@ class Checkable(object):
             print("SQLite Error: %s" % str(e))
 
     # -----------------------------------------------------------------------------
-    def fdparse(self, value):
+    @classmethod
+    def fdparse(cls, value):
         """
         Parse a file or directory name and type ('f' or 'd') from hsi output.
         Return the two values in a tuple if successful, or None if not.
-        
-        !@! update this to parse the cos from ls -P output and return that as
-        well. Note that directories do not have a cos.
 
         In "ls -P" output, directory lines look like
 
@@ -111,26 +109,37 @@ class Checkable(object):
             FILE    /home/tpb/halloy_test   111670  111670  3962+300150
                 X0352700        5081    0       1  01/29/2004       15:25:02
                 03/19/2012      13:09:50
-
-        !@! test?
         """
-        rgx = ('(.)([r-][w-][x-]){3}(\s+\S+){3}(\s+\d+)(\s+\w{3}' +
-               '\s+\d+\s+[\d:]+)\s+(\S+)')
-        q = re.search(rgx, value)
-        if q:
-            (type, ign1, ign2, ign3, ign4, fname) = q.groups()
-            if type == '-': type = 'f'
-            return(type, fname)
-        else:
-            return None
+        try:
+            q = cls.rgxP
+        except AttributeError:
+            cls.rgxP = re.compile("(FILE|DIRECTORY)\s+(\S+)(\s+\d+\s+\d+" +
+                                  "\s+\S+\s+\S+\s+(\d+))?")
+            cls.rgxl = re.compile("(.)([r-][w-][x-]){3}(\s+\S+){3}" +
+                                  "(\s+\d+)(\s+\w{3}\s+\d+\s+[\d:]+)" +
+                                  "\s+(\S+)")
+            cls.map = {'DIRECTORY': 'd',
+                       'd': 'd',
+                       'FILE': 'f',
+                       '-': 'f'}
+            
+        ltup = re.findall(cls.rgxP, value)
+        if ltup:
+            (type, fname, ign1, cos) = ltup[0]
+            return(cls.map[type], fname, cos)
+
+        ltup = re.findall(cls.rgxl, value)
+        if ltup:
+            (type, ign1, ign2, ign3, ign4, fname) = ltup[0]
+            return(cls.map[type], fname, '')
+
+        return None
 
     # -------------------------------------------------------------------------
     @classmethod
     def get_list(cls, filename='drill.db'):
         """
         Return the current list of checkables.
-
-        !@! test?
         """
         Checkable.dbname = filename
         rval = []
@@ -143,12 +152,11 @@ class Checkable(object):
                        ' from checkables order by last_check')
             rows = cx.fetchall()
             for row in rows:
-                # !@! have to update Checkable ctor to accept cos
                 new = Checkable(rowid=row[0],
                                 path=row[1],
                                 type=row[2],
                                 checksum=row[3],
-                                # cos=row[4],
+                                cos=row[4],
                                 last_check=row[5])
                 rval.append(new)
             db.close()
@@ -181,8 +189,6 @@ class Checkable(object):
          4 fetched and checksummed a non-directory file
          5 fetched a checksummed file and matched its checksum
          6 fetched a checksummed file and the checksum match failed
-
-        !@! test?
         """
         rval = []
         hsi_prompt = "]:"
@@ -229,19 +235,18 @@ class Checkable(object):
         else:
             # it's a directory -- get the list. this is outcome 1 from above --
             # we fill in rval with the list of the directory's contents
-
-            # !@! replace "ls -l" with "ls -P"; result will have to be parsed
-            # differently
-
-            S.sendline("ls -l")
+            S.sendline("ls -P")
             S.expect(hsi_prompt)
 
             lines = S.before.split('\n')
             for line in lines:
-                r = self.fdparse(line)
+                r = Checkable.fdparse(line)
                 if None != r:
-                    fpath = '/'.join([self.path, r[1]])
-                    new = Checkable(path=fpath, type=r[0])
+                    if '/' not in r[1]:
+                        fpath = '/'.join([self.path, r[1]])
+                    else:
+                        fpath = r[1]
+                    new = Checkable(path=fpath, type=r[0], cos=r[2])
                     new.persist()
                     rval.append(new)
 
@@ -258,7 +263,8 @@ class Checkable(object):
         """
         Update the object's entry in the database.
 
-        There are two situations where we need to push data into the database.
+        There are several situations where we need to push data into the
+        database.
 
         1) We have found a new object to track and want to add it to the
            database. However, if the path matches an entry already in the
@@ -272,7 +278,7 @@ class Checkable(object):
            type: ...
            last_check: 0
 
-        2) I have just checked an existing object and I want to update its
+        2) We have just checked an existing object and want to update its
            last_check time. In this case, we'll have the following incoming values:
 
            rowid: != None
@@ -280,9 +286,14 @@ class Checkable(object):
            type: ...
            last_check: != 0
 
-        In any other case, we'll throw an exception.
+        3) The cos of an existing file has changed. Incoming values:
 
-        !@! test?
+           rowid: != None
+           path: ...
+           type: 'f'
+           cos: != ''
+           
+        In any other case, we'll throw an exception.
         """
         try:
             db = sql.connect(self.dbname)
@@ -299,7 +310,7 @@ class Checkable(object):
                             self.cos,
                             self.rowid))
             elif self.rowid == None and self.last_check == 0.0:
-                # Adding (or perhaps updating) a new checkable
+                # Adding (or perhaps updating) a new/existing checkable
                 cx.execute("select * from checkables where path=?",
                            (self.path,))
                 rows = cx.fetchall()
@@ -317,18 +328,26 @@ class Checkable(object):
                                 self.cos,
                                 self.last_check))
                 elif 1 == len(rows):
-                    # path is in db -- if type has changed, reset last_check
-                    # and checksum. Otherwise, leave it alone
+                    # path is in db -- if type or cos has changed, reset
+                    # last_check and checksum. Otherwise, leave it alone
+
                     if self.type != rows[0][2]:
                         cx.execute("""update checkables set type=?,
                                                             last_check=?,
-                                                            cos=?,
                                                             checksum=?
                                       where path=?""",
-                                   (self.type, 0, '', '', self.path))
+                                   (self.type, 0, '', self.path))
+                    if self.type == 'd':
+                        cx.execute("""update checkables set cos=?
+                                      where path=?""",
+                                   ('', self.path))
+                    elif self.cos != rows[0][4]:
+                        cx.execute("""update checkables set cos=?
+                                      where path=?""",
+                                   (self.cos, self.path))
                 else:
-                    raise StandardError("There seems to be more than one"
-                                        + " occurrence of '%s' in the database" %
+                    raise StandardError("There seems to be more than one" +
+                                        " occurrence of '%s' in the database" %
                                         self.path)
             else:
                 raise StandardError("Invalid conditions: "
@@ -619,30 +638,28 @@ class CheckableTest(testhelp.HelpedTestCase):
         Parse an ls -l line from hsi where we're looking at a directory with a
         recent date (no year). fdparse() should return type='d', path=<file
         path>.
-
-        !@! update this to test "ls -X" output
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwx------    2 tpb       ccsstaff         ' +
                 '512 Oct 17 13:54 subdir1')
-        (t,f) = n.fdparse(line)
+        (t,f,c) = n.fdparse(line)
         self.expected('d', t)
         self.expected('subdir1', f)
+        self.expected('', c)
     
     # -------------------------------------------------------------------------
     def test_fdparse_ldy(self):
         """
         Parse an ls -l line from hsi where we're looking at a directory with a year
         in the date. fdparse() should return type='d', path=<file path>.
-
-        !@! update this to test 'ls -X' output
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwxr-xr-x    2 tpb       ccsstaff         ' +
                 '512 Dec 17  2004 incase')
-        (t,f) = n.fdparse(line)
+        (t,f,c) = n.fdparse(line)
         self.expected('d', t)
         self.expected('incase', f)
+        self.expected('', c)
     
     # -------------------------------------------------------------------------
     def test_fdparse_lfr(self):
@@ -650,31 +667,29 @@ class CheckableTest(testhelp.HelpedTestCase):
         Parse an ls -l line from hsi where we're looking at a file with a
         recent date (no year). fdparse() should return type='f', path=<file
         path>.
-
-        !@! update this to test "ls -X" output
         """
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff     ' +
                 '1720832 Oct 17 13:56 crawler.tar')
-        (t,f) = n.fdparse(line)
+        (t,f,c) = n.fdparse(line)
         self.expected('f', t)
         self.expected('crawler.tar', f)
+        self.expected('', c)
     
     # -------------------------------------------------------------------------
     def test_fdparse_lfy(self):
         """
         Parse an ls -X line from hsi where we're looking at a file with a year
         in the date. fdparse() should return type='f', path=<file path>.
-
-        !@! update this to test "ls -X" output
         """
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff        4896' +
                 ' Dec 30  2011 pytest.tar.idx')
-        (t,f) = n.fdparse(line)
+        (t,f,c) = n.fdparse(line)
         self.expected('f', t)
         self.expected('pytest.tar.idx', f)
-    
+        self.expected('', c)
+
     # -------------------------------------------------------------------------
     def test_fdparse_nomatch(self):
         """
@@ -697,9 +712,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         n = Checkable(path='xyx', type='d')
         line = "DIRECTORY       /home/tpb/apache"
-        (t,f) = n.fdparse(line)
+        (t,f,c) = n.fdparse(line)
         self.expected('d', t)
         self.expected('/home/tpb/apache', f)
+        self.expected('', c)
     
     # -------------------------------------------------------------------------
     def test_fdparse_Pf(self):
@@ -885,15 +901,17 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         now = time.time()
         self.db_add_one(path=self.testpath, type='d', checksum='abc',
-                        last_check=now)
+                        cos='1234', last_check=now)
         
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
+        self.expected('1234', x[1].cos)
 
         x[1].last_check = 0
         x[1].checksum = ''
+        x[1].cos = '9876'
         try:
             x[1].rowid = None
             x[1].persist()
@@ -907,6 +925,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('d', x[1].type)
         self.expected(now, x[1].last_check)
         self.expected('abc', x[1].checksum)
+        self.expected('', x[1].cos)
     
     # -------------------------------------------------------------------------
     def test_persist_dir_exist_fd(self):
@@ -921,14 +940,16 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         now = time.time()
         self.db_add_one(path=self.testpath, type='f', checksum='abc',
-                        last_check=now)
+                        cos='1234', last_check=now)
         
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
-
+        self.expected('1234', x[1].cos)
+        
         x[1].last_check = 0
+        x[1].cos= ''
         try:
             x[1].rowid = None
             x[1].type = 'd'
@@ -943,6 +964,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('d', x[1].type)
         self.expected(0, x[1].last_check)
         self.expected('', x[1].checksum)
+        self.expected('', x[1].cos)
     
     # -------------------------------------------------------------------------
     def test_persist_dir_invalid(self):
@@ -1099,6 +1121,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(now, x[1].last_check)
 
         x[1].last_check = 0
+        x[1].cos = '1234'
         try:
             x[1].rowid = None
             x[1].type = 'f'
@@ -1113,6 +1136,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('f', x[1].type)
         self.expected(0, x[1].last_check)
         self.expected('', x[1].checksum)
+        self.expected('1234', x[1].cos)
     
     # -------------------------------------------------------------------------
     def test_persist_file_exist_ff(self):
@@ -1124,13 +1148,14 @@ class CheckableTest(testhelp.HelpedTestCase):
             os.unlink(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         now = time.time()
-        self.db_add_one(last_check=now, type='f', checksum='abc')
+        self.db_add_one(last_check=now, type='f', checksum='abc', cos='1111')
         x = Checkable.get_list(filename=self.testfile)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
 
         x[1].last_check = 0
+        x[1].cos = '2222'
         try:
             x[1].rowid = None
             x[1].persist()
@@ -1144,7 +1169,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('f', x[1].type)
         self.expected(now, x[1].last_check)
         self.expected('abc', x[1].checksum)
-    
+        self.expected('2222', x[1].cos)
+        
     # -------------------------------------------------------------------------
     def test_persist_file_invalid(self):
         """
