@@ -195,7 +195,8 @@ def run_tests(a, final, testlist, volume, logfile=None, module=None):
         result = unittest.TextTestRunner(verbosity=volume).run(suite)
         if 'tearDownModule' in dir(module):
             module.tearDownModule()
-
+        return(result.testsRun, len(result.errors), len(result.failures))
+    
 # -----------------------------------------------------------------------------
 class LoggingTestSuite(unittest.TestSuite):
     # -------------------------------------------------------------------------
