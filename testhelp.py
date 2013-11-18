@@ -231,7 +231,7 @@ class HelpedTestCase(unittest.TestCase):
 
     # -------------------------------------------------------------------------
     def expected(self, expval, actual):
-        msg = "Expected "
+        msg = "\nExpected: "
         if type(expval) == int:
             msg += "%d"
         elif type(expval) == float:
@@ -239,7 +239,7 @@ class HelpedTestCase(unittest.TestCase):
         else:
             msg += "'%s'"
 
-        msg += ", got "
+        msg += "\n  Actual: "
         if type(actual) == int:
             msg += "%d"
         elif type(actual) == float:

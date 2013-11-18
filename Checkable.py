@@ -28,7 +28,7 @@ class Checkable(object):
         self.path = '---'
         self.type = '-'
         self.checksum = ''
-        # self.cos = ''
+        self.cos = ''
         self.last_check = 0
         self.rowid = None
         self.args = args
@@ -37,7 +37,7 @@ class Checkable(object):
                          'path',
                          'type',
                          'checksum',
-                         # 'cos',
+                         'cos',
                          'last_check']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
@@ -72,8 +72,6 @@ class Checkable(object):
         """
         Start from scratch. The first thing we want to do is to add "/" to the
         queue, then take that Checkable object and call its .check() method.
-
-        !@! test?
         """
         Checkable.dbname = filename
         try:
@@ -88,8 +86,8 @@ class Checkable(object):
                                                       last_check int)""")
                 cx.execute("""insert into checkables(path, type, checksum,
                                                      cos, last_check)
-                                          values(?, ?, ?, ?)""",
-                           (dataroot, 'd', '', 0))
+                                          values(?, ?, ?, ?, ?)""",
+                           (dataroot, 'd', '', '', 0))
                 db.commit()
                 db.close()
         except sql.Error, e:
@@ -312,7 +310,7 @@ class Checkable(object):
                                                          checksum,
                                                          cos,
                                                          last_check)
-                                  values(?, ?, ?, ?)""",
+                                  values(?, ?, ?, ?, ?)""",
                                (self.path,
                                 self.type,
                                 self.checksum,
@@ -550,12 +548,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/home/somebody', rows[0][1])    # path
         self.expected('d', rows[0][2])                 # type
         self.expected('', rows[0][3])                  # checksum
-        self.expected(0, rows[0][4])                   # last_check
-
-        # !@! this test should fail with cos implemented until we remove the
-        # preceding line and uncomment the following two
-        # self.expected('', rows[0][4])                  # cos
-        # self.expected(0, rows[0][5])                   # last_check
+        self.expected('', rows[0][4])                  # cos
+        self.expected(0, rows[0][5])                   # last_check
 
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
@@ -616,11 +610,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/', rows[0][1])     # path
         self.expected('d', rows[0][2])     # type
         self.expected('', rows[0][3])      # checksum
-        self.expected(0, rows[0][4])       # last_check
-        # !@! this test should fail until we remove the preceding line and
-        # uncomment the following two
-        # self.expected('', rows[0][4])      # cos
-        # self.expected(0, rows[0][5])       # last_check
+        self.expected('', rows[0][4])      # cos
+        self.expected(0, rows[0][5])       # last_check
         
     # -------------------------------------------------------------------------
     def test_fdparse_ldr(self):
@@ -694,6 +685,38 @@ class CheckableTest(testhelp.HelpedTestCase):
         line = '/home/tpb/cli_test:'
         z = n.fdparse(line)
         self.expected(None, z)
+    
+    # -------------------------------------------------------------------------
+    def test_fdparse_Pd(self):
+        """
+
+        Parse an ls -P line from hsi where we're looking at a directory. The -P
+        format doesn't provide date or cos for directories.
+
+        fdparse() should return type='d', path=<file path>
+        """
+        n = Checkable(path='xyx', type='d')
+        line = "DIRECTORY       /home/tpb/apache"
+        (t,f) = n.fdparse(line)
+        self.expected('d', t)
+        self.expected('/home/tpb/apache', f)
+    
+    # -------------------------------------------------------------------------
+    def test_fdparse_Pf(self):
+        """
+
+        Parse an ls -P line from hsi where we're looking at a file. fdparse()
+        should return type='f', path=<file path>, cos.
+
+        """
+        n = Checkable(path='xyx', type='d')
+        line = ("FILE    /home/tpb/LoadL_admin   88787   88787   " +
+                "3962+411820     X0352700        5081    0       1       " +
+                "03/14/2003      07:12:43        03/19/2012       13:09:50")
+        (t,f,c) = n.fdparse(line)
+        self.expected('f', t)
+        self.expected('/home/tpb/LoadL_admin', f)
+        self.expected('5081', c)
     
     # -------------------------------------------------------------------------
     def test_get_list_nosuch(self):
@@ -1194,7 +1217,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                "type='d', " +
                "cos='9999', " +
                "checksum='flibbertygibbet', " + 
-               "last_check=%f" % now)
+               "last_check=%f)" % now)
                     
         x = Checkable(rowid=17, path='/abc/def', type='d',
                       checksum='flibbertygibbet', cos='9999',
@@ -1237,7 +1260,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             cx.execute("""insert into checkables(path,
                                                  type,
                                                  checksum,
-                                                 cose
+                                                 cos,
                                                  last_check)
                                       values(?, ?, ?, ?, ?)""",
                        (path, type, checksum, cos, last_check))
