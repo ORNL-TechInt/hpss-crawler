@@ -1,0 +1,665 @@
+#!/usr/bin/env python
+
+import copy
+import os
+import sqlite3 as sql
+import testhelp
+import toolframe
+import traceback as tb
+
+# -----------------------------------------------------------------------------
+class Dimension(object):
+    """
+    The Dimension object has a name, for example, 'cos', indicating what the
+    dimension represents. Within the object, the actual data are tracked in
+    dictionaries p_sum (population summary) and s_sum (sample summary).
+
+    The struct of both dictionaries looks like this:
+
+        {'5081': {'count': 1700, 'pct': 25.432},
+         '6002': {'count':  900, 'pct': 12.785},
+         ...}
+
+    The keys for the top level dict are the categories for the dimension.
+
+    The count field is the number of items found in the category for the
+    population or the sample.
+
+    The pct field is the percent of the total represented by the category of
+    the total, either in the population or the sample.
+
+    In the database, this data is stored in records like
+
+        name      category    p_count    p_pct   s_count    s_pct
+        'cos'     '5081'         1700   25.432        50   24.987
+        'cos'     '6002'          900   12.785        28   11.938
+        ...
+        
+    """
+    # The default database to use
+    dbname = 'drill.db'
+
+    # attributes that can be set through the constructor
+    settable_attrl = ['dbname', 'name', 'sampsize']
+
+    # -------------------------------------------------------------------------
+    def __init__(self, *args, **kwargs):
+        """
+        Initialize/create a Dimension object - we expect a name, to be used as
+        a database key, and a sample size parameter relative to the population
+        size, given as a fraction that can be used directly as a multiplier
+        (e.g., 0.05 for 5%, 0.005 for .5%, etc.).
+
+        Field 'name' in the object corresponds with field 'category' in the db.
+        """
+        self.dbname = Dimension.dbname
+        self.db_initialized = False
+        self.name = ''          # name must be set by caller
+        self.sampsize = 0.01    # default sample size is 1%
+        self.p_sum = {}         # population summary starts empty
+        self.s_sum = {}         # sample summary starts empty
+        for attr in kwargs:
+            if attr in self.settable_attrl:
+                setattr(self, attr, kwargs[attr])
+            else:
+                raise StandardError("Attribute '%s'" % attr+
+                                    " is not valid for Dimension" )
+        if self.name == '':
+            raise StandardError("Caller must set attribute 'name'")
+        self.db_init()
+        
+    # -------------------------------------------------------------------------
+    def __repr__(self):
+        rv = "Dimension(name='%s'" % self.name
+        if self.dbname != Dimension.dbname:
+            rv += ", dbname='%s'" % self.dbname
+        rv += ")"
+        return rv
+
+    # -------------------------------------------------------------------------
+    def db(self):
+        try:
+            return self.db_handle
+        except AttributeError:
+            self.db_handle = sql.connect(self.dbname)
+            self.db_handle.isolation_level = None
+            return self.db_handle
+    
+    # -------------------------------------------------------------------------
+    def db_cursor(self):
+        try:
+            return self.db_cursor_handle
+        except AttributeError:
+            db = self.db()
+            self.db_cursor_handle = db.cursor()
+            return self.db_cursor_handle
+
+    # -------------------------------------------------------------------------
+    def db_execute(self, cmd, data=None):
+        cx = self.db_cursor()
+        if data is None:
+            cx.execute(cmd)
+            rows = cx.fetchall()
+        elif 1 < len(data):
+            cx.executemany(cmd, data)
+            rows = cx.fetchall()
+        else:
+            cx.execute(cmd, data[0])
+            rows = cx.fetchall()
+        return rows
+    
+    # -------------------------------------------------------------------------
+    def db_init(self):
+        if hasattr(self,'db_handle'):
+            return
+        rows = self.db_execute("""SELECT name FROM sqlite_master
+                                  WHERE type='table' AND name='dimension'""")
+        if len(rows) < 1:
+            self.db_execute("""create table dimension(id int primary key,
+                                                 name text,
+                                                 category text,
+                                                 p_count int,
+                                                 p_pct real,
+                                                 s_count int,
+                                                 s_pct real)""")
+            self.db().commit()
+        
+    # -------------------------------------------------------------------------
+    def load(self):
+        rows = self.db_execute("""select category, p_count, p_pct, s_count,
+                                         s_pct
+                                  from dimension where name = ?""",
+                               [(self.name,)])
+        for row in rows:
+            (cval, p_count, p_pct, s_count, s_pct) = row
+            self.p_sum.setdefault(cval, {'count': p_count,
+                                         'pct': p_pct})
+            self.s_sum.setdefault(cval, {'count': s_count,
+                                         'pct': s_pct})
+        pass
+    
+    # -------------------------------------------------------------------------
+    def persist(self):
+        """
+        Initialize the database and dimension table if necessary. Then save
+        this object to it.
+
+        Saving the object: first, we have to find out which rows are already in
+        the database. Then, comparing the rows from the database with the
+        object, we construct two lists: rows to be updated, and rows to be
+        inserted. There's no way for categories to be removed from a summary
+        dictionary, so we don't have to worry about deleting entries.
+        """
+        if self.p_sum == {}:
+            return
+        
+        i_list = []
+        i_data = []
+        u_list = []
+        u_data = []
+        
+        # find out which rows are already in the database
+        rows = self.db_execute("""select name, category from dimension
+                                  where name = ?""", [(self.name,)])
+        for k in self.p_sum:
+            if (self.name, k) in rows:
+                u_list.append((self.name, k))
+            else:
+                i_list.append((self.name, k))
+
+        u_cmd = """update dimension set p_count=?,
+                                      p_pct=?,
+                                      s_count=?,
+                                      s_pct=?
+                  where name=? and category=?
+                  """
+        for (name, cat) in u_list:
+            u_data.append((self.p_sum[cat]['count'],
+                           self.p_sum[cat]['pct'],
+                           self.s_sum[cat]['count'],
+                           self.s_sum[cat]['pct'],
+                           self.name,
+                           cat))
+        if u_data != []:
+            self.db_execute(u_cmd, u_data)
+        
+        i_cmd = """insert into dimension(name,
+                                         category,
+                                         p_count,
+                                         p_pct,
+                                         s_count,
+                                         s_pct)
+                   values(?, ?, ?, ?, ?, ?)
+            """
+        for (name, cat) in i_list:
+            i_data.append((self.name,
+                           cat,
+                           self.p_sum[cat]['count'],
+                           self.p_sum[cat]['pct'],
+                           self.s_sum[cat]['count'],
+                           self.s_sum[cat]['pct']))
+        if i_data != []:
+            self.db_execute(i_cmd, i_data)
+                          
+        pass
+    
+    # -------------------------------------------------------------------------
+    def sum_total(self, dict=None, which='p'):
+        """
+        Return the total of all the 'count' entries in one of the dictionaries.
+        The dictionary to sum up can be indicated by passing an argument to
+        dict, or by passing 'p(opulation)' or 's(ample)' to which.
+        """
+        if dict is not None:
+            rv = sum(map(lambda x: x['count'], dict.values()))
+        elif which.startswith('s'):
+            rv = sum(map(lambda x: x['count'], self.s_sum.values()))
+        else:
+            rv = sum(map(lambda x: x['count'], self.p_sum.values()))
+        return rv
+    
+    # -------------------------------------------------------------------------
+    def update_category(self, catval, p_suminc=1, s_suminc=0):
+        if catval not in self.p_sum:
+            self.p_sum[catval] = {'count': p_suminc, 'pct': 0.0}
+        else:
+            self.p_sum[catval]['count'] += p_suminc
+
+        if catval not in self.s_sum:
+            self.s_sum[catval] = {'count': s_suminc, 'pct': 0.0}
+        else:
+            self.s_sum[catval]['count'] += s_suminc
+
+        self._update_pct()
+    
+    # -------------------------------------------------------------------------
+    def _update_pct(self):
+        """
+        Update the 'pct' values in the population and sample dictionaries. This
+        is called by update_category and is tested as part of the tests for it.
+        This routine should not normally be called from the outside.
+        """
+        for d in [self.p_sum, self.s_sum]:
+            total = sum(map(lambda x: x['count'], d.values()))
+            if 0 < total:
+                for key in d:
+                    d[key]['pct'] = 100.0 * d[key]['count'] / total
+            else:
+                for key in d:
+                    d[key]['pct'] = 0.0
+    
+# -----------------------------------------------------------------------------
+class DimensionTest(testhelp.HelpedTestCase):
+    testdb = 'test.db'
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_attrs(self):
+        """
+        Verify that a newly created Dimension object has the following attributes:
+         - name (string)
+         - sampsize (small float value, e.g., 0.005)
+         - p_sum (empty dict)
+         - s_sum (empty dict)
+         - methods
+            > update_category
+            > update_pct
+            > sum_total
+            > persist
+            > load
+        """
+        dimname = 'ctor_attrs'
+        a = Dimension(dbname=self.testdb,
+                      name=dimname,
+                      sampsize=0.005)
+        for attr in ['name',
+                     'sampsize',
+                     'p_sum',
+                     's_sum',
+                     'update_category',
+                     '_update_pct',
+                     'sum_total',
+                     'persist',
+                     'load',]:
+            self.assertTrue(hasattr(a, attr),
+                            "Object %s does not have expected attribute %s" %
+                            (a, attr))
+
+    # -------------------------------------------------------------------------
+    def test_ctor_bad_attr(self):
+        """
+        Attempting to create a Dimension with attrs that are not in the
+        settable list should get an exception.
+        """
+        dimname = 'bad_attr'
+        got_exception = False
+        try:
+            a = Dimension(dbname=self.testdb,
+                          name=dimname,
+                          catl=[1,2,3])
+        except StandardError, e:
+            got_exception = True
+            self.assertTrue("Attribute 'catl' is not valid" in tb.format_exc(),
+                            "Got the wrong StandardError: " +
+                            '\n"""\n%s\n"""' % str(e))
+        except:
+            self.fail("Got unexpected exception: " +
+                      '"""\n%s\n"""' % tb.format_exc())
+        self.assertTrue(got_exception,
+                        "Expected a StandardError but didn't " +
+                        "get one for attr 'catl'")
+
+        got_exception = False    
+        try:
+            a = Dimension(dbname=self.testdb,
+                          name=dimname,
+                          aardvark='Fanny Brice')
+        except StandardError, e:
+            got_exception = True
+            self.assertTrue("Attribute 'aardvark' is not valid" in
+                            tb.format_exc(),
+                            "Got the wrong StandardError: " +
+                            '\n"""\n%s\n"""' % tb.format_exc())
+        except:
+            self.fail("Got unexpected exception: " +
+                      '"""\n%s\n"""' % tb.format_exc())
+        self.assertTrue(got_exception,
+                        "Expected an StandardError but didn't get " +
+                        "one for attr 'aardvark'")
+            
+    # -------------------------------------------------------------------------
+    def test_ctor_defaults(self):
+        """
+        A new Dimension with only the name specified should have the right
+        defaults.
+        """
+        dimname = 'defaults'
+        a = Dimension(dbname=self.testdb, name=dimname)
+        self.expected(dimname, a.name)
+        self.expected(0.01, a.sampsize)
+        self.expected({}, a.p_sum)
+        self.expected({}, a.s_sum)
+        
+    # -------------------------------------------------------------------------
+    def test_ctor_no_name(self):
+        """
+        Attempting to create a Dimension without providing a name should get an
+        exception.
+        """
+        got_exception = False
+        try:
+            a = Dimension(dbname=self.testdb)
+        except StandardError, e:
+            got_exception = True
+            self.assertTrue("Caller must set attribute 'name'" in
+                            tb.format_exc(),
+                            "Got the wrong StandardError: " +
+                            '\n"""\n%s\n"""' % tb.format_exc())
+        except:
+            self.fail("Got unexpected exception: " +
+                      '"""\n%s\n"""' % tb.format_exc())
+        self.assertTrue(got_exception,
+                        "Expected an exception but didn't get one")
+        
+    # -------------------------------------------------------------------------
+    def test_db_already_no_table(self):
+        """
+        Creating a Dimension object should initialize the dimension table in
+        the existing database if the db exists but the table does not.
+        """
+        self.db_reboot()
+        rows = self.db_execute("""SELECT name FROM sqlite_master
+                                  WHERE type='table' AND name='dimension'""")
+        self.assertTrue(0 == len(rows),
+                        'Did not expect table \'dimension\' in database')
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected to find database file '%s'" % self.testdb)
+
+        a = Dimension(dbname=self.testdb, name='already_nt')
+        a.persist()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected to find database file '%s'" % self.testdb)
+
+        rows = self.db_execute("""SELECT name FROM sqlite_master
+                               WHERE type='table' AND name='dimension'""")
+        self.assertTrue(0 < len(rows),
+                        'Expected table \'dimension\' in database')
+            
+    # -------------------------------------------------------------------------
+    def test_ex_nihilo(self):
+        """
+        Creating and persisting a Dimension object should initialize the
+        database and table dimension if they do not exist. (see the
+        Checkable.ex_nihilo() method and tests for clues)
+        """
+        self.db_reboot()
+
+        a = Dimension(dbname=self.testdb, name='ex_nihilo')
+        a.persist()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected to find database file '%s'" % self.testdb)
+
+        rows = self.db_execute("""SELECT name FROM sqlite_master
+                                  WHERE type='table' AND name='dimension'""")
+        self.assertTrue(0 < len(rows),
+                        "Expected table 'dimension' in database")
+
+    # -------------------------------------------------------------------------
+    def test_load_already(self):
+        """
+        With the database and dimension table in place and a named Dimension in
+        place in the table, calling load() on a Dimension with the same name as
+        the one in the table should load the information from the table into
+        the object.
+        """
+        self.db_reboot()
+        testdata = [('cos', '6002', 24053, 17.2563, 190, 15.2343),
+                    ('cos', '5081', 14834, 98.753,  105, 28.4385)]
+        # create the dimension table without putting anything in it
+        z = Dimension(dbname=self.testdb, name='foobar')
+        z.persist()
+
+        # insert some test data into the table
+        self.db_executemany("""insert into dimension(name,
+                                                    category,
+                                                    p_count,
+                                                    p_pct,
+                                                    s_count,
+                                                    s_pct)
+                                      values(?, ?, ?, ?, ?, ?)""",
+                            testdata)
+
+        # get a default Dimension with the same name as the data in the table
+        q = Dimension(dbname=self.testdb, name='cos')
+        # this should load the data from the table into the object
+        q.load()
+
+        # verify the loaded data in the object
+        self.expected('cos', q.name)
+        self.assertTrue(testdata[0][1] in q.p_sum.keys(),
+                        "Expected '%s' in p_sum.keys()" % testdata[0][1])
+        self.assertTrue(testdata[0][1] in q.s_sum.keys(),
+                        "Expected '%s' in s_sum.keys()" % testdata[0][1])
+        self.assertTrue(testdata[1][1] in q.p_sum.keys(),
+                        "Expected '%s' in p_sum.keys()" % testdata[1][1])
+        self.assertTrue(testdata[1][1] in q.s_sum.keys(),
+                        "Expected '%s' in s_sum.keys()" % testdata[1][1])
+
+        self.expected(testdata[0][2], q.p_sum[testdata[0][1]]['count'])
+        self.expected(testdata[0][3], q.p_sum[testdata[0][1]]['pct'])
+        self.expected(testdata[0][4], q.s_sum[testdata[0][1]]['count'])
+        self.expected(testdata[0][5], q.s_sum[testdata[0][1]]['pct'])
+
+        self.expected(testdata[1][2], q.p_sum[testdata[1][1]]['count'])
+        self.expected(testdata[1][3], q.p_sum[testdata[1][1]]['pct'])
+        self.expected(testdata[1][4], q.s_sum[testdata[1][1]]['count'])
+        self.expected(testdata[1][5], q.s_sum[testdata[1][1]]['pct'])
+
+    # -------------------------------------------------------------------------
+    def test_load_new(self):
+        """
+        With the database and dimension table in place, create a new Dimension
+        that is not in the table. Calling load() on it should be a no-op -- the
+        object should not be stored to the database and its contents should not
+        be changed.
+        """
+        # reboot the database and call persist() to create the table without
+        # adding any data
+        self.db_reboot()
+        ignore = Dimension(dbname=self.testdb, name='foobar')
+        ignore.persist()
+
+        # get a Dimension object that is not in the table
+        test = Dimension(dbname=self.testdb, name='notindb')
+        # make a copy of the object for reference (not just a handle to the
+        # same ojbect)
+        ref = copy.deepcopy(test)
+
+        # call load(), which should be a no op
+        test.load()
+
+        # verify that the object didn't change
+        self.expected(ref.dbname, test.dbname)
+        self.expected(ref.name, test.name)
+        self.expected(ref.sampsize, test.sampsize)
+        self.expected(ref.p_sum, test.p_sum)
+        self.expected(ref.s_sum, test.s_sum)
+
+        # TODO: verify that the object still is not in the table
+        
+    # -------------------------------------------------------------------------
+    def test_persist_already(self):
+        """
+        With the database and dimension table in place and a named Dimension in
+        place in the table, updating and persisting a Dimension with the same
+        name should update the database record.
+        """
+        self.db_reboot()
+
+        # first, we need to stick some records in the table
+        test = Dimension(dbname=self.testdb, name='foobar')
+        test.update_category('<1M')
+        test.update_category('<1G')
+        test.persist()
+
+        # verify that the records are in the table as expected
+        rows = self.db_execute("""select name, 
+                                         category,
+                                         p_count,
+                                         p_pct,
+                                         s_count,
+                                         s_pct
+                                  from dimension""")
+        self.expected(2, len(rows))
+        self.expected(('foobar', '<1M', 1, 50.0, 0, 0.0), rows[0])
+        self.expected(('foobar', '<1G', 1, 50.0, 0, 0.0), rows[1])
+
+        # update the Dimension values
+        test.update_category('<1M', s_suminc=1)
+        test.update_category('<1G', s_suminc=2)
+        test.update_category('<1T', s_suminc=1)
+        test.persist()
+        
+        # verify that the records in the database got updated
+        rows = self.db_execute("""select name, 
+                                         category,
+                                         p_count,
+                                         p_pct,
+                                         s_count,
+                                         s_pct from dimension""")
+        self.expected(3, len(rows))
+        self.expected(('foobar', '<1M', 2, 40.0, 1, 25.0), rows[0])
+        self.expected(('foobar', '<1G', 2, 40.0, 2, 50.0), rows[1])
+        self.expected(('foobar', '<1T', 1, 20.0, 1, 25.0), rows[2])
+        
+    # -------------------------------------------------------------------------
+    def test_persist_new(self):
+        """
+        With the database and dimension table in place, create a new Dimension
+        that is not in the table. Calling persist() on it should store it in
+        the dimension table in the database.
+        """
+        self.db_reboot()
+        
+        # instantiating the object initializes the database
+        new = Dimension(dbname=self.testdb, name='notintable')
+        new.update_category('5081', s_suminc=1)
+        new.update_category('6001')
+        new.update_category('6002', s_suminc=1)
+        new.update_category('6003')
+        new.persist()
+
+        # verify that the data is in the table
+        rows = self.db_execute("""select name,
+                                         category,
+                                         p_count,
+                                         p_pct,
+                                         s_count,
+                                         s_pct
+                                  from dimension""")
+        self.expected(4, len(rows))
+        testdata = [('notintable', '5081', 1, 25.0, 1, 50.0),
+                    ('notintable', '6001', 1, 25.0, 0, 0.0),
+                    ('notintable', '6002', 1, 25.0, 1, 50.0),
+                    ('notintable', '6003', 1, 25.0, 0, 0.0)]
+        for row in testdata:
+            self.assertTrue(row in rows,
+                            "Expected '%s' to be in rows (%s)" % (row, rows))
+        
+    # -------------------------------------------------------------------------
+    def test_repr(self):
+        """
+        Method __repr__ should return <Dimension(name='foo')> if the dbname is
+        the default. If the dbname is something else, __repr__ should show it.
+        Like so: <Dimension(name='baz', dbname='sizz')>
+        """
+        
+        exp = "Dimension(name='foo')"
+        a = eval(exp)
+        self.expected(exp, a.__repr__())
+
+        exp = "Dimension(name='baz', dbname='sizz')"
+        b = eval(exp)
+        self.expected(exp, b.__repr__())
+        
+    # -------------------------------------------------------------------------
+    def test_sum_total(self):
+        """
+        Return the sum of all the 'count' values in either the p_sum or s_sum
+        dictionary.
+        """
+        a = Dimension(dbname=self.testdb, name='sum_total')
+        a.update_category('6001')
+        a.update_category('6001', s_suminc=2)
+        a.update_category('5081')
+        a.update_category('5081', s_suminc=3)
+        self.expected(4, a.sum_total())
+        self.expected(4, a.sum_total(dict=a.p_sum))
+        self.expected(5, a.sum_total(which='s'))
+        self.expected(5, a.sum_total(dict=a.s_sum))
+        
+    # -------------------------------------------------------------------------
+    def test_update_category_already(self):
+        """
+        If the category exists, the psum and ssum counts and percentages should
+        be updated appropriately. Call sum_total and sum_pct to check the
+        summary counts and percentages.
+        """
+        a = Dimension(dbname=self.testdb,
+                      name='xcat',
+                      sampsize=0.05)
+        a.update_category('6001', p_suminc=1, s_suminc=1)
+        a.update_category('5081')
+        self.expected('xcat', a.name)
+        self.expected(0.05, a.sampsize)
+        self.expected({'count': 1, 'pct': 50.0}, a.p_sum['5081'])
+        self.expected({'count': 1, 'pct': 50.0}, a.p_sum['6001'])
+        self.expected({'count': 1, 'pct': 100.0}, a.s_sum['6001'])
+        self.expected({'count': 0, 'pct': 0.0}, a.s_sum['5081'])
+
+    # -------------------------------------------------------------------------
+    def test_update_category_new(self):
+        """
+        If the category does not exist, it should be added to psum and ssum as
+        dictionary keys and the counts and percentages should be updated
+        appropriately. Call sum_total and sum_pct to check the summary counts
+        and percentages.
+        """
+        a = Dimension(dbname=self.testdb,
+                      name='newcat',
+                      sampsize=0.01)
+        a.update_category('5081', p_suminc=1, s_suminc=1)
+        self.expected('newcat', a.name)
+        self.expected(0.01, a.sampsize)
+        self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.p_sum)
+        self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.s_sum)
+
+    # -------------------------------------------------------------------------
+    def db_reboot(self):
+        if os.path.exists(self.testdb):
+            os.unlink(self.testdb)
+            
+    # -------------------------------------------------------------------------
+    def db_execute(self, cmd):
+        db = sql.connect(self.testdb)
+        cx = db.cursor()
+        cx.execute(cmd)
+        rows = cx.fetchall()
+        db.commit()
+        db.close()
+        return rows
+            
+    # -------------------------------------------------------------------------
+    def db_executemany(self, cmd, data):
+        db = sql.connect(self.testdb)
+        cx = db.cursor()
+        cx.executemany(cmd, data)
+        rows = cx.fetchall()
+        db.commit()
+        db.close()
+        return rows
+            
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    toolframe.ez_launch(test='DimensionTest',
+                        logfile='crawl_test.log')
+        
