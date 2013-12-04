@@ -16,6 +16,7 @@ def main(args):
                     'AlertTest',
                     'Checkable',
                     'CrawlConfig',
+                    'CrawlDBI',
                     'CrawlPlugin',
                     'Dimension',
                     'testhelp',
