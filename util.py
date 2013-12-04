@@ -5,7 +5,6 @@ import os
 import pdb
 import socket
 import sys
-import testhelp
 import toolframe
 import unittest
 
@@ -113,6 +112,16 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
     return rval
 
 # -----------------------------------------------------------------------------
+def line_quote(value):
+    if type(value) == str and value.startswith("'"):
+        rv = value.strip("'")
+    elif type(value) == str and value.startswith('"'):
+        rv = value.strip('"')
+    else:
+        rv = value
+    return '\n"""\n%s\n"""' % str(rv)
+
+# -----------------------------------------------------------------------------
 def my_name():
     """
     Return the caller's name
@@ -161,6 +170,23 @@ class UtilTest(unittest.TestCase):
         self.assertTrue(expected in x,
                       "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
                       (expected, x))
+
+    # -------------------------------------------------------------------------
+    def test_line_quote(self):
+        exp = '\n"""\nabc\n"""'
+        act = line_quote('abc')
+        self.assertEqual(exp, act,
+                         "Expected %s, got %s" % (exp, act))
+
+        exp = '\n"""\nabc\n"""'
+        act = line_quote("'abc'")
+        self.assertEqual(exp, act,
+                         "Expected %s, got %s" % (exp, act))
+                      
+        exp = '\n"""\nabc\n"""'
+        act = line_quote('"abc"')
+        self.assertEqual(exp, act,
+                         "Expected %s, got %s" % (exp, act))
 
     # -------------------------------------------------------------------------
     def test_my_name(self):
