@@ -53,7 +53,6 @@ class Dimension(object):
         Field 'name' in the object corresponds with field 'category' in the db.
         """
         self.dbname = Dimension.dbname
-        self.db_initialized = False
         self.name = ''          # name must be set by caller
         self.sampsize = 0.01    # default sample size is 1%
         self.p_sum = {}         # population summary starts empty
