@@ -17,6 +17,7 @@ def main(args):
                     'Checkable',
                     'CrawlConfig',
                     'CrawlPlugin',
+                    'Dimension',
                     'testhelp',
                     'util',
                     ]:
