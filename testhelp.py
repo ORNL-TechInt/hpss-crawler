@@ -71,9 +71,16 @@ def all_tests(name, filter=None):
         filter = 'Test'
     # print("all_tests(%s, %s)" % (name, filter))
     # print dir(sys.modules[name])
-    for item in dir(sys.modules[name]):
-        if filter in item:
-            testclasses.append(item)
+    elif type(filter) == str:
+        for item in dir(sys.modules[name]):
+            if filter in item:
+                testclasses.append(item)
+    elif type(filter) == list:
+        for item in dir(sys.modules[name]):
+            for f in filter:
+                if f in item:
+                    testclasses.append(item)
+        
     for c in testclasses:
         cobj = getattr(sys.modules[name], c)
         for case in unittest.TestLoader().getTestCaseNames(cobj):
