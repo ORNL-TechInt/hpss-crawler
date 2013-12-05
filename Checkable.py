@@ -350,13 +350,17 @@ class Checkable(object):
             print("Database Error: %s" % str(e))
 
 # -----------------------------------------------------------------------------
+def setUpModule():
+    testhelp.module_test_setup(CheckableTest)
+    
+# -----------------------------------------------------------------------------
 def tearDownModule():
-    if os.path.exists(CheckableTest.testfile):
-        os.unlink(CheckableTest.testfile)
+    testhelp.module_test_teardown(CheckableTest)
 
 # -----------------------------------------------------------------------------
 class CheckableTest(testhelp.HelpedTestCase):
-    testfile = 'test.db'
+    testdir = './test.d'
+    testfile = '%s/test.db' % testdir
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
     testpath = '/home/tpb/TODO'
     

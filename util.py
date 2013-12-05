@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import CrawlConfig
 import logging
 import os
 import pdb
@@ -18,48 +17,6 @@ def contents(filename):
     f = open(filename, 'r')
     rval = f.read()
     f.close()
-    return rval
-
-# ------------------------------------------------------------------------------
-def get_config(cfname='', reset=False):
-    """
-    Open the config file based on cfname, $CRAWL_CONF, or the default, in that
-    order. Construct a CrawlConfig object, cache it, and return it. Subsequent
-    calls will retrieve the cached object unless reset=True, in which case the
-    old object is destroyed and a new one is constructed.
-
-    Note that values in the default dict passed to CrawlConfig.CrawlConfig
-    must be strings.
-    """
-    if reset:
-        try:
-            del get_config._config
-        except AttributeError:
-            pass
-    
-    try:
-        rval = get_config._config
-    except AttributeError:
-        if cfname == '':
-            envval = os.getenv('CRAWL_CONF')
-            if None != envval:
-                cfname = envval
-    
-        if cfname == '':
-            cfname = 'crawl.cfg'
-
-        if not os.path.exists(cfname):
-            raise StandardError("%s does not exist" % cfname)
-        elif not os.access(cfname, os.R_OK):
-            raise StandardError("%s is not readable" % cfname)
-        rval = CrawlConfig.CrawlConfig({'fire': 'no',
-                                        'frequency': '3600',
-                                        'heartbeat': '10'})
-        rval.read(cfname)
-        rval.set('crawler', 'filename', cfname)
-        rval.set('crawler', 'loadtime', str(time.time()))
-        get_config._config = rval
-        
     return rval
 
 # ------------------------------------------------------------------------------
