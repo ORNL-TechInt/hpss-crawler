@@ -223,8 +223,17 @@ class Dimension(object):
                     d[key]['pct'] = 0.0
     
 # -----------------------------------------------------------------------------
+def setUpModule():
+    testhelp.module_test_setup(DimensionTest.testdir)
+    
+# -----------------------------------------------------------------------------
+def tearDownModule():
+    testhelp.module_test_teardown(DimensionTest.testdir)
+
+# -----------------------------------------------------------------------------
 class DimensionTest(testhelp.HelpedTestCase):
-    testdb = 'test.db'
+    testdir = './test.d'
+    testdb = '%s/test.db' % testdir
     
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
@@ -533,14 +542,14 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         Method __repr__ should return <Dimension(name='foo')> if the dbname is
         the default. If the dbname is something else, __repr__ should show it.
-        Like so: <Dimension(name='baz', dbname='sizz')>
+        Like so: <Dimension(name='baz', dbname='./test.d/test.db')>
         """
         
         exp = "Dimension(name='foo')"
         a = eval(exp)
         self.expected(exp, a.__repr__())
 
-        exp = "Dimension(name='baz', dbname='sizz')"
+        exp = "Dimension(name='baz', dbname='%s')" % self.testdb
         b = eval(exp)
         self.expected(exp, b.__repr__())
         

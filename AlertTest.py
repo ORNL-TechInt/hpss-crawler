@@ -23,11 +23,11 @@ import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
-    testhelp.module_test_setup(AlertTest)
+    testhelp.module_test_setup(AlertTest.testdir)
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
-    testhelp.module_test_teardown(AlertTest)
+    testhelp.module_test_teardown(AlertTest.testdir)
 
 # -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):

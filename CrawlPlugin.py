@@ -118,12 +118,12 @@ class CrawlPlugin(object):
         return(self.frequency < (time.time() - self.last_fired))
 
 # -----------------------------------------------------------------------------
+def setUpModule():
+    testhelp.module_test_setup(CrawlPluginTest.plugdir)
+    
+# -----------------------------------------------------------------------------
 def tearDownModule():
-    if os.path.exists('test_plugins'):
-        shutil.rmtree('test_plugins')
-
-    if os.path.exists('test_plugins_alt'):
-        shutil.rmtree('test_plugins_alt')
+    testhelp.module_test_teardown(CrawlPluginTest.plugdir)
 
 # -----------------------------------------------------------------------------
 class CrawlPluginTest(testhelp.HelpedTestCase):
