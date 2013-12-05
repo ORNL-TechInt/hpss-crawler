@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
+import CrawlDBI
 import hashlib
 import os
 import pdb
 import pexpect
 import random
 import re
-import sqlite3 as sql
 import stat
 import sys
 import testhelp
@@ -74,24 +74,19 @@ class Checkable(object):
         queue, then take that Checkable object and call its .check() method.
         """
         Checkable.dbname = filename
-        try:
-            if not os.path.exists(filename):
-                db = sql.connect(filename)
-                cx = db.cursor()
-                cx.execute("""create table checkables(id int primary key,
-                                                      path text,
-                                                      type text,
-                                                      checksum text,
-                                                      cos text,
-                                                      last_check int)""")
-                cx.execute("""insert into checkables(path, type, checksum,
-                                                     cos, last_check)
-                                          values(?, ?, ?, ?, ?)""",
-                           (dataroot, 'd', '', '', 0))
-                db.commit()
-                db.close()
-        except sql.Error, e:
-            print("SQLite Error: %s" % str(e))
+        if not os.path.exists(filename):
+            db = CrawlDBI.DBIsqlite(dbname=filename)
+            db.create(table='checkables',
+                      fields=['id int primary key',
+                              'path text',
+                              'type text',
+                              'checksum text',
+                              'cos text',
+                              'last_check int'])
+            db.insert(table='checkables',
+                      fields=['path', 'type', 'checksum', 'cos', 'last_check'],
+                      data=[(dataroot, 'd', '', '', 0)])
+            db.close()
 
     # -----------------------------------------------------------------------------
     @classmethod
@@ -143,27 +138,21 @@ class Checkable(object):
         """
         Checkable.dbname = filename
         rval = []
-        try:
-            if not os.path.exists(filename):
-                raise StandardError("Please call .ex_nihilo() first")
-            db = sql.connect(filename)
-            cx = db.cursor()
-            cx.execute('select rowid, path, type, checksum, cos, last_check' +
-                       ' from checkables order by last_check')
-            rows = cx.fetchall()
-            for row in rows:
-                new = Checkable(rowid=row[0],
-                                path=row[1],
-                                type=row[2],
-                                checksum=row[3],
-                                cos=row[4],
-                                last_check=row[5])
-                rval.append(new)
-            db.close()
-            return rval
-        except sql.Error, e:
-            print("SQLite Error: %s" % str(e))
-            raise
+        db = CrawlDBI.DBIsqlite(dbname=filename)
+        rows = db.select(table='checkables',
+                         fields=['rowid', 'path', 'type',
+                                 'checksum', 'cos', 'last_check'],
+                         orderby='last_check')
+        for row in rows:
+            new = Checkable(rowid=row[0],
+                            path=row[1],
+                            type=row[2],
+                            checksum=row[3],
+                            cos=row[4],
+                            last_check=row[5])
+            rval.append(new)
+        db.close()
+        return rval
 
     # -------------------------------------------------------------------------
     def check(self, odds):
@@ -296,55 +285,54 @@ class Checkable(object):
         In any other case, we'll throw an exception.
         """
         try:
-            db = sql.connect(self.dbname)
-            cx = db.cursor()
-
+            db = CrawlDBI.DBIsqlite(dbname=self.dbname)
             if self.rowid != None and self.last_check != 0.0:
                 # Updating the check time for an existing object 
-                cx.execute("update checkables set last_check=?," +
-                           "checksum=?," +
-                           "cos=?"
-                           "where rowid=?",
-                           (self.last_check,
-                            self.checksum,
-                            self.cos,
-                            self.rowid))
+                db.update(table='checkables',
+                          fields=['last_check', 'checksum', 'cos'],
+                          where='rowid=?',
+                          data=[(self.last_check,
+                                 self.checksum,
+                                 self.cos,
+                                 self.rowid)])
             elif self.rowid == None and self.last_check == 0.0:
                 # Adding (or perhaps updating) a new/existing checkable
-                cx.execute("select * from checkables where path=?",
-                           (self.path,))
-                rows = cx.fetchall()
+                rows = db.select(table='checkables',
+                                 fields=[],
+                                 where='path=?',
+                                 data=(self.path,))
                 if 0 == len(rows):
                     # path not in db -- we insert it
-                    cx.execute("""insert into checkables(path,
-                                                         type,
-                                                         checksum,
-                                                         cos,
-                                                         last_check)
-                                  values(?, ?, ?, ?, ?)""",
-                               (self.path,
-                                self.type,
-                                self.checksum,
-                                self.cos,
-                                self.last_check))
+                    db.insert(table='checkables',
+                              fields=['path',
+                                      'type',
+                                      'checksum',
+                                      'cos',
+                                      'last_check'],
+                              data=[(self.path,
+                                     self.type,
+                                     self.checksum,
+                                     self.cos,
+                                     self.last_check)])
                 elif 1 == len(rows):
                     # path is in db -- if type or cos has changed, reset
                     # last_check and checksum. Otherwise, leave it alone
 
                     if self.type != rows[0][2]:
-                        cx.execute("""update checkables set type=?,
-                                                            last_check=?,
-                                                            checksum=?
-                                      where path=?""",
-                                   (self.type, 0, '', self.path))
+                        db.update(table='checkables',
+                                  fields=['type', 'last_check', 'checksum'],
+                                  where='path=?',
+                                  data=[(self.type, 0, '', self.path)])
                     if self.type == 'd':
-                        cx.execute("""update checkables set cos=?
-                                      where path=?""",
-                                   ('', self.path))
+                        db.update(table='checkables',
+                                  fields=['cos'],
+                                  where='path=?',
+                                  data=[('', self.path)])
                     elif self.cos != rows[0][4]:
-                        cx.execute("""update checkables set cos=?
-                                      where path=?""",
-                                   (self.cos, self.path))
+                        db.update(table='checkables',
+                                  fields=['cos'],
+                                  where='path=?',
+                                  data=[(self.cos, self.path)])
                 else:
                     raise StandardError("There seems to be more than one" +
                                         " occurrence of '%s' in the database" %
@@ -357,10 +345,9 @@ class Checkable(object):
                                     + "checksum = '%s'; " % self.checksum
                                     + "last_check = %f" % self.last_check)
 
-            db.commit()
             db.close()
-        except sql.Error, e:
-            print("SQLite Error: %s" % str(e))
+        except CrawlDBI.DBIerror, e:
+            print("Database Error: %s" % str(e))
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
@@ -552,17 +539,14 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = sql.connect(self.testfile)
-        cx = db.cursor()
+        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
 
         # there should be one row
-        cx.execute('select * from checkables')
-        rows = cx.fetchall()
+        rows = db.select(table='checkables', fields=[])
         self.expected(1, len(rows))
 
         # the one row should reference the root directory
-        cx.execute('select max(rowid) from checkables')
-        max_id = cx.fetchone()[0]
+        [(max_id,)] = db.select(table='checkables', fields=['max(rowid)'])
         self.expected(1, max_id)                       # id
         self.expected('/home/somebody', rows[0][1])    # path
         self.expected('d', rows[0][2])                 # type
@@ -614,17 +598,14 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = sql.connect(self.testfile)
-        cx = db.cursor()
-
+        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        
         # there should be one row
-        cx.execute('select * from checkables')
-        rows = cx.fetchall()
+        rows = db.select(table='checkables', fields=[])
         self.expected(1, len(rows))
 
         # the one row should reference the root directory
-        cx.execute('select max(rowid) from checkables')
-        max_id = cx.fetchone()[0]
+        [(max_id, )] = db.select(table='checkables', fields=['max(rowid)'])
         self.expected(1, max_id)           # id
         self.expected('/', rows[0][1])     # path
         self.expected('d', rows[0][2])     # type
@@ -744,12 +725,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             Checkable.get_list(filename=self.testfile)
             self.fail("Expected an exception but didn't get one.")
-        except StandardError, e:
-            self.assertEqual("Please call .ex_nihilo() first" in str(e), True,
-                             "Got the wrong StandardError: "
+        except CrawlDBI.DBIerror, e:
+            self.assertEqual("no such table: checkables" in str(e), True,
+                             "Got the wrong DBIerror: "
                              + '\n"""\n%s\n"""' % tb.format_exc())
         except Exception, e:
-            self.fail("Expected a StandardError but got this instead:"
+            self.fail("Expected a CrawlDBI.DBIerror but got this instead:"
                       + '\n"""\n%s\n"""' % tb.format_exc())
     
     # -------------------------------------------------------------------------
@@ -777,17 +758,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo(filename=self.testfile)
 
         # put the test data into the database
-        db = sql.connect(self.testfile)
-        cx = db.cursor()
-        cx.executemany("""insert into checkables(path,
-                                                 type,
-                                                 checksum,
-                                                 cos,
-                                                 last_check)
-                                      values(?, ?, ?, ?, ?)""",
-                       testdata[1:])
-        db.commit()
-
+        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
+                  data=testdata[1:])
+        db.close()
+        
         # run the target routine
         x = Checkable.get_list(self.testfile)
 
@@ -1193,8 +1169,8 @@ class CheckableTest(testhelp.HelpedTestCase):
             x[1].persist()
         except StandardError, e:
             self.assertEqual("Invalid conditions:" in str(e), True,
-                             "Got the wrong StandardError: "
-                             + '\n"""\n%s\n"""' % tb.format_exc())
+                             "Got the wrong StandardError: %s" %
+                             util.line_quote(tb.format_exc()))
         except:
             self.fail("Got unexpected exception: "
                       + '"""\n%s\n"""' % tb.format_exc())
@@ -1252,23 +1228,15 @@ class CheckableTest(testhelp.HelpedTestCase):
                         
     # -------------------------------------------------------------------------
     def db_duplicates(self):
-        try:
-            db = sql.connect(self.testfile)
-            cx = db.cursor()
-            sqlcmd = """insert into checkables(path,
-                                               type,
-                                               checksum,
-                                               cos,
-                                               last_check)
-                                      values('/abc/def', 'd', '', '', 0)"""
-            cx.execute(sqlcmd)
-            cx.execute(sqlcmd)
-
-            db.commit()
-            db.close()
-        except sql.Error, e:
-            print("SQLite Error: %s" % str(e))
-            
+        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
+                  data=[('/abc/def', 'd', '', '', 0)])
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
+                  data=[('/abc/def', 'd', '', '', 0)])
+        db.close()
+        
     # -------------------------------------------------------------------------
     def db_add_one(self,
                    path=testpath,
@@ -1280,20 +1248,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         Add one record to the database. All arguments except self are optional.
         !@! review calls to db_add_one and add cos where appropriate
         """
-        try:
-            db = sql.connect(self.testfile)
-            cx = db.cursor()
-            cx.execute("""insert into checkables(path,
-                                                 type,
-                                                 checksum,
-                                                 cos,
-                                                 last_check)
-                                      values(?, ?, ?, ?, ?)""",
-                       (path, type, checksum, cos, last_check))
-            db.commit()
-            db.close()
-        except sql.Error, e:
-            print("SQLite Error: %s" % str(e))
+        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
+                  data=[(path, type, checksum, cos, last_check)])
+        db.close()
 
     # -------------------------------------------------------------------------
     def ymdhms(self, dt):
