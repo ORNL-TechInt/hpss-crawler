@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import copy
+import CrawlDBI
 import os
-import sqlite3 as sql
 import testhelp
 import toolframe
 import traceback as tb
@@ -78,57 +78,34 @@ class Dimension(object):
     # -------------------------------------------------------------------------
     def db(self):
         try:
-            return self.db_handle
+            return self.dbh
         except AttributeError:
-            self.db_handle = sql.connect(self.dbname)
-            self.db_handle.isolation_level = None
-            return self.db_handle
-    
-    # -------------------------------------------------------------------------
-    def db_cursor(self):
-        try:
-            return self.db_cursor_handle
-        except AttributeError:
-            db = self.db()
-            self.db_cursor_handle = db.cursor()
-            return self.db_cursor_handle
-
-    # -------------------------------------------------------------------------
-    def db_execute(self, cmd, data=None):
-        cx = self.db_cursor()
-        if data is None:
-            cx.execute(cmd)
-            rows = cx.fetchall()
-        elif 1 < len(data):
-            cx.executemany(cmd, data)
-            rows = cx.fetchall()
-        else:
-            cx.execute(cmd, data[0])
-            rows = cx.fetchall()
-        return rows
+            self.dbh = CrawlDBI.DBI(dbname=self.dbname)
+            return self.dbh
     
     # -------------------------------------------------------------------------
     def db_init(self):
-        if hasattr(self,'db_handle'):
+        if hasattr(self,'dbh'):
             return
-        rows = self.db_execute("""SELECT name FROM sqlite_master
-                                  WHERE type='table' AND name='dimension'""")
-        if len(rows) < 1:
-            self.db_execute("""create table dimension(id int primary key,
-                                                 name text,
-                                                 category text,
-                                                 p_count int,
-                                                 p_pct real,
-                                                 s_count int,
-                                                 s_pct real)""")
-            self.db().commit()
+        db = self.db()
+        if not db.table_exists(table='dimension'):
+            db.create(table='dimension',
+                      fields=['id int primary key',
+                              'name text',
+                              'category text',
+                              'p_count int',
+                              'p_pct real',
+                              's_count int',
+                              's_pct real'])
         
     # -------------------------------------------------------------------------
     def load(self):
-        rows = self.db_execute("""select category, p_count, p_pct, s_count,
-                                         s_pct
-                                  from dimension where name = ?""",
-                               [(self.name,)])
+        db = self.db()
+        rows = db.select(table='dimension',
+                         fields=['category', 'p_count', 'p_pct', 's_count',
+                                 's_pct'],
+                         where='name = ?',
+                         data=(self.name,))
         for row in rows:
             (cval, p_count, p_pct, s_count, s_pct) = row
             self.p_sum.setdefault(cval, {'count': p_count,
@@ -158,20 +135,18 @@ class Dimension(object):
         u_data = []
         
         # find out which rows are already in the database
-        rows = self.db_execute("""select name, category from dimension
-                                  where name = ?""", [(self.name,)])
+        db = self.db()
+        rows = db.select(table='dimension',
+                         fields=['name', 'category'],
+                         where='name = ?',
+                         data=(self.name,))
+        
         for k in self.p_sum:
             if (self.name, k) in rows:
                 u_list.append((self.name, k))
             else:
                 i_list.append((self.name, k))
 
-        u_cmd = """update dimension set p_count=?,
-                                      p_pct=?,
-                                      s_count=?,
-                                      s_pct=?
-                  where name=? and category=?
-                  """
         for (name, cat) in u_list:
             u_data.append((self.p_sum[cat]['count'],
                            self.p_sum[cat]['pct'],
@@ -180,16 +155,12 @@ class Dimension(object):
                            self.name,
                            cat))
         if u_data != []:
-            self.db_execute(u_cmd, u_data)
-        
-        i_cmd = """insert into dimension(name,
-                                         category,
-                                         p_count,
-                                         p_pct,
-                                         s_count,
-                                         s_pct)
-                   values(?, ?, ?, ?, ?, ?)
-            """
+            # self.db_execute(u_cmd, u_data)
+            db.update(table='dimension',
+                      fields=['p_count', 'p_pct', 's_count', 's_pct'],
+                      where='name=? and category=?',
+                      data=u_data)
+            
         for (name, cat) in i_list:
             i_data.append((self.name,
                            cat,
@@ -198,7 +169,11 @@ class Dimension(object):
                            self.s_sum[cat]['count'],
                            self.s_sum[cat]['pct']))
         if i_data != []:
-            self.db_execute(i_cmd, i_data)
+            # self.db_execute(i_cmd, i_data)
+            db.insert(table='dimension',
+                      fields=['name', 'category', 'p_count',
+                              'p_pct', 's_count', 's_pct'],
+                      data=i_data)
                           
         pass
     
@@ -366,9 +341,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         the existing database if the db exists but the table does not.
         """
         self.db_reboot()
-        rows = self.db_execute("""SELECT name FROM sqlite_master
-                                  WHERE type='table' AND name='dimension'""")
-        self.assertTrue(0 == len(rows),
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        self.assertFalse(db.table_exists(table='dimension'),
                         'Did not expect table \'dimension\' in database')
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
@@ -378,11 +352,10 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
 
-        rows = self.db_execute("""SELECT name FROM sqlite_master
-                               WHERE type='table' AND name='dimension'""")
-        self.assertTrue(0 < len(rows),
+        self.assertTrue(db.table_exists(table='dimension'),
                         'Expected table \'dimension\' in database')
-            
+        db.close()
+        
     # -------------------------------------------------------------------------
     def test_ex_nihilo(self):
         """
@@ -397,11 +370,11 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
 
-        rows = self.db_execute("""SELECT name FROM sqlite_master
-                                  WHERE type='table' AND name='dimension'""")
-        self.assertTrue(0 < len(rows),
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        self.assertTrue(db.table_exists(table='dimension'),
                         "Expected table 'dimension' in database")
-
+        db.close()
+        
     # -------------------------------------------------------------------------
     def test_load_already(self):
         """
@@ -418,14 +391,12 @@ class DimensionTest(testhelp.HelpedTestCase):
         z.persist()
 
         # insert some test data into the table
-        self.db_executemany("""insert into dimension(name,
-                                                    category,
-                                                    p_count,
-                                                    p_pct,
-                                                    s_count,
-                                                    s_pct)
-                                      values(?, ?, ?, ?, ?, ?)""",
-                            testdata)
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        db.insert(table='dimension',
+                  fields=['name', 'category',
+                          'p_count', 'p_pct', 's_count', 's_pct'],
+                  data=testdata)
+        db.close()
 
         # get a default Dimension with the same name as the data in the table
         q = Dimension(dbname=self.testdb, name='cos')
@@ -501,13 +472,10 @@ class DimensionTest(testhelp.HelpedTestCase):
         test.persist()
 
         # verify that the records are in the table as expected
-        rows = self.db_execute("""select name, 
-                                         category,
-                                         p_count,
-                                         p_pct,
-                                         s_count,
-                                         s_pct
-                                  from dimension""")
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        rows = db.select(table='dimension',
+                         fields=['name', 'category', 'p_count', 'p_pct',
+                                 's_count', 's_pct'])
         self.expected(2, len(rows))
         self.expected(('foobar', '<1M', 1, 50.0, 0, 0.0), rows[0])
         self.expected(('foobar', '<1G', 1, 50.0, 0, 0.0), rows[1])
@@ -519,12 +487,10 @@ class DimensionTest(testhelp.HelpedTestCase):
         test.persist()
         
         # verify that the records in the database got updated
-        rows = self.db_execute("""select name, 
-                                         category,
-                                         p_count,
-                                         p_pct,
-                                         s_count,
-                                         s_pct from dimension""")
+        rows = db.select(table='dimension',
+                         fields=['name', 'category', 'p_count', 'p_pct',
+                                 's_count', 's_pct'])
+        db.close()
         self.expected(3, len(rows))
         self.expected(('foobar', '<1M', 2, 40.0, 1, 25.0), rows[0])
         self.expected(('foobar', '<1G', 2, 40.0, 2, 50.0), rows[1])
@@ -548,13 +514,11 @@ class DimensionTest(testhelp.HelpedTestCase):
         new.persist()
 
         # verify that the data is in the table
-        rows = self.db_execute("""select name,
-                                         category,
-                                         p_count,
-                                         p_pct,
-                                         s_count,
-                                         s_pct
-                                  from dimension""")
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        rows = db.select(table='dimension',
+                         fields=['name', 'category', 'p_count', 'p_pct',
+                                 's_count', 's_pct'])
+        db.close()
         self.expected(4, len(rows))
         testdata = [('notintable', '5081', 1, 25.0, 1, 50.0),
                     ('notintable', '6001', 1, 25.0, 0, 0.0),
@@ -636,26 +600,6 @@ class DimensionTest(testhelp.HelpedTestCase):
     def db_reboot(self):
         if os.path.exists(self.testdb):
             os.unlink(self.testdb)
-            
-    # -------------------------------------------------------------------------
-    def db_execute(self, cmd):
-        db = sql.connect(self.testdb)
-        cx = db.cursor()
-        cx.execute(cmd)
-        rows = cx.fetchall()
-        db.commit()
-        db.close()
-        return rows
-            
-    # -------------------------------------------------------------------------
-    def db_executemany(self, cmd, data):
-        db = sql.connect(self.testdb)
-        cx = db.cursor()
-        cx.executemany(cmd, data)
-        rows = cx.fetchall()
-        db.commit()
-        db.close()
-        return rows
             
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
