@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import CrawlConfig
 import os
 import shutil
 import sqlite3
@@ -19,12 +20,61 @@ def tearDownModule():
         shutil.rmtree(DBIsqliteTest.testdir)
 
 # -----------------------------------------------------------------------------
-class DBI(object):
+class DBI_abstract(object):
     settable_attrl = ['dbname', 'host', 'username', 'password']
+    
+# -----------------------------------------------------------------------------
+class DBI(object):
+    # -------------------------------------------------------------------------
+    def __init__(self, *args, **kwargs):
+        if 'cfg' not in kwargs:
+            cfgname = 'crawl.cfg'
+            cfg = util.get_config(cfname=cfgname)
+        elif type(kwargs['cfg']) == str:
+            cfgname = kwargs['cfg']
+            cfg = util.get_config(cfname=cfgname)
+        elif isinstance(kwargs['cfg'], CrawlConfig.CrawlConfig):
+            cfg = kwargs['cfg']
+        else:
+            raise DBIerror('Invalid type for cfg arg to DBI constructor')
+        del kwargs['cfg']
+        dbtype = cfg.get('dbi', 'dbtype')
+        if dbtype == 'sqlite':
+            self.dbobj = DBIsqlite(*args, **kwargs)
+        elif dbtype == 'mysql':
+            self.dbobj = DBImysql(*args, **kwargs)
+        elif dbtype == 'db2':
+            self.dbobj = DBIdb2(*args, **kwargs)
+        else:
+            raise DBIerror("Unknown database type")
+        
     # -------------------------------------------------------------------------
     def __repr__(self):
-        rv = "DBI(dbname='%s')" % self.dbname
-        return rv
+        return self.dbobj.__repr__()
+    
+    # -------------------------------------------------------------------------
+    def table_exists(self, **kwargs):
+        return self.dbobj.table_exists(**kwargs)
+
+    # -------------------------------------------------------------------------
+    def close(self):
+        return self.dbobj.close()
+    
+    # -------------------------------------------------------------------------
+    def create(self, **kwargs):
+        return self.dbobj.create(**kwargs)
+    
+    # -------------------------------------------------------------------------
+    def insert(self, **kwargs):
+        return self.dbobj.insert(**kwargs)
+    
+    # -------------------------------------------------------------------------
+    def select(self, **kwargs):
+        return self.dbobj.select(**kwargs)
+    
+    # -------------------------------------------------------------------------
+    def update(self, **kwargs):
+        return self.dbobj.update(**kwargs)
     
 # -----------------------------------------------------------------------------
 class DBIerror(Exception):
@@ -34,7 +84,7 @@ class DBIerror(Exception):
         return repr(self.value)
 
 # -----------------------------------------------------------------------------
-class DBIsqlite(DBI):
+class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
@@ -54,21 +104,29 @@ class DBIsqlite(DBI):
         self.dbh.isolation_level = None
 
     # -------------------------------------------------------------------------
+    def __repr__(self):
+        rv = "DBIsqlite(dbname='%s')" % self.dbname
+        return rv
+
+    # -------------------------------------------------------------------------
     def table_exists(self, table=''):
         """
         Return True if table is not empty and the named table exists.
         Otherwise, return False.
         """
-        dbc = self.dbh.cursor()
-        dbc.execute("""
-                    select name from sqlite_master
-                    where type='table'
-                    and name=?
-                    """, (table,))
-        rows = dbc.fetchall()
-        dbc.close()
-        return 0 < len(rows)
-    
+        try:
+            dbc = self.dbh.cursor()
+            dbc.execute("""
+                        select name from sqlite_master
+                        where type='table'
+                        and name=?
+                        """, (table,))
+            rows = dbc.fetchall()
+            dbc.close()
+            return 0 < len(rows)
+        except sqlite3.OperationalError, e:
+            raise DBIerror(str(e))
+        
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
@@ -86,16 +144,22 @@ class DBIsqlite(DBI):
         elif table == '':
             raise DBIerror("On create(), table name must not be empty")
 
-        cmd = ("create table %s(" % table + ",".join(fields) + ")")
-        c = self.dbh.cursor()
-        c.execute(cmd)
+        try:
+            cmd = ("create table %s(" % table + ",".join(fields) + ")")
+            c = self.dbh.cursor()
+            c.execute(cmd)
+        except sqlite3.OperationalError, e:
+            raise DBIerror(str(e))
 
     # -------------------------------------------------------------------------
     def close(self):
         """
         Close the connection to the database.
         """
-        self.dbh.close()
+        try:
+            self.dbh.close()
+        except sqlite3.OperationalError, e:
+            raise DBIerror(str(e))
     
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
@@ -115,18 +179,21 @@ class DBIsqlite(DBI):
             raise DBIerror("On insert(), data must be a list")
         elif data == []:
             raise DBIerror("On insert(), data list must not be empty")
-        
-        cmd = ("insert into %s(" % table +
-               ",".join(fields) +
-               ") values (" +
-               ",".join(["?" for x in fields]) +
-               ")")
-        c = self.dbh.cursor()
-        c.executemany(cmd, data)
-        c.close()
+
+        try:
+            cmd = ("insert into %s(" % table +
+                   ",".join(fields) +
+                   ") values (" +
+                   ",".join(["?" for x in fields]) +
+                   ")")
+            c = self.dbh.cursor()
+            c.executemany(cmd, data)
+            c.close()
+        except sqlite3.OperationalError, e:
+            raise DBIerror(str(e))
         
     # -------------------------------------------------------------------------
-    def select(self, table='', fields=[], where='', data=[], orderby=''):
+    def select(self, table='', fields=[], where='', data=(), orderby=''):
         """
         Retrieve data from the table.
         """
@@ -138,33 +205,38 @@ class DBIsqlite(DBI):
             raise DBIerror("On select(), fields must be a list")
         elif type(where) != str:
             raise DBIerror("On select(), where clause must be a string")
-        elif type(data) != list:
-            raise DBIerror("On select(), data must be a list of tuples")
+        elif type(data) != tuple:
+            raise DBIerror("On select(), data must be a tuple")
         elif type(orderby) != str:
             raise DBIerror("On select(), orderby clause must be a string")
-        elif '?' not in where and data != []:
+        elif '?' not in where and data != ():
             raise DBIerror("Data would be ignored")
 
-        cmd = "select "
-        if 0 < len(fields):
-            cmd += ",".join(fields)
-        else:
-            cmd += "*"
-        cmd += " from %s" % table
-        if where != '':
-            cmd += " where %s" % where
-        if orderby != '':
-            cmd += " order by %s" % orderby
+        try:
+            cmd = "select "
+            if 0 < len(fields):
+                cmd += ",".join(fields)
+            else:
+                cmd += "*"
+            cmd += " from %s" % table
+            if where != '':
+                cmd += " where %s" % where
+            if orderby != '':
+                cmd += " order by %s" % orderby
 
-        c = self.dbh.cursor()
-        if '?' in cmd:
-            c.execute(cmd, data)
-        else:
-            c.execute(cmd)
-        rv = c.fetchall()
-        c.close()
-        return rv
-    
+            c = self.dbh.cursor()
+            if '?' in cmd:
+                c.execute(cmd, data)
+            else:
+                c.execute(cmd)
+            rv = c.fetchall()
+            c.close()
+            return rv
+        except sqlite3.OperationalError, e:
+            raise DBIerror(str(e))
+        except sqlite3.ProgrammingError, e:
+            raise DBIerror(str(e))
+
     # -------------------------------------------------------------------------
     def update(self, table='', where='', fields=[], data=[]):
         """
@@ -185,19 +257,57 @@ class DBIsqlite(DBI):
             raise DBIerror("On update(), data must be a list of tuples")
         elif data == []:
             raise DBIerror("On update(), data must not be empty")
-            
-        cmd = "update %s" % table
-        cmd += " set %s" % ",".join(["%s=?" % x for x in fields])
-        if where != '':
-            cmd += " where %s" % where
 
-        c = self.dbh.cursor()
-        c.executemany(cmd, data)
-        c.close()
-    
+        try:
+            cmd = "update %s" % table
+            cmd += " set %s" % ",".join(["%s=?" % x for x in fields])
+            if where != '':
+                cmd += " where %s" % where
+
+            c = self.dbh.cursor()
+            c.executemany(cmd, data)
+            c.close()
+        except sqlite3.OperationalError, e:
+            raise DBIerror(str(e))
+
 # -----------------------------------------------------------------------------
 # class DBImysql(DBI):
 #     pass
+
+# -----------------------------------------------------------------------------
+class DBITest(testhelp.HelpedTestCase):
+    testdir = 'test.d'
+    cfgfile = '%s/dbitest.cfg' % testdir
+    testdb = '%s/test.db' % testdir
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_sqlite(self):
+        """
+        With a config object specifying sqlite as the database type, DBI should
+        instantiate itself with an internal DBIsqlite object.
+        """
+        tcfg = CrawlConfig.CrawlConfig()
+        tcfg.add_section('dbi')
+        tcfg.set('dbi', 'dbtype', 'sqlite')
+        a = DBI(dbname=self.testdb, cfg=tcfg)
+        self.assertTrue(hasattr(a, 'dbobj'),
+                        "Expected to find a dbobj attribute on %s" % a)
+        self.assertTrue(isinstance(a.dbobj, DBIsqlite),
+                        "Expected %s to be a DBIsqlite object" % a.dbobj)
+        
+    # -------------------------------------------------------------------------
+    def test_repr(self):
+        """
+        With a config object specifying sqlite as the database type, calling
+        __repr__ on a DBI object should produce a representation that looks
+        like a DBIsqlite object.
+        """
+        tcfg = CrawlConfig.CrawlConfig()
+        tcfg.add_section('dbi')
+        tcfg.set('dbi', 'dbtype', 'sqlite')
+        a = DBI(dbname=self.testdb, cfg=tcfg)
+        b = DBIsqlite(dbname=self.testdb)
+        self.expected(str(b), str(a))
 
 # -----------------------------------------------------------------------------
 class DBIsqliteTest(testhelp.HelpedTestCase):
@@ -376,15 +486,15 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                       data=[('abc', 'def', 99),
                             ('aardvark', 'buffalo', 78)])
             self.fail("Expected exception not thrown")
-        except sqlite3.OperationalError, e:
+        except DBIerror, e:
             self.assertTrue("table fnox has no column named three" in
                             str(e),
-                            "Got the wrong sqlite3.OperationalError: %s" %
+                            "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
         except AssertionError:
             raise
         except Exception, e:
-            self.fail("Expected sqlite3.OperationalError, got %s" %
+            self.fail("Expected DBIerror, got %s" %
                       util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
@@ -521,14 +631,14 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                       data=[('abc', 'def', 99),
                             ('aardvark', 'buffalo', 78)])
             self.fail("Expected exception not thrown")
-        except sqlite3.OperationalError, e:
+        except DBIerror, e:
             self.assertTrue("no such table: tnox" in str(e),
-                            "Got the wrong sqlite3.OperationalError: %s" %
+                            "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
         except AssertionError:
             raise
         except Exception, e:
-            self.fail("Expected sqlite3.OperationalError, got %s" %
+            self.fail("Expected DBIerror, got %s" %
                       util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
@@ -600,7 +710,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         db.insert(table=tname, fields=fnames, data=testdata)
 
         rows = db.select(table=tname, fields=[],
-                         where='size = 92', data=[])
+                         where='size = 92', data=())
         self.expected(1, len(rows))
         self.expected([testdata[1]], rows)
 
@@ -623,16 +733,16 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
 
         try:
             rows = db.select(table=tname, fields=[],
-                             where='name = ?', data=[])
+                             where='name = ?', data=())
             self.fail("Expected exception not thrown")
-        except sqlite3.ProgrammingError, e:
+        except DBIerror, e:
             self.assertTrue("Incorrect number of bindings supplied" in str(e),
-                            "Got the wrong sqlite3.ProgrammingError: %s" %
+                            "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
         except AssertionError:
             raise
         except Exception, e:
-            self.fail("Expected sqlite3.ProgrammingError, got %s" %
+            self.fail("Expected DBIerror, got %s" %
                       util.line_quote(tb.format_exc()))
 
     # -------------------------------------------------------------------------
@@ -654,7 +764,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
 
         try:
             rows = db.select(table=tname, fields=[],
-                             where="name = 'zippo'", data=[('frodo',)])
+                             where="name = 'zippo'", data=('frodo',))
             self.fail("Expected exception not thrown")
         except DBIerror, e:
             self.assertTrue("Data would be ignored" in str(e),
@@ -684,7 +794,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         db.insert(table=tname, fields=fnames, data=testdata)
 
         rows = db.select(table=tname, fields=[],
-                         where='name = ?', data=['zippo'])
+                         where='name = ?', data=('zippo',))
         self.expected(1, len(rows))
         self.expected([testdata[1]], rows)
 
@@ -815,7 +925,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                              where='name = ?', data='zippo')
             self.fail("Expected exception not thrown")
         except DBIerror, e:
-            self.assertTrue("On select(), data must be a list of tuples" in
+            self.assertTrue("On select(), data must be a tuple" in
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
@@ -1255,7 +1365,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    toolframe.ez_launch(test='DBIsqliteTest',
+    toolframe.ez_launch(test=['DBITest', 'DBIsqliteTest'],
                         logfile='crawl_test.log')
 
                 
