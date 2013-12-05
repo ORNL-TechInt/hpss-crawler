@@ -5,7 +5,8 @@ CrawlConfig
 crawler_pid
 crawler.exit
 DODO
-NOTES
+ls.PR*
+NOTES*
 TAGS
 test.d
 *.cfg
