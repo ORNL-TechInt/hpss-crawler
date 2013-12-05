@@ -351,11 +351,11 @@ class Checkable(object):
 
 # -----------------------------------------------------------------------------
 def setUpModule():
-    testhelp.module_test_setup(CheckableTest)
+    testhelp.module_test_setup(CheckableTest.testdir)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
-    testhelp.module_test_teardown(CheckableTest)
+    testhelp.module_test_teardown(CheckableTest.testdir)
 
 # -----------------------------------------------------------------------------
 class CheckableTest(testhelp.HelpedTestCase):

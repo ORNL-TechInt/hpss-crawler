@@ -11,13 +11,11 @@ import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
-    if not os.path.exists(DBIsqliteTest.testdir):
-        os.mkdir(DBIsqliteTest.testdir)
+    testhelp.module_test_setup(DBIsqliteTest.testdir)
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
-    if not testhelp.keepfiles() and os.path.exists(DBIsqliteTest.testdir):
-        shutil.rmtree(DBIsqliteTest.testdir)
+    testhelp.module_test_teardown(DBIsqliteTest.testdir)
 
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):

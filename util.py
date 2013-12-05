@@ -131,6 +131,20 @@ class UtilTest(unittest.TestCase):
                       (expected, x))
 
     # -------------------------------------------------------------------------
+    def test_get_logger_10(self):
+        exp = None
+        actual = get_logger(reset=True, soft=False)
+        self.assertEqual(exp, actual,
+                         "Expected %s, got %s" % (exp, actual))
+        
+    # -------------------------------------------------------------------------
+    def test_get_logger_11(self):
+        exp = None
+        actual = get_logger(reset=True, soft=True)
+        self.assertEqual(exp, actual,
+                         "Expected %s, got %s" % (exp, actual))
+        
+    # -------------------------------------------------------------------------
     def test_line_quote(self):
         exp = '\n"""\nabc\n"""'
         act = line_quote('abc')

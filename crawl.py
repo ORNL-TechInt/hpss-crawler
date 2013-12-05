@@ -288,7 +288,7 @@ def setUpModule():
     """
     Setup needed before running the tests.
     """
-    testhelp.module_test_setup(CrawlTest)
+    testhelp.module_test_setup(CrawlTest.testdir)
 
     if not os.path.islink('crawl'):
         os.symlink('crawl.py', 'crawl')
@@ -298,7 +298,7 @@ def tearDownModule():
     """
     Clean up after a sequence of tests.
     """
-    testhelp.module_test_teardown(CrawlTest)
+    testhelp.module_test_teardown(CrawlTest.testdir)
 
     if is_running():
         testhelp.touch('crawler.exit')

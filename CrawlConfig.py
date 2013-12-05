@@ -258,12 +258,12 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
 # -----------------------------------------------------------------------------
 def setUpModule():
-    testhelp.module_test_setup(CrawlConfigTest)
+    testhelp.module_test_setup(CrawlConfigTest.testdir)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
     os.chdir(launch_dir)
-    testhelp.module_test_teardown(CrawlConfigTest)
+    testhelp.module_test_teardown(CrawlConfigTest.testdir)
     
 # -----------------------------------------------------------------------------
 class CrawlConfigTest(testhelp.HelpedTestCase):
