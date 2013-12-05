@@ -29,10 +29,10 @@ class DBI(object):
     def __init__(self, *args, **kwargs):
         if 'cfg' not in kwargs:
             cfgname = 'crawl.cfg'
-            cfg = util.get_config(cfname=cfgname)
+            cfg = CrawlConfig.get_config(cfname=cfgname)
         elif type(kwargs['cfg']) == str:
             cfgname = kwargs['cfg']
-            cfg = util.get_config(cfname=cfgname)
+            cfg = CrawlConfig.get_config(cfname=cfgname)
             del kwargs['cfg']
         elif isinstance(kwargs['cfg'], CrawlConfig.CrawlConfig):
             cfg = kwargs['cfg']
@@ -40,7 +40,13 @@ class DBI(object):
         else:
             raise DBIerror('Invalid type for cfg arg to DBI constructor')
 
-        dbtype = cfg.get('dbi', 'dbtype')
+        try:
+            dbtype = cfg.get('dbi', 'dbtype')
+        except CrawlConfig.NoSectionError:
+            dbtype = 'sqlite'
+        except CrawlConfig.NoOptionError:
+            dbtype = 'sqlite'
+            
         if dbtype == 'sqlite':
             self.dbobj = DBIsqlite(*args, **kwargs)
         elif dbtype == 'mysql':

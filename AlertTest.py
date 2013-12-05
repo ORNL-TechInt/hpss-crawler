@@ -23,14 +23,11 @@ import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
-    if not os.path.exists(AlertTest.testdir):
-        os.mkdir(AlertTest.testdir)
+    testhelp.module_test_setup(AlertTest)
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
-    if not testhelp.keepfiles():
-        logger = util.get_logger(reset=True, soft=True)
-        shutil.rmtree(AlertTest.testdir)
+    testhelp.module_test_teardown(AlertTest)
 
 # -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):

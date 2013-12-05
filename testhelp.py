@@ -4,11 +4,12 @@ import logging, logging.handlers
 import os
 import pdb
 import pexpect
+import shutil
 import socket
 import sys
-import unittest
 import StringIO
 import toolframe
+import unittest
 import util
 
 from optparse import *
@@ -160,6 +161,20 @@ def list_tests(a, final, testlist):
                     break
 
 # -----------------------------------------------------------------------------
+def module_test_setup(testclass):
+    if os.path.isdir(testclass.testdir):
+        shutil.rmtree(testclass.testdir)
+    os.makedirs(testclass.testdir)
+    
+# -----------------------------------------------------------------------------
+def module_test_teardown(testclass):
+    if not keepfiles():
+        # close and release any open logging files
+        logger = util.get_logger(reset=True, soft=True)
+        if os.path.isdir(testclass.testdir):
+            shutil.rmtree(testclass.testdir)
+    
+# -----------------------------------------------------------------------------
 def test_name(obj=None):
     """
     Return the caller's function name (with an optional class prefix).
@@ -237,8 +252,27 @@ class LoggingTestSuite(unittest.TestSuite):
 # -----------------------------------------------------------------------------
 class HelpedTestCase(unittest.TestCase):
 
+    # --------------------------------------------------------------------------
+    def cd(self, dirname):
+        """
+        Attempt to cd into a test directory. If it does not exist, create it
+        and then cd into it.
+        """
+        try:
+            os.chdir(dirname)
+        except OSError as e:
+            if 'No such file or directory' in str(e):
+                os.makedirs(dirname)
+                os.chdir(dirname)
+            else:
+                raise
+
     # -------------------------------------------------------------------------
     def expected(self, expval, actual):
+        """
+        Compare the expected value (expval) and the actual value (actual). If
+        there are differences, report them.
+        """
         msg = "\nExpected: "
         if type(expval) == int:
             msg += "%d"
