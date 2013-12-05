@@ -71,7 +71,7 @@ def all_tests(name, filter=None):
         filter = 'Test'
     # print("all_tests(%s, %s)" % (name, filter))
     # print dir(sys.modules[name])
-    elif type(filter) == str:
+    if type(filter) == str:
         for item in dir(sys.modules[name]):
             if filter in item:
                 testclasses.append(item)

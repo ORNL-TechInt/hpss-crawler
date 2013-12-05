@@ -33,11 +33,13 @@ class DBI(object):
         elif type(kwargs['cfg']) == str:
             cfgname = kwargs['cfg']
             cfg = util.get_config(cfname=cfgname)
+            del kwargs['cfg']
         elif isinstance(kwargs['cfg'], CrawlConfig.CrawlConfig):
             cfg = kwargs['cfg']
+            del kwargs['cfg']
         else:
             raise DBIerror('Invalid type for cfg arg to DBI constructor')
-        del kwargs['cfg']
+
         dbtype = cfg.get('dbi', 'dbtype')
         if dbtype == 'sqlite':
             self.dbobj = DBIsqlite(*args, **kwargs)
