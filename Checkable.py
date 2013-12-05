@@ -75,7 +75,7 @@ class Checkable(object):
         """
         Checkable.dbname = filename
         if not os.path.exists(filename):
-            db = CrawlDBI.DBIsqlite(dbname=filename)
+            db = CrawlDBI.DBI(dbname=filename)
             db.create(table='checkables',
                       fields=['id int primary key',
                               'path text',
@@ -138,7 +138,7 @@ class Checkable(object):
         """
         Checkable.dbname = filename
         rval = []
-        db = CrawlDBI.DBIsqlite(dbname=filename)
+        db = CrawlDBI.DBI(dbname=filename)
         rows = db.select(table='checkables',
                          fields=['rowid', 'path', 'type',
                                  'checksum', 'cos', 'last_check'],
@@ -285,7 +285,7 @@ class Checkable(object):
         In any other case, we'll throw an exception.
         """
         try:
-            db = CrawlDBI.DBIsqlite(dbname=self.dbname)
+            db = CrawlDBI.DBI(dbname=self.dbname)
             if self.rowid != None and self.last_check != 0.0:
                 # Updating the check time for an existing object 
                 db.update(table='checkables',
@@ -539,7 +539,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db = CrawlDBI.DBI(dbname=self.testfile)
 
         # there should be one row
         rows = db.select(table='checkables', fields=[])
@@ -598,7 +598,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db = CrawlDBI.DBI(dbname=self.testfile)
         
         # there should be one row
         rows = db.select(table='checkables', fields=[])
@@ -727,11 +727,11 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.fail("Expected an exception but didn't get one.")
         except CrawlDBI.DBIerror, e:
             self.assertEqual("no such table: checkables" in str(e), True,
-                             "Got the wrong DBIerror: "
-                             + '\n"""\n%s\n"""' % tb.format_exc())
+                             "Got the wrong DBIerror: %s" %
+                             util.line_quote(tb.format_exc()))
         except Exception, e:
-            self.fail("Expected a CrawlDBI.DBIerror but got this instead:"
-                      + '\n"""\n%s\n"""' % tb.format_exc())
+            self.fail("Expected a CrawlDBI.DBIerror but got this instead: %s" %
+                      util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
     def test_get_list_known(self):
@@ -758,7 +758,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo(filename=self.testfile)
 
         # put the test data into the database
-        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db = CrawlDBI.DBI(dbname=self.testfile)
         db.insert(table='checkables',
                   fields=['path', 'type', 'checksum', 'cos', 'last_check'],
                   data=testdata[1:])
@@ -1228,7 +1228,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                         
     # -------------------------------------------------------------------------
     def db_duplicates(self):
-        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db = CrawlDBI.DBI(dbname=self.testfile)
         db.insert(table='checkables',
                   fields=['path', 'type', 'checksum', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', '', 0)])
@@ -1248,7 +1248,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Add one record to the database. All arguments except self are optional.
         !@! review calls to db_add_one and add cos where appropriate
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testfile)
+        db = CrawlDBI.DBI(dbname=self.testfile)
         db.insert(table='checkables',
                   fields=['path', 'type', 'checksum', 'cos', 'last_check'],
                   data=[(path, type, checksum, cos, last_check)])
