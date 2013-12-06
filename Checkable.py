@@ -225,34 +225,45 @@ class Checkable(object):
          5 fetched a checksummed file and matched its checksum
          6 fetched a checksummed file and the checksum match failed
         """
+        # fire up hsi
         rval = []
         hsi_prompt = "]:"
         S = pexpect.spawn('hsi -q', timeout=300)
         # S.logfile = sys.stdout
         S.expect(hsi_prompt)
 
+        # Attempt to cd to the path represented by the current object
         S.sendline("cd %s" % self.path)
         S.expect(hsi_prompt)
         if 'Not a directory' in S.before:
-            # run the checks on the file
+            # it's not a directory, so run the checks on the file
             if self.checksum != '':
+                # we have a checksum so we're going to compare it
+                # fetch the file to disk
                 localname = "/tmp/" + os.path.basename(self.path)
                 S.sendline("get %s : %s" % (localname, self.path))
                 S.expect(hsi_prompt)
+
+                # compute the hash
                 m = hashlib.md5()
                 m.update(util.contents(localname))
+
+                # turn the hash into a hexadecimal string
                 filesum =  ''.join(["%02x" % ord(i) for i in m.digest()])
+
+                # compare the stored checksum against the newly computed one
                 if self.checksum != filesum:
-                    # outcome 6
+                    # outcome 6 -- checksums do not match
                     rval = Alert("Recorded checksum '%s' " % self.checksum +
                                  "does not match computed " +
                                  "checksum '%s' " + filesum +
                                  "for file %s" % self.path)
                 else:
-                    # outcome 5
+                    # outcome 5 -- checksums do match
                     rval = "matched"
             elif 0 < odds and random.randrange(int(odds)) <= 1:
-                # outcome 4
+                # outcome 4 -- we're adding it to the sample so we have to
+                # fetch the file and compute a checksum on it
                 localname = "/tmp/" + os.path.basename(self.path)
                 S.sendline("get %s : %s" % (localname, self.path))
                 S.expect(hsi_prompt)
@@ -262,14 +273,14 @@ class Checkable(object):
                 os.unlink(localname)
                 rval = self
             else:
-                # outcome 3
+                # outcome 3 -- we're skipping the file
                 rval = 'skipped'
         elif 'Access denied' in S.before:
-            # it's a directory but I don't have access to it -- outcome 2
+            # outcome 2 -- it's a directory but I don't have access to it
             rval = 'access denied'
         else:
-            # it's a directory -- get the list. this is outcome 1 from above --
-            # we fill in rval with the list of the directory's contents
+            # outcome 1 -- it's a directory -- get the list. we fill in rval
+            # with the list of the directory's contents.
             S.sendline("ls -P")
             S.expect(hsi_prompt)
 
@@ -422,8 +433,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .check() on a directory should give us back a list of Checkable
         objects representing the entries in the directory
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         testdir='/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
@@ -451,8 +461,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .check() on a file should execute the check actions for that
         file.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         testdir='/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
@@ -583,8 +592,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         create it. For this test, we specify and verify a dataroot value.
         """
         # make sure the .db file does not exist
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
 
         # this call should create it
         Checkable.ex_nihilo(filename=self.testfile, dataroot="/home/somebody")
@@ -627,8 +635,7 @@ class CheckableTest(testhelp.HelpedTestCase):
          been asked to use a non-database file for the database.
         """
         # make sure the .db file does not exist
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
 
         # create a dummy .db file and set its mtime back by 500 seconds
         testhelp.touch(self.testfile)
@@ -651,8 +658,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         create it.
         """
         # make sure the .db file does not exist
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
 
         # this call should create it
         Checkable.ex_nihilo(filename=self.testfile)
@@ -783,8 +789,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Calling .get_list() before .ex_nihilo() should cause an exception
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
+
         try:
             Checkable.get_list(filename=self.testfile)
             self.fail("Expected an exception but didn't get one.")
@@ -803,8 +809,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         representing what is in the table
         """
         # make sure the .db file does not exist
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
 
         # create some test data (path, type, checksum, cos, last_check)
         testdata = [('/', 'd', '', '', 0),
@@ -848,8 +853,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Verify that checksum gets stored by persist().
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         testpath = 'Checkable.py'
         Checkable.ex_nihilo(filename=self.testfile, dataroot=testpath)
 
@@ -874,8 +878,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         (rowid == None, last_check == 0, type == 'd'). Exception should be
         thrown.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         self.db_duplicates()
         x = Checkable.get_list(filename=self.testfile)
@@ -907,8 +910,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new directory (rowid == None, last_check == 0, type == 'd',
         path does not match). New record should be added.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         x = Checkable.get_list(filename=self.testfile)
         self.expected(1, len(x))
@@ -938,8 +940,7 @@ class CheckableTest(testhelp.HelpedTestCase):
          Seems like for a directory, either they should both be untouched or
          both be set to the empty string.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
 
         now = time.time()
@@ -977,8 +978,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'f'), changing type (f -> d). Existing path should be
         updated.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
 
         now = time.time()
@@ -1015,8 +1015,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in an invalid directory (rowid != None, last_check == 0, type ==
         'd'). Exception should be thrown.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         now = time.time()
         self.db_add_one(path='/home', type='d', last_check=now)
@@ -1059,8 +1058,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         None, path exists, type == 'd', last_check changed). Last check time
         should be updated.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
 
         x = Checkable.get_list(filename=self.testfile)
@@ -1086,8 +1084,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file with path matching a duplicate in database (rowid ==
         None, last_check == 0, type == 'f'). Exception should be thrown.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         self.db_add_one(path=self.testpath, type='f')
         self.db_add_one(path=self.testpath, type='f')
@@ -1125,8 +1122,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file (rowid == None, last_check == 0, path does not
         match, type == 'f'). New record should be added.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
 
         x = Checkable.get_list(filename=self.testfile)
@@ -1153,8 +1149,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file with matching path (rowid == None, last_check
         == 0, type == 'f'). Existing path should be updated.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         now = time.time()
         self.db_add_one(last_check=now, type='d')
@@ -1187,8 +1182,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file with matching path (rowid == None, last_check
         == 0, type == 'f'). Existing path should not be updated.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         now = time.time()
         self.db_add_one(last_check=now, type='f', checksum='abc', cos='1111')
@@ -1220,8 +1214,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in an invalid file (rowid == None, last_check != 0, type == 'f')
         Exception should be thrown.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         self.db_add_one()
         x = Checkable.get_list(filename=self.testfile)
@@ -1254,8 +1247,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         path exists, type == 'f', last_check changed). Last check time should
         be updated.
         """
-        if os.path.exists(self.testfile):
-            os.unlink(self.testfile)
+        util.conditional_rm(self.testfile)
         Checkable.ex_nihilo(filename=self.testfile)
         self.db_add_one()
         x = Checkable.get_list(filename=self.testfile)

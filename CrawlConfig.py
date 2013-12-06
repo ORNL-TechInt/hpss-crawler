@@ -29,6 +29,7 @@ import testhelp
 import time
 import toolframe
 import unittest
+import util
 
 # # -----------------------------------------------------------------------------
 # def main(argv):
@@ -450,8 +451,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         get_config(reset=True, soft=True)
         self.cd(self.testdir)
         self.clear_env()
-        if os.path.exists(self.default_cfname):
-            os.unlink(self.default_cfname)
+        util.conditional_rm(self.default_cfname)
 
         # test with no argument
         try:
@@ -566,8 +566,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         get_config(reset=True, soft=True)
         self.cd(self.testdir)
         os.environ['CRAWL_CONF'] = self.env_cfname
-        if os.path.exists(self.env_cfname):
-            os.unlink(self.env_cfname)
+        util.conditional_rm(self.env_cfname)
 
         got_exception = False
         try:
@@ -672,8 +671,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.write_cfg_file(self.env_cfname, d)
         os.chmod(self.env_cfname, 0644)
 
-        if os.path.exists(self.exp_cfname):
-            os.unlink(self.exp_cfname)
+        util.conditional_rm(self.exp_cfname)
 
         try:
             cfg = get_config(self.exp_cfname)
@@ -804,8 +802,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Clean up after every test.
         """
-        if os.path.exists(self.env_cfname):
-            os.unlink(self.env_cfname)
+        util.conditional_rm(self.env_cfname)
         os.chdir(launch_dir)
         
     # ------------------------------------------------------------------------

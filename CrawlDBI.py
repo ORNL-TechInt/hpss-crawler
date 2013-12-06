@@ -511,7 +511,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling create() with correct arguments should create the table
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         db.create(table='create_yes', fields=['one text',
                                               'two int'])
@@ -587,7 +587,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert on fields not in the table should get an exception
         """
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         db.create(table='fnox', fields=['one text', 'two text'])
         try:
@@ -732,7 +732,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert on a non-existent table should get an exception
         """
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         # db.create(table='tnox', fields=['one text', 'two text'])
         try:
@@ -756,7 +756,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with good arguments should put the data in the table
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
 
         tname=util.my_name().replace('test_', '')
         fdef = ['id int primary key', 'name text', 'size int']
@@ -782,7 +782,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling select() specifying fields should get only the fields requested
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -808,7 +808,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with where with no '?' and an empty data list is fine.
         The data returned should match the where clause.
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -830,7 +830,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a where clause with a '?' and an empty data list
         should get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -861,7 +861,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with where clause with no '?' and data in the list
         should get an exception -- the data would be ignored
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -892,7 +892,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a where clause containing '?' and data in the
         data list should return the data matching the where clause
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -914,7 +914,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with an empty field list should get all the data -- an
         empty field list indicates the wildcard option
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -940,7 +940,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with an empty orderby should get the data in the order
         inserted
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -964,7 +964,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling select() with an empty table name should get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -994,7 +994,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling select() with an empty where arg should get all the data
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1019,7 +1019,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a non-list as the data argument should
         get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1051,7 +1051,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a non-list as the fields argument should
         get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1082,7 +1082,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a non-string orderby argument should
         get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1113,7 +1113,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a non-string table argument should
         get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1144,7 +1144,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with a non-string where argument should
         get an exception
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1175,7 +1175,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() specifying orderby should get the rows in the
         order requested
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1199,7 +1199,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling select() specifying where should get only the rows requested
         """
-        self.reset_db()
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
@@ -1224,7 +1224,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         If table foo exists, db.table_exists(table='foo') should return True
         """
         tname = util.my_name().replace('test_', '')
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         db.create(table=tname, fields=self.fdef)
         self.expected(True, db.table_exists(tname))
@@ -1236,7 +1236,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         False
         """
         tname = util.my_name().replace('test_', '')
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         self.expected(False, db.table_exists(tname))
         
@@ -1250,7 +1250,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
         
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
@@ -1337,7 +1337,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
         
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
@@ -1452,7 +1452,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
         
-        self.reset_db
+        util.conditional_rm(self.testdb)
         db = DBIsqlite(dbname=self.testdb)
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
@@ -1467,14 +1467,6 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
             self.assertTrue(exp in r,
                             "Expected %s in %s but didn't find it" %
                             (str(exp), util.line_quote(r)))
-    
-    # -------------------------------------------------------------------------
-    def reset_db(self):
-        """
-        Delete the database table so we can start over.
-        """
-        if os.path.exists(self.testdb):
-            os.unlink(self.testdb)
         
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

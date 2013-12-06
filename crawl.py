@@ -343,8 +343,7 @@ class CrawlDaemon(daemon.Daemon):
                     #
                     # Check for the exit signal
                     #
-                    if os.path.exists(exitfile):
-                        os.unlink(exitfile)
+                    if util.conditional_rm(exitfile):
                         self.dlog('crawl: shutting down')
                         keep_going = False
                         break
@@ -468,8 +467,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         EXP: attempting to open a nonexistent config file throws an error
         """
         cfname = '%s/nosuch.cfg' % self.testdir
-        if os.path.exists(cfname):
-            os.unlink(cfname)
+        util.conditional_rm(cfname)
         cmd = 'crawl cfgdump -c %s' % cfname
         result = pexpect.run(cmd)
         self.vassert_in("Traceback", result)
@@ -819,8 +817,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         t = copy.deepcopy(self.cdict)
         logpath = '%s/test_get_logger_config.log' % self.testdir
         t['crawler']['logpath'] = logpath
-        if os.path.exists(logpath):
-            os.unlink(logpath)
+        util.conditional_rm(logpath)
         self.assertEqual(os.path.exists(logpath), False,
                          '%s should not exist but does' % logpath)
 
@@ -863,8 +860,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         """
         util.get_logger(reset=True, soft=True)
         logpath = '%s/test_get_logger_path.log' % self.testdir
-        if os.path.exists(logpath):
-            os.unlink(logpath)
+        util.conditional_rm(logpath)
         self.assertEqual(os.path.exists(logpath), False,
                          '%s should not exist but does' % logpath)
         lobj = util.get_logger(logpath)
@@ -1041,11 +1037,9 @@ class CrawlTest(testhelp.HelpedTestCase):
                     pid = line.split()[1]
                     print("pid = %s <- kill this" % pid)
 
-        if os.path.exists('crawler_pid'):
-            os.unlink('crawler_pid')
+        util.conditional_rm('crawler_pid')
 
-        if os.path.exists('crawler.exit'):
-            os.unlink('crawler.exit')
+        util.conditional_rm('crawler.exit')
 
 # ------------------------------------------------------------------------------
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))

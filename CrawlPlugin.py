@@ -97,8 +97,7 @@ class CrawlPlugin(object):
         if self.name in sys.modules.keys():
             filename = re.sub("\.pyc?", ".pyc",
                               sys.modules[self.name].__file__)
-            if os.path.exists(filename):
-                os.unlink(filename)
+            util.conditional_rm(filename)
 
             del sys.modules[self.name]
             
