@@ -7,7 +7,6 @@ import socket
 import sys
 import time
 import toolframe
-import unittest
 
 # -----------------------------------------------------------------------------
 def contents(filename):
@@ -118,58 +117,3 @@ def setup_logging(logfile='',
         rval.info('-' * (55 - len(host)))
     return rval
 
-# -----------------------------------------------------------------------------
-class UtilTest(unittest.TestCase):
-    # -------------------------------------------------------------------------
-    def test_content(self):
-        x = contents('./util.py')
-        self.assertEqual(type(x), str,
-                         "Expected a string but got a %s" % type(x))
-        expected = 'def contents('
-        self.assertTrue(expected in x,
-                      "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
-                      (expected, x))
-
-    # -------------------------------------------------------------------------
-    def test_get_logger_10(self):
-        exp = None
-        actual = get_logger(reset=True, soft=False)
-        self.assertEqual(exp, actual,
-                         "Expected %s, got %s" % (exp, actual))
-        
-    # -------------------------------------------------------------------------
-    def test_get_logger_11(self):
-        exp = None
-        actual = get_logger(reset=True, soft=True)
-        self.assertEqual(exp, actual,
-                         "Expected %s, got %s" % (exp, actual))
-        
-    # -------------------------------------------------------------------------
-    def test_line_quote(self):
-        exp = '\n"""\nabc\n"""'
-        act = line_quote('abc')
-        self.assertEqual(exp, act,
-                         "Expected %s, got %s" % (exp, act))
-
-        exp = '\n"""\nabc\n"""'
-        act = line_quote("'abc'")
-        self.assertEqual(exp, act,
-                         "Expected %s, got %s" % (exp, act))
-                      
-        exp = '\n"""\nabc\n"""'
-        act = line_quote('"abc"')
-        self.assertEqual(exp, act,
-                         "Expected %s, got %s" % (exp, act))
-
-    # -------------------------------------------------------------------------
-    def test_my_name(self):
-        actual = my_name()
-        expected = 'test_my_name'
-        self.assertEqual(expected, actual,
-                         "Expected '%s' to match '%s'" %
-                         (expected, actual))
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='UtilTest',
-                        logfile='crawl_test.log')
