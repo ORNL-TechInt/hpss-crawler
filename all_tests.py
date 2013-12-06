@@ -20,7 +20,7 @@ def main(args):
                     'CrawlPlugin',
                     'Dimension',
                     'testhelp',
-                    'util',
+                    'UtilTest',
                     ]:
         script = modname + '.py'
         mod = __import__(modname)

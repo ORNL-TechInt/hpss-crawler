@@ -161,19 +161,31 @@ def list_tests(a, final, testlist):
                     break
 
 # -----------------------------------------------------------------------------
-def module_test_setup(dirname):
-    if os.path.isdir(dirname):
-        shutil.rmtree(dirname)
-    os.makedirs(dirname)
-    
+def module_test_setup(dir):
+    if type(dir) == str:
+        reset_directory(dir)
+    elif type(dir) == list:
+        for dirname in dir:
+            reset_directory(dirname)
+            
 # -----------------------------------------------------------------------------
-def module_test_teardown(dirname):
+def module_test_teardown(dir):
     if not keepfiles():
         # close and release any open logging files
         logger = util.get_logger(reset=True, soft=True)
-        if os.path.isdir(dirname):
-            shutil.rmtree(dirname)
+        if type(dir) == str:
+            reset_directory(dir, make=False)
+        elif type(dir) == list:
+            for dirname in dir:
+                reset_directory(dirname, make=False)
     
+# -----------------------------------------------------------------------------
+def reset_directory(dirpath, make=True):
+    if os.path.isdir(dirpath):
+        shutil.rmtree(dirpath)
+    if make and not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+        
 # -----------------------------------------------------------------------------
 def test_name(obj=None):
     """

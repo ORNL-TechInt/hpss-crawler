@@ -119,11 +119,13 @@ class CrawlPlugin(object):
 
 # -----------------------------------------------------------------------------
 def setUpModule():
-    testhelp.module_test_setup(CrawlPluginTest.plugdir)
+    testhelp.module_test_setup([CrawlPluginTest.plugdir,
+                                CrawlPluginTest.plugdir + '_alt'])
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
-    testhelp.module_test_teardown(CrawlPluginTest.plugdir)
+    testhelp.module_test_teardown([CrawlPluginTest.plugdir,
+                                   CrawlPluginTest.plugdir + '_alt'])
 
 # -----------------------------------------------------------------------------
 class CrawlPluginTest(testhelp.HelpedTestCase):
