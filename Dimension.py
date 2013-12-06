@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-
+"""
+Track stratum proportions in a sample against a population
+"""
 import copy
 import CrawlDBI
 import os
 import testhelp
 import toolframe
 import traceback as tb
+import util
 
 # -----------------------------------------------------------------------------
 class Dimension(object):
@@ -69,6 +72,9 @@ class Dimension(object):
         
     # -------------------------------------------------------------------------
     def __repr__(self):
+        """
+        A human readable representation of a Dimension object
+        """
         rv = "Dimension(name='%s'" % self.name
         if self.dbname != Dimension.dbname:
             rv += ", dbname='%s'" % self.dbname
@@ -77,6 +83,9 @@ class Dimension(object):
 
     # -------------------------------------------------------------------------
     def db(self):
+        """
+        Get our database connection (initialize it if necessary)
+        """
         try:
             return self.dbh
         except AttributeError:
@@ -85,6 +94,9 @@ class Dimension(object):
     
     # -------------------------------------------------------------------------
     def db_init(self):
+        """
+        Get a database handle. If our table has not yet been created, do so.
+        """
         if hasattr(self,'dbh'):
             return
         db = self.db()
@@ -100,6 +112,9 @@ class Dimension(object):
         
     # -------------------------------------------------------------------------
     def load(self):
+        """
+        Load this object with data from the database
+        """
         db = self.db()
         rows = db.select(table='dimension',
                          fields=['category', 'p_count', 'p_pct', 's_count',
@@ -117,14 +132,13 @@ class Dimension(object):
     # -------------------------------------------------------------------------
     def persist(self):
         """
-        Initialize the database and dimension table if necessary. Then save
-        this object to it.
+        Save this object to the database.
 
-        Saving the object: first, we have to find out which rows are already in
-        the database. Then, comparing the rows from the database with the
-        object, we construct two lists: rows to be updated, and rows to be
-        inserted. There's no way for categories to be removed from a summary
-        dictionary, so we don't have to worry about deleting entries.
+        First, we have to find out which rows are already in the database.
+        Then, comparing the rows from the database with the object, we
+        construct two lists: rows to be updated, and rows to be inserted.
+        There's no way for categories to be removed from a summary dictionary,
+        so we don't have to worry about deleting entries from the database.
         """
         if self.p_sum == {}:
             return
@@ -134,19 +148,23 @@ class Dimension(object):
         u_list = []
         u_data = []
         
-        # find out which rows are already in the database
+        # Find out which rows are already in the database.
         db = self.db()
         rows = db.select(table='dimension',
                          fields=['name', 'category'],
                          where='name = ?',
                          data=(self.name,))
         
+        # Based on the population data, sort the database entries into items to
+        # be updated versus those to be inserted.
         for k in self.p_sum:
             if (self.name, k) in rows:
                 u_list.append((self.name, k))
             else:
                 i_list.append((self.name, k))
 
+        # For each item in the update list, build the data tuple and add it to
+        # the update list
         for (name, cat) in u_list:
             u_data.append((self.p_sum[cat]['count'],
                            self.p_sum[cat]['pct'],
@@ -154,13 +172,16 @@ class Dimension(object):
                            self.s_sum[cat]['pct'],
                            self.name,
                            cat))
+        # If the data tuple list is not empty, issue an update against the
+        # database
         if u_data != []:
-            # self.db_execute(u_cmd, u_data)
             db.update(table='dimension',
                       fields=['p_count', 'p_pct', 's_count', 's_pct'],
                       where='name=? and category=?',
                       data=u_data)
             
+        # For each item in the insert list, build the data tuple and add it to
+        # the insert list
         for (name, cat) in i_list:
             i_data.append((self.name,
                            cat,
@@ -168,8 +189,8 @@ class Dimension(object):
                            self.p_sum[cat]['pct'],
                            self.s_sum[cat]['count'],
                            self.s_sum[cat]['pct']))
+        # If the insert data tuple list is not empty, issue the insert
         if i_data != []:
-            # self.db_execute(i_cmd, i_data)
             db.insert(table='dimension',
                       fields=['name', 'category', 'p_count',
                               'p_pct', 's_count', 's_pct'],
@@ -182,7 +203,7 @@ class Dimension(object):
         """
         Return the total of all the 'count' entries in one of the dictionaries.
         The dictionary to sum up can be indicated by passing an argument to
-        dict, or by passing 'p(opulation)' or 's(ample)' to which.
+        dict, or by passing abbreviations of 'population' or 'sample' to which.
         """
         if dict is not None:
             rv = sum(map(lambda x: x['count'], dict.values()))
@@ -194,6 +215,12 @@ class Dimension(object):
     
     # -------------------------------------------------------------------------
     def update_category(self, catval, p_suminc=1, s_suminc=0):
+        """
+        Update the population (and optionally the sample) count for a category.
+        If the category is new, it is added to the population and sample
+        dictionaries. Once the counts are updated, we call _update_pct() to
+        update the percent values as well.
+        """
         if catval not in self.p_sum:
             self.p_sum[catval] = {'count': p_suminc, 'pct': 0.0}
         else:
@@ -211,7 +238,7 @@ class Dimension(object):
         """
         Update the 'pct' values in the population and sample dictionaries. This
         is called by update_category and is tested as part of the tests for it.
-        This routine should not normally be called from the outside.
+        This routine should not normally be called from outside the class.
         """
         for d in [self.p_sum, self.s_sum]:
             total = sum(map(lambda x: x['count'], d.values()))
@@ -224,14 +251,23 @@ class Dimension(object):
     
 # -----------------------------------------------------------------------------
 def setUpModule():
+    """
+    Set up for testing
+    """
     testhelp.module_test_setup(DimensionTest.testdir)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
+    """
+    Clean up after testing
+    """
     testhelp.module_test_teardown(DimensionTest.testdir)
 
 # -----------------------------------------------------------------------------
 class DimensionTest(testhelp.HelpedTestCase):
+    """
+    Tests for the Dimension class
+    """
     testdir = './test.d'
     testdb = '%s/test.db' % testdir
     
@@ -349,7 +385,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         Creating a Dimension object should initialize the dimension table in
         the existing database if the db exists but the table does not.
         """
-        self.db_reboot()
+        util.conditional_rm(self.testdb)
         db = CrawlDBI.DBI(dbname=self.testdb)
         self.assertFalse(db.table_exists(table='dimension'),
                         'Did not expect table \'dimension\' in database')
@@ -372,7 +408,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         database and table dimension if they do not exist. (see the
         Checkable.ex_nihilo() method and tests for clues)
         """
-        self.db_reboot()
+        util.conditional_rm(self.testdb)
 
         a = Dimension(dbname=self.testdb, name='ex_nihilo')
         a.persist()
@@ -392,7 +428,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         the one in the table should load the information from the table into
         the object.
         """
-        self.db_reboot()
+        util.conditional_rm(self.testdb)
         testdata = [('cos', '6002', 24053, 17.2563, 190, 15.2343),
                     ('cos', '5081', 14834, 98.753,  105, 28.4385)]
         # create the dimension table without putting anything in it
@@ -443,7 +479,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         # reboot the database and call persist() to create the table without
         # adding any data
-        self.db_reboot()
+        util.conditional_rm(self.testdb)
         ignore = Dimension(dbname=self.testdb, name='foobar')
         ignore.persist()
 
@@ -472,7 +508,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         place in the table, updating and persisting a Dimension with the same
         name should update the database record.
         """
-        self.db_reboot()
+        util.conditional_rm(self.testdb)
 
         # first, we need to stick some records in the table
         test = Dimension(dbname=self.testdb, name='foobar')
@@ -512,7 +548,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         that is not in the table. Calling persist() on it should store it in
         the dimension table in the database.
         """
-        self.db_reboot()
+        util.conditional_rm(self.testdb)
         
         # instantiating the object initializes the database
         new = Dimension(dbname=self.testdb, name='notintable')
@@ -605,11 +641,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.p_sum)
         self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.s_sum)
 
-    # -------------------------------------------------------------------------
-    def db_reboot(self):
-        if os.path.exists(self.testdb):
-            os.unlink(self.testdb)
-            
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='DimensionTest',

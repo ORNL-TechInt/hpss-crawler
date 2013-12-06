@@ -1,5 +1,25 @@
 #!/usr/bin/env python
+"""
+An item in HPSS that can be checked for integrity
 
+As we scan the population of files in HPSS, we select a representative sample.
+We expect this sample to gradually grow. We will never delete entries from the
+sample, so eventually it is expected that it will match the population. In the
+meantime, we want to get useful information about the reliability of HPSS by
+examining the files in the sample and verifying that each file's data matches
+its checksum.
+
+The following information is tracked for each Checkable:
+
+    path
+    type (file or directory)
+    cos (HPSS class of service)
+    last_check (last time the item was checked)
+    checksum (md5 hash representing the data most recently read from the file)
+
+Note that directories are only used to find more files. A directory does not
+have a cos or a checksum.
+"""
 import CrawlDBI
 import hashlib
 import os
@@ -18,11 +38,22 @@ import util
 
 # -----------------------------------------------------------------------------
 class Checkable(object):
+    """
+    This class represents an HPSS entity that can be checked. That is, it has
+    attributes that can be validated (cos, checksum) or it contains other
+    things that can be checked (eg., a directory).
+
+    Note that only files have cos and checksum. Directories only have path,
+    type, and last_check.
+    """
+    # !@! seems like dbname should be the default database name (e.g.,
+    # 'drill.db')
     dbname = ''
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
-        Initialize a Checkable object.
+        Initialize a Checkable object -- set the path, type, checksum, cos, and
+        last_check to default values, then update them based on the arguments.
         """
         self.dbname = Checkable.dbname
         self.path = '---'
@@ -70,8 +101,17 @@ class Checkable(object):
     @classmethod
     def ex_nihilo(cls, filename='drill.db', dataroot='/'):
         """
-        Start from scratch. The first thing we want to do is to add "/" to the
-        queue, then take that Checkable object and call its .check() method.
+        Start from scratch. Create the database if necessary. Create the
+        table(s) if necessary. Bootstrap the queue by adding the root
+        director(ies).
+
+        !@! Currently, all Checkables go in table 'checkables'. We want to
+         change this so that directories go in table 'queue' and files go in
+         table 'sample'. These two tables must be created here. The sample
+         table needs all the attributes (path, cos, checksum, last_check) while
+         the queue table only needs path and last_check. The type field need
+         not be stored in the database because it will be distinguished by
+         which table the item is in.
         """
         Checkable.dbname = filename
         if not os.path.exists(filename):
@@ -134,7 +174,7 @@ class Checkable(object):
     @classmethod
     def get_list(cls, filename='drill.db'):
         """
-        Return the current list of checkables.
+        Return the current list of Checkables from the database.
         """
         Checkable.dbname = filename
         rval = []
@@ -161,12 +201,18 @@ class Checkable(object):
          - get a list of its contents if possible,
          - create a Checkable object for each item and persist it to the
            database
-         - return the list
+         - return the list of Checkables found in the directory
         For a file:
          - if it's readable, decide whether to make it an official check
-         - if so, do all the check steps for the file
-         - update the time of last check
-         - persist the object to the database
+         - if no, no Checkable is created for this file
+         - if yes,
+            - if we have a checksum for the file:
+                - retrieve the file and compute the checksum and verify it
+            - else:
+                - retrieve the file, compute the checksum and record it
+            - record/verify the file's COS
+            - update last_check with the current time
+            - persist the object to the database
 
         The value of odds indicates the likelihood with which we should check
         files: 1 in odds
@@ -351,10 +397,16 @@ class Checkable(object):
 
 # -----------------------------------------------------------------------------
 def setUpModule():
+    """
+    Create the test directory in preparation to run the tests.
+    """
     testhelp.module_test_setup(CheckableTest.testdir)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
+    """
+    Clean up the test directory after a test run.
+    """
     testhelp.module_test_teardown(CheckableTest.testdir)
 
 # -----------------------------------------------------------------------------
@@ -423,6 +475,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     def test_ctor(self):
         """
         Verify that the constructor gives us an object with the right methods
+        and default attributes.
         """
         x = Checkable()
         for method in self.methods:
@@ -563,6 +616,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         If the database file does already exist, calling ex_nihilo() should do
         nothing.
+
+        The current behavior is that if an existing (non database) file is
+        named as the database, no attempt will be made to create the tables.
+        This is desirable. We don't want to create the tables unless we created
+        the file. Otherwise, the user might overwrite a file inadvertently by
+        trying to treat it as a database.
+
+        !@! Update ex_nihilo to throw an exception if it detects that it has
+         been asked to use a non-database file for the database.
         """
         # make sure the .db file does not exist
         if os.path.exists(self.testfile):
@@ -622,7 +684,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Parse an ls -l line from hsi where we're looking at a directory with a
         recent date (no year). fdparse() should return type='d', path=<file
-        path>.
+        name>.
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwx------    2 tpb       ccsstaff         ' +
@@ -636,7 +698,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     def test_fdparse_ldy(self):
         """
         Parse an ls -l line from hsi where we're looking at a directory with a year
-        in the date. fdparse() should return type='d', path=<file path>.
+        in the date. fdparse() should return type='d', path=<file name>.
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwxr-xr-x    2 tpb       ccsstaff         ' +
@@ -651,7 +713,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Parse an ls -l line from hsi where we're looking at a file with a
         recent date (no year). fdparse() should return type='f', path=<file
-        path>.
+        name>.
         """
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff     ' +
@@ -665,7 +727,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     def test_fdparse_lfy(self):
         """
         Parse an ls -X line from hsi where we're looking at a file with a year
-        in the date. fdparse() should return type='f', path=<file path>.
+        in the date. fdparse() should return type='f', path=<file name>.
         """
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff        4896' +
@@ -689,7 +751,6 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_fdparse_Pd(self):
         """
-
         Parse an ls -P line from hsi where we're looking at a directory. The -P
         format doesn't provide date or cos for directories.
 
@@ -705,10 +766,8 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_fdparse_Pf(self):
         """
-
         Parse an ls -P line from hsi where we're looking at a file. fdparse()
         should return type='f', path=<file path>, cos.
-
         """
         n = Checkable(path='xyx', type='d')
         line = ("FILE    /home/tpb/LoadL_admin   88787   88787   " +
@@ -874,6 +933,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Send in a new directory with matching path (rowid == None, last_check
         == 0, type == 'd'). Existing path should not be updated.
+
+        !@! It appears that cos is getting cleared but checksum is preserved.
+         Seems like for a directory, either they should both be untouched or
+         both be set to the empty string.
         """
         if os.path.exists(self.testfile):
             os.unlink(self.testfile)
@@ -1232,6 +1295,9 @@ class CheckableTest(testhelp.HelpedTestCase):
                         
     # -------------------------------------------------------------------------
     def db_duplicates(self):
+        """
+        Store a duplicate entry in the file table.
+        """
         db = CrawlDBI.DBI(dbname=self.testfile)
         db.insert(table='checkables',
                   fields=['path', 'type', 'checksum', 'cos', 'last_check'],
@@ -1250,7 +1316,6 @@ class CheckableTest(testhelp.HelpedTestCase):
                    last_check=0):
         """
         Add one record to the database. All arguments except self are optional.
-        !@! review calls to db_add_one and add cos where appropriate
         """
         db = CrawlDBI.DBI(dbname=self.testfile)
         db.insert(table='checkables',
@@ -1260,6 +1325,10 @@ class CheckableTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def ymdhms(self, dt):
+        """
+        Given a tm tuple, return a formatted data/time string
+        ("YYYY.mmdd.HHMMSS")
+        """
         return time.strftime("%Y.%m%d.%H%M%S", time.localtime(dt))
     
 # -----------------------------------------------------------------------------

@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""
+Run all the crawler unit tests
+
+Each test class is loaded and run. No arguments are accepted. For greater
+control, run each set of tests by itself.
+"""
 import os
 import pexpect
 import pdb

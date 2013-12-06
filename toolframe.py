@@ -56,6 +56,9 @@ import unittest
 
 # -----------------------------------------------------------------------------
 def tf_main(args, prefix=None):
+    """
+    Dispatch a subfunction from mainmod
+    """
     mainmod = sys.modules['__main__']
     if prefix == None:
         prefix = mainmod.prefix()
@@ -126,6 +129,10 @@ def tf_launch(prefix,
               cleanup_tests=None,
               testclass='',
               logfile=''):
+    """
+    For a tool style program, figure out what we're doing and eventually call
+    tf_main()
+    """
     if '__main__' != modname:
         return
     if len(sys.argv) == 1 and sys.argv[0] == '':
@@ -154,6 +161,10 @@ def ez_launch(main = None,
               cleanup=None,
               test=None,
               logfile=''):
+    """
+    For a simple (non-tool-style) program, figure out what needs to happen and
+    call the invoker's 'main' callback.
+    """
     # pdb.set_trace()
     if len(sys.argv) == 1 and sys.argv[0] == '':
         return

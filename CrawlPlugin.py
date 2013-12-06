@@ -1,17 +1,8 @@
 #!/usr/bin/env python
 """
-CrawlPlugin.py - Plugin class for HPSS integrity crawler
+Plugin class for HPSS integrity crawler
 
-  * Configuration data is read and copied into the object by method
-    init_cfg_data(), called by both the constructor and reload().
-    init_cfg_data() reversed the order of cfg and name in its argument list from
-    the constructor so name can have a default and reload() doesn't have to pass
-    it.
-
-  * last_fired is initialized by the constructor but not by reload(). So if the
-    plugin is updated by a reconfigure, it won't lose its last fire time but
-    will stay on the same schedule.
-
+This module contains the CrawlPlugin and CrawlPluginTest classes.
 """
 import copy
 import CrawlConfig
@@ -28,10 +19,23 @@ import util
 
 # -----------------------------------------------------------------------------
 class CrawlPlugin(object):
+    """
+    An object of this class represents a crawler plugin which is to be run
+    periodically. The plugin's attributes are defined in a configuration file
+    and this class loads them from there.
+    """
     # -------------------------------------------------------------------------
     def __init__(self, name=None, cfg=None, logger=None):
         """
-        Initialize this object.
+        Configuration data is read and copied into the object by method
+        init_cfg_data(), called by both the constructor and reload().
+        init_cfg_data() reverses the order of cfg and name in its argument list
+        from the constructor so name can have a default and reload() doesn't
+        have to pass it.
+
+        last_fired is initialized by the constructor but not by reload(). So if
+        the plugin is updated by a reconfigure, it won't lose its last fire
+        time but will stay on the same schedule.
         """
         assert(name != None)
         assert(cfg != None)
@@ -119,16 +123,25 @@ class CrawlPlugin(object):
 
 # -----------------------------------------------------------------------------
 def setUpModule():
+    """
+    Set up for testing
+    """
     testhelp.module_test_setup([CrawlPluginTest.plugdir,
                                 CrawlPluginTest.plugdir + '_alt'])
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
+    """
+    Clean up after testing
+    """
     testhelp.module_test_teardown([CrawlPluginTest.plugdir,
                                    CrawlPluginTest.plugdir + '_alt'])
 
 # -----------------------------------------------------------------------------
 class CrawlPluginTest(testhelp.HelpedTestCase):
+    """
+    This class contains the tests for the CrawlPlugin class.
+    """
     plugdir = 'test_plugins'
     
     # -------------------------------------------------------------------------
@@ -154,7 +167,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_fire_false(self):
         """
-        If option 'fire' is False in config, should be False in plugin
+        If option 'fire' is False in config, the object's firable attribute
+        should be False and attempting to fire the plugin should do nothing
         """
         pname = util.my_name()
         self.make_plugin(pname)
@@ -176,7 +190,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_fire_true(self):
         """
-        if option 'fire' is True in config, should be True in plugin
+        If option 'fire' is True in config, the plugin's firable attribute
+        should be True and attempting to fire the plugin should work
         """
         pname = util.my_name()
         self.make_plugin(pname)
@@ -198,7 +213,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_fire_unset(self):
         """
-        If option 'fire' is not set in config, should be true in plugin
+        If option 'fire' is not set in config, the firable attribute should be
+        true in plugin object
         """
         pname = util.my_name()
         self.make_plugin(pname)
@@ -215,7 +231,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_freq_set(self):
         """
-        if frequency is set in config, plugin should match
+        If frequency is set in config, plugin should match
         """
         pname = util.my_name()
         self.make_plugin(pname)
@@ -232,7 +248,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_freq_unset(self):
         """
-        if frequency not set in config, should be 3600 in plugin
+        If frequency not set in config, should be 3600 (1 hour) in plugin
         """
         pname = util.my_name()
         self.make_plugin(pname)
@@ -248,7 +264,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_plugdir_inspath(self):
         """
-        if plugin_dir set in config and in sys.path, sys.path should not change
+        If plugin_dir set in config and in sys.path, sys.path should not change
         """
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
@@ -266,7 +282,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_plugdir_ninspath(self):
         """
-        if plugin_dir set in config and not in sys.path, should be added to sys.path
+        If plugin_dir set in config and not in sys.path, should be added to sys.path
         """
         if self.plugdir in sys.path:
             sys.path.remove(self.plugdir)
@@ -288,7 +304,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_plugdir_unset(self):
         """
-        if plugin_dir not set in config, should throw exception
+        If plugin_dir not set in config, attempting to create a plugin object
+        should throw an exception
         """
         if self.plugdir in sys.path:
             sys.path.remove(self.plugdir)
@@ -310,7 +327,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_plugin_inmod(self):
         """
-        if plugin does exist and is in module list, should be reloaded
+        If plugin does exist and is in module list and its config file changes,
+        it should be reloaded
         """
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
@@ -351,7 +369,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_plugin_ninmod(self):
         """
-        if plugin does exists and not in module list, should be imported
+        If plugin does exists and not in module list, should be imported
         """
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
@@ -371,13 +389,13 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
             p = CrawlPlugin(pname, c)
         except ImportError:
             self.fail("Expected import to succeed but it did not.")
-        except Exception, e:
-            self.fail("Got unexpected exception: %s" % tb.format_exc())
+        # except Exception, e:
+        #     self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_init_plugin_nosuch(self):
         """
-        if plugin does not exist, should get ImportError
+        If plugin does not exist, should get ImportError
         """
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
@@ -398,13 +416,14 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
             self.fail("Expected import to fail but it did not.")
         except ImportError:
             pass
-        except Exception, e:
-            self.fail("Got unexpected exception: %s" % tb.format_exc())
+        # except Exception, e:
+        #     self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_reload_fire(self):
         """
-        Update fire
+        Changing a plugin's configuration and reloading it should update the
+        firable attribute.
         """
         # set up the plugin
         if self.plugdir not in sys.path:
@@ -436,7 +455,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_reload_freq(self):
         """
-        Update frequency
+        Changing a plugin's configuration and reloading it should update its
+        frequency attribute.
         """
         # set up the plugin
         if self.plugdir not in sys.path:
@@ -466,7 +486,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_reload_plugdir(self):
         """
-        Update plugdir
+        Updating plugdir in the configuration and reloading should update the
+        object's plugdir attribute.
 
         If the plugdir changes, do we unload all the plugins currently loaded
         from the old dir? No, just the one being reloaded.
@@ -510,14 +531,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.assertTrue(re.findall(rgx, sys.modules[pname].__file__),
                         "expected '%s' to match sys.modules[%s].__file__" %
                         (rgx, pname))
-                                 
-        
-        # raise testhelp.UnderConstructionError()
     
     # -------------------------------------------------------------------------
     def test_time_to_fire_false(self):
         """
-        time_to_fire() should return False if time.time() - last_fired <= freq
+        If time.time() - last_fired <= freq, time_to_fire() should return False 
         """
         # set up the plugin
         if self.plugdir not in sys.path:
@@ -545,7 +563,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_time_to_fire_true(self):
         """
-        time_to_fire() should return True if freq < time.time() - last_fired
+        If freq < time.time() - last_fired, time_to_fire() should return True 
         """
         # set up the plugin
         if self.plugdir not in sys.path:
@@ -572,6 +590,9 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def make_plugin(self, pname, pdir=None):
+        """
+        Create a plugin for testing
+        """
         if None == pdir:
             pdir = self.plugdir
         if not os.path.isdir(pdir):

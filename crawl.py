@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-crawl - Run a bunch of plug-ins which will probe the integrity of HPSS
+Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import CrawlConfig
 import CrawlPlugin
@@ -232,19 +232,6 @@ def cfg_changed(cfg):
     """
     return cfg.changed()
 
-# ---------------------------------------------------------------------------
-# def contents(filepath, string=True):
-#     """
-#     Return the contents of a file as a string.
-#     """
-#     f = open(filepath, 'r')
-#     if string:
-#         rval = "".join(f.readlines())
-#     else:
-#         rval = f.readlines()
-#     f.close()
-#     return rval
-
 # ------------------------------------------------------------------------------
 def get_timeval(cfg, section, option, default):
     """
@@ -267,26 +254,9 @@ def is_running():
     return running
     
 # ------------------------------------------------------------------------------
-def persistent_rm(path):
-    """
-    Try up to 10 times to remove a directory tree, sleeping after each attempt
-    to give the file system time to respond.
-    """
-    done = False
-    retries = 0
-    while not done and retries < 10:
-        try:
-            shutil.rmtree(path)
-            done = True
-        except OSError as e:
-            time.sleep(1.0)
-            print("Retry %d of 10: shutil.rmtree(%s)" % (retries, path))
-            retries += 1
-
-# ------------------------------------------------------------------------------
 def setUpModule():
     """
-    Setup needed before running the tests.
+    Setup for running the tests.
     """
     testhelp.module_test_setup(CrawlTest.testdir)
 
@@ -307,6 +277,11 @@ def tearDownModule():
 
 # ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
+    """
+    This class extends this daemon.Daemon to serve this application. Method
+    run() gets run in the background and then calls fire() when appropriate to
+    invoke a plugin.
+    """
     # --------------------------------------------------------------------------
     def fire(self, plugin, cfg):
         """
@@ -412,8 +387,10 @@ class CrawlDaemon(daemon.Daemon):
                 keep_going = False
 
 # -----------------------------------------------------------------------------
-class CrawlTest(unittest.TestCase):
-
+class CrawlTest(testhelp.HelpedTestCase):
+    """
+    Tests for the code in crawl.py
+    """
     testdir = './test.d'
     plugdir = '%s/plugins' % testdir
     default_logpath = '%s/test_default_hpss_crawl.log' % testdir
@@ -902,7 +879,8 @@ class CrawlTest(unittest.TestCase):
         EXP: correct number of seconds returned
         """
         os.environ['CRAWL_LOG'] = '%s/test_get_timeval.log' % self.testdir
-        t = self.dict2cfg(copy.deepcopy(self.cdict))
+        t = CrawlConfig.CrawlConfig()
+        t.load_dict(self.cdict)
         result = t.get_time('plugin_A', 'frequency', 1900)
         self.assertEqual(type(result), int,
                          'type of CrawlConfig.get_time result should be %s but is %s (%s)'
@@ -980,16 +958,6 @@ class CrawlTest(unittest.TestCase):
         del os.environ['CRAWL_LOG']
 
     # --------------------------------------------------------------------------
-    def dict2cfg(self, d):
-        """
-        Load the contents of a two layer dictionary into a ConfigParser object
-        !@! to be replaced by crawl_config.load_dict()
-        """
-        rval = CrawlConfig.CrawlConfig()
-        rval.load_dict(d)
-        return rval
-    
-    # --------------------------------------------------------------------------
     def vassert_in(self, expected, actual):
         """
         If expected does not occur in actual, report it as an error.
@@ -1056,6 +1024,9 @@ class CrawlTest(unittest.TestCase):
         
     # ------------------------------------------------------------------------
     def tearDown(self):
+        """
+        Clean up to do after each test
+        """
         if os.getcwd().endswith('/test.d'):
             os.chdir(launch_dir)
 

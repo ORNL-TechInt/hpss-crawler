@@ -23,10 +23,16 @@ import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
+    """
+    Set up test directory.
+    """
     testhelp.module_test_setup(AlertTest.testdir)
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
+    """
+    Clean up test directory, removing any test data left in it.
+    """
     testhelp.module_test_teardown(AlertTest.testdir)
 
 # -----------------------------------------------------------------------------
@@ -49,6 +55,10 @@ class AlertTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_alert_log(self):
+        """
+        Generate a log alert and verify that the message was written to the
+        correct log file.
+        """
         logfile = '%s/alert_log.log' % self.testdir
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
@@ -67,6 +77,9 @@ class AlertTest(testhelp.HelpedTestCase):
     
     # -------------------------------------------------------------------------
     def test_alert_shell(self):
+        """
+        Generate a shell alert and verify that it ran.
+        """
         logfile = '%s/alert_shell.log' % self.testdir
         outfile = '%s/alert_shell.out' % self.testdir
         runfile = '%s/runme' % self.testdir
@@ -98,6 +111,10 @@ class AlertTest(testhelp.HelpedTestCase):
     
     # -------------------------------------------------------------------------
     def test_alert_email(self):
+        """
+        Generate an e-mail alert and verify that it was sent (this is where we
+        use 'monkey patching').
+        """
         fakesmtp.inbox = []
         logfile = '%s/alert_email.log' % self.testdir
         targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
@@ -130,6 +147,7 @@ class AlertTest(testhelp.HelpedTestCase):
                         "'%s' not found in e-mail message '%s'" %
                         (payload, m.fullmessage))
 
+# -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='AlertTest',
                         logfile='crawl_test.log')
