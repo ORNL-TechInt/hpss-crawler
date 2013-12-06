@@ -197,7 +197,7 @@ def crl_status(argv):
     usage: crawl status
     """
     if is_running():
-        cpid = contents('crawler_pid').strip()
+        cpid = util.contents('crawler_pid').strip()
         print("The crawler is running as process %s." % cpid)
     else:
         print("The crawler is not running.")
@@ -233,17 +233,17 @@ def cfg_changed(cfg):
     return cfg.changed()
 
 # ---------------------------------------------------------------------------
-def contents(filepath, string=True):
-    """
-    Return the contents of a file as a string.
-    """
-    f = open(filepath, 'r')
-    if string:
-        rval = "".join(f.readlines())
-    else:
-        rval = f.readlines()
-    f.close()
-    return rval
+# def contents(filepath, string=True):
+#     """
+#     Return the contents of a file as a string.
+#     """
+#     f = open(filepath, 'r')
+#     if string:
+#         rval = "".join(f.readlines())
+#     else:
+#         rval = f.readlines()
+#     f.close()
+#     return rval
 
 # ------------------------------------------------------------------------------
 def get_timeval(cfg, section, option, default):
@@ -445,7 +445,7 @@ class CrawlTest(unittest.TestCase):
         # print(">>>\n%s\n<<<" % result)
         self.vassert_nin("Traceback", result)
         self.assertEqual(os.path.exists(self.default_logpath), True)
-        lcontent = contents(self.default_logpath)
+        lcontent = util.contents(self.default_logpath)
         for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
@@ -472,7 +472,7 @@ class CrawlTest(unittest.TestCase):
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.assertEqual(os.path.exists(logpath), True)
-        lcontent = contents(logpath)
+        lcontent = util.contents(logpath)
         # print(">>>\n%s\n<<<" % result)
         for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
@@ -572,11 +572,11 @@ class CrawlTest(unittest.TestCase):
         # test.d/fired should exist and contain 'plugin plugin_1 fired'
         filename = '%s/fired' % self.testdir
         self.assertEqual(os.path.exists(filename), True)
-        self.vassert_in('plugin plugin_1 fired', contents(filename))
+        self.vassert_in('plugin plugin_1 fired', util.contents(filename))
         
         # lfname should exist and contain specific strings
         self.assertEqual(os.path.exists(lfname), True)
-        self.vassert_in('firing plugin_1', contents(lfname))
+        self.vassert_in('firing plugin_1', util.contents(lfname))
     
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
@@ -588,7 +588,7 @@ class CrawlTest(unittest.TestCase):
         cmd = "crawl log --log %s %s" % (lfname, msg)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        self.vassert_in(msg, contents(lfname))
+        self.vassert_in(msg, util.contents(lfname))
         
     # --------------------------------------------------------------------------
     def test_crawl_start_x(self):
@@ -611,7 +611,7 @@ class CrawlTest(unittest.TestCase):
                          "Expected crawler to still be running but it is not")
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
-        self.assertEqual('leaving daemonize' in contents(logpath), True)
+        self.assertEqual('leaving daemonize' in util.contents(logpath), True)
         
         testhelp.touch('crawler.exit')
 
@@ -670,15 +670,15 @@ class CrawlTest(unittest.TestCase):
         self.assertEqual(is_running(), True)
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
-        self.assertEqual('crawl: CONFIG: [other_plugin]' in contents(logpath),
+        self.assertEqual('crawl: CONFIG: [other_plugin]' in util.contents(logpath),
                          True,
                          "Expected 'other_plugin' in log file not found")
         self.assertEqual('crawl: CONFIG: unplanned: silver' in
-                         contents(logpath),
+                         util.contents(logpath),
                          True,
                          "Expected 'unplanned: silver' in log file not found")
         self.assertEqual('crawl: CONFIG: simple: check for this' in
-                         contents(logpath),
+                         util.contents(logpath),
                          True,
                          "Expected 'simple: check for this' " +
                          "in log file not found")
@@ -715,14 +715,14 @@ class CrawlTest(unittest.TestCase):
                          "Expected crawler to still be running but it isn't")
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
-        self.assertEqual('leaving daemonize' in contents(logpath), True)
+        self.assertEqual('leaving daemonize' in util.contents(logpath), True)
         time.sleep(2)
-        self.assertEqual('other: firing' in contents(logpath), True,
+        self.assertEqual('other: firing' in util.contents(logpath), True,
                          "Log file does not indicate plugin was fired")
         self.assertEqual(os.path.exists('%s/fired' % self.testdir), True,
                          "File %s/fired does not exist" % self.testdir)
         self.assertEqual('plugin other fired\n',
-                         contents('%s/fired' % self.testdir),
+                         util.contents('%s/fired' % self.testdir),
                          "Contents of %s/fired is not right" % self.testdir)
         
         testhelp.touch('crawler.exit')
@@ -759,7 +759,7 @@ class CrawlTest(unittest.TestCase):
         
         testhelp.touch('crawler.exit')
         time.sleep(1)
-        self.vassert_nin("Traceback", contents(logpath))
+        self.vassert_nin("Traceback", util.contents(logpath))
         self.assertEqual(is_running(), False,
                          "crawler is still running unexpectedly")
         self.assertEqual(os.path.exists('crawler_pid'), False,

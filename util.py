@@ -9,12 +9,16 @@ import time
 import toolframe
 
 # -----------------------------------------------------------------------------
-def contents(filename):
+def contents(filename, string=True):
     """
-    Return the contents of the file as a string
+    Return the contents of the file. If string is True, we return a string,
+    otherwise a list.
     """
     f = open(filename, 'r')
-    rval = f.read()
+    if string:
+        rval = f.read()
+    else:
+        rval = f.readlines()
     f.close()
     return rval
 
