@@ -12,6 +12,7 @@ import sys
 import testhelp
 import time
 import toolframe
+import util
 
 def main(args):
     # pdb.set_trace()

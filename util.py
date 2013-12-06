@@ -12,10 +12,13 @@ import toolframe
 def conditional_rm(filepath):
     """
     We want to delete filepath but we don't want to generate an error if it
-    doesn't exist.
+    doesn't exist. Return the existence value of filepath at call time.
     """
+    rv = False
     if os.path.exists(filepath):
+        rv = True
         os.unlink(filepath)
+    return rv
 
 # -----------------------------------------------------------------------------
 def contents(filename, string=True):
