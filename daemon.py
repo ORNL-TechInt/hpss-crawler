@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-
+"""
+A generic daemon class
+"""
 import atexit
 import errno
 import os
@@ -13,8 +15,6 @@ MAXFD = 2048
 # -----------------------------------------------------------------------------
 class Daemon:
     """
-    A generic daemon class.
-    
     Usage: subclass the Daemon class and override the run() method
     """
     # -------------------------------------------------------------------------
@@ -25,6 +25,17 @@ class Daemon:
                  stderr='/dev/null',
                  workdir='.',
                  logger=None):
+        """
+        Argument pidfile controls where the process id is written.
+
+        The stdin/stdout/stderr arguments are paths to files where the process
+        stdin, stdout, and stderr will be written, respectively.
+
+        We'll chdir to the directory indicated by workdir before starting our
+        payload.
+
+        If logger is available, we'll use it to report what's going on.
+        """
         self.origdir = os.getcwd()
         self.stdin = stdin
         self.stdout = stdout
@@ -36,7 +47,7 @@ class Daemon:
     # -------------------------------------------------------------------------
     def daemonize(self):
         """
-        do the UNIX double-fork magic, see Stevens' "Advanced
+        Do the UNIX double-fork magic, see Stevens' "Advanced
         Programming in the UNIX Environment" for details (ISBN 0201563177)
         http://www.erlenstar.demon.co.uk/unix/faq_2.html#SEC16
         """
@@ -110,6 +121,10 @@ class Daemon:
         
     # -------------------------------------------------------------------------
     def close_if_open(self, fd):
+        """
+        Attempt to close an open file descriptor. This is used to release
+        resources in the parent before forking a child.
+        """
         try:
             os.close(fd)
         except OSError, exc:
@@ -123,15 +138,24 @@ class Daemon:
             
     # -------------------------------------------------------------------------
     def dlog(self, message):
+        """
+        Conditional logging
+        """
         if self.logger:
             self.logger.info(message)
             
     # -------------------------------------------------------------------------
     def delpid(self):
+        """
+        Remove the pid file on the way out
+        """
         os.remove(self.pidfile)
 
     # -------------------------------------------------------------------------
     def get_max_fd(self):
+        """
+        Find out what the system's highest file descriptor can be
+        """
         limits = resource.getrlimit(resource.RLIMIT_NOFILE)
         result = limits[1]
         if result == resource.RLIM_INFINITY:
@@ -213,13 +237,3 @@ class Daemon:
         will be called after the process has been daemonized by
         start() or restart().
         """
-
-    # -------------------------------------------------------------------------
-    def trace(self, msg):
-        """
-        """
-        f = open("/tmp/esg/pubd/pubd.trace", "a")
-        now = time.strftime("%Y.%m%d %H:%M:%S")
-        f.write("%(now)s %(msg)s\n" % vars())
-        f.close()
-        

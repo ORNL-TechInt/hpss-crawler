@@ -9,6 +9,15 @@ import time
 import toolframe
 
 # -----------------------------------------------------------------------------
+def conditional_rm(filepath):
+    """
+    We want to delete filepath but we don't want to generate an error if it
+    doesn't exist.
+    """
+    if os.path.exists(filepath):
+        os.unlink(filepath)
+
+# -----------------------------------------------------------------------------
 def contents(filename, string=True):
     """
     Return the contents of the file. If string is True, we return a string,
@@ -75,6 +84,10 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
 
 # -----------------------------------------------------------------------------
 def line_quote(value):
+    """
+    Wrap a set of lines with line-oriented quotes (three double quotes in a
+    row).
+    """
     if type(value) == str and value.startswith("'"):
         rv = value.strip("'")
     elif type(value) == str and value.startswith('"'):

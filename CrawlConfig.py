@@ -1,6 +1,19 @@
 #!/usr/bin/env python
 """
-CrawlConfig.py - Configuration class for crawl.py
+Configuration class for crawl.py
+
+This class is based on python's standard ConfigParser class. It adds
+
+    1) a function to manage and return a singleton config object (get_config)
+
+    2) sensitivity to updates to the underlying configuration file (changed)
+
+    3) a 'time' type which shows up in the configuration file as '10 sec', '2hr',
+    '7 minutes', etc., but is presented to the caller as a number of seconds.
+
+    4) a boolean handler which returns False if the option does not exist
+    (rather than throwing an exception)
+
 """
 import ConfigParser
 from ConfigParser import NoSectionError, NoOptionError
@@ -17,20 +30,20 @@ import time
 import toolframe
 import unittest
 
-# -----------------------------------------------------------------------------
-def main(argv):
-    """
-    Dummy main routine so we can use toolframe and testhelp
-    """
-    print("This is the package for CrawlConfig.")
-    print("Usage:")
-    print("    import CrawlConfig")
-    print("    ...")
-    print("    cfg = CrawlConfig()")
-    print("    cfg.load_dict(dict)")
-    print("    cfg.read(filename)")
-    print("    cfg.get(<section>, <option>)")
-    print("See the documentation for ConfigParser for more detail.")
+# # -----------------------------------------------------------------------------
+# def main(argv):
+#     """
+#     Dummy main routine so we can use toolframe and testhelp
+#     """
+#     print("This is the package for CrawlConfig.")
+#     print("Usage:")
+#     print("    import CrawlConfig")
+#     print("    ...")
+#     print("    cfg = CrawlConfig()")
+#     print("    cfg.load_dict(dict)")
+#     print("    cfg.read(filename)")
+#     print("    cfg.get(<section>, <option>)")
+#     print("See the documentation for ConfigParser for more detail.")
     
 # ------------------------------------------------------------------------------
 def get_config(cfname='', reset=False, soft=False):
@@ -80,8 +93,14 @@ def get_config(cfname='', reset=False, soft=False):
     return rval
 
 class CrawlConfig(ConfigParser.ConfigParser):
+    """
+    See the module description for information on this class.
+    """
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the object with a default filename and load time.
+        """
         self.filename = '<???>'
         self.loadtime = 0.0
         m = sys.modules[__name__]
@@ -151,6 +170,10 @@ class CrawlConfig(ConfigParser.ConfigParser):
     
     # -------------------------------------------------------------------------
     def getboolean(self, name, option):
+        """
+        Retrieve the value of section(name)/option as a boolean. If the option
+        does not exist, catch the exception and return False.
+        """
         try:
             # rval = super(CrawlConfig, self).getboolean(name, option)
             rval = ConfigParser.ConfigParser.getboolean(self, name, option)
@@ -231,6 +254,9 @@ class CrawlConfig(ConfigParser.ConfigParser):
         
     # -------------------------------------------------------------------------
     def read(self, filename):
+        """
+        Read the configuration file and cache the file name and load time.
+        """
         ConfigParser.ConfigParser.read(self, filename)
         self.filename = filename
         self.loadtime = time.time()
@@ -258,15 +284,24 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
 # -----------------------------------------------------------------------------
 def setUpModule():
+    """
+    Set up for the tests.
+    """
     testhelp.module_test_setup(CrawlConfigTest.testdir)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
+    """
+    Clean up after the tests
+    """
     os.chdir(launch_dir)
     testhelp.module_test_teardown(CrawlConfigTest.testdir)
     
 # -----------------------------------------------------------------------------
 class CrawlConfigTest(testhelp.HelpedTestCase):
+    """
+    Test class for CrawlConfig
+    """
     default_cfname = 'crawl.cfg'
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
@@ -755,6 +790,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         
     # --------------------------------------------------------------------------
     def clear_env(self):
+        """
+        Remove $CRAWL_CFG from the environment.
+        """
         try:
             x = os.environ['CRAWL_CFG']
             del os.environ['CRAWL_CFG']
@@ -763,6 +801,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         
     # ------------------------------------------------------------------------
     def tearDown(self):
+        """
+        Clean up after every test.
+        """
         if os.path.exists(self.env_cfname):
             os.unlink(self.env_cfname)
         os.chdir(launch_dir)

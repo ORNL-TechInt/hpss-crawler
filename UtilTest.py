@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-
+"""
+Tests for util.py
+"""
 import logging
 import os
 import pdb
@@ -13,14 +15,23 @@ import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
+    """
+    Set up for testing
+    """
     testhelp.module_test_setup(UtilTest.testdir)
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
+    """
+    Clean up after testing
+    """
     testhelp.module_test_teardown(UtilTest.testdir)
     
 # -----------------------------------------------------------------------------
 class UtilTest(testhelp.HelpedTestCase):
+    """
+    Tests for util.py
+    """
     testdir = './test.d'
     
     # -------------------------------------------------------------------------
