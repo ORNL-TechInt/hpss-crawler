@@ -5,6 +5,7 @@ Database interface classes
 import CrawlConfig
 import os
 import shutil
+import socket
 import sqlite3
 import testhelp
 import toolframe
@@ -193,6 +194,7 @@ class DBIsqlite(DBI_abstract):
             self.dbh = sqlite3.connect(self.dbname)
             # set autocommit mode
             self.dbh.isolation_level = None
+            self.table_exists(table="sqlite_master")
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args))
 
@@ -563,7 +565,92 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                       util.line_quote(tb.format_exc()))
             
     # -------------------------------------------------------------------------
-    def test_ctor_no_dbname(self):
+    def test_ctor_dbn_db(self):
+        """
+        File dbname exists and is a database file -- we will use it.
+        """
+        # first, we create a database file from scratch
+        util.conditional_rm(self.testdb)
+        tabname = util.my_name()
+        dba = DBIsqlite(dbname=self.testdb)
+        dba.create(table=tabname, fields=['field1 text'])
+        dba.close()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected %s to exists but it does not" % self.testdb)
+        s = os.stat(self.testdb)
+        self.assertNotEqual(0, s.st_size,
+                            "Expected %s to contain some data" % self.testdb)
+
+        # now, when we try to access it, it should be there
+        dbb = DBIsqlite(dbname=self.testdb)
+        self.assertTrue(dbb.table_exists(table=tabname))
+        dbb.close()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected %s to exists but it does not" % self.testdb)
+        s = os.stat(self.testdb)
+        self.assertNotEqual(0, s.st_size,
+                            "Expected %s to contain some data" % self.testdb)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_dir(self):
+        """
+        File dbname exists and is a directory -- we throw an exception.
+        """
+        util.conditional_rm(self.testdb)
+        os.mkdir(self.testdb, 0777)
+        try:
+            db = DBIsqlite(dbname=self.testdb)
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.assertEqual(str(e),
+                             "unable to open database file",
+                             "Unexpected DBIerror thrown: %s" %
+                             util.line_quote(tb.format_exc()))
+        except Exception, e:
+            self.fail("Unexpected exception caught: %s" %
+                      util.line_quote(tb.format_exc()))
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_empty(self):
+        """
+        File dbname exists and is empty -- we will use it as a database.
+        """
+        util.conditional_rm(self.testdb)
+        testhelp.touch(self.testdb)
+        db = DBIsqlite(dbname=self.testdb)
+        db.create(table='testtab', fields=['gru text'])
+        db.close()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected %s to exists but it does not" % self.testdb)
+        s = os.stat(self.testdb)
+        self.assertNotEqual(0, s.st_size,
+                            "Expected %s to contain some data" % self.testdb)
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_fifo(self):
+        """
+        File dbname exists and is a fifo -- we throw an exception
+        """
+        util.conditional_rm(self.testdb)
+        os.mkfifo(self.testdb)
+        try:
+            db = DBIsqlite(dbname=self.testdb)
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.assertEqual(str(e),
+                             "disk I/O error",
+                             "Unexpected DBIerror thrown: %s" %
+                             util.line_quote(tb.format_exc()))
+        except Exception, e:
+            self.fail("Unexpected exception caught: %s" %
+                      util.line_quote(tb.format_exc()))
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_none(self):
         """
         Attempt to create an object with no dbname should get an exception
         """
@@ -582,6 +669,131 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
             self.fail("Got an unexpected exception: " +
                       '"""\n%s\n"""' % tb.format_exc())
 
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_nosuch(self):
+        """
+        File dbname does not exist -- initializing a db connection to it should
+        create it.
+        """
+        util.conditional_rm(self.testdb)
+        db = DBIsqlite(dbname=self.testdb)
+        db.close()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected %s to exists but it does not" % self.testdb)
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_sock(self):
+        """
+        File dbname is a socket -- we throw an exception
+        """
+        util.conditional_rm(self.testdb)
+        sockname = '%s/%s' % (self.testdir, util.my_name())
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.bind(sockname)
+        try:
+            db = DBIsqlite(dbname=sockname)
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.assertEqual(str(e),
+                             "unable to open database file",
+                             "Unexpected DBIerror thrown: %s" %
+                             util.line_quote(tb.format_exc()))
+        except Exception, e:
+            self.fail("Unexpected exception caught: %s" %
+                      util.line_quote(tb.format_exc()))
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_sym_dir(self):
+        """
+        File dbname exists is a symlink. We should react to what the symlink
+        points at. If it's a directory, we throw an exception.
+        """
+        # the symlink points at a directory
+        util.conditional_rm(self.testdb)
+        os.mkdir(self.testdb + '_xyz', 0777)
+        os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
+        try:
+            db = DBIsqlite(dbname=self.testdb)
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.assertEqual(str(e),
+                             "unable to open database file",
+                             "Unexpected DBIerror thrown: %s" %
+                             util.line_quote(tb.format_exc()))
+        except Exception, e:
+            self.fail("Unexpected exception caught: %s" %
+                      util.line_quote(tb.format_exc()))
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_sym_nosuch(self):
+        """
+        File dbname exists and is a symlink pointing at a non-existent file. We
+        create it.
+        """
+        # the symlink points at a non-existent file
+        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.testdb + '_xyz')
+        os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
+        db = DBIsqlite(dbname=self.testdb)
+        db.create(table='testtab', fields=['froob text'])
+        db.close
+
+        self.assertTrue(os.path.exists(self.testdb + '_xyz'),
+                        "Expected %s to exist" %
+                        self.testdb + '_xyz')
+        s = os.stat(self.testdb)
+        self.assertNotEqual(0, s.st_size,
+                            "Expected %s to contain some data" % self.testdb)
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_sym_empty(self):
+        """
+        File dbname exists and is a symlink pointing at an empty file. We use
+        it.
+        """
+        # the symlink points at a directory
+        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.testdb + '_xyz')
+        testhelp.touch(self.testdb + '_xyz')
+        os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
+        db = DBIsqlite(dbname=self.testdb)
+        db.create(table='testtab', fields=['froob text'])
+        db.close
+
+        self.assertTrue(os.path.exists(self.testdb + '_xyz'),
+                        "Expected %s to exist" %
+                        self.testdb + '_xyz')
+        s = os.stat(self.testdb)
+        self.assertNotEqual(0, s.st_size,
+                            "Expected %s to contain some data" % self.testdb)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_text(self):
+        """
+        File dbname exists and contains text. We should throw an exception
+        """
+        util.conditional_rm(self.testdb)
+        f = open(self.testdb, 'w')
+        f.write('This is a text file, not a database file\n')
+        f.close()
+
+        try:
+            db = DBIsqlite(dbname=self.testdb)
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.assertEqual(str(e), "file is encrypted or is not a database",
+                             "Unexpected DBIerror thrown: %s" %
+                             util.line_quote(tb.format_exc()))
+        except Exception, e:
+            self.fail("Unexpected exception caught: %s" %
+                      util.line_quote(tb.format_exc()))
+    
     # -------------------------------------------------------------------------
     def test_insert_fnox(self):
         """

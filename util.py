@@ -15,7 +15,13 @@ def conditional_rm(filepath):
     doesn't exist. Return the existence value of filepath at call time.
     """
     rv = False
-    if os.path.exists(filepath):
+    if os.path.islink(filepath):
+        rv = True
+        os.unlink(filepath)
+    elif os.path.isdir(filepath):
+        rv = True
+        os.rmdir(filepath)
+    elif os.path.exists(filepath):
         rv = True
         os.unlink(filepath)
     return rv
