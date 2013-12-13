@@ -248,7 +248,15 @@ class Dimension(object):
             else:
                 for key in d:
                     d[key]['pct'] = 0.0
-    
+
+    # -------------------------------------------------------------------------
+    def vote(self, category):
+        if ((category in self.s_sum) and
+            (self.s_sum[category]['pct'] < self.p_sum[category]['pct'])):
+            return 1
+        else:
+            return 0
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
