@@ -124,6 +124,14 @@ class DBI(object):
         return self.dbobj.create(**kwargs)
     
     # -------------------------------------------------------------------------
+    def delete(self, **kwargs):
+        """
+        Delete data from the table. table is a table name (string). where is a
+        where clause (string). data is a tuple of fields.
+        """
+        return self.dbobj.delete(**kwargs)
+    
+    # -------------------------------------------------------------------------
     def insert(self, **kwargs):
         """
         Insert data into the table. Fields is a list of field names. Data is a
@@ -261,6 +269,42 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror(''.join(e.args))
     
     # -------------------------------------------------------------------------
+    def delete(self, table='', where='', data=()):
+        """
+        See DBI.delete()
+        """
+        # Handle invalid arguments
+        if type(table) != str:
+            raise DBIerror("On delete(), table name must be a string")
+        elif table == '':
+            raise DBIerror("On delete(), table name must not be empty")
+        elif type(where) != str:
+            raise DBIerror("On delete(), where clause must be a string")
+        elif type(data) != tuple:
+            raise DBIerror("On delete(), data must be a tuple")
+        elif '?' not in where and data != ():
+            raise DBIerror("Data would be ignored")
+        elif '?' in where and data == ():
+            raise DBIerror("Criteria are not fully specified")
+
+        # Build and run the select statement 
+        try:
+            cmd = "delete from %s" % table
+            if where != '':
+                cmd += " where %s" % where
+
+            c = self.dbh.cursor()
+            if '?' in cmd:
+                c.execute(cmd, data)
+            else:
+                c.execute(cmd)
+
+            c.close()
+        # Translate any sqlite3 errors to DBIerror
+        except sqlite3.Error, e:
+            raise DBIerror(cmd + ': ' + ''.join(e.args))
+
+    # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
         """
         See DBI.insert()
@@ -291,7 +335,7 @@ class DBIsqlite(DBI_abstract):
             c.close()
         # Translate sqlite specific exception into a DBIerror
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(cmd + ": " + ''.join(e.args))
         
     # -------------------------------------------------------------------------
     def select(self, table='', fields=[], where='', data=(), orderby=''):
@@ -534,8 +578,8 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         a = DBIsqlite(dbname=self.testdb)
         dirl = [q for q in dir(a) if not q.startswith('__')]
-        xattr = ['close', 'create', 'dbh', 'dbname', 'insert', 'select',
-                 'settable_attrl', 'table_exists', 'update']
+        xattr = ['close', 'create', 'dbh', 'dbname', 'delete', 'insert',
+                 'select', 'settable_attrl', 'table_exists', 'update']
 
         for attr in dirl:
             if attr not in xattr:
@@ -794,6 +838,207 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
             self.fail("Unexpected exception caught: %s" %
                       util.line_quote(tb.format_exc()))
     
+    # -------------------------------------------------------------------------
+    def test_delete_nq_nd(self):
+        """
+        A delete with no '?' in the where clause and no data tuple is
+        okay. The records deleted should match the where clause.
+        """
+        (db, td) = self.delete_setup()
+        db.delete(table=td['tabname'], where="name='sam'")
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        for r in td['rows'][0:1] + td['rows'][2:]:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+        self.assertFalse(td['rows'][1] in rows,
+                         "%s should have been deleted" % (td['rows'][1],))
+        
+    # -------------------------------------------------------------------------
+    def test_delete_q_nd(self):
+        """
+        A delete with a '?' in the where clause and no data tuple should
+        get an exception.
+        """
+        (db, td) = self.delete_setup()
+        try:
+            db.delete(table=td['tabname'], where='name=?')
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.expected(str(e), "Criteria are not fully specified")
+        
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        # no data should have been deleted
+        for r in td['rows']:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+        
+    # -------------------------------------------------------------------------
+    def test_delete_nq_td(self):
+        """
+        A delete with no '?' in the where clause and a non-empty data list
+        should get an exception -- the data would be ignored.
+        """
+        (db, td) = self.delete_setup()
+        try:
+            db.delete(table=td['tabname'], where='name=foo', data=('meg',))
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.expected(str(e), "Data would be ignored")
+        
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        # no data should have been deleted
+        for r in td['rows']:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+        
+
+    # -------------------------------------------------------------------------
+    def test_delete_q_td(self):
+        """
+        A delete with a '?' in the where clause and a non-empty data list
+        should delete the data matching the where clause.
+        """
+        (db, td) = self.delete_setup()
+        db.delete(table=td['tabname'], where='name=?', data=('gertrude',))
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        for r in td['rows'][0:-1]:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+        self.assertFalse(td['rows'][-1] in rows,
+                         "%s should have been deleted" % (td['rows'][1],))
+        
+
+    # -------------------------------------------------------------------------
+    def test_delete_mtt(self):
+        """
+        A delete with an empty table name should throw an exception.
+        """
+        (db, td) = self.delete_setup()
+        try:
+            db.delete(table='', where='name=?', data=('meg',))
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.expected(str(e), "On delete(), table name must not be empty")
+        
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        # no data should have been deleted
+        for r in td['rows']:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+
+    # -------------------------------------------------------------------------
+    def test_delete_mtw(self):
+        """
+        A delete with an empty where clause should delete all the data.
+        """
+        (db, td) = self.delete_setup()
+        db.delete(table=td['tabname'])
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        self.expected(0, len(rows))
+
+    # -------------------------------------------------------------------------
+    def test_delete_ntd(self):
+        """
+        A delete with a non-tuple data value should throw an exception
+        """
+        (db, td) = self.delete_setup()
+        try:
+            db.delete(table=td['tabname'], where='name=?', data='meg')
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.expected(str(e), "On delete(), data must be a tuple")
+        
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        # no data should have been deleted
+        for r in td['rows']:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+
+    # -------------------------------------------------------------------------
+    def test_delete_nst(self):
+        """
+        A delete with a non-string table name should throw an exception
+        """
+        (db, td) = self.delete_setup()
+        try:
+            db.delete(table=32, where='name=?', data='meg')
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.expected(str(e), "On delete(), table name must be a string")
+        
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        # no data should have been deleted
+        for r in td['rows']:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+
+    # -------------------------------------------------------------------------
+    def test_delete_nsw(self):
+        """
+        A delete with a non-string where argument should throw an exception
+        """
+        (db, td) = self.delete_setup()
+        try:
+            db.delete(table=td['tabname'], where=[])
+            self.fail("Expected exception was not thrown")
+        except AssertionError:
+            raise
+        except DBIerror, e:
+            self.expected(str(e),
+                          "On delete(), where clause must be a string")
+        
+        rows = db.select(table=td['tabname'])
+        db.close()
+
+        # no data should have been deleted
+        for r in td['rows']:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+
+    # -------------------------------------------------------------------------
+    def test_delete_w(self):
+        """
+        A delete with a valid where argument should delete the data matching
+        the where
+        """
+        (db, td) = self.delete_setup()
+        db.delete(table=td['tabname'], where="name like 's%'")
+        rows = db.select(table=td['tabname'], fields=['id', 'name', 'age'])
+        db.close()
+
+        for r in td['rows'][0:1] + td['rows'][3:]:
+            self.assertTrue(r in rows,
+                            "Expected %s in %s" % (r, rows))
+        for r in td['rows'][1:3]:
+            self.assertFalse(r in rows,
+                             "%s should have been deleted" % (r,))
+        
     # -------------------------------------------------------------------------
     def test_insert_fnox(self):
         """
@@ -1228,7 +1473,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_select_nld(self):
         """
-        Calling select() with a non-list as the data argument should
+        Calling select() with a non-tuple as the data argument should
         get an exception
         """
         util.conditional_rm(self.testdb)
@@ -1680,6 +1925,27 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                             "Expected %s in %s but didn't find it" %
                             (str(exp), util.line_quote(r)))
         
+    # -------------------------------------------------------------------------
+    def delete_setup(self):
+        util.conditional_rm(self.testdb)
+        flist = ['id integer primary key', 'name text', 'age int']
+        testdata = {'tabname': 'test_table',
+                    'flist': flist,
+                    'ifields': [x.split()[0] for x in flist],
+                    'rows': [(1, 'bob', 32),
+                             (2, 'sam', 17),
+                             (3, 'sally', 25),
+                             (4, 'meg', 19),
+                             (5, 'gertrude', 95)]}
+        
+        db = DBIsqlite(dbname=self.testdb)
+        db.create(table=testdata['tabname'],
+                  fields=testdata['flist'])
+        db.insert(table=testdata['tabname'],
+                  fields=testdata['ifields'],
+                  data=testdata['rows'])
+        return (db, testdata)
+    
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test=['DBITest', 'DBIsqliteTest'],

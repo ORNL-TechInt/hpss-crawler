@@ -9,25 +9,22 @@ meantime, we want to get useful information about the reliability of HPSS by
 examining the files in the sample and verifying that each file's data matches
 its checksum.
 
-The following information is tracked for each Checkable:
+The following information is tracked for each Checkable in the database:
 
     path
     type (file or directory)
     cos (HPSS class of service)
     last_check (last time the item was checked)
-    checksum (md5 hash representing the data most recently read from the file)
+
+Checksums are held directly in HPSS and managed using the hsi hashcreate and
+hashverify commands.
 
 Note that directories are only used to find more files. A directory does not
 have a cos or a checksum.
-
-!@! Goals for this round of updates
- - remove 'checksum' field from checkables table
- - store checksums in UDA using hsi
- - only record files in the database for which we ask hsi to store a checksum
- - change the odds parameter to a probability value
 """
 import CrawlDBI
-import hashlib
+import Dimension
+# import hashlib
 import os
 import pdb
 import pexpect
@@ -69,17 +66,17 @@ class Checkable(object):
         self.dbname = Checkable.dbname
         self.path = '---'
         self.type = '-'
-        self.checksum = ''
         self.cos = ''
         self.last_check = 0
         self.rowid = None
         self.args = args
+        self.hsi_prompt = "]:"
         for k in kwargs:
             if k not in ['rowid',
                          'path',
                          'type',
-                         'checksum',
                          'cos',
+                         'dim',
                          'last_check']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
@@ -95,7 +92,6 @@ class Checkable(object):
                "path='%s', " % self.path +
                "type='%s', " % self.type +
                "cos='%s', " % self.cos +
-               "checksum='%s', " % self.checksum +
                "last_check=%f)" % self.last_check)
 
     # -------------------------------------------------------------------------
@@ -109,6 +105,197 @@ class Checkable(object):
                 (self.type == other.type))
 
     # -------------------------------------------------------------------------
+    def addable(self, category):
+        # determine which dimensions vote for this item
+        rval = False
+        votes = {}
+        for k in self.dim:
+            votes[k] = self.dim[k].vote(category)
+            
+        # if the dimensions vote for it, roll the dice to decide
+        if 0 < sum(votes.values()):
+            if random.random() < self.probability:
+                rval = True
+        return rval
+    
+    # -------------------------------------------------------------------------
+    def check(self, probability):
+        """
+        For a directory:
+         - get a list of its contents if possible,
+         - create a Checkable object for each item and persist it to the
+           database
+         - return the list of Checkables found in the directory
+        For a file:
+         - if it's readable, decide whether to make it an official check
+         - if no, no Checkable is created for this file
+         - if yes,
+            - if we have a checksum for the file:
+                - retrieve the file and compute the checksum and verify it
+            - else:
+                - retrieve the file, compute the checksum and record it
+            - record/verify the file's COS
+            - update last_check with the current time
+            - persist the object to the database
+
+        The value of probability [0.0 .. 1.0] indicates the likelihood with
+        which we should check files.
+
+        potential outcomes
+         1 read a directory, returning a list of the contents
+         2 tried to read a directory but it was not accessible - return []
+         3 verified a checksum for a file - return True
+         4 checksum verification for a file failed - return False
+        """
+        # fire up hsi
+        self.probability = probability
+        rval = []
+        S = pexpect.spawn('hsi -q', timeout=300)
+        # S.logfile = sys.stdout
+        S.expect(self.hsi_prompt)
+
+        # if the current object is a directory,
+        #    cd to it
+        #    run 'ls -P'
+        #    add subdirectories to the list of checkables
+        #    decide whether to add each file to the sample
+        #    if we add the file to the sample, we run hashcreate for it
+        # elif the current object is a file,
+        #    run hashverify on it
+        #    assess the result
+        #    raise an alert if the hashverify failed
+        # else
+        #    raise an exception for invalid Checkable type
+
+        if self.type == 'd':
+            S.sendline("cd %s" % self.path)
+            S.expect(self.hsi_prompt)
+            if 'Not a directory' in S.before:
+                # it's not a directory. get the file info (ls -P) and decide
+                # whether to add it to the sample.
+                S.sendline("ls -P %s" % self.path)
+                S.expect(self.hsi_prompt)
+                rval = self.harvest(S)
+
+            elif "Access denied" in S.before:
+                # it's a directory I don't have access to. Drop it from the
+                # database and continue
+                self.db_delete()
+                rval = "access denied"
+                
+            else:
+                # we have cd'd into a directory. We run "ls -P" for the
+                # directory contents. For each subdirectory, we persist it to
+                # the database and add it to the list to return. For each file,
+                # we decide whether to add it to the sample. If so, we persist
+                # it and add it to rval. Otherwise , we drop it.
+                S.sendline("ls -P")
+                S.expect(self.hsi_prompt)
+                rval = self.harvest(S)
+                
+        elif self.type == 'f':
+            S.sendline("hashverify %s" % self.path)
+            S.expect(self.hsi_prompt)
+            if "%s: (md5) OK" % self.path in S.before:
+                # hash was verified successfully
+                rval = "matched"
+            else:
+                # hash verification failed
+                rval = Alert("Checksum mismatch: %s" % S.before)
+        else:
+            # we have an invalid Checkable type (not 'd' or 'f')
+            raise StandardError("Invalid Checkable type: %s" % self.type)
+
+        S.sendline("quit")
+        S.expect(pexpect.EOF)
+        S.close()
+
+        self.last_check = time.time()
+        self.persist()
+        return rval
+
+        # ------------------------------------------
+        # Attempt to cd to the path represented by the current object
+        # S.sendline("cd %s" % self.path)
+        # S.expect(hsi_prompt)
+        # if 'Not a directory' in S.before:
+        #     # it's not a directory, so run the checks on the file
+        #     if self.checksum != '':
+        #         # we have a checksum so we're going to compare it
+        #         # fetch the file to disk
+        #         localname = "/tmp/" + os.path.basename(self.path)
+        #         S.sendline("get %s : %s" % (localname, self.path))
+        #         S.expect(hsi_prompt)
+        # 
+        #         # compute the hash
+        #         m = hashlib.md5()
+        #         m.update(util.contents(localname))
+        # 
+        #         # turn the hash into a hexadecimal string
+        #         filesum =  ''.join(["%02x" % ord(i) for i in m.digest()])
+        # 
+        #         # compare the stored checksum against the newly computed one
+        #         if self.checksum != filesum:
+        #             # outcome 6 -- checksums do not match
+        #             rval = Alert("Recorded checksum '%s' " % self.checksum +
+        #                          "does not match computed " +
+        #                          "checksum '%s' " + filesum +
+        #                          "for file %s" % self.path)
+        #         else:
+        #             # outcome 5 -- checksums do match
+        #             rval = "matched"
+        #     elif 0 < odds and random.randrange(int(odds)) <= 1:
+        #         # outcome 4 -- we're adding it to the sample so we have to
+        #         # fetch the file and compute a checksum on it
+        #         localname = "/tmp/" + os.path.basename(self.path)
+        #         S.sendline("get %s : %s" % (localname, self.path))
+        #         S.expect(hsi_prompt)
+        #         m = hashlib.md5()
+        #         m.update(util.contents(localname))
+        #         self.checksum = ''.join(["%02x" % ord(i) for i in m.digest()])
+        #         os.unlink(localname)
+        #         rval = self
+        #     else:
+        #         # outcome 3 -- we're skipping the file
+        #         rval = 'skipped'
+        # elif 'Access denied' in S.before:
+        #     # outcome 2 -- it's a directory but I don't have access to it
+        #     rval = 'access denied'
+        # else:
+        #     # outcome 1 -- it's a directory -- get the list. we fill in rval
+        #     # with the list of the directory's contents.
+        #     S.sendline("ls -P")
+        #     S.expect(hsi_prompt)
+        # 
+        #     lines = S.before.split('\n')
+        #     for line in lines:
+        #         r = Checkable.fdparse(line)
+        #         if None != r:
+        #             if '/' not in r[1]:
+        #                 fpath = '/'.join([self.path, r[1]])
+        #             else:
+        #                 fpath = r[1]
+        #             new = Checkable(path=fpath, type=r[0], cos=r[2])
+        #             new.persist()
+        #             rval.append(new)
+        # 
+        # S.sendline("quit")
+        # S.expect(pexpect.EOF)
+        # S.close()
+        # 
+        # self.last_check = time.time()
+        # self.persist()
+        # return rval
+
+    # -------------------------------------------------------------------------
+    def db_delete(self):
+        db = CrawlDBI.DBI(dbname=self.dbname)
+        db.delete(table='checkables',
+                  where='path=?',
+                  data=(self.path,))
+        db.close()
+
+    # -------------------------------------------------------------------------
     @classmethod
     def ex_nihilo(cls, dbname=default_dbname, dataroot='/'):
         """
@@ -120,15 +307,14 @@ class Checkable(object):
         if not os.path.exists(dbname):
             db = CrawlDBI.DBI(dbname=dbname)
             db.create(table='checkables',
-                      fields=['id int primary key',
+                      fields=['id integer primary key',
                               'path text',
                               'type text',
-                              'checksum text',
                               'cos text',
                               'last_check int'])
             db.insert(table='checkables',
-                      fields=['path', 'type', 'checksum', 'cos', 'last_check'],
-                      data=[(dataroot, 'd', '', '', 0)])
+                      fields=['path', 'type', 'cos', 'last_check'],
+                      data=[(dataroot, 'd', '', 0)])
             db.close()
 
     # -----------------------------------------------------------------------------
@@ -174,6 +360,20 @@ class Checkable(object):
         return None
 
     # -------------------------------------------------------------------------
+    def find_by_path(self):
+        """
+        Look up the current item in the database based on path, returning the
+        database row(s).
+        """
+        db = CrawlDBI.DBI(dbname=self.dbname)
+        rv = db.select(table='checkables',
+                       fields=[],
+                       where='path=?',
+                       data=(self.path,))
+        db.close()
+        return rv
+
+    # -------------------------------------------------------------------------
     @classmethod
     def get_list(cls, dbname=default_dbname):
         """
@@ -184,231 +384,142 @@ class Checkable(object):
         db = CrawlDBI.DBI(dbname=dbname)
         rows = db.select(table='checkables',
                          fields=['rowid', 'path', 'type',
-                                 'checksum', 'cos', 'last_check'],
+                                 'cos', 'last_check'],
                          orderby='last_check')
         for row in rows:
             new = Checkable(rowid=row[0],
                             path=row[1],
                             type=row[2],
-                            checksum=row[3],
-                            cos=row[4],
-                            last_check=row[5])
+                            cos=row[3],
+                            last_check=row[4])
             rval.append(new)
         db.close()
         return rval
 
     # -------------------------------------------------------------------------
-    def check(self, odds):
-        """
-        For a directory:
-         - get a list of its contents if possible,
-         - create a Checkable object for each item and persist it to the
-           database
-         - return the list of Checkables found in the directory
-        For a file:
-         - if it's readable, decide whether to make it an official check
-         - if no, no Checkable is created for this file
-         - if yes,
-            - if we have a checksum for the file:
-                - retrieve the file and compute the checksum and verify it
-            - else:
-                - retrieve the file, compute the checksum and record it
-            - record/verify the file's COS
-            - update last_check with the current time
-            - persist the object to the database
-
-        The value of odds indicates the likelihood with which we should check
-        files: 1 in odds
-
-        potential outcomes
-         1 read a directory, returning a list of the contents
-         2 tried to read a directory but it was not accessible
-         3 skipped a non-directory file
-         4 fetched and checksummed a non-directory file
-         5 fetched a checksummed file and matched its checksum
-         6 fetched a checksummed file and the checksum match failed
-        """
-        # fire up hsi
+    def harvest(self, S):
+        if not hasattr(self, 'dim'):
+            setattr(self, 'dim', {})
+            self.dim['cos'] = Dimension.Dimension(name='cos')
         rval = []
-        hsi_prompt = "]:"
-        S = pexpect.spawn('hsi -q', timeout=300)
-        # S.logfile = sys.stdout
-        S.expect(hsi_prompt)
-
-        # Attempt to cd to the path represented by the current object
-        S.sendline("cd %s" % self.path)
-        S.expect(hsi_prompt)
-        if 'Not a directory' in S.before:
-            # it's not a directory, so run the checks on the file
-            if self.checksum != '':
-                # we have a checksum so we're going to compare it
-                # fetch the file to disk
-                localname = "/tmp/" + os.path.basename(self.path)
-                S.sendline("get %s : %s" % (localname, self.path))
-                S.expect(hsi_prompt)
-
-                # compute the hash
-                m = hashlib.md5()
-                m.update(util.contents(localname))
-
-                # turn the hash into a hexadecimal string
-                filesum =  ''.join(["%02x" % ord(i) for i in m.digest()])
-
-                # compare the stored checksum against the newly computed one
-                if self.checksum != filesum:
-                    # outcome 6 -- checksums do not match
-                    rval = Alert("Recorded checksum '%s' " % self.checksum +
-                                 "does not match computed " +
-                                 "checksum '%s' " + filesum +
-                                 "for file %s" % self.path)
-                else:
-                    # outcome 5 -- checksums do match
-                    rval = "matched"
-            elif 0 < odds and random.randrange(int(odds)) <= 1:
-                # outcome 4 -- we're adding it to the sample so we have to
-                # fetch the file and compute a checksum on it
-                localname = "/tmp/" + os.path.basename(self.path)
-                S.sendline("get %s : %s" % (localname, self.path))
-                S.expect(hsi_prompt)
-                m = hashlib.md5()
-                m.update(util.contents(localname))
-                self.checksum = ''.join(["%02x" % ord(i) for i in m.digest()])
-                os.unlink(localname)
-                rval = self
-            else:
-                # outcome 3 -- we're skipping the file
-                rval = 'skipped'
-        elif 'Access denied' in S.before:
-            # outcome 2 -- it's a directory but I don't have access to it
-            rval = 'access denied'
-        else:
-            # outcome 1 -- it's a directory -- get the list. we fill in rval
-            # with the list of the directory's contents.
-            S.sendline("ls -P")
-            S.expect(hsi_prompt)
-
-            lines = S.before.split('\n')
-            for line in lines:
-                r = Checkable.fdparse(line)
-                if None != r:
-                    if '/' not in r[1]:
-                        fpath = '/'.join([self.path, r[1]])
-                    else:
-                        fpath = r[1]
-                    new = Checkable(path=fpath, type=r[0], cos=r[2])
+        data = S.before
+        for line in data.split("\n"):
+            r = Checkable.fdparse(line)
+            if None != r:
+                if 'd' == r[0]:
+                    new = Checkable(path=r[1], type=r[0], cos=r[2])
                     new.persist()
                     rval.append(new)
-
-        S.sendline("quit")
-        S.expect(pexpect.EOF)
-        S.close()
-
-        self.last_check = time.time()
-        self.persist()
+                elif 'f' == r[0]:
+                    new = Checkable(path=r[1], type=r[0], cos=r[2])
+                    self.dim['cos'].update_category(r[2])
+                    if self.addable(r[2]):
+                        self.dim['cos'].update_category(r[2],
+                                                        p_suminc=0,
+                                                        s_suminc=1)
+                        new.persist()
+                        rval.append(new)
+                        S.sendline("hashcreate %s" % self.path)
+                        S.expect(self.hsi_prompt)
+        self.dim['cos'].persist()
         return rval
 
     # -------------------------------------------------------------------------
     def persist(self):
         """
-        Update the object's entry in the database.
+        Insert or update the object's entry in the database.
 
-        There are several situations where we need to push data into the
-        database.
+        If rowid is None, the object must be new, so last_check must be 0.0. If
+        not, throw an exception.
 
-        1) We have found a new object to track and want to add it to the
-           database. However, if the path matches an entry already in the
-           database, we don't want to add a duplicate. Rather, we should update
-           the one already there. So this will usually be an insert but may
-           sometimes be an update by path. In this case, we'll have the
-           following incoming values:
+        If path is empty, something is wrong. Throw an exception.
 
-           rowid: None
-           path: ...
-           type: ...
-           last_check: 0
+        If type == 'd' and cos != '', something is wrong. Throw an exception.
 
-        2) We have just checked an existing object and want to update its
-           last_check time. In this case, we'll have the following incoming values:
+        Otherwise, if rowid != None, update by rowid (setting last_check to 0
+        if type changes).
 
-           rowid: != None
-           path: ...
-           type: ...
-           last_check: != 0
-
-        3) The cos of an existing file has changed. Incoming values:
-
-           rowid: != None
-           path: ...
-           type: 'f'
-           cos: != ''
-           
-        In any other case, we'll throw an exception.
+        If rowid == None, look the entry up by path. If more than one
+        occurrence exists, raise an exception. If only one occurrence exists,
+        update it (setting last_check to 0 if type changes). If no occurrence
+        exists, insert it.
         """
-        try:
-            db = CrawlDBI.DBI(dbname=self.dbname)
-            if self.rowid != None and self.last_check != 0.0:
-                # Updating the check time for an existing object 
+        if self.rowid != None and self.last_check == 0.0:
+            raise StandardError("%s has rowid != None, last_check == 0.0" %
+                                self)
+        if self.rowid == None and self.last_check != 0.0:
+            raise StandardError("%s has rowid == None, last_check != 0.0" %
+                                self)
+        if self.path == '':
+            raise StandardError("%s has an empty path" % self)
+        if self.type == 'd' and self.cos != '':
+            raise StandardError("%s has type 'd', non-empty cos" % self)
+        if self.type != 'f' and self.type != 'd':
+            raise StandardError("%s has invalid type" % self)
+
+        db = CrawlDBI.DBI(dbname=self.dbname)
+        if self.rowid != None:
+            # we have a rowid, so it should be in the database
+            rows = db.select(table='checkables',
+                             fields=[],
+                             where='rowid=?',
+                             data=(self.rowid,))
+            # it wasn't there! raise an exception
+            if 0 == len(rows):
+                raise StandardError("%s has rowid, should be in database" %
+                                    self)
+            # exactly one copy is in database. That's good.
+            elif 1 == len(rows):
+                # oops! the paths don't match. raise an exception
+                if rows[0][1] != self.path:
+                    raise StandardError("Path value does not match for " +
+                                        "%s and %s" % (self, rows[0][1]))
+                # The type is changing. Let's set last_check to 0.0.
+                if rows[0][2] != self.type:
+                    self.last_check = 0.0
+                # update it
                 db.update(table='checkables',
-                          fields=['last_check', 'checksum', 'cos'],
+                          fields=['type', 'cos', 'last_check'],
                           where='rowid=?',
-                          data=[(self.last_check,
-                                 self.checksum,
-                                 self.cos,
+                          data=[(self.type, self.cos, self.last_check,
                                  self.rowid)])
-            elif self.rowid == None and self.last_check == 0.0:
-                # Adding (or perhaps updating) a new/existing checkable
-                rows = db.select(table='checkables',
-                                 fields=[],
-                                 where='path=?',
-                                 data=(self.path,))
-                if 0 == len(rows):
-                    # path not in db -- we insert it
-                    db.insert(table='checkables',
-                              fields=['path',
-                                      'type',
-                                      'checksum',
-                                      'cos',
-                                      'last_check'],
-                              data=[(self.path,
-                                     self.type,
-                                     self.checksum,
-                                     self.cos,
-                                     self.last_check)])
-                elif 1 == len(rows):
-                    # path is in db -- if type or cos has changed, reset
-                    # last_check and checksum. Otherwise, leave it alone
-
-                    if self.type != rows[0][2]:
-                        db.update(table='checkables',
-                                  fields=['type', 'last_check', 'checksum'],
-                                  where='path=?',
-                                  data=[(self.type, 0, '', self.path)])
-                    if self.type == 'd':
-                        db.update(table='checkables',
-                                  fields=['cos'],
-                                  where='path=?',
-                                  data=[('', self.path)])
-                    elif self.cos != rows[0][4]:
-                        db.update(table='checkables',
-                                  fields=['cos'],
-                                  where='path=?',
-                                  data=[(self.cos, self.path)])
-                else:
-                    raise StandardError("There seems to be more than one" +
-                                        " occurrence of '%s' in the database" %
-                                        self.path)
+            # hmm... we found more than one copy in the database. raise an
+            # exception
             else:
-                raise StandardError("Invalid conditions: "
-                                    + "rowid = %s; " % str(self.rowid)
-                                    + "path = '%s'; " % self.path
-                                    + "type = '%s'; " % self.type
-                                    + "checksum = '%s'; " % self.checksum
-                                    + "last_check = %f" % self.last_check)
+                raise StandardError("There appears to be more than one copy " +
+                                    "of %s in the database" % self)
 
-            db.close()
-        except CrawlDBI.DBIerror, e:
-            print("Database Error: %s" % str(e))
-
+        else:
+            rows = self.find_by_path()
+            # it's not there -- we need to insert it
+            if 0 == len(rows):
+                db.insert(table='checkables',
+                          fields=['path', 'type', 'cos', 'last_check'],
+                          data=[(self.path, self.type, self.cos, self.last_check)])
+            # it is in the database -- we need to update it
+            elif 1 == len(rows):
+                # if type is changing, last_check resets to 0.0
+                if rows[0][2] != self.type:
+                    self.last_check = 0.0
+                    flist=['type', 'cos', 'last_check']
+                    dlist=[(self.type, self.cos, self.last_check, rows[0][0])]
+                elif rows[0][4] < self.last_check:
+                    flist=['type', 'cos', 'last_check']
+                    dlist=[(self.type, self.cos, self.last_check, rows[0][0])]
+                else:
+                    flist=['type', 'cos']
+                    dlist=[(self.type, self.cos, rows[0][0])]
+                # update it
+                db.update(table='checkables',
+                          fields=flist,
+                          where='rowid=?',
+                          data=dlist)
+            # more than a single copy in the database -- raise an exception
+            else:
+                raise StandardError("There appears to be more than one copy " +
+                                    "of %s in the database" % self)
+        db.close()
+        
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -444,14 +555,14 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable.get_list(dbname=self.testdb)
         
         self.expected(2, len(x))
-        dirlist = x[1].check(50)
+        dirlist = x[1].check(1.0)
 
         c = Checkable(path=testdir + '/crawler.tar', type='f')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
         c = Checkable(path=testdir + '/crawler.tar.idx', type='f')
-        self.assertTrue(c in dirlist,
-                        "expected to find %s in %s" % (c, dirlist))
+        self.assertFalse(c in dirlist,
+                        "expected to not find %s in %s" % (c, dirlist))
         c = Checkable(path=testdir + '/subdir1', type='d')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
@@ -463,7 +574,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     def test_check_file(self):
         """
         Calling .check() on a file should execute the check actions for that
-        file.
+        file and update the item's last_check value.
         """
         util.conditional_rm(self.testdb)
         Checkable.ex_nihilo(dbname=self.testdb)
@@ -497,25 +608,30 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(Checkable.dbname, x.dbname)
         self.expected('---', x.path)
         self.expected('-', x.type)
-        self.expected('', x.checksum)
+        # self.expected('', x.checksum)
         self.expected('', x.cos)
         self.expected(0, x.last_check)
         self.expected(None, x.rowid)
-
+        if hasattr(x, 'checksum'):
+            self.fail("Checkables no longer carry the checksum around")
+            
     # -------------------------------------------------------------------------
     def test_ctor_args(self):
         """
         Verify that the constructor accepts and sets rowid, path, type,
-        checksum, cos, and last_check
+        cos, and last_check
         """
-        x = Checkable(path='/one/two/three', type='f', last_check=72)
+        x = Checkable(rowid=3, path='/one/two/three', type='f', cos='6002',
+                      last_check=72)
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
                          "Checkable object is missing %s method" % method)
+        self.expected(3, x.rowid)
         self.expected('/one/two/three', x.path)
         self.expected('f', x.type)
+        self.expected('6002', x.cos)
         self.expected(72, x.last_check)
-            
+
     # -------------------------------------------------------------------------
     def test_ctor_bad_args(self):
         """
@@ -527,11 +643,28 @@ class CheckableTest(testhelp.HelpedTestCase):
         except StandardError, e:
             self.assertEqual('Attribute path_x is invalid for Checkable'
                              in str(e), True,
-                             "Got the wrong StandardError: "
-                             + '\n"""\n%s\n"""' % tb.format_exc())
+                             "Got the wrong StandardError: %s" %
+                             util.line_quote(tb.format_exc()))
         except Exception, e:
-            self.fail("Expected a StandardError but got this instead:"
-                      + '\n"""\n%s\n"""' % tb.format_exc())
+            self.fail("Expected a StandardError but got this instead: %s" %
+                      util.line_quote(tb.format_exc()))
+            
+    # -------------------------------------------------------------------------
+    def test_ctor_checksum(self):
+        """
+        Verify that the constructor rejects checksum arg
+        """
+        try:
+            x = Checkable(path='/one/two/three', type='f', checksum='foo', last_check=72)
+            self.fail("Expected an exception but didn't get one.")
+        except StandardError, e:
+            self.assertEqual('Attribute checksum is invalid for Checkable'
+                             in str(e), True,
+                             "Got the wrong StandardError: %s" %
+                             util.line_quote(tb.format_exc()))
+        except Exception, e:
+            self.fail("Expected a StandardError but got this instead: %s" %
+                      util.line_quote(tb.format_exc()))
             
     # -------------------------------------------------------------------------
     def test_eq(self):
@@ -543,25 +676,21 @@ class CheckableTest(testhelp.HelpedTestCase):
         a = Checkable(rowid=92,
                       path='/foo/bar',
                       type='f',
-                      checksum='12345',
                       cos='9283',
                       last_check=now)
         b = Checkable(rowid=97,
                       path='/foo/bar',
                       type='f',
-                      checksum='something else',
                       cos='23743',
                       last_check=now + 23)
         c = Checkable(rowid=43,
                       path='/foo/bar',
                       type='d',
-                      checksum='7777',
                       cos='2843',
                       last_check=now - 32)
         d = Checkable(rowid=18,
                       path='/foo/fiddle',
                       type='f',
-                      checksum='1234591',
                       cos='9222',
                       last_check=now + 10132)
         e = lambda: None
@@ -570,7 +699,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         f = Checkable(rowid=49,
                       path='/foo/fiddle',
                       type='d',
-                      checksum='77sd7',
                       cos='739',
                       last_check=now-19)
         self.assertEqual(a, b,
@@ -620,9 +748,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(1, max_id)                       # id
         self.expected('/home/somebody', rows[0][1])    # path
         self.expected('d', rows[0][2])                 # type
-        self.expected('', rows[0][3])                  # checksum
-        self.expected('', rows[0][4])                  # cos
-        self.expected(0, rows[0][5])                   # last_check
+        self.expected('', rows[0][3])                  # cos
+        self.expected(0, rows[0][4])                   # last_check
 
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
@@ -636,8 +763,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         the file. Otherwise, the user might overwrite a file inadvertently by
         trying to treat it as a database.
 
-        !@! Update ex_nihilo to throw an exception if it detects that it has
-         been asked to use a non-database file for the database.
+        Note: the use of unacceptable database files is tested in CrawlDBI.py.
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
@@ -686,9 +812,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(1, max_id)           # id
         self.expected('/', rows[0][1])     # path
         self.expected('d', rows[0][2])     # type
-        self.expected('', rows[0][3])      # checksum
-        self.expected('', rows[0][4])      # cos
-        self.expected(0, rows[0][5])       # last_check
+        self.expected('', rows[0][3])      # cos
+        self.expected(0, rows[0][4])       # last_check
         
     # -------------------------------------------------------------------------
     def test_fdparse_ldr(self):
@@ -816,16 +941,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
 
-        # create some test data (path, type, checksum, cos, last_check)
-        testdata = [('/', 'd', '', '', 0),
-                    ('/abc', 'd', '', '', 17),
-                    ('/xyz', 'f', '', '', 92),
-                    ('/abc/foo', 'f', '', '', 5),
-                    ('/abc/bar', 'f', '', '', time.time())]
+        # create some test data (path, type, cos, last_check)
+        testdata = [('/', 'd', '', 0),
+                    ('/abc', 'd', '', 17),
+                    ('/xyz', 'f', '', 92),
+                    ('/abc/foo', 'f', '', 5),
+                    ('/abc/bar', 'f', '', time.time())]
 
         # testdata has to be sorted by last_check since that's the way get_list
         # will order the list it returns
-        testdata.sort(key=lambda x : x[4])
+        testdata.sort(key=lambda x : x[3])
 
         # create the .db file
         Checkable.ex_nihilo(dbname=self.testdb)
@@ -833,7 +958,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # put the test data into the database
         db = CrawlDBI.DBI(dbname=self.testdb)
         db.insert(table='checkables',
-                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
+                  fields=['path', 'type', 'cos', 'last_check'],
                   data=testdata[1:])
         db.close()
         
@@ -849,14 +974,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         for idx, item in enumerate(x):
             self.expected(testdata[idx][0], item.path)
             self.expected(testdata[idx][1], item.type)
-            self.expected(testdata[idx][2], item.checksum)
-            self.expected(testdata[idx][3], item.cos)
-            self.expected(testdata[idx][4], item.last_check)
+            self.expected(testdata[idx][2], item.cos)
+            self.expected(testdata[idx][3], item.last_check)
     
     # -------------------------------------------------------------------------
-    def test_persist_checksum(self):
+    def test_persist_last_check(self):
         """
-        Verify that checksum gets stored by persist().
+        Verify that last_check gets stored by persist().
         """
         util.conditional_rm(self.testdb)
         testpath = 'Checkable.py'
@@ -865,15 +989,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         when = time.time()
         
         x = Checkable.get_list(dbname=self.testdb)
-        m = hashlib.md5()
-        m.update(util.contents(testpath))
-        csum = ''.join(["%02x" % ord(i) for i in m.digest()])
-        x[0].checksum = csum
         x[0].last_check = when
         x[0].persist()
 
         y = Checkable.get_list(dbname=self.testdb)
-        self.expected(csum, y[0].checksum)
         self.expected(when, y[0].last_check)
 
     # -------------------------------------------------------------------------
@@ -893,13 +1012,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             foo.persist()
             self.fail("Expected an exception but didn't get one.")
+        except AssertionError:
+            raise
         except StandardError, e:
-            self.assertEqual('There seems to be more than one' in str(e), True,
+            self.assertEqual('There appears to be more than one' in str(e),
+                             True,
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
-        except:
-            self.fail("Expected a StandardError but got this instead: %s" %
-                      util.line_quote(tb.format_exc()))
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(3, len(x))
@@ -921,11 +1040,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(1, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
-        try:
-            foo.persist()
-        except:
-            self.fail("Got unexpected exception:"
-                      + '\n"""\n%s\n"""' % tb.format_exc())
+        foo.persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
@@ -940,40 +1055,28 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Send in a new directory with matching path (rowid == None, last_check
         == 0, type == 'd'). Existing path should not be updated.
-
-        !@! It appears that cos is getting cleared but checksum is preserved.
-         Seems like for a directory, either they should both be untouched or
-         both be set to the empty string.
         """
         util.conditional_rm(self.testdb)
         Checkable.ex_nihilo(dbname=self.testdb)
 
         now = time.time()
-        self.db_add_one(path=self.testpath, type='d', checksum='abc',
-                        cos='1234', last_check=now)
+        self.db_add_one(path=self.testpath, type='d', last_check=now)
         
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
-        self.expected('1234', x[1].cos)
+        self.expected('', x[1].cos)
 
         x[1].last_check = 0
-        x[1].checksum = ''
-        x[1].cos = '9876'
-        try:
-            x[1].rowid = None
-            x[1].persist()
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
+        x[1].rowid = None
+        x[1].persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('d', x[1].type)
         self.expected(now, x[1].last_check)
-        self.expected('abc', x[1].checksum)
         self.expected('', x[1].cos)
     
     # -------------------------------------------------------------------------
@@ -987,7 +1090,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo(dbname=self.testdb)
 
         now = time.time()
-        self.db_add_one(path=self.testpath, type='f', checksum='abc',
+        self.db_add_one(path=self.testpath, type='f',
                         cos='1234', last_check=now)
         
         x = Checkable.get_list(dbname=self.testdb)
@@ -998,20 +1101,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         
         x[1].last_check = 0
         x[1].cos= ''
-        try:
-            x[1].rowid = None
-            x[1].type = 'd'
-            x[1].persist()
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
+        x[1].rowid = None
+        x[1].type = 'd'
+        x[1].persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('d', x[1].type)
         self.expected(0, x[1].last_check)
-        self.expected('', x[1].checksum)
         self.expected('', x[1].cos)
     
     # -------------------------------------------------------------------------
@@ -1040,13 +1138,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             x[0].persist()
             self.fail("Expected an exception but didn't get one.")
+        except AssertionError:
+            raise
         except StandardError, e:
-            self.assertEqual("Invalid conditions:" in str(e), True,
-                             "Got the wrong StandardError: "
-                             + '\n"""\n%s\n"""' % tb.format_exc())
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
+            self.assertEqual("has rowid != None, last_check == 0.0" in str(e),
+                             True,
+                             "Got the wrong StandardError: %s" %
+                             util.line_quote(tb.format_exc()))
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
@@ -1071,11 +1169,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, x[0].last_check)
 
         x[0].last_check = now = time.time()
-        try:
-            x[0].persist()
-        except:
-            self.fail("Got an unexpected exception:" 
-                      + '\n"""\n%s\n"""' % tb.format_exc())
+        x[0].persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(1, len(x))
@@ -1103,13 +1197,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             foo.persist()
             self.fail("Expected an exception but didn't get one.")
+        except AssertionError:
+            raise
         except StandardError, e:
-            self.assertEqual('There seems to be more than one' in str(e), True,
-                             "Got the wrong StandardError: "
-                             + '\n"""\n%s\n"""' % tb.format_exc())
-        except:
-            self.fail("Expected a StandardError but got this instead:"
-                      + '\n"""\n%s\n"""' % tb.format_exc())
+            self.assertEqual('There appears to be more than one' in str(e),
+                             True,
+                             "Got the wrong StandardError: %s" %
+                             util.line_quote(tb.format_exc()))
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(3, len(x))
@@ -1133,15 +1227,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(1, len(x))
         self.expected("/", x[0].path)
-        self.expected("", x[0].checksum)
         self.expected(0, x[0].last_check)
 
         foo = Checkable(path=self.testpath, type='f')
-        try:
-            foo.persist()
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
+        foo.persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
@@ -1165,20 +1254,15 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         x[1].last_check = 0
         x[1].cos = '1234'
-        try:
-            x[1].rowid = None
-            x[1].type = 'f'
-            x[1].persist()
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
+        x[1].rowid = None
+        x[1].type = 'f'
+        x[1].persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
         self.expected(0, x[1].last_check)
-        self.expected('', x[1].checksum)
         self.expected('1234', x[1].cos)
     
     # -------------------------------------------------------------------------
@@ -1190,7 +1274,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         Checkable.ex_nihilo(dbname=self.testdb)
         now = time.time()
-        self.db_add_one(last_check=now, type='f', checksum='abc', cos='1111')
+        self.db_add_one(last_check=now, type='f', cos='1111')
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
@@ -1198,19 +1282,14 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         x[1].last_check = 0
         x[1].cos = '2222'
-        try:
-            x[1].rowid = None
-            x[1].persist()
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
+        x[1].rowid = None
+        x[1].persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
         self.expected(now, x[1].last_check)
-        self.expected('abc', x[1].checksum)
         self.expected('2222', x[1].cos)
         
     # -------------------------------------------------------------------------
@@ -1229,16 +1308,17 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         now = time.time()
         x[1].last_check = now
+        x[1].rowid = None
         try:
-            x[1].rowid = None
             x[1].persist()
+            self.fail("Expected exception but didn't get one")
+        except AssertionError:
+            raise
         except StandardError, e:
-            self.assertEqual("Invalid conditions:" in str(e), True,
+            self.assertEqual("has rowid == None, last_check != 0.0" in str(e),
+                             True,
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
-        except:
-            self.fail("Got unexpected exception: "
-                      + '"""\n%s\n"""' % tb.format_exc())
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
@@ -1262,11 +1342,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         now = time.time()
         x[1].last_check = now
-        try:
-            x[1].persist()
-        except:
-            self.fail("Got unexpected exception: \"\"\"\n%s\n\"\"\"" %
-                      tb.format_exc())
+        x[1].persist()
 
         x = Checkable.get_list(dbname=self.testdb)
         self.expected(2, len(x))
@@ -1282,12 +1358,9 @@ class CheckableTest(testhelp.HelpedTestCase):
                "path='/abc/def', " +
                "type='d', " +
                "cos='9999', " +
-               "checksum='flibbertygibbet', " + 
                "last_check=%f)" % now)
                     
-        x = Checkable(rowid=17, path='/abc/def', type='d',
-                      checksum='flibbertygibbet', cos='9999',
-                      last_check=now)
+        x = eval(exp)
         self.expected(exp, x.__repr__())
                         
     # -------------------------------------------------------------------------
@@ -1297,18 +1370,17 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         db = CrawlDBI.DBI(dbname=self.testdb)
         db.insert(table='checkables',
-                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
-                  data=[('/abc/def', 'd', '', '', 0)])
+                  fields=['path', 'type', 'cos', 'last_check'],
+                  data=[('/abc/def', 'd', '', 0)])
         db.insert(table='checkables',
-                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
-                  data=[('/abc/def', 'd', '', '', 0)])
+                  fields=['path', 'type', 'cos', 'last_check'],
+                  data=[('/abc/def', 'd', '', 0)])
         db.close()
         
     # -------------------------------------------------------------------------
     def db_add_one(self,
                    path=testpath,
                    type='f',
-                   checksum='',
                    cos='',
                    last_check=0):
         """
@@ -1316,8 +1388,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         db = CrawlDBI.DBI(dbname=self.testdb)
         db.insert(table='checkables',
-                  fields=['path', 'type', 'checksum', 'cos', 'last_check'],
-                  data=[(path, type, checksum, cos, last_check)])
+                  fields=['path', 'type', 'cos', 'last_check'],
+                  data=[(path, type, cos, last_check)])
         db.close()
 
     # -------------------------------------------------------------------------
