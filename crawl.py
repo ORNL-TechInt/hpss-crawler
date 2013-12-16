@@ -972,31 +972,6 @@ class CrawlTest(testhelp.HelpedTestCase):
                       (expected, actual))
 
     # ------------------------------------------------------------------------
-    def write_cfg_file(self, fname, cfgdict):
-        """
-        Write a config file for testing. Put the 'crawler' section first.
-        Complain if the 'crawler' section is not present.
-        """
-        if (not isinstance(cfgdict, dict) and
-            not isinstance(cfgdict, CrawlConfig.CrawlConfig)):
-            
-            raise StandardError("cfgdict has invalid type %s" % type(cfgdict))
-        
-        elif isinstance(cfgdict, dict):
-            cfg = CrawlConfig.CrawlConfig()
-            cfg.load_dict(cfgdict)
-
-        elif isinstance(cfgdict, CrawlConfig.CrawlConfig):
-            cfg = cfgdict
-            
-        if 'crawler' not in cfg.sections():
-            raise StandardError("section 'crawler' missing from test config file")
-        
-        f = open(fname, 'w')
-        cfg.write(f)
-        f.close()
-
-    # ------------------------------------------------------------------------
     def write_plugmod(self, plugdir, plugname):
         """
         Create a plugin module to test firing

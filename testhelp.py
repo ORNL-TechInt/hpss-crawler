@@ -16,6 +16,7 @@ Extensions to python's standard unittest module
     > self.expected() compares an expected and actual value and reports diffs
     
 """
+import CrawlConfig
 import logging, logging.handlers
 import os
 import pdb
@@ -152,15 +153,6 @@ def expectVSgot(expected, got):
             print "GOT:      '%s'" % got
             raise e
         
-# # -----------------------------------------------------------------------------
-# def into_test_dir():
-#     tdname = '_test.%d' % os.getpid()
-#     bname = os.path.basename(os.getcwd())
-#     if bname != tdname:
-#         os.mkdir(tdname)
-#         os.chdir(tdname)
-#     return tdname
-
 # -----------------------------------------------------------------------------
 def keepfiles(value=None):
     """
@@ -368,6 +360,31 @@ class HelpedTestCase(unittest.TestCase):
         
         self.assertEqual(expval, actual, msg % (expval, actual))
     
+    # ------------------------------------------------------------------------
+    def write_cfg_file(self, fname, cfgdict, includee=False):
+        """
+        Write a config file for testing. Put the 'crawler' section first.
+        Complain if the 'crawler' section is not present.
+        """
+        if (not isinstance(cfgdict, dict) and
+            not isinstance(cfgdict, CrawlConfig.CrawlConfig)):
+            
+            raise StandardError("cfgdict has invalid type %s" % type(cfgdict))
+        
+        elif isinstance(cfgdict, dict):
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.load_dict(cfgdict)
+
+        elif isinstance(cfgdict, CrawlConfig.CrawlConfig):
+            cfg = cfgdict
+            
+        if 'crawler' not in cfg.sections() and not includee:
+            raise StandardError("section 'crawler' missing from test config file")
+        
+        f = open(fname, 'w')
+        cfg.write(f)
+        f.close()
+
 # -----------------------------------------------------------------------------
 def show_stdout(value=None):
     """
