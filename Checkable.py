@@ -411,9 +411,9 @@ class Checkable(object):
                     new.persist()
                     rval.append(new)
                 elif 'f' == r[0]:
-                    new = Checkable(path=r[1], type=r[0], cos=r[2])
                     self.dim['cos'].update_category(r[2])
                     if self.addable(r[2]):
+                        new = Checkable(path=r[1], type=r[0], cos=r[2])
                         self.dim['cos'].update_category(r[2],
                                                         p_suminc=0,
                                                         s_suminc=1)
