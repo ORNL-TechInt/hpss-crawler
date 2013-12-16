@@ -22,7 +22,7 @@ def main(args):
     for modname in ['crawl',
                     'AlertTest',
                     'Checkable',
-                    'CrawlConfig',
+                    'CrawlConfigTest',
                     'CrawlDBI',
                     'CrawlPlugin',
                     'Dimension',
