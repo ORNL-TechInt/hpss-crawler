@@ -6,18 +6,20 @@ import pexpect
 import sqlite3 as sql
 import sys
 import time
+import util
 
 # -----------------------------------------------------------------------------
 def main(cfg):
     # Get stuff we need -- the logger object, hsi prompt string, dataroot,
     # etc.
-    clog = sys.modules['__main__'].get_logger()
+    # clog = sys.modules['__main__'].get_logger()
+    clog = util.get_logger()
     hsi_prompt = "]:"
     plugdir = cfg.get('crawler', 'plugin-dir')
-    dataroot = cfg.get('drill-instructor', 'dataroot')
-    dbfilename = cfg.get('drill-instructor', 'dbfile')
-    odds = cfg.get('drill-instructor', 'odds')
-    n_ops = int(cfg.get('drill-instructor', 'operations'))
+    dataroot = cfg.get('checksum-verifier', 'dataroot')
+    dbfilename = cfg.get('checksum-verifier', 'dbfile')
+    odds = cfg.get('checksum-verifier', 'odds')
+    n_ops = int(cfg.get('checksum-verifier', 'operations'))
 
     # Initialize our statistics
     (t_checksums, t_matches, t_failures) = get_stats(dbfilename)
@@ -41,7 +43,7 @@ def main(cfg):
         if 0 < len(clist):
             # but it's not, so grab the first item and check it
             item = clist.pop(0)
-            clog.info("drill-instructor: [%d] checking %s" %
+            clog.info("checksum-verifier: [%d] checking %s" %
                       (item.rowid, item.path))
             ilist = item.check(odds)
 
@@ -59,42 +61,42 @@ def main(cfg):
             if type(ilist) == str:
                 if ilist == "matched":
                     matches += 1
-                    clog.info("drill-instructor: %s checksums matched" %
+                    clog.info("checksum-verifier: %s checksums matched" %
                               item.path)
                 elif ilist == "skipped":
-                    clog.info("drill-instructor: %s skipped" % item.path)
+                    clog.info("checksum-verifier: %s skipped" % item.path)
                 elif ilist == "access denied":
-                    clog.info("drill-instructor: dir %s not accessible" %
+                    clog.info("checksum-verifier: dir %s not accessible" %
                               item.path)
                 else:
-                    clog.info("drill-instructor: unexpected string returned " +
+                    clog.info("checksum-verifier: unexpected string returned " +
                               "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
-                clog.info("drill-instructor: in %s, found:" % item.path)
+                clog.info("checksum-verifier: in %s, found:" % item.path)
                 for n in ilist:
-                    clog.info("drill-instructor: >>> %s %s %s %f" %
+                    clog.info("checksum-verifier: >>> %s %s %s %f" %
                               (n.path, n.type, n.checksum,
                                n.last_check))
             elif isinstance(ilist, Checkable.Checkable):
-                clog.info("drill-instructor: file checksummed - %s, %s" %
+                clog.info("checksum-verifier: file checksummed - %s, %s" %
                           (ilist.path, ilist.checksum))
                 checksums += 1
             elif isinstance(ilist, Alert.Alert):
-                clog.info("drill-instructor: Alert generated: '%s'" %
+                clog.info("checksum-verifier: Alert generated: '%s'" %
                           ilist.msg())
                 failures += 1
             else:
-                clog.info("drill-instructor: unexpected return val from " +
+                clog.info("checksum-verifier: unexpected return val from " +
                           "Checkable.check: %s: %r" % (type(ilist), ilist))
 
     # Report the statistics in the log
-    clog.info("drill-instructor: files checksummed: %d; " % checksums +
+    clog.info("checksum-verifier: files checksummed: %d; " % checksums +
               "checksums matched: %d; " % matches +
               "failures: %d" % failures)
     t_checksums += checksums
     t_matches += matches
     t_failures += failures
-    clog.info("drill-instructor: totals checksummed: %d; " % t_checksums +
+    clog.info("checksum-verifier: totals checksummed: %d; " % t_checksums +
               "matches: %d; " % t_matches +
               "failures: %d" % t_failures)
 
