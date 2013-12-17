@@ -172,16 +172,17 @@ class DBIerror(Exception):
     have to know anything about specific error types associated with the
     various database types.
     """
-    def __init__(self, value):
+    def __init__(self, value, dbname=None):
         """
         Set the value for the exception. It should be a string.
         """
         self.value = str(value)
+        self.dbname = dbname
     def __str__(self):
         """
         Report the exception value (should be a string).
         """
-        return str(self.value)
+        return "%s (dbname=%s)" % (str(self.value), self.dbname)
 
 # -----------------------------------------------------------------------------
 class DBIsqlite(DBI_abstract):
@@ -193,6 +194,10 @@ class DBIsqlite(DBI_abstract):
         for attr in kwargs:
             if attr in self.settable_attrl:
                 setattr(self, attr, kwargs[attr])
+            elif hasattr(self, 'dbname'):
+                raise DBIerror("Attribute '%s'" % attr +
+                               " is not valid for %s" % self.__class__,
+                               dbname=self.dbname)
             else:
                 raise DBIerror("Attribute '%s'" % attr +
                                " is not valid for %s" % self.__class__)
@@ -204,7 +209,7 @@ class DBIsqlite(DBI_abstract):
             self.dbh.isolation_level = None
             self.table_exists(table="sqlite_master")
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def __repr__(self):
@@ -230,7 +235,7 @@ class DBIsqlite(DBI_abstract):
             dbc.close()
             return 0 < len(rows)
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
@@ -239,13 +244,17 @@ class DBIsqlite(DBI_abstract):
         """
         # Handle bad arguments
         if type(fields) != list:
-            raise DBIerror("On create(), fields must be a list")
+            raise DBIerror("On create(), fields must be a list",
+                           dbname=self.dbname)
         elif fields == []:
-            raise DBIerror("On create(), fields must not be empty")
+            raise DBIerror("On create(), fields must not be empty",
+                           dbname=self.dbname)
         if type(table) != str:
-            raise DBIerror("On create(), table name must be a string")
+            raise DBIerror("On create(), table name must be a string",
+                           dbname=self.dbname)
         elif table == '':
-            raise DBIerror("On create(), table name must not be empty")
+            raise DBIerror("On create(), table name must not be empty",
+                           dbname=self.dbname)
 
         # Construct and run the create statement
         try:
@@ -254,7 +263,7 @@ class DBIsqlite(DBI_abstract):
             c.execute(cmd)
         # Convert any sqlite3 error into a DBIerror
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def close(self):
@@ -266,7 +275,7 @@ class DBIsqlite(DBI_abstract):
             self.dbh.close()
         # Convert any sqlite3 error into a DBIerror
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
     
     # -------------------------------------------------------------------------
     def delete(self, table='', where='', data=()):
@@ -275,17 +284,22 @@ class DBIsqlite(DBI_abstract):
         """
         # Handle invalid arguments
         if type(table) != str:
-            raise DBIerror("On delete(), table name must be a string")
+            raise DBIerror("On delete(), table name must be a string",
+                           dbname=self.dbname)
         elif table == '':
-            raise DBIerror("On delete(), table name must not be empty")
+            raise DBIerror("On delete(), table name must not be empty",
+                           dbname=self.dbname)
         elif type(where) != str:
-            raise DBIerror("On delete(), where clause must be a string")
+            raise DBIerror("On delete(), where clause must be a string",
+                           dbname=self.dbname)
         elif type(data) != tuple:
-            raise DBIerror("On delete(), data must be a tuple")
+            raise DBIerror("On delete(), data must be a tuple",
+                           dbname=self.dbname)
         elif '?' not in where and data != ():
-            raise DBIerror("Data would be ignored")
+            raise DBIerror("Data would be ignored", dbname=self.dbname)
         elif '?' in where and data == ():
-            raise DBIerror("Criteria are not fully specified")
+            raise DBIerror("Criteria are not fully specified",
+                           dbname=self.dbname)
 
         # Build and run the select statement 
         try:
@@ -302,7 +316,7 @@ class DBIsqlite(DBI_abstract):
             c.close()
         # Translate any sqlite3 errors to DBIerror
         except sqlite3.Error, e:
-            raise DBIerror(cmd + ': ' + ''.join(e.args))
+            raise DBIerror(cmd + ': ' + ''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
@@ -311,17 +325,23 @@ class DBIsqlite(DBI_abstract):
         """
         # Handle any bad arguments
         if type(table) != str:
-            raise DBIerror("On insert(), table name must be a string")
+            raise DBIerror("On insert(), table name must be a string",
+                           dbname=self.dbname)
         elif table == '':
-            raise DBIerror("On insert(), table name must not be empty")
+            raise DBIerror("On insert(), table name must not be empty",
+                           dbname=self.dbname)
         elif type(fields) != list:
-            raise DBIerror("On insert(), fields must be a list")
+            raise DBIerror("On insert(), fields must be a list",
+                           dbname=self.dbname)
         elif fields == []:
-            raise DBIerror("On insert(), fields list must not be empty")
+            raise DBIerror("On insert(), fields list must not be empty",
+                           dbname=self.dbname)
         elif type(data) != list:
-            raise DBIerror("On insert(), data must be a list")
+            raise DBIerror("On insert(), data must be a list",
+                           dbname=self.dbname)
         elif data == []:
-            raise DBIerror("On insert(), data list must not be empty")
+            raise DBIerror("On insert(), data list must not be empty",
+                           dbname=self.dbname)
 
         # Construct and run the insert statement
         try:
@@ -335,7 +355,8 @@ class DBIsqlite(DBI_abstract):
             c.close()
         # Translate sqlite specific exception into a DBIerror
         except sqlite3.Error, e:
-            raise DBIerror(cmd + ": " + ''.join(e.args))
+            raise DBIerror(cmd + ": " + ''.join(e.args),
+                           dbname=self.dbname)
         
     # -------------------------------------------------------------------------
     def select(self, table='', fields=[], where='', data=(), orderby=''):
@@ -344,19 +365,26 @@ class DBIsqlite(DBI_abstract):
         """
         # Handle invalid arguments
         if type(table) != str:
-            raise DBIerror("On select(), table name must be a string")
+            raise DBIerror("On select(), table name must be a string",
+                           dbname=self.dbname)
         elif table == '':
-            raise DBIerror("On select(), table name must not be empty")
+            raise DBIerror("On select(), table name must not be empty",
+                           dbname=self.dbname)
         elif type(fields) != list:
-            raise DBIerror("On select(), fields must be a list")
+            raise DBIerror("On select(), fields must be a list",
+                           dbname=self.dbname)
         elif type(where) != str:
-            raise DBIerror("On select(), where clause must be a string")
+            raise DBIerror("On select(), where clause must be a string",
+                           dbname=self.dbname)
         elif type(data) != tuple:
-            raise DBIerror("On select(), data must be a tuple")
+            raise DBIerror("On select(), data must be a tuple",
+                           dbname=self.dbname)
         elif type(orderby) != str:
-            raise DBIerror("On select(), orderby clause must be a string")
+            raise DBIerror("On select(), orderby clause must be a string",
+                           dbname=self.dbname)
         elif '?' not in where and data != ():
-            raise DBIerror("Data would be ignored")
+            raise DBIerror("Data would be ignored",
+                           dbname=self.dbname)
 
         # Build and run the select statement 
         try:
@@ -381,7 +409,8 @@ class DBIsqlite(DBI_abstract):
             return rv
         # Translate any sqlite3 errors to DBIerror
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(''.join(e.args),
+                           dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def update(self, table='', where='', fields=[], data=[]):
@@ -390,19 +419,26 @@ class DBIsqlite(DBI_abstract):
         """
         # Handle invalid arguments
         if type(table) != str:
-            raise DBIerror("On update(), table name must be a string")
+            raise DBIerror("On update(), table name must be a string",
+                           dbname=self.dbname)
         elif table == '':
-            raise DBIerror("On update(), table name must not be empty")
+            raise DBIerror("On update(), table name must not be empty",
+                           dbname=self.dbname)
         elif type(where) != str:
-            raise DBIerror("On update(), where clause must be a string")
+            raise DBIerror("On update(), where clause must be a string",
+                           dbname=self.dbname)
         elif type(fields) != list:
-            raise DBIerror("On update(), fields must be a list")
+            raise DBIerror("On update(), fields must be a list",
+                           dbname=self.dbname)
         elif fields == []:
-            raise DBIerror("On update(), fields must not be empty")
+            raise DBIerror("On update(), fields must not be empty",
+                           dbname=self.dbname)
         elif type(data) != list:
-            raise DBIerror("On update(), data must be a list of tuples")
+            raise DBIerror("On update(), data must be a list of tuples",
+                           dbname=self.dbname)
         elif data == []:
-            raise DBIerror("On update(), data must not be empty")
+            raise DBIerror("On update(), data must not be empty",
+                           dbname=self.dbname)
 
         # Build and run the update statement
         try:
@@ -416,7 +452,8 @@ class DBIsqlite(DBI_abstract):
             c.close()
         # Translate database-specific exceptions into DBIerrors
         except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args))
+            raise DBIerror(''.join(e.args),
+                           dbname=self.dbname)
 
 # -----------------------------------------------------------------------------
 # class DBImysql(DBI):
@@ -490,7 +527,8 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except Exception, e:
-            self.fail("Expected DBIerror, got %s" % type(e))
+            self.fail("Expected DBIerror, got %s" % type(e),
+                      dbname=self.dbname)
     
     # -------------------------------------------------------------------------
     def test_create_mtf(self):
