@@ -152,7 +152,11 @@ class Checkable(object):
         rval = []
         S = pexpect.spawn('hsi -q', timeout=300)
         # S.logfile = sys.stdout
-        S.expect(self.hsi_prompt)
+        which = S.expect([self.hsi_prompt,
+                          "HPSS Unavailable",
+                          "connect: Connection refused"])
+        if 0 != which:
+            return "unavailable"
 
         # if the current object is a directory,
         #    cd to it
@@ -556,7 +560,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         
         self.expected(2, len(x))
         dirlist = x[1].check(1.0)
-
+        if type(dirlist) == str and dirlist == "unavailable":
+            return
+        
         c = Checkable(path=testdir + '/crawler.tar', type='f')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
@@ -587,7 +593,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         checked = []
         for item in [z for z in x if z.type == 'f']:
             self.expected(0, item.last_check)
-            item.check(-1)
+            result = item.check(-1)
+            if type(result) == str and result == "unavailable":
+                return
 
         x = Checkable.get_list(dbname=self.testdb)
         for item in [z for z in x if z.type == 'f']:
