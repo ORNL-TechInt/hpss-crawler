@@ -11,6 +11,7 @@ import testhelp
 import time
 import toolframe
 import util
+import warnings
 
 # -----------------------------------------------------------------------------
 def setUpModule():
@@ -536,6 +537,52 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         root_d['crawler']['coal'] = 'anthracite'
 
         for D in [root_d, inc1_d, inc2_d]:
+            for section in D:
+                for option in D[section]:
+                    self.expected(D[section][option], obj.get(section, option))
+
+    # --------------------------------------------------------------------------
+    def test_read_warn(self):
+        """
+        Read a config file which contains an include option. If some included
+        files don't exist, we should get a warning that they were not loaded.
+        """
+        cfname_root = "%s/%s.cfg" % (self.testdir, "inclroot")
+        cfname_inc1 = "%s/%s.cfg" % (self.testdir, "include1")
+        cfname_inc2 = "%s/%s.cfg" % (self.testdir, "include2")
+
+        root_d = copy.deepcopy(self.cdict)
+        root_d['crawler']['include'] = cfname_inc1
+
+        inc1_d = {'crawler': {'logmax': '17',
+                              'coal': 'anthracite'
+                              },
+                  'newsect': {'newopt': 'newval',
+                              'include': cfname_inc2}
+            }
+
+        # inc2_d = {'fiddle': {'bar': 'wumpus'}}
+
+        self.write_cfg_file(cfname_root, root_d)
+        self.write_cfg_file(cfname_inc1, inc1_d)
+
+        obj = CrawlConfig.CrawlConfig()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            # this read should raise a warning about some config file(s) not
+            # being loaded
+            obj.read(cfname_root)
+            # we only should have gotten one warning
+            self.assertTrue(len(w) == 1)
+            # it should be a UserWarning
+            self.assertTrue(issubclass(w[-1].category, UserWarning))
+            # it should contain this string
+            self.assertTrue("Some config files not loaded" in str(w[-1]))
+
+        root_d['crawler']['logmax'] = '17'
+        root_d['crawler']['coal'] = 'anthracite'
+
+        for D in [root_d, inc1_d]:
             for section in D:
                 for option in D[section]:
                     self.expected(D[section][option], obj.get(section, option))

@@ -23,6 +23,7 @@ import stat
 import StringIO
 import sys
 import time
+import warnings
 
 # ------------------------------------------------------------------------------
 def get_config(cfname='', reset=False, soft=False):
