@@ -549,7 +549,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         cfname_root = "%s/%s.cfg" % (self.testdir, "inclroot")
         cfname_inc1 = "%s/%s.cfg" % (self.testdir, "include1")
-        cfname_inc2 = "%s/%s.cfg" % (self.testdir, "include2")
+        cfname_inc2 = "%s/%s.cfg" % (self.testdir, "includez")
 
         root_d = copy.deepcopy(self.cdict)
         root_d['crawler']['include'] = cfname_inc1
@@ -573,11 +573,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             # being loaded
             obj.read(cfname_root)
             # we only should have gotten one warning
-            self.assertTrue(len(w) == 1)
+            self.expected(1, len(w))
             # it should be a UserWarning
-            self.assertTrue(issubclass(w[-1].category, UserWarning))
+            self.assertTrue(issubclass(w[-1].category, UserWarning),
+                            "Expected a UserWarning, but got a %s" %
+                            w[-1].category)
             # it should contain this string
-            self.assertTrue("Some config files not loaded" in str(w[-1]))
+            self.assertTrue("Some config files not loaded" in str(w[-1]),
+                            "Unexpected message: '%s'" % str(w[-1]))
 
         root_d['crawler']['logmax'] = '17'
         root_d['crawler']['coal'] = 'anthracite'
