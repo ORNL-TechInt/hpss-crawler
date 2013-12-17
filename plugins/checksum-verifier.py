@@ -1,6 +1,7 @@
 import Checkable
 import ConfigParser
 import CrawlConfig
+import CrawlDBI
 import os
 import pexpect
 import sqlite3 as sql
@@ -26,14 +27,21 @@ def main(cfg):
     (checksums, matches, failures) = (0, 0, 0)
 
     # Fetch the list of HPSS objects that we're looking at from the
-    # sqlite database
+    # database
     try:
-        clist = Checkable.Checkable.get_list()
+        clist = Checkable.Checkable.get_list(dbname=dbfilename)
+    except CrawlDBI.DBIerror, e:
+        if "no such table: checkables" in str(e):
+            Checkable.Checkable.ex_nihilo(dbname=dbfilename,
+                                          dataroot=dataroot)
+            clist = Checkable.Checkable.get_list(dbname=dbfilename)
+        else:
+            raise
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
             Checkable.Checkable.ex_nihilo(filename=dbfilename,
                                           dataroot=dataroot)
-            clist = Checkable.Checkable.get_list()
+            clist = Checkable.Checkable.get_list(dbname=dbfilename)
         else:
             raise
 
