@@ -333,21 +333,8 @@ class CrawlDaemon(daemon.Daemon):
                         del plugin_d[p]
                 
                 heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
-                while True:
-                    #
-                    # Issue the heartbeat if it's time
-                    #
-                    if 0 == (int(time.time()) % heartbeat):
-                        self.dlog('crawl: heartbeat...')
-                        
-                    #
-                    # Check for the exit signal
-                    #
-                    if util.conditional_rm(exitfile):
-                        self.dlog('crawl: shutting down')
-                        keep_going = False
-                        break
-
+                ecount = ewhen = 0
+                while keep_going:
                     #
                     # Fire any plugins that are due
                     #
@@ -359,6 +346,21 @@ class CrawlDaemon(daemon.Daemon):
                         tbstr = tb.format_exc()
                         for line in tbstr.split('\n'):
                             self.dlog("crawl: '%s'" % line)
+                        ecount += 1
+                        dt = time.time() - ewhen
+                        if 3 < ecount and dt < 5.0:
+                            self.dlog("crawl: too many breaks in a " +
+                                      "short time -- shutting down")
+                            keep_going = False
+                        elif 5.0 <= dt:
+                            ewhen = time.time()
+                            ecount = 0
+
+                    #
+                    # Issue the heartbeat if it's time
+                    #
+                    if 0 == (int(time.time()) % heartbeat):
+                        self.dlog('crawl: heartbeat...')
                             
                     #
                     # If config file has changed, reload it by reseting the
@@ -370,6 +372,13 @@ class CrawlDaemon(daemon.Daemon):
                         cfgname = cfg.get('crawler', 'filename')
                         CrawlConfig.get_config(reset=True)
                         break
+
+                    #
+                    # Check for the exit signal
+                    #
+                    if util.conditional_rm(exitfile):
+                        self.dlog('crawl: shutting down')
+                        keep_going = False
 
                     #
                     # We cycle once per second so we can detect if the user
