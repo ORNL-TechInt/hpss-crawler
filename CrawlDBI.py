@@ -522,13 +522,11 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
             a.table_exists(table='dimension')
             self.fail("Expected exception on closed database not thrown")
         except DBIerror, e:
-            self.expected("Cannot operate on a closed database.", str(e))
-            pass
+            exp = "Cannot operate on a closed database."
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
         except AssertionError:
             raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" % type(e),
-                      dbname=self.dbname)
     
     # -------------------------------------------------------------------------
     def test_create_mtf(self):
@@ -686,13 +684,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.assertEqual(str(e),
-                             "unable to open database file",
-                             "Unexpected DBIerror thrown: %s" %
-                             util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Unexpected exception caught: %s" %
-                      util.line_quote(tb.format_exc()))
+            self.assertTrue("unable to open database file" in str(e),
+                            "Unexpected DBIerror thrown: %s" %
+                            util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
     def test_ctor_dbn_empty(self):
@@ -723,13 +717,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.assertEqual(str(e),
-                             "disk I/O error",
-                             "Unexpected DBIerror thrown: %s" %
-                             util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Unexpected exception caught: %s" %
-                      util.line_quote(tb.format_exc()))
+            self.assertTrue("disk I/O error" in str(e),
+                            "Unexpected DBIerror thrown: %s" %
+                            util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
     def test_ctor_dbn_none(self):
@@ -778,13 +768,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.assertEqual(str(e),
-                             "unable to open database file",
-                             "Unexpected DBIerror thrown: %s" %
-                             util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Unexpected exception caught: %s" %
-                      util.line_quote(tb.format_exc()))
+            self.assertTrue("unable to open database file" in str(e),
+                            "Unexpected DBIerror thrown: %s" %
+                            util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sym_dir(self):
@@ -802,13 +788,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.assertEqual(str(e),
-                             "unable to open database file",
-                             "Unexpected DBIerror thrown: %s" %
-                             util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Unexpected exception caught: %s" %
-                      util.line_quote(tb.format_exc()))
+            self.assertTrue("unable to open database file" in str(e),
+                            "Unexpected DBIerror thrown: %s" %
+                            util.line_quote(tb.format_exc()))
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sym_nosuch(self):
@@ -869,12 +851,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.assertEqual(str(e), "file is encrypted or is not a database",
-                             "Unexpected DBIerror thrown: %s" %
-                             util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Unexpected exception caught: %s" %
-                      util.line_quote(tb.format_exc()))
+            self.assertTrue("file is encrypted or is not a database" in str(e),
+                            "Unexpected DBIerror thrown: %s" %
+                            util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
     def test_delete_nq_nd(self):
@@ -906,7 +885,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.expected(str(e), "Criteria are not fully specified")
+            exp = "Criteria are not fully specified"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -929,7 +910,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.expected(str(e), "Data would be ignored")
+            exp = "Data would be ignored"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -970,7 +953,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.expected(str(e), "On delete(), table name must not be empty")
+            exp = "On delete(), table name must not be empty"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -1004,7 +989,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.expected(str(e), "On delete(), data must be a tuple")
+            exp = "On delete(), data must be a tuple"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -1026,7 +1013,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.expected(str(e), "On delete(), table name must be a string")
+            exp = "On delete(), table name must be a string"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -1048,8 +1037,10 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         except AssertionError:
             raise
         except DBIerror, e:
-            self.expected(str(e),
-                          "On delete(), where clause must be a string")
+            exp = "On delete(), where clause must be a string"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
+                          
         
         rows = db.select(table=td['tabname'])
         db.close()
