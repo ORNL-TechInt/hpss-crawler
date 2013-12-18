@@ -843,22 +843,21 @@ class CrawlTest(testhelp.HelpedTestCase):
         """
         TEST: Call get_logger() with no argument
 
-        EXP: Attempts to log to '/var/log/crawl.log'
+        EXP: Attempts to log to '/var/log/crawl.log', falls back to
+        '/tmp/crawl.log' if we can't access the protected file
         """
         util.get_logger(reset=True, soft=True)
-        got_exception = False
-        try:
-            lobj = util.get_logger()
-        except IOError as e:
-            self.assertEqual('Permission denied' in str(e), True)
-            self.assertEqual('/var/log/crawl.log' in str(e), True)
-            got_exception = True
+        lobj = util.get_logger()
 
-        if os.getuid() != 0 and got_exception == False:
-            self.fail('Only root should be able to write to the '
-                      + 'default log file')
-        elif os.getuid() == 0 and got_exception == True:
-            self.fail('Root should be able to write to the default log file')
+        # if I'm root, I should be looking at /var/log/crawl.log
+        if os.getuid() == 0:
+            self.expected('/var/log/crawl.log',
+                          lobj.handlers[0].stream.name)
+            
+        # otherwise, I should be looking at /tmp/crawl.log
+        else:
+            self.expected('/tmp/crawl.log',
+                          lobj.handlers[0].stream.name)
         
     # --------------------------------------------------------------------------
     def test_get_logger_path(self):

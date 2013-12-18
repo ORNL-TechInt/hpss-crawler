@@ -40,6 +40,7 @@ def contents(filename, string=True):
     f.close()
     return rval
 
+default_logfile_name = "/var/log/crawl.log"
 # ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False, soft=False):
     """
@@ -67,8 +68,12 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
         except AttributeError:
             pass
 
+    kwargs = {}
     envval = os.getenv('CRAWL_LOG')
 
+    # setting filename -- first, assume the default, then work down the
+    # precedence stack from cmdline to cfg to environment
+    filename = default_logfile_name
     if cmdline != '':
         filename = cmdline
     elif cfg != None:
@@ -76,17 +81,36 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
             filename = cfg.get('crawler', 'logpath')
         except:
             pass
+    
+        try:
+            maxbytes = cfg.get_size('crawler', 'logsize')  # !@! write this
+            kwargs['maxBytes'] = maxbytes
+        except:
+            pass
+    
+        if cfg.has_section('crawler'):
+            if cfg.has_option('crawler', 'logmax'):
+                kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
+        
     elif envval != None:
         filename = envval
-    else:
-        filename = '/var/log/crawl.log'
-        
+
+    # if a cfg is provided, let's see if it gives us a log file size and backup
+    # count
+    if cfg != None:
+        if cfg.has_section('crawler'):
+            if cfg.has_option('crawler', 'logsize'):
+                kwargs['maxBytes'] = cfg.get_size('crawler', 'logsize')
+            if cfg.has_option('crawler', 'logmax'):
+                kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
+            
     try:
         rval = get_logger._logger
     except AttributeError:
         if soft:
             return None
-        get_logger._logger = setup_logging(filename, 'crawl')
+        get_logger._logger = setup_logging(filename, 'crawl',
+                                           bumper=False, **kwargs)
         rval = get_logger._logger
 
     return rval
@@ -131,9 +155,23 @@ def setup_logging(logfile='',
         rval.handlers[0].close()
         del rval.handlers[0]
     if rval.handlers == []:
-        fh = logging.handlers.RotatingFileHandler(logfile,
-                                                  maxBytes=10*1024*1024,
-                                                  backupCount=5)
+        if maxBytes == 0:
+            maxBytes = 10*1024*1024
+        if backupCount == 0:
+            backupCount = 1
+        done = False
+        while not done:
+            try:
+                fh = logging.handlers.RotatingFileHandler(logfile,
+                                                     maxBytes=maxBytes,
+                                                     backupCount=backupCount)
+                done = True
+            except:
+                if logfile == default_logfile_name:
+                    logfile = "/tmp/%s" % os.path.basename(logfile)
+                else:
+                    raise
+                
         strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
         fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
         fh.setFormatter(fmt)

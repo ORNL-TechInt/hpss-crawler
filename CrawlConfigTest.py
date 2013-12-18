@@ -428,6 +428,20 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
     # -------------------------------------------------------------------------
+    def test_get_size(self):
+        """
+        Routine get_size() translates expressions like '30 mib' to 30 * 1024 *
+        1024 or '10mb' to 10,000,000
+        """
+        section = util.my_name()
+        obj = CrawlConfig.CrawlConfig()
+        obj.add_section(section)
+        obj.set(section, 'tenmb', '10mb')
+        obj.set(section, 'thirtymib', '30mib')
+        self.expected(10*1000*1000, obj.get_size(section, 'tenmb'))
+        self.expected(30*1024*1024, obj.get_size(section, 'thirtymib'))
+                      
+    # -------------------------------------------------------------------------
     def test_get_time(self):
         """
         Routines exercised: __init__(), load_dict(), get_time().

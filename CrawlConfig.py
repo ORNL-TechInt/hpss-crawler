@@ -116,6 +116,34 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return rval
 
     # -------------------------------------------------------------------------
+    def get_size(self, section, option, default=None, logger=None):
+        """
+        Unit specs are case insensitive.
+        
+        b  -> 1
+        kb -> 1000**1       kib -> 1024
+        mb -> 1000**2       mib -> 1024**2
+        gb -> 1000**3       gib -> 1024**3
+        tb -> 1000**4       tib -> 1024**4
+        pb -> 1000**5       pib -> 1024**5
+        eb -> 1000**6       eib -> 1024**6
+        zb -> 1000**7       zib -> 1024**7
+        yb -> 1000**8       yib -> 1024**8
+        """
+        try:
+            spec = self.get(section, option)
+            [(mag, unit)] = re.findall("(\d+)\s*(\w*)", spec)
+            mult = self.map_size_unit(unit)
+            rval = int(mag) * mult
+        except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
+            if default != None:
+                rval = default
+            else:
+                raise
+
+        return rval
+
+    # -------------------------------------------------------------------------
     def get_time(self, section, option, default=None, logger=None):
         """
         Retrieve the value of section/option. It is assumed to be a duration
@@ -187,6 +215,51 @@ class CrawlConfig(ConfigParser.ConfigParser):
             for o in sorted(dict[s].keys()):
                 self.set(s, o, dict[s][o])
     
+    # -------------------------------------------------------------------------
+    def map_size_unit(self, spec):
+        """
+        b  -> 1
+        kb -> 1000**1       kib -> 1024
+        mb -> 1000**2       mib -> 1024**2
+        gb -> 1000**3       gib -> 1024**3
+        tb -> 1000**4       tib -> 1024**4
+        pb -> 1000**5       pib -> 1024**5
+        eb -> 1000**6       eib -> 1024**6
+        zb -> 1000**7       zib -> 1024**7
+        yb -> 1000**8       yib -> 1024**8
+        """
+        done = False
+        while not done:
+            try:
+                rval = self._sizemap[spec]
+                done = True
+            except AttributeError:
+                self._sizemap = {'': 1,
+                                 'b': 1,
+                                 'kb': 1000,
+                                 'kib': 1024,
+                                 'mb': 1000 * 1000,
+                                 'mib': 1024 * 1024,
+                                 'gb': 1000 ** 3,
+                                 'gib': 1024 ** 3,
+                                 'tb': 1000 ** 4,
+                                 'tib': 1024 ** 4,
+                                 'pb': 1000 ** 5,
+                                 'pib': 1024 ** 5,
+                                 'eb': 1000 ** 6,
+                                 'eib': 1024 ** 6,
+                                 'zb': 1000 ** 7,
+                                 'zib': 1024 ** 7,
+                                 'yb': 1000 ** 8,
+                                 'yib': 1024 ** 8,
+                                 }
+                done = False
+            except KeyError:
+                rval = 1
+                done = True
+
+        return rval
+        
     # -------------------------------------------------------------------------
     def map_time_unit(self, spec):
         """
