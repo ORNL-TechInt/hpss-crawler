@@ -2,6 +2,7 @@
 """
 Tests for util.py
 """
+import CrawlConfig
 import logging
 import os
 import pdb
@@ -25,6 +26,7 @@ def tearDownModule():
     """
     Clean up after testing
     """
+    util.conditional_rm("/tmp/crawl.log")
     testhelp.module_test_teardown(UtilTest.testdir)
     
 # -----------------------------------------------------------------------------
@@ -138,6 +140,53 @@ class UtilTest(testhelp.HelpedTestCase):
         actual = util.get_logger(reset=True, soft=True)
         self.expected(exp, actual)
         
+    # -------------------------------------------------------------------------
+    def test_get_logger_cfg(self):
+        """
+        Call get_logger with a config that specifies non default values for log
+        file name, log file size, and max log files on disk. Verify that the
+        resulting logger has the correct parameters.
+        """
+        cfname = "%s/%s.cfg" % (self.testdir, util.my_name())
+        lfname = "%s/%s.log" % (self.testdir, util.my_name())
+        cdict = {'crawler': {'logpath': lfname,
+                             'logsize': '17mb',
+                             'logmax': '13'
+                             }
+                 }
+        c = CrawlConfig.CrawlConfig()
+        c.load_dict(cdict)
+
+        # reset any logger that has been initialized
+        util.get_logger(reset=True, soft=True)
+
+        # now ask for one that matches the configuration
+        l = util.get_logger(cfg=c)
+
+        # and check that it has the right handler
+        self.expected(1, len(l.handlers))
+        self.expected(os.path.abspath(lfname), l.handlers[0].stream.name)
+        self.expected(17*1000*1000, l.handlers[0].maxBytes)
+        self.expected(13, l.handlers[0].backupCount)
+
+    # -------------------------------------------------------------------------
+    def test_get_logger_nocfg(self):
+        """
+        Call get_logger with no cmdline or cfg arguments and make sure the
+        resulting logger has the correct parameters.
+        """
+        # reset any logger that has been initialized
+        util.get_logger(reset=True, soft=True)
+
+        # now ask for a default logger
+        l = util.get_logger()
+
+        # and check that it has the right handler
+        self.expected(1, len(l.handlers))
+        self.expected("/tmp/crawl.log", l.handlers[0].stream.name)
+        self.expected(10*1024*1024, l.handlers[0].maxBytes)
+        self.expected(5, l.handlers[0].backupCount)
+
     # -------------------------------------------------------------------------
     def test_line_quote(self):
         """
