@@ -599,7 +599,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         testhelp.touch('crawler.exit')
 
-        time.sleep(1)
+        time.sleep(2)
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
                 
@@ -626,7 +626,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         testhelp.touch('crawler.exit')
 
-        time.sleep(1)
+        time.sleep(2)
         self.assertEqual(is_running(), False)
         
     # --------------------------------------------------------------------------
@@ -669,7 +669,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         testhelp.touch('crawler.exit')
 
-        time.sleep(1)
+        time.sleep(2)
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
                 
@@ -711,7 +711,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         testhelp.touch('crawler.exit')
 
-        time.sleep(1)
+        time.sleep(2)
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
                 
@@ -742,7 +742,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("crawler_pid", result)
         
         testhelp.touch('crawler.exit')
-        time.sleep(1)
+        time.sleep(2)
         self.vassert_nin("Traceback", util.contents(logpath))
         self.assertEqual(is_running(), False,
                          "crawler is still running unexpectedly")
@@ -778,7 +778,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cmd = 'crawl stop --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        time.sleep(1)
+        time.sleep(1.5)
         
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
@@ -810,7 +810,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cmd = 'crawl stop --log %s' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        time.sleep(1)
+        time.sleep(2)
         
         self.assertEqual(is_running(), False)
         self.assertEqual(os.path.exists('crawler_pid'), False)
