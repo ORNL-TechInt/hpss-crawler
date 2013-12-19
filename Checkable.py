@@ -307,9 +307,8 @@ class Checkable(object):
         table(s) if necessary. Bootstrap the queue by adding the root
         director(ies).
         """
-        # Checkable.dbname = filename
-        if not os.path.exists(dbname):
-            db = CrawlDBI.DBI(dbname=dbname)
+        db = CrawlDBI.DBI(dbname=dbname)
+        if not db.table_exists(table='checkables'):
             db.create(table='checkables',
                       fields=['id integer primary key',
                               'path text',
@@ -320,7 +319,7 @@ class Checkable(object):
                       fields=['path', 'type', 'cos', 'last_check'],
                       data=[(dataroot, 'd', '', 0)])
             db.close()
-
+            
     # -----------------------------------------------------------------------------
     @classmethod
     def fdparse(cls, value):
@@ -524,12 +523,20 @@ class Checkable(object):
                                     "of %s in the database" % self)
         db.close()
         
+    # -------------------------------------------------------------------------
+    @classmethod
+    def set_dbname(cls, dbname=default_dbname):
+        """
+        Set the database name for future Checkable objects
+        """
+        Checkable.dbname = dbname
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Create the test directory in preparation to run the tests.
     """
-    Checkable.dbname = CheckableTest.testdb
+    Checkable.set_dbname(CheckableTest.testdb)
     testhelp.module_test_setup(CheckableTest.testdir)
     
 # -----------------------------------------------------------------------------
@@ -762,8 +769,44 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
         """
-        If the database file does already exist, calling ex_nihilo() should do
-        nothing.
+        If the database file and the checkables table already exists, calling
+        ex_nihilo() should do nothing.
+
+        The current behavior is that if an existing (non database) file is
+        named as the database, no attempt will be made to create the tables.
+        This is desirable. We don't want to create the tables unless we created
+        the file. Otherwise, the user might overwrite a file inadvertently by
+        trying to treat it as a database.
+
+        Note: the use of unacceptable database files is tested in CrawlDBI.py.
+        """
+        # make sure the .db file does not exist
+        util.conditional_rm(self.testdb)
+
+        # create a dummy .db file and set its mtime back by 500 seconds
+        testhelp.touch(self.testdb)
+        s = os.stat(self.testdb)
+        newtime = s[stat.ST_MTIME] - 500
+        os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
+
+        # create a dummy 'checkables' table in the test database
+        self.db_mk_dummy_table()
+        pre = os.stat(self.testdb)
+        
+        # call the test target routine
+        Checkable.ex_nihilo(dbname=self.testdb)
+
+        # verify that the file's mtime is unchanged and its size is unchanged
+        post = os.stat(self.testdb)
+        self.expected(self.ymdhms(pre[stat.ST_MTIME]),
+                      self.ymdhms(post[stat.ST_MTIME]))
+        self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
+        
+    # -------------------------------------------------------------------------
+    def test_ex_nihilo_notable(self):
+        """
+        If the database file does already exist and the checkables table does
+        not, calling ex_nihilo() should create the table.
 
         The current behavior is that if an existing (non database) file is
         named as the database, no attempt will be made to create the tables.
@@ -785,10 +828,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         # call the test target routine
         Checkable.ex_nihilo(dbname=self.testdb)
 
-        # verify that the file's mtime is unchanged and its size is 0
-        p = os.stat(self.testdb)
-        self.expected(self.ymdhms(newtime), self.ymdhms(p[stat.ST_MTIME]))
-        self.expected(0, p[stat.ST_SIZE])
+        # verify that the file exists and the table does also
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected %s to exist" % self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        self.assertTrue(db.table_exists(table='checkables'),
+                        "Expected table 'checkables' to exist in db")
         
     # -------------------------------------------------------------------------
     def test_ex_nihilo_scratch(self):
@@ -1372,20 +1417,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(exp, x.__repr__())
                         
     # -------------------------------------------------------------------------
-    def db_duplicates(self):
-        """
-        Store a duplicate entry in the file table.
-        """
-        db = CrawlDBI.DBI(dbname=self.testdb)
-        db.insert(table='checkables',
-                  fields=['path', 'type', 'cos', 'last_check'],
-                  data=[('/abc/def', 'd', '', 0)])
-        db.insert(table='checkables',
-                  fields=['path', 'type', 'cos', 'last_check'],
-                  data=[('/abc/def', 'd', '', 0)])
-        db.close()
-        
-    # -------------------------------------------------------------------------
     def db_add_one(self,
                    path=testpath,
                    type='f',
@@ -1400,6 +1431,29 @@ class CheckableTest(testhelp.HelpedTestCase):
                   data=[(path, type, cos, last_check)])
         db.close()
 
+    # -------------------------------------------------------------------------
+    def db_duplicates(self):
+        """
+        Store a duplicate entry in the file table.
+        """
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'cos', 'last_check'],
+                  data=[('/abc/def', 'd', '', 0)])
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'cos', 'last_check'],
+                  data=[('/abc/def', 'd', '', 0)])
+        db.close()
+        
+    # -------------------------------------------------------------------------
+    def db_mk_dummy_table(self):
+        """
+        Create a table named 'checkables' but we don't care what fields it has
+        """
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        db.create(table='checkables', fields=['id int'])
+        db.close()
+        
     # -------------------------------------------------------------------------
     def ymdhms(self, dt):
         """

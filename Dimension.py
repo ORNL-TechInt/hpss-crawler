@@ -410,14 +410,32 @@ class DimensionTest(testhelp.HelpedTestCase):
         db.close()
         
     # -------------------------------------------------------------------------
-    def test_ex_nihilo(self):
+    def test_ex_nihilo_nofile(self):
         """
         Creating and persisting a Dimension object should initialize the
-        database and table dimension if they do not exist. (see the
-        Checkable.ex_nihilo() method and tests for clues)
+        database and table dimension if they do not exist.
         """
         util.conditional_rm(self.testdb)
 
+        a = Dimension(dbname=self.testdb, name='ex_nihilo')
+        a.persist()
+        self.assertTrue(os.path.exists(self.testdb),
+                        "Expected to find database file '%s'" % self.testdb)
+
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        self.assertTrue(db.table_exists(table='dimension'),
+                        "Expected table 'dimension' in database")
+        db.close()
+        
+    # -------------------------------------------------------------------------
+    def test_ex_nihilo_notable(self):
+        """
+        If the db file exists but the table does not, creating and persisting a
+        Dimension object should create the table 'dimension'.
+        """
+        util.conditional_rm(self.testdb)
+        testhelp.touch(self.testdb)
+        
         a = Dimension(dbname=self.testdb, name='ex_nihilo')
         a.persist()
         self.assertTrue(os.path.exists(self.testdb),

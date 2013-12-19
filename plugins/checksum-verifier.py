@@ -15,6 +15,7 @@ def main(cfg):
     # etc.
     # clog = sys.modules['__main__'].get_logger()
     clog = util.get_logger()
+    clog.info("checksum-verifier: firing up")
     hsi_prompt = "]:"
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = cfg.get('checksum-verifier', 'dataroot')
@@ -22,6 +23,8 @@ def main(cfg):
     odds = cfg.get('checksum-verifier', 'odds')
     n_ops = int(cfg.get('checksum-verifier', 'operations'))
 
+    Checkable.Checkable.set_dbname(dbfilename)
+    
     # Initialize our statistics
     (t_checksums, t_matches, t_failures) = get_stats(dbfilename)
     (checksums, matches, failures) = (0, 0, 0)
@@ -32,6 +35,7 @@ def main(cfg):
         clist = Checkable.Checkable.get_list(dbname=dbfilename)
     except CrawlDBI.DBIerror, e:
         if "no such table: checkables" in str(e):
+            clog.info("checksum-verifier: calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dbname=dbfilename,
                                           dataroot=dataroot)
             clist = Checkable.Checkable.get_list(dbname=dbfilename)
@@ -39,6 +43,7 @@ def main(cfg):
             raise
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
+            clog.info("checksum-verifier: calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(filename=dbfilename,
                                           dataroot=dataroot)
             clist = Checkable.Checkable.get_list(dbname=dbfilename)
