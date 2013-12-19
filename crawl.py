@@ -349,7 +349,7 @@ class CrawlDaemon(daemon.Daemon):
                         ecount += 1
                         dt = time.time() - ewhen
                         if 3 < ecount and dt < 5.0:
-                            self.dlog("crawl: too many breaks in a " +
+                            self.dlog("crawl: too many exceptions in a " +
                                       "short time -- shutting down")
                             keep_going = False
                         elif 5.0 <= dt:
