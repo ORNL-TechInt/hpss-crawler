@@ -262,11 +262,14 @@ class Checkable(object):
                           'cos text',
                           'checksum int',
                           'last_check int'])
-        rows = db.select(table='checkables', fields=[])
-        if len(rows) == 0:
-            db.insert(table='checkables',
-                      fields=['path', 'type', 'cos', 'checksum', 'last_check'],
-                      data=[(dataroot, 'd', '', 0, 0)])
+        if type(dataroot) == str:
+            dataroot = [ dataroot ]
+
+        if type(dataroot) == list:
+            for root in dataroot:
+                r = Checkable(path=root, type='d')
+                r.persist()
+
         db.close()
             
     # -----------------------------------------------------------------------------
@@ -500,14 +503,22 @@ class Checkable(object):
                     flist=['type', 'cos', 'checksum', 'last_check']
                     dlist=[(self.type, self.cos, self.checksum,
                             self.last_check, rows[0][0])]
+                elif ((self.cos == rows[0][3]) and
+                      (self.checksum == rows[0][4]) and
+                      (self.last_check == rows[0][5])):
+                    # everything matches -- no need to update it
+                    flist = []
+                    dlist = []
                 else:
                     flist=['type', 'cos', 'checksum']
                     dlist=[(self.type, self.cos, self.checksum, rows[0][0])]
-                # update it
-                db.update(table='checkables',
-                          fields=flist,
-                          where='rowid=?',
-                          data=dlist)
+
+                # if an update is needed, do it
+                if flist != []:
+                    db.update(table='checkables',
+                              fields=flist,
+                              where='rowid=?',
+                              data=dlist)
             # more than a single copy in the database -- raise an exception
             else:
                 raise StandardError("There appears to be more than one copy " +
@@ -584,7 +595,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                 self.expected(0, c.checksum)
             elif c.path == "%s/subdir2" % testdir:
                 self.expected(0, c.checksum)
-                
+
     # -------------------------------------------------------------------------
     def test_check_file(self):
         """
@@ -851,6 +862,36 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('d', rows[0][2])     # type
         self.expected('', rows[0][3])      # cos
         self.expected(0, rows[0][4])       # last_check
+        
+    # -------------------------------------------------------------------------
+    def test_ex_nihilo_rootlist(self):
+        """
+        Method ex_nihilo() must be able to take a list in its dataroot argument
+        """
+        # make sure the .db file does not exist
+        util.conditional_rm(self.testdb)
+
+        # this call should create it
+        Checkable.ex_nihilo(dbname=self.testdb, dataroot=['abc', 'def'])
+
+        # check that it exists
+        self.assertEqual(os.path.exists(self.testdb), True,
+                         "File '%s' should be created by ex_nihilo()" %
+                         (self.testdb))
+
+        # assuming it does, look inside and make sure the checkables table got
+        # initialized correctly
+        db = CrawlDBI.DBI(dbname=self.testdb)
+        
+        # there should be two rows, one for each item in the dataroot list
+        rows = db.select(table='checkables', fields=[])
+        self.expected(2, len(rows))
+
+        self.expected('abc', rows[0][1])
+        self.expected('d', rows[0][2])
+
+        self.expected('def', rows[1][1])
+        self.expected('d', rows[1][2])
         
     # -------------------------------------------------------------------------
     def test_fdparse_ldr(self):

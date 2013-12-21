@@ -46,6 +46,7 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected([''], util.csv_list(""))
         self.expected([''], util.csv_list("     "))
         self.expected(['', ''], util.csv_list("  , "))
+        self.expected(['xyz'], util.csv_list("xyz"))
         self.expected(['abc', ''], util.csv_list("  abc, "))
         self.expected(['a', 'b', 'c'], util.csv_list(" a,b ,  c  "))
                        

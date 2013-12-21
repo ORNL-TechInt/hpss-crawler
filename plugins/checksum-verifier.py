@@ -21,7 +21,7 @@ def main(cfg):
     clog.info("checksum-verifier: firing up")
     hsi_prompt = "]:"
     plugdir = cfg.get('crawler', 'plugin-dir')
-    dataroot = cfg.get('checksum-verifier', 'dataroot')
+    dataroot = util.csv_list(cfg.get('checksum-verifier', 'dataroot'))
     dbfilename = cfg.get('checksum-verifier', 'dbfile')
     odds = cfg.getfloat('checksum-verifier', 'odds')
     n_ops = int(cfg.get('checksum-verifier', 'operations'))
