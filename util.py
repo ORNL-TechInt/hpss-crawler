@@ -40,6 +40,15 @@ def contents(filename, string=True):
     f.close()
     return rval
 
+# ------------------------------------------------------------------------------
+def csv_list(value, delimiter=","):
+    """
+    Split a string on a delimiter and return the resulting list, stripping away
+    whitespace.
+    """
+    rval = [x.strip() for x in value.split(delimiter)]
+    return rval
+
 default_logfile_name = "/var/log/crawl.log"
 # ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False, soft=False):

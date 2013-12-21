@@ -37,6 +37,19 @@ class UtilTest(testhelp.HelpedTestCase):
     testdir = './test.d'
     
     # -------------------------------------------------------------------------
+    def test_csv_list(self):
+        """
+        csv_list() called with whitespace should return an empty list
+        csv_list() on whitespace with a comma in it => ['', '']
+        csv_list() on 'a, b   , c' => ['a', 'b', 'c']
+        """
+        self.expected([''], util.csv_list(""))
+        self.expected([''], util.csv_list("     "))
+        self.expected(['', ''], util.csv_list("  , "))
+        self.expected(['abc', ''], util.csv_list("  abc, "))
+        self.expected(['a', 'b', 'c'], util.csv_list(" a,b ,  c  "))
+                       
+    # -------------------------------------------------------------------------
     def test_content(self):
         """
         contents() is supposed to read and return the contents of a file as a
