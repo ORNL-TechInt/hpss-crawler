@@ -258,7 +258,9 @@ class DBIsqlite(DBI_abstract):
 
         # Construct and run the create statement
         try:
-            cmd = ("create table %s(" % table + ",".join(fields) + ")")
+            cmd = ("create table if not exists %s(" % table +
+                   ", ".join(fields) +
+                   ")")
             c = self.dbh.cursor()
             c.execute(cmd)
         # Convert any sqlite3 error into a DBIerror

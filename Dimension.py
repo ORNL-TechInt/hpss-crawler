@@ -69,7 +69,8 @@ class Dimension(object):
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
         self.db_init()
-        
+        self.load()
+
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
@@ -199,6 +200,33 @@ class Dimension(object):
         pass
     
     # -------------------------------------------------------------------------
+    def report(self):
+        """
+        Generate a string reflecting the current contents of the dimension
+        """
+        rval = ("\n%-8s     %17s   %17s" % (self.name,
+                                            "Population",
+                                            "Sample"))
+
+        rval += ("\n%8s     %17s   %17s" % (8 * '-',
+                                            17 * '-',
+                                            17 * '-'))
+        for cval in self.p_sum:
+            rval += ("\n%-8s  "   % cval +
+                     "   %8d"   % self.p_sum[cval]['count'] +
+                     "   %6.2f" % self.p_sum[cval]['pct'] +
+                     "   %8d"   % self.s_sum[cval]['count'] +
+                     "   %6.2f" % self.s_sum[cval]['pct'])
+        rval += ("\n%-8s     %8d   %6.2f   %8d   %6.2f" %
+                 ("Total",
+                  self.sum_total(which='p'),
+                  sum(map(lambda x: x['pct'], self.p_sum.values())),
+                  self.sum_total(which='s'),
+                  sum(map(lambda x: x['pct'], self.s_sum.values()))))
+        rval += "\n"
+        return rval
+        
+    # -------------------------------------------------------------------------
     def sum_total(self, dict=None, which='p'):
         """
         Return the total of all the 'count' entries in one of the dictionaries.
@@ -248,6 +276,7 @@ class Dimension(object):
             else:
                 for key in d:
                     d[key]['pct'] = 0.0
+        pass
 
     # -------------------------------------------------------------------------
     def vote(self, category):
