@@ -1,8 +1,11 @@
+import Alert
 import Checkable
 import ConfigParser
 import CrawlConfig
 import CrawlDBI
+import Dimension
 import os
+import pdb
 import pexpect
 import sqlite3 as sql
 import sys
@@ -20,7 +23,7 @@ def main(cfg):
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = cfg.get('checksum-verifier', 'dataroot')
     dbfilename = cfg.get('checksum-verifier', 'dbfile')
-    odds = cfg.get('checksum-verifier', 'odds')
+    odds = cfg.getfloat('checksum-verifier', 'odds')
     n_ops = int(cfg.get('checksum-verifier', 'operations'))
 
     Checkable.Checkable.set_dbname(dbfilename)
@@ -60,36 +63,43 @@ def main(cfg):
                       (item.rowid, item.path))
             ilist = item.check(odds)
 
-            # There are six expected outcomes that check can return:
-            #  'matched' => a checksum was verified
-            #  'skipped' => a file was skipped
-            #  'access denied' => encountered a directory where we don't have
-            #                     permission to go
-            #  <list of Checkables> => read a directory, generated a Checkable
-            #                          for each entry
-            #  <Checkable> => a file checksummed was collected
-            #  <Alert> => a file checksum did not match and an Alert was
-            #             generated
-            #  ...     => unexpected cases
+            # Expected outcomes that check can return:
+            #  list of Checkables: read dir or checksummed files (may be empty)
+            #  Alert:              checksum verify failed
+            #  'access denied':    unaccessible directory
+            #  'matched':          a checksum was verified
+            #  'checksummed':      file was checksummed
+            #  'skipped':          file was skipped
+            #  'unavailable':      HPSS is temporarily unavailable
+            #  StandardError:      invalid Checkable type (not 'f' or 'd')
+            #
             if type(ilist) == str:
-                if ilist == "matched":
+                if ilist == "access denied":
+                    clog.info("checksum-verifier: dir %s not accessible" %
+                              item.path)
+                    clist.remove(item)
+                elif ilist == "matched":
                     matches += 1
                     clog.info("checksum-verifier: %s checksums matched" %
                               item.path)
+                elif ilist == "checksummed":
+                    checksums += 1
+                    clog.info("checksum-verifier: %s checksummed" % item.path)
                 elif ilist == "skipped":
                     clog.info("checksum-verifier: %s skipped" % item.path)
-                elif ilist == "access denied":
-                    clog.info("checksum-verifier: dir %s not accessible" %
-                              item.path)
+                elif ilist == "unavailable":
+                    clog.info("checksum-verifier: HPSS is not available")
+                    break
                 else:
                     clog.info("checksum-verifier: unexpected string returned " +
                               "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
                 clog.info("checksum-verifier: in %s, found:" % item.path)
                 for n in ilist:
-                    clog.info("checksum-verifier: >>> %s %s %s %f" %
-                              (n.path, n.type, n.checksum,
-                               n.last_check))
+                    clog.info("checksum-verifier: >>> %s" % str(n))
+                    if 'f' == n.type:
+                        clog.info("checksum-verifier: ..... checksummed")
+                        checksums += 1
             elif isinstance(ilist, Checkable.Checkable):
                 clog.info("checksum-verifier: file checksummed - %s, %s" %
                           (ilist.path, ilist.checksum))
@@ -116,6 +126,11 @@ def main(cfg):
     # Record the current totals in the database
     update_stats(dbfilename, (t_checksums, t_matches, t_failures))
 
+    # Report the dimension data in the log
+    d = Dimension.Dimension(name='cos')
+    clog.info(d.report())
+
+stats_table = 'cvstats'
 # -----------------------------------------------------------------------------
 def get_stats(dbfilename):
     """
@@ -125,13 +140,13 @@ def get_stats(dbfilename):
     db = sql.connect(dbfilename)
     cx = db.cursor()
     cx.execute("select name from sqlite_master " +
-               "where type = 'table' and name = 'distats'")
+               "where type = 'table' and name = '%s'" % stats_table)
     rows = cx.fetchall()
     if 0 == len(rows):
         rval = (0, 0, 0)
     else:
-        cx.execute("""select checksums, matches, failures from distats
-                      where rowid = 1""")
+        cx.execute("""select checksums, matches, failures from %s
+                      where rowid = 1""" % stats_table)
         rows = cx.fetchall()
         rval = rows[0]
 
@@ -141,26 +156,33 @@ def get_stats(dbfilename):
 # -----------------------------------------------------------------------------
 def update_stats(dbfilename, cmf):
     """
-    Record the three values in tuple cmf in table distats in the database. If
+    Record the three values in tuple cmf in table cvstats in the database. If
     the table does not exist, create it.
     """
     db = sql.connect(dbfilename)
     cx = db.cursor()
     cx.execute("select name from sqlite_master " +
-               "where type = 'table' and name = 'distats'")
+               "where type = 'table' and name = '%s'" % stats_table)
     rows = cx.fetchall()
     if 0 == len(rows):
-        cx.execute("""create table distats(rowid         int,
-                                           checksums     int,
-                                           matches       int,
-                                           failures      int)""")
-        cx.execute("""insert into distats(rowid, checksums, matches, failures)
+        cx.execute("""create table %s(rowid         int,
+                                      checksums     int,
+                                      matches       int,
+                                      failures      int)""" % stats_table)
+        cx.execute("""insert into %s(rowid, checksums, matches, failures)
                                   values(     1,         0,       0,        0)
-                   """)
-    cx.execute("""update distats set checksums=?,
+                   """ % stats_table)
+    cx.execute("""update %s set checksums=?,
                                      matches=?,
                                      failures=?
-                         where rowid = 1""", cmf)
+                         where rowid = 1""" % stats_table,
+               cmf)
 
     db.commit()
     db.close()
+
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    pdb.set_trace()
+    cfg = CrawlConfig.get_config()
+    main(cfg)

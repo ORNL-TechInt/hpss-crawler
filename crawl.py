@@ -24,6 +24,7 @@ import traceback as tb
 import unittest
 import util
 
+exit_file = 'crawler.exit'
 # ------------------------------------------------------------------------------
 def crl_cfgdump(argv):
     """cfgdump - load a config file and dump its contents
@@ -201,7 +202,9 @@ def crl_status(argv):
         print("The crawler is running as process %s." % cpid)
     else:
         print("The crawler is not running.")
-    
+    if os.path.exists(exit_file):
+        print("Termination has been requested (%s exists)" % exit_file) 
+
 # ------------------------------------------------------------------------------
 def crl_stop(argv):
     """stop - shut down the crawler daemon if it is running
@@ -222,7 +225,7 @@ def crl_stop(argv):
     
     if o.debug: pdb.set_trace()
 
-    testhelp.touch('crawler.exit')
+    testhelp.touch(exit_file)
     
 # ---------------------------------------------------------------------------
 def cfg_changed(cfg):
@@ -271,7 +274,7 @@ def tearDownModule():
     testhelp.module_test_teardown(CrawlTest.testdir)
 
     if is_running():
-        testhelp.touch('crawler.exit')
+        testhelp.touch(exit_file)
 
     os.chdir(launch_dir)
 
@@ -310,7 +313,6 @@ class CrawlDaemon(daemon.Daemon):
         plugin_d = {}
         while keep_going:
             try:
-                exitfile = 'crawler.exit'
                 cfg = CrawlConfig.get_config(cfgname)
                 pluglstr = cfg.get('crawler', 'plugins')
                 pluglist = [x.strip() for x in pluglstr.split(',')]
@@ -376,7 +378,7 @@ class CrawlDaemon(daemon.Daemon):
                     #
                     # Check for the exit signal
                     #
-                    if util.conditional_rm(exitfile):
+                    if util.conditional_rm(exit_file):
                         self.dlog('crawl: shutting down')
                         keep_going = False
 
@@ -578,7 +580,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     def test_crawl_start_x(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
-        when file 'crawler.exit' is touched. Verify that crawler_pid exists
+        when the exit file is touched. Verify that crawler_pid exists
         while crawler is running and that it is removed when it stops.
         """
         cfgpath = '%s/test_start.cfg' % self.testdir
@@ -597,7 +599,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual('leaving daemonize' in util.contents(logpath), True)
         
-        testhelp.touch('crawler.exit')
+        testhelp.touch(exit_file)
 
         time.sleep(2)
         self.assertEqual(is_running(), False)
@@ -624,7 +626,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         result = pexpect.run(cmd)
         self.assertEqual('crawler_pid exists' in result, True)
         
-        testhelp.touch('crawler.exit')
+        testhelp.touch(exit_file)
 
         time.sleep(2)
         self.assertEqual(is_running(), False)
@@ -633,7 +635,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     def test_crawl_start_cfg(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
-        when file 'crawler.exit' is touched. Verify that the correct config
+        when the exit file is touched. Verify that the correct config
         file is loaded.
         """
         cfgpath = '%s/test_stcfg.cfg' % self.testdir
@@ -667,7 +669,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected 'simple: check for this' " +
                          "in log file not found")
         
-        testhelp.touch('crawler.exit')
+        testhelp.touch(exit_file)
 
         time.sleep(2)
         self.assertEqual(is_running(), False)
@@ -677,7 +679,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     def test_crawl_start_fire(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
-        when file 'crawler.exit' is touched. Verify that at least one plugin
+        when the exit file is touched. Verify that at least one plugin
         fires and produces some output.
         """
         cfgpath = '%s/test_fire.cfg' % self.testdir
@@ -709,7 +711,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          util.contents('%s/fired' % self.testdir),
                          "Contents of %s/fired is not right" % self.testdir)
         
-        testhelp.touch('crawler.exit')
+        testhelp.touch(exit_file)
 
         time.sleep(2)
         self.assertEqual(is_running(), False)
@@ -719,7 +721,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     def test_crawl_start_nonplugin_sections(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
-        when file 'crawler.exit' is touched. Verify that a config file with
+        when the exit file is touched. Verify that a config file with
         non-plugin sections works properly. Sections that are not listed with
         the 'plugin' option in the 'crawler' section should not be loaded as
         plugins.
@@ -741,7 +743,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
         
-        testhelp.touch('crawler.exit')
+        testhelp.touch(exit_file)
         time.sleep(2)
         self.vassert_nin("Traceback", util.contents(logpath))
         self.assertEqual(is_running(), False,
@@ -1010,7 +1012,7 @@ class CrawlTest(testhelp.HelpedTestCase):
             os.chdir(launch_dir)
 
         if is_running():
-            testhelp.touch('crawler.exit')
+            testhelp.touch(exit_file)
             time.sleep(1.0)
             
         if is_running():
@@ -1022,7 +1024,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         util.conditional_rm('crawler_pid')
 
-        util.conditional_rm('crawler.exit')
+        util.conditional_rm(exit_file)
 
 # ------------------------------------------------------------------------------
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))

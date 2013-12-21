@@ -22,9 +22,9 @@ hashverify commands.
 Note that directories are only used to find more files. A directory does not
 have a cos or a checksum.
 """
+import Alert
 import CrawlDBI
 import Dimension
-# import hashlib
 import os
 import pdb
 import pexpect
@@ -67,6 +67,7 @@ class Checkable(object):
         self.path = '---'
         self.type = '-'
         self.cos = ''
+        self.checksum = 0
         self.last_check = 0
         self.rowid = None
         self.args = args
@@ -75,12 +76,15 @@ class Checkable(object):
             if k not in ['rowid',
                          'path',
                          'type',
+                         'checksum',
                          'cos',
                          'dim',
                          'last_check']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
+        if self.checksum == None:
+            self.checksum = 0
         super(Checkable, self).__init__()
         
     # -------------------------------------------------------------------------
@@ -92,6 +96,7 @@ class Checkable(object):
                "path='%s', " % self.path +
                "type='%s', " % self.type +
                "cos='%s', " % self.cos +
+               "checksum=%d, " % self.checksum +
                "last_check=%f)" % self.last_check)
 
     # -------------------------------------------------------------------------
@@ -141,11 +146,16 @@ class Checkable(object):
         The value of probability [0.0 .. 1.0] indicates the likelihood with
         which we should check files.
 
-        potential outcomes
-         1 read a directory, returning a list of the contents
-         2 tried to read a directory but it was not accessible - return []
-         3 verified a checksum for a file - return True
-         4 checksum verification for a file failed - return False
+        potential outcomes            return
+         read a directory             list of Checkable objects
+                                         (files checksummed)
+         file checksum fail           Alert
+         invalid Checkable type       raise StandardError
+         access denied                "access denied"
+         verified file checksum       "matched"
+         checksum a file              "checksummed"
+         skipped a file               "skipped"
+         hpss unavailable             "unavailable"
         """
         # fire up hsi
         self.probability = probability
@@ -156,14 +166,15 @@ class Checkable(object):
                           "HPSS Unavailable",
                           "connect: Connection refused"])
         if 0 != which:
-            return "unavailable"
+            return "unavailable"    # outcome 5
 
         # if the current object is a directory,
         #    cd to it
         #    run 'ls -P'
         #    add subdirectories to the list of checkables
         #    decide whether to add each file to the sample
-        #    if we add the file to the sample, we run hashcreate for it
+        #    if we add the file to the sample, we run hashcreate for it and set
+        #       its checksum member to 1
         # elif the current object is a file,
         #    run hashverify on it
         #    assess the result
@@ -179,7 +190,11 @@ class Checkable(object):
                 # whether to add it to the sample.
                 S.sendline("ls -P %s" % self.path)
                 S.expect(self.hsi_prompt)
-                rval = self.harvest(S)
+                result = self.harvest(S)
+                if 0 != self.checksum:
+                    rval = "checksummed"
+                else:
+                    rval = "skipped"
 
             elif "Access denied" in S.before:
                 # it's a directory I don't have access to. Drop it from the
@@ -203,9 +218,14 @@ class Checkable(object):
             if "%s: (md5) OK" % self.path in S.before:
                 # hash was verified successfully
                 rval = "matched"
+            elif "no valid checksum found" in S.before:
+                S.sendline("hashcreate %s" % self.path)
+                S.expect(self.hsi_prompt)
+                self.checksum = 1
+                rval = "checksummed"
             else:
                 # hash verification failed
-                rval = Alert("Checksum mismatch: %s" % S.before)
+                rval = Alert.Alert("Checksum mismatch: %s" % S.before)
         else:
             # we have an invalid Checkable type (not 'd' or 'f')
             raise StandardError("Invalid Checkable type: %s" % self.type)
@@ -217,79 +237,6 @@ class Checkable(object):
         self.last_check = time.time()
         self.persist()
         return rval
-
-        # ------------------------------------------
-        # Attempt to cd to the path represented by the current object
-        # S.sendline("cd %s" % self.path)
-        # S.expect(hsi_prompt)
-        # if 'Not a directory' in S.before:
-        #     # it's not a directory, so run the checks on the file
-        #     if self.checksum != '':
-        #         # we have a checksum so we're going to compare it
-        #         # fetch the file to disk
-        #         localname = "/tmp/" + os.path.basename(self.path)
-        #         S.sendline("get %s : %s" % (localname, self.path))
-        #         S.expect(hsi_prompt)
-        # 
-        #         # compute the hash
-        #         m = hashlib.md5()
-        #         m.update(util.contents(localname))
-        # 
-        #         # turn the hash into a hexadecimal string
-        #         filesum =  ''.join(["%02x" % ord(i) for i in m.digest()])
-        # 
-        #         # compare the stored checksum against the newly computed one
-        #         if self.checksum != filesum:
-        #             # outcome 6 -- checksums do not match
-        #             rval = Alert("Recorded checksum '%s' " % self.checksum +
-        #                          "does not match computed " +
-        #                          "checksum '%s' " + filesum +
-        #                          "for file %s" % self.path)
-        #         else:
-        #             # outcome 5 -- checksums do match
-        #             rval = "matched"
-        #     elif 0 < odds and random.randrange(int(odds)) <= 1:
-        #         # outcome 4 -- we're adding it to the sample so we have to
-        #         # fetch the file and compute a checksum on it
-        #         localname = "/tmp/" + os.path.basename(self.path)
-        #         S.sendline("get %s : %s" % (localname, self.path))
-        #         S.expect(hsi_prompt)
-        #         m = hashlib.md5()
-        #         m.update(util.contents(localname))
-        #         self.checksum = ''.join(["%02x" % ord(i) for i in m.digest()])
-        #         os.unlink(localname)
-        #         rval = self
-        #     else:
-        #         # outcome 3 -- we're skipping the file
-        #         rval = 'skipped'
-        # elif 'Access denied' in S.before:
-        #     # outcome 2 -- it's a directory but I don't have access to it
-        #     rval = 'access denied'
-        # else:
-        #     # outcome 1 -- it's a directory -- get the list. we fill in rval
-        #     # with the list of the directory's contents.
-        #     S.sendline("ls -P")
-        #     S.expect(hsi_prompt)
-        # 
-        #     lines = S.before.split('\n')
-        #     for line in lines:
-        #         r = Checkable.fdparse(line)
-        #         if None != r:
-        #             if '/' not in r[1]:
-        #                 fpath = '/'.join([self.path, r[1]])
-        #             else:
-        #                 fpath = r[1]
-        #             new = Checkable(path=fpath, type=r[0], cos=r[2])
-        #             new.persist()
-        #             rval.append(new)
-        # 
-        # S.sendline("quit")
-        # S.expect(pexpect.EOF)
-        # S.close()
-        # 
-        # self.last_check = time.time()
-        # self.persist()
-        # return rval
 
     # -------------------------------------------------------------------------
     def db_delete(self):
@@ -308,17 +255,19 @@ class Checkable(object):
         director(ies).
         """
         db = CrawlDBI.DBI(dbname=dbname)
-        if not db.table_exists(table='checkables'):
-            db.create(table='checkables',
-                      fields=['id integer primary key',
-                              'path text',
-                              'type text',
-                              'cos text',
-                              'last_check int'])
+        db.create(table='checkables',
+                  fields=['id integer primary key',
+                          'path text',
+                          'type text',
+                          'cos text',
+                          'checksum int',
+                          'last_check int'])
+        rows = db.select(table='checkables', fields=[])
+        if len(rows) == 0:
             db.insert(table='checkables',
-                      fields=['path', 'type', 'cos', 'last_check'],
-                      data=[(dataroot, 'd', '', 0)])
-            db.close()
+                      fields=['path', 'type', 'cos', 'checksum', 'last_check'],
+                      data=[(dataroot, 'd', '', 0, 0)])
+        db.close()
             
     # -----------------------------------------------------------------------------
     @classmethod
@@ -387,20 +336,25 @@ class Checkable(object):
         db = CrawlDBI.DBI(dbname=dbname)
         rows = db.select(table='checkables',
                          fields=['rowid', 'path', 'type',
-                                 'cos', 'last_check'],
+                                 'cos', 'checksum', 'last_check'],
                          orderby='last_check')
         for row in rows:
             new = Checkable(rowid=row[0],
                             path=row[1],
                             type=row[2],
                             cos=row[3],
-                            last_check=row[4])
+                            checksum=row[4],
+                            last_check=row[5])
             rval.append(new)
         db.close()
         return rval
 
     # -------------------------------------------------------------------------
     def harvest(self, S):
+        """
+        Given a list of files and directories from hsi, step through them and
+        handle each one.
+        """
         if not hasattr(self, 'dim'):
             setattr(self, 'dim', {})
             self.dim['cos'] = Dimension.Dimension(name='cos')
@@ -414,16 +368,34 @@ class Checkable(object):
                     new.persist()
                     rval.append(new)
                 elif 'f' == r[0]:
-                    self.dim['cos'].update_category(r[2])
-                    if self.addable(r[2]):
+                    if r[1] == self.path and r[0] == self.type:
+                        new = self
+                    else:
                         new = Checkable(path=r[1], type=r[0], cos=r[2])
-                        self.dim['cos'].update_category(r[2],
+                        if new.persist():
+                            self.dim['cos'].update_category(new.cos)
+
+                    if self.addable(new.cos):
+                        self.dim['cos'].update_category(new.cos,
                                                         p_suminc=0,
                                                         s_suminc=1)
-                        new.persist()
-                        rval.append(new)
-                        S.sendline("hashcreate %s" % self.path)
+                        new.checksum = 1
+                        S.sendline("hashcreate %s" % new.path)
                         S.expect(self.hsi_prompt)
+                    else:
+                        # we're not adding it to the sample, but if it already
+                        # has a checksum, it's already part of the sample and
+                        # we need to reflect that.
+                        S.sendline("hashlist %s" % new.path)
+                        S.expect(self.hsi_prompt)
+                        if re.search("\n[0-9a-f]+\smd5\s%s" % new.path,
+                                    S.before):
+                            new.checksum = 1
+                            self.dim['cos'].update_category(new.cos,
+                                                            p_suminc=0,
+                                                            s_suminc=1)
+                    new.persist()
+                    rval.append(new)
         self.dim['cos'].persist()
         return rval
 
@@ -446,6 +418,9 @@ class Checkable(object):
         occurrence exists, raise an exception. If only one occurrence exists,
         update it (setting last_check to 0 if type changes). If no occurrence
         exists, insert it.
+
+        Return True if the item was added to the database, otherwise False.
+        This is used to decide whether the count the item in the population.
         """
         if self.rowid != None and self.last_check == 0.0:
             raise StandardError("%s has rowid != None, last_check == 0.0" %
@@ -460,6 +435,8 @@ class Checkable(object):
         if self.type != 'f' and self.type != 'd':
             raise StandardError("%s has invalid type" % self)
 
+        # assume it's already present
+        rval = False
         db = CrawlDBI.DBI(dbname=self.dbname)
         if self.rowid != None:
             # we have a rowid, so it should be in the database
@@ -477,15 +454,21 @@ class Checkable(object):
                 if rows[0][1] != self.path:
                     raise StandardError("Path value does not match for " +
                                         "%s and %s" % (self, rows[0][1]))
-                # The type is changing. Let's set last_check to 0.0.
+                # The type is changing. Let's set last_check to 0.0. We can
+                # also reset checksum and cos. If it's going 'f' -> 'd',
+                # checksum should be 0 and cos should be '' for a directory. If
+                # it's going 'd' -> 'f', we assume we don't have a checksum for
+                # the new file and we don't know what the cos is.
                 if rows[0][2] != self.type:
+                    self.cos = ''
+                    self.checksum = 0
                     self.last_check = 0.0
                 # update it
                 db.update(table='checkables',
-                          fields=['type', 'cos', 'last_check'],
+                          fields=['type', 'cos', 'checksum', 'last_check'],
                           where='rowid=?',
-                          data=[(self.type, self.cos, self.last_check,
-                                 self.rowid)])
+                          data=[(self.type, self.cos, self.checksum,
+                                 self.last_check, self.rowid)])
             # hmm... we found more than one copy in the database. raise an
             # exception
             else:
@@ -497,21 +480,29 @@ class Checkable(object):
             # it's not there -- we need to insert it
             if 0 == len(rows):
                 db.insert(table='checkables',
-                          fields=['path', 'type', 'cos', 'last_check'],
-                          data=[(self.path, self.type, self.cos, self.last_check)])
+                          fields=['path', 'type', 'cos', 'checksum',
+                                  'last_check'],
+                          data=[(self.path, self.type, self.cos, self.checksum,
+                                 self.last_check)])
+                rval = True
             # it is in the database -- we need to update it
             elif 1 == len(rows):
-                # if type is changing, last_check resets to 0.0
+                # if type is changing, last_check resets to 0.0, checksum to 0,
+                # cos to ''
                 if rows[0][2] != self.type:
                     self.last_check = 0.0
-                    flist=['type', 'cos', 'last_check']
-                    dlist=[(self.type, self.cos, self.last_check, rows[0][0])]
-                elif rows[0][4] < self.last_check:
-                    flist=['type', 'cos', 'last_check']
-                    dlist=[(self.type, self.cos, self.last_check, rows[0][0])]
+                    self.checksum = 0
+                    self.cos = ''
+                    flist=['type', 'cos', 'checksum', 'last_check']
+                    dlist=[(self.type, self.cos, self.checksum,
+                            self.last_check, rows[0][0])]
+                elif rows[0][5] < self.last_check:
+                    flist=['type', 'cos', 'checksum', 'last_check']
+                    dlist=[(self.type, self.cos, self.checksum,
+                            self.last_check, rows[0][0])]
                 else:
-                    flist=['type', 'cos']
-                    dlist=[(self.type, self.cos, rows[0][0])]
+                    flist=['type', 'cos', 'checksum']
+                    dlist=[(self.type, self.cos, self.checksum, rows[0][0])]
                 # update it
                 db.update(table='checkables',
                           fields=flist,
@@ -522,7 +513,8 @@ class Checkable(object):
                 raise StandardError("There appears to be more than one copy " +
                                     "of %s in the database" % self)
         db.close()
-        
+        return rval
+    
     # -------------------------------------------------------------------------
     @classmethod
     def set_dbname(cls, dbname=default_dbname):
@@ -574,15 +566,25 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
         c = Checkable(path=testdir + '/crawler.tar.idx', type='f')
-        self.assertFalse(c in dirlist,
-                        "expected to not find %s in %s" % (c, dirlist))
+        self.assertTrue(c in dirlist,
+                        "expected to find %s in %s" % (c, dirlist))
         c = Checkable(path=testdir + '/subdir1', type='d')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
         c = Checkable(path=testdir + '/subdir2', type='d')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
-    
+
+        for c in dirlist:
+            if c.path == "%s/crawler.tar" % testdir:
+                self.expected(1, c.checksum)
+            elif c.path == "%s/crawler.tar.idx" % testdir:
+                self.expected(1, c.checksum)
+            elif c.path == "%s/subdir1" % testdir:
+                self.expected(0, c.checksum)
+            elif c.path == "%s/subdir2" % testdir:
+                self.expected(0, c.checksum)
+                
     # -------------------------------------------------------------------------
     def test_check_file(self):
         """
@@ -627,8 +629,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('', x.cos)
         self.expected(0, x.last_check)
         self.expected(None, x.rowid)
-        if hasattr(x, 'checksum'):
-            self.fail("Checkables no longer carry the checksum around")
             
     # -------------------------------------------------------------------------
     def test_ctor_args(self):
@@ -657,23 +657,6 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.fail("Expected an exception but didn't get one.")
         except StandardError, e:
             self.assertEqual('Attribute path_x is invalid for Checkable'
-                             in str(e), True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Expected a StandardError but got this instead: %s" %
-                      util.line_quote(tb.format_exc()))
-            
-    # -------------------------------------------------------------------------
-    def test_ctor_checksum(self):
-        """
-        Verify that the constructor rejects checksum arg
-        """
-        try:
-            x = Checkable(path='/one/two/three', type='f', checksum='foo', last_check=72)
-            self.fail("Expected an exception but didn't get one.")
-        except StandardError, e:
-            self.assertEqual('Attribute checksum is invalid for Checkable'
                              in str(e), True,
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
@@ -790,10 +773,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
 
         # create a dummy 'checkables' table in the test database
-        self.db_mk_dummy_table()
+        Checkable.ex_nihilo(dbname=self.testdb)
         pre = os.stat(self.testdb)
         
         # call the test target routine
+        time.sleep(1.0)
         Checkable.ex_nihilo(dbname=self.testdb)
 
         # verify that the file's mtime is unchanged and its size is unchanged
@@ -1307,6 +1291,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         x[1].last_check = 0
         x[1].cos = '1234'
+        x[1].checksum = 1
         x[1].rowid = None
         x[1].type = 'f'
         x[1].persist()
@@ -1315,8 +1300,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
+        self.expected(0, x[1].checksum)
         self.expected(0, x[1].last_check)
-        self.expected('1234', x[1].cos)
+        self.expected('', x[1].cos)
     
     # -------------------------------------------------------------------------
     def test_persist_file_exist_ff(self):
@@ -1411,6 +1397,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                "path='/abc/def', " +
                "type='d', " +
                "cos='9999', " +
+               "checksum=0, " +
                "last_check=%f)" % now)
                     
         x = eval(exp)
@@ -1443,15 +1430,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', 0)])
-        db.close()
-        
-    # -------------------------------------------------------------------------
-    def db_mk_dummy_table(self):
-        """
-        Create a table named 'checkables' but we don't care what fields it has
-        """
-        db = CrawlDBI.DBI(dbname=self.testdb)
-        db.create(table='checkables', fields=['id int'])
         db.close()
         
     # -------------------------------------------------------------------------
