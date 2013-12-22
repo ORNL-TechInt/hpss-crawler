@@ -19,14 +19,15 @@ def main(args):
     start = time.time()
     logfile = 'crawl_test.log'
     tr = te = tf = 0
-    for modname in ['crawl',
+    for modname in ['crawlTest',
                     'AlertTest',
-                    'Checkable',
+                    'CheckableTest',
                     'CrawlConfigTest',
-                    'CrawlDBI',
-                    'CrawlPlugin',
-                    'Dimension',
-                    'testhelp',
+                    'CrawlDBITest',
+                    'CrawlPluginTest',
+                    'DimensionTest',
+                    'testhelpTest',
+                    # 'toolframeTest.py',
                     'UtilTest',
                     ]:
         script = modname + '.py'
