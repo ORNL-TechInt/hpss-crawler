@@ -172,7 +172,7 @@ def ez_launch(main = None,
     pname = re.sub('.py$', '', sname)
     if sname.endswith('.py') and not os.path.exists(pname) and '-L' in sys.argv:
         print("creating symlink: %s -> %s" % (pname, sname))
-        os.symlink(sname, pname)
+        os.symlink(os.path.basename(sname), pname)
     elif sys._getframe(1).f_code.co_name in ['?', '<module>']:
         if sname.endswith('.py'):
             if '-d' in sys.argv:
