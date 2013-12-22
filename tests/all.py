@@ -14,8 +14,8 @@ import time
 import toolframe
 import util
 
+pdb.set_trace()
 def main(args):
-    # pdb.set_trace()
     start = time.time()
     logfile = 'crawl_test.log'
     tr = te = tf = 0

@@ -21,11 +21,14 @@ needed.
 
 ## Running Tests
 
-   $ crawl.py [-v]
+   $ tests/all
 
 Test results are written to stdout and also logged in crawl_test.log so a
 history is available.
 
+The tests for a specific component can be run like this:
+
+   $ tests/<component-testfile>.py
 
 ## Git Repo Branches
 
