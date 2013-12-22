@@ -17,7 +17,9 @@ import util
 pdb.set_trace()
 def main(args):
     start = time.time()
-    logfile = 'crawl_test.log'
+    mself = sys.modules[__name__]
+    logfile = '%s/crawl_test.log' % os.path.dirname(mself.__file__)
+    startdir = os.getcwd()
     tr = te = tf = 0
     for modname in ['crawlTest',
                     'AlertTest',
@@ -38,6 +40,7 @@ def main(args):
         tr += r
         te += e
         tf += f
+        os.chdir(startdir)
     print("all tests: %0.3fs (run: %d; errors: %d; failures: %d)" %
           (time.time() - start, tr, te, tf))
 

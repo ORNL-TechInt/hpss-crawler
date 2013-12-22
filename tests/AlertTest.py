@@ -21,6 +21,9 @@ import time
 import toolframe
 import util
 
+mself = sys.modules[__name__]
+logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -37,7 +40,7 @@ def tearDownModule():
 
 # -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):
-    testdir = 'test.d'
+    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
     
     # -------------------------------------------------------------------------
     def test_init(self):
@@ -97,7 +100,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.add_section('alert_section')
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
-        cfg.set('alert_section', 'shell', 'test.d/runme')
+        cfg.set('alert_section', 'shell', '%s/runme' % self.testdir)
         util.get_logger(cmdline=logfile, reset=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
@@ -150,4 +153,4 @@ class AlertTest(testhelp.HelpedTestCase):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='AlertTest',
-                        logfile='crawl_test.log')
+                        logfile=logfile)
