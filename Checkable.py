@@ -25,19 +25,12 @@ have a cos or a checksum.
 import Alert
 import CrawlDBI
 import Dimension
-import os
-import pdb
 import pexpect
 import random
 import re
-import stat
-import sys
 import testhelp
 import time
 import toolframe
-import traceback as tb
-import unittest
-import util
 
 default_dbname = 'HIC.db'
 
@@ -161,7 +154,6 @@ class Checkable(object):
         self.probability = probability
         rval = []
         S = pexpect.spawn('hsi -q', timeout=300)
-        # S.logfile = sys.stdout
         which = S.expect([self.hsi_prompt,
                           "HPSS Unavailable",
                           "connect: Connection refused"])
@@ -533,21 +525,6 @@ class Checkable(object):
         Set the database name for future Checkable objects
         """
         Checkable.dbname = dbname
-
-# -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Create the test directory in preparation to run the tests.
-    """
-    Checkable.set_dbname(CheckableTest.testdb)
-    testhelp.module_test_setup(CheckableTest.testdir)
-    
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up the test directory after a test run.
-    """
-    testhelp.module_test_teardown(CheckableTest.testdir)
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

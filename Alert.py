@@ -35,7 +35,6 @@ import email.mime.text
 import os
 import smtplib
 import socket
-import sys
 import util
 
 # -----------------------------------------------------------------------------

@@ -321,21 +321,6 @@ class HelpedTestCase(unittest.TestCase):
     """
     This class adds some goodies to the standard unittest.TestCase
     """
-    # --------------------------------------------------------------------------
-    def cd(self, dirname):
-        """
-        Attempt to cd into a test directory. If it does not exist, create it
-        and then cd into it.
-        """
-        try:
-            os.chdir(dirname)
-        except OSError as e:
-            if 'No such file or directory' in str(e):
-                os.makedirs(dirname)
-                os.chdir(dirname)
-            else:
-                raise
-
     # -------------------------------------------------------------------------
     def expected(self, expval, actual):
         """
@@ -384,6 +369,31 @@ class HelpedTestCase(unittest.TestCase):
         f = open(fname, 'w')
         cfg.write(f)
         f.close()
+
+# -----------------------------------------------------------------------------
+class Chdir(object):
+    """
+    This class allows for doing the following:
+
+        with Chdir('/some/other/directory'):
+            assert(in '/some/other/directory')
+            do_stuff()
+        assert(back at our starting point)
+
+    No matter what happens in do_stuff(), we're guaranteed that at the assert,
+    we'll be back in the directory we started from.
+    """
+    # ------------------------------------------------------------------------
+    def __init__(self, target):
+        self.start = os.getcwd()
+        self.target = target
+    # ------------------------------------------------------------------------
+    def __enter__(self):
+        os.chdir(self.target)
+        return self.target
+    # ------------------------------------------------------------------------
+    def __exit__(self, type, value, traceback):
+        os.chdir(self.start)
 
 # -----------------------------------------------------------------------------
 def show_stdout(value=None):

@@ -11,13 +11,10 @@ import CrawlConfig
 import email.mime.text as emt
 import fakesmtp
 import os
-import shutil
-import smtplib
 import socket
 import stat
 import sys
 import testhelp
-import time
 import toolframe
 import util
 
