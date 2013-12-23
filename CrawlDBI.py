@@ -9,7 +9,8 @@ import toolframe
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
     """
-    Each of the specific database interface classes inherit from this one
+    Each of the specific database interface classes (DBIsqlite, DBImysql, etc.)
+    inherit from this one
     """
     settable_attrl = ['dbname', 'host', 'username', 'password']
     
@@ -19,6 +20,12 @@ class DBI(object):
     This is the generic database interface object. The application uses this
     class so it doesn't have to know anything about talking to the database
     type actually in use.
+
+    When a DBI object is created, it looks for an argument named "dbtype" in
+    kwargs that should contain "sqlite", "mysql", or "db2".
+
+    The DBI creates an internal object of the appropriate type and then
+    forwards all method calls to it.
     """
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
@@ -40,42 +47,41 @@ class DBI(object):
         enough, we may need more control over commits but autocommit will do
         for now.
         """
-        if 'cfg' not in kwargs:
-            cfgname = 'crawl.cfg'
-            cfg = CrawlConfig.get_config(cfname=cfgname)
-        elif type(kwargs['cfg']) == str:
-            cfgname = kwargs['cfg']
-            cfg = CrawlConfig.get_config(cfname=cfgname)
-            del kwargs['cfg']
-        elif isinstance(kwargs['cfg'], CrawlConfig.CrawlConfig):
-            cfg = kwargs['cfg']
-            del kwargs['cfg']
-        else:
-            raise DBIerror('Invalid type for cfg arg to DBI constructor')
-
+        # work out the dbtype
         try:
-            dbtype = cfg.get('dbi', 'dbtype')
+            if 'dbtype' in kwargs:
+                dbtype = kwargs['dbtype']
+                del kwargs['dbtype']
+            elif 'cfg' in kwargs:
+                cfg = kwargs['cfg']
+                del kwargs['cfg']
+                dbtype = cfg.get('dbi', 'dbtype')
+            else:
+                cfg = CrawlConfig.get_config()
+                dbtype = cfg.get('dbi', 'dbtype')
         except CrawlConfig.NoSectionError:
             dbtype = 'sqlite'
         except CrawlConfig.NoOptionError:
             dbtype = 'sqlite'
             
         if dbtype == 'sqlite':
-            self.dbobj = DBIsqlite(*args, **kwargs)
+            self._dbobj = DBIsqlite(*args, **kwargs)
         elif dbtype == 'mysql':
-            self.dbobj = DBImysql(*args, **kwargs)
+            self._dbobj = DBImysql(*args, **kwargs)
         elif dbtype == 'db2':
-            self.dbobj = DBIdb2(*args, **kwargs)
+            self._dbobj = DBIdb2(*args, **kwargs)
         else:
             raise DBIerror("Unknown database type")
-        
+
+        self.dbname = self._dbobj.dbname
+
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
         Human readable representation for the object provided by the
         database-specific class.
         """
-        return self.dbobj.__repr__()
+        return self._dbobj.__repr__()
     
     # -------------------------------------------------------------------------
     def table_exists(self, **kwargs):
@@ -83,7 +89,7 @@ class DBI(object):
         Return True if the table argument is not empty and the named table
         exists (even if the table itself is empty). Otherwise, return False.
         """
-        return self.dbobj.table_exists(**kwargs)
+        return self._dbobj.table_exists(**kwargs)
 
     # -------------------------------------------------------------------------
     def close(self):
@@ -91,7 +97,7 @@ class DBI(object):
         Close the connection to the database. After a call to close(),
         operations are not allowed on the database.
         """
-        return self.dbobj.close()
+        return self._dbobj.close()
     
     # -------------------------------------------------------------------------
     def create(self, **kwargs):
@@ -101,7 +107,14 @@ class DBI(object):
 
             ['id int primary key', 'name text', 'category xtext', ... ]
         """
-        return self.dbobj.create(**kwargs)
+        return self._dbobj.create(**kwargs)
+    
+    # -------------------------------------------------------------------------
+    def cursor(self, **kwargs):
+        """
+        Return a database cursor
+        """
+        return self._dbobj.cursor(**kwargs)
     
     # -------------------------------------------------------------------------
     def delete(self, **kwargs):
@@ -109,7 +122,7 @@ class DBI(object):
         Delete data from the table. table is a table name (string). where is a
         where clause (string). data is a tuple of fields.
         """
-        return self.dbobj.delete(**kwargs)
+        return self._dbobj.delete(**kwargs)
     
     # -------------------------------------------------------------------------
     def insert(self, **kwargs):
@@ -117,7 +130,7 @@ class DBI(object):
         Insert data into the table. Fields is a list of field names. Data is a
         list of tuples.
         """
-        return self.dbobj.insert(**kwargs)
+        return self._dbobj.insert(**kwargs)
     
     # -------------------------------------------------------------------------
     def select(self, **kwargs):
@@ -135,7 +148,7 @@ class DBI(object):
         retrieved from the database. If orderby contains an field name, the
         rows are returned in that order.
         """
-        return self.dbobj.select(**kwargs)
+        return self._dbobj.select(**kwargs)
     
     # -------------------------------------------------------------------------
     def update(self, **kwargs):
@@ -143,7 +156,7 @@ class DBI(object):
         Update data in the table. Where indicates which records are to be
         updated. Fields is a list of field names. Data is a list of tuples.
         """
-        return self.dbobj.update(**kwargs)
+        return self._dbobj.update(**kwargs)
     
 # -----------------------------------------------------------------------------
 class DBIerror(Exception):
@@ -259,6 +272,17 @@ class DBIsqlite(DBI_abstract):
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
     
+    # -------------------------------------------------------------------------
+    def cursor(self):
+        """
+        See DBI.cursor()
+        """
+        try:
+            rval = self.dbh.cursor()
+            return rval
+        except sqlite3.Error, e:
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
+
     # -------------------------------------------------------------------------
     def delete(self, table='', where='', data=()):
         """

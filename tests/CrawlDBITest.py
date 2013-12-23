@@ -48,10 +48,10 @@ class DBITest(testhelp.HelpedTestCase):
         tcfg.add_section('dbi')
         tcfg.set('dbi', 'dbtype', 'sqlite')
         a = CrawlDBI.DBI(dbname=self.testdb, cfg=tcfg)
-        self.assertTrue(hasattr(a, 'dbobj'),
-                        "Expected to find a dbobj attribute on %s" % a)
-        self.assertTrue(isinstance(a.dbobj, CrawlDBI.DBIsqlite),
-                        "Expected %s to be a DBIsqlite object" % a.dbobj)
+        self.assertTrue(hasattr(a, '_dbobj'),
+                        "Expected to find a _dbobj attribute on %s" % a)
+        self.assertTrue(isinstance(a._dbobj, CrawlDBI.DBIsqlite),
+                        "Expected %s to be a DBIsqlite object" % a._dbobj)
         
     # -------------------------------------------------------------------------
     def test_repr(self):
@@ -68,9 +68,19 @@ class DBITest(testhelp.HelpedTestCase):
         self.expected(str(b), str(a))
 
 # -----------------------------------------------------------------------------
-class DBIsqliteTest(testhelp.HelpedTestCase):
+class DBItstBase(testhelp.HelpedTestCase):
     """
-    Tests for the DBIsqlite class
+    Basic tests for the DBI<dbname> classes.
+
+    Arranging the tests this way allows us to avoid having to write a complete,
+    independent set of tests for each database type.
+
+    Class DBIsqliteTest, which inherits the test methods from this one, will
+    set the necessary parameters to select the sqlite database type so that
+    when it is processed by the test running code, the tests will be run on an
+    sqlite database. Similarly, DBImysqlTest will set the necessary parameters
+    to select that database type, then run the inherited tests on a mysql
+    database.
     """
     testdir = DBITest.testdir
     testdb = '%s/test.db' % testdir
@@ -86,7 +96,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling close() should free up the db resources and make the database
         handle unusable.
         """
-        a = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        a = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         a.close()
         try:
             a.table_exists(table='dimension')
@@ -103,7 +113,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling create() with an empty field list should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.create(table='nogood', fields=[])
             self.fail("Expected exception on empty field list, not thrown")
@@ -122,7 +132,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling create() with an empty table name should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.create(table='', fields=['abc text'])
             self.fail("Expected exception on empty table name, not thrown")
@@ -143,7 +153,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling create() with a non-list as the fields argument should
         get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.create(table='create_nlf', fields='notdict')
             self.fail("Expected exception on non-list fields, not thrown")
@@ -164,10 +174,10 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling create() with correct arguments should create the table
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table='create_yes', fields=['one text',
                                               'two int'])
-        dbc = db.dbh.cursor()
+        dbc = db.cursor()
         dbc.execute("""
         select name from sqlite_master where type='table' and name='create_yes'
         """)
@@ -182,10 +192,11 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Verify that a new object has the right attributes with the right
         default values
         """
-        a = CrawlDBI.DBIsqlite(dbname=self.testdb)
-        dirl = [q for q in dir(a) if not q.startswith('__')]
-        xattr = ['close', 'create', 'dbh', 'dbname', 'delete', 'insert',
-                 'select', 'settable_attrl', 'table_exists', 'update']
+        a = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        dirl = [q for q in dir(a) if not q.startswith('_')]
+        xattr = ['close', 'create', 'dbname', 'delete', 'insert',
+                 'select', 'table_exists', 'update',
+                 'cursor']
 
         for attr in dirl:
             if attr not in xattr:
@@ -202,7 +213,8 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         exception
         """
         try:
-            a = CrawlDBI.DBIsqlite(dbname=self.testdb, badattr="frooble")
+            a = CrawlDBI.DBI(dbname=self.testdb, badattr="frooble",
+                             dbtype=self.dbtype)
             self.fail("Expected exception on bad attribute not thrown")
         except CrawlDBI.DBIerror, e:
             self.assertTrue("Attribute 'badattr' is not valid" in str(e),
@@ -222,7 +234,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         # first, we create a database file from scratch
         util.conditional_rm(self.testdb)
         tabname = util.my_name()
-        dba = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        dba = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         dba.create(table=tabname, fields=['field1 text'])
         dba.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -232,7 +244,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                             "Expected %s to contain some data" % self.testdb)
 
         # now, when we try to access it, it should be there
-        dbb = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        dbb = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         self.assertTrue(dbb.table_exists(table=tabname))
         dbb.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -249,7 +261,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         os.mkdir(self.testdb, 0777)
         try:
-            db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -265,7 +277,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         util.conditional_rm(self.testdb)
         testhelp.touch(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table='testtab', fields=['gru text'])
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -282,7 +294,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         os.mkfifo(self.testdb)
         try:
-            db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -297,7 +309,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Attempt to create an object with no dbname should get an exception
         """
         try:
-            a = CrawlDBI.DBIsqlite()
+            a = CrawlDBI.DBI(dbtype=self.dbtype)
             self.fail("Expected an exception but didn't get one")
         except CrawlDBI.DBIerror, e:
             gotx = True
@@ -318,7 +330,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         create it.
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected %s to exists but it does not" % self.testdb)
@@ -333,7 +345,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sockname)
         try:
-            db = CrawlDBI.DBIsqlite(dbname=sockname)
+            db = CrawlDBI.DBI(dbname=sockname, dbtype=self.dbtype)
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -353,7 +365,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         os.mkdir(self.testdb + '_xyz', 0777)
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
         try:
-            db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -372,7 +384,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         util.conditional_rm(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table='testtab', fields=['froob text'])
         db.close
 
@@ -394,7 +406,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb + '_xyz')
         testhelp.touch(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table='testtab', fields=['froob text'])
         db.close
 
@@ -416,7 +428,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         f.close()
 
         try:
-            db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -644,7 +656,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling insert on fields not in the table should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table='fnox', fields=['one text', 'two text'])
         try:
             db.insert(table='fnox',
@@ -668,7 +680,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with an empty data list should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.insert(table='mtd', fields=['one', 'two'], data=[])
             self.fail("Expected an exception but didn't get one")
@@ -688,7 +700,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with an empty field list should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.insert(table='mtd', fields=[], data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -708,7 +720,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with an empty table name should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.insert(table='', fields=['one', 'two'], data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -728,7 +740,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with a non-string table name should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.insert(table=32, fields=['one', 'two'], data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -748,7 +760,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with a non-list fields arg should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.insert(table='nlf', fields='froo', data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -768,7 +780,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         Calling insert with a non-list data arg should get an exception
         """
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.insert(table='nlf', fields=['froo', 'pizzazz'], data={})
             self.fail("Expected an exception but didn't get one")
@@ -789,7 +801,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling insert on a non-existent table should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         # db.create(table='tnox', fields=['one text', 'two text'])
         try:
             db.insert(table='tnox',
@@ -820,11 +832,11 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         testdata = [(1, 'sinbad', 54),
                     (2, 'zorro', 98)]
 
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table=tname, fields=fdef)
         db.insert(table=tname, fields=fnames, data=testdata)
                   
-        dbc = db.dbh.cursor()
+        dbc = db.cursor()
         dbc.execute("""
         select * from insert_yes
         """)
@@ -839,7 +851,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() specifying fields should get only the fields requested
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -865,7 +877,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         The data returned should match the where clause.
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -887,7 +899,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -918,7 +930,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         should get an exception -- the data would be ignored
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -949,7 +961,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         data list should return the data matching the where clause
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -971,7 +983,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         empty field list indicates the wildcard option
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -997,7 +1009,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         inserted
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1021,7 +1033,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with an empty table name should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1051,7 +1063,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() with an empty where arg should get all the data
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1076,7 +1088,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1108,7 +1120,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1139,7 +1151,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1170,7 +1182,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1201,7 +1213,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1232,7 +1244,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         order requested
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1256,7 +1268,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling select() specifying where should get only the rows requested
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1281,9 +1293,9 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         tname = util.my_name().replace('test_', '')
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table=tname, fields=self.fdef)
-        self.expected(True, db.table_exists(tname))
+        self.expected(True, db.table_exists(table=tname))
 
     # -------------------------------------------------------------------------
     def test_table_exists_no(self):
@@ -1293,8 +1305,8 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         """
         tname = util.my_name().replace('test_', '')
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
-        self.expected(False, db.table_exists(tname))
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        self.expected(False, db.table_exists(table=tname))
         
     # -------------------------------------------------------------------------
     def test_update_f(self):
@@ -1307,7 +1319,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                  ('zumpy', 47, 202.1)]
         
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1328,7 +1340,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling update() with an empty data list should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table=tname, fields=self.fnames, data =[])
             self.fail("Expected exception not thrown")
@@ -1348,7 +1360,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling update() with an empty field list should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table=tname, fields=[], data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1368,7 +1380,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         Calling update() with an empty table name should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table='', fields=self.fnames, data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1394,7 +1406,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                  ('zumpy', 47, 202.1)]
         
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1416,7 +1428,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table=tname, fields=17, data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1438,7 +1450,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table=tname, fields=self.fnames, data='notalist')
             self.fail("Expected exception not thrown")
@@ -1460,7 +1472,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table=38, fields=self.fnames, data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1482,7 +1494,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         try:
             db.update(table=tname, fields=self.fnames, data=self.testdata,
                       where=[])
@@ -1509,7 +1521,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                  ('zumpy', 47, 202.1)]
         
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1537,7 +1549,7 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                              (4, 'meg', 19),
                              (5, 'gertrude', 95)]}
         
-        db = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
         db.create(table=testdata['tabname'],
                   fields=testdata['flist'])
         db.insert(table=testdata['tabname'],
@@ -1545,6 +1557,11 @@ class DBIsqliteTest(testhelp.HelpedTestCase):
                   data=testdata['rows'])
         return (db, testdata)
     
+# -----------------------------------------------------------------------------
+class DBIsqliteTest(DBItstBase):
+    dbtype = 'sqlite'
+    pass
+
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test=['DBITest', 'DBIsqliteTest'],
