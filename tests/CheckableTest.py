@@ -2,22 +2,15 @@
 """
 Tests for Checkable.py
 """
-import Alert
 from Checkable import Checkable
 import CrawlDBI
-import Dimension
 import os
-import pdb
-import pexpect
-import random
-import re
 import stat
 import sys
 import testhelp
 import time
 import toolframe
 import traceback as tb
-import unittest
 import util
 
 mself = sys.modules[__name__]

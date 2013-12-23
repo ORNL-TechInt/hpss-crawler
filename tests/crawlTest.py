@@ -3,26 +3,14 @@
 Tests for code in crawl.py
 """
 import CrawlConfig
-import CrawlPlugin
 import crawl
 import copy
-import daemon
-import glob
-import logging
-import optparse
 import os
-import pdb
 import pexpect
-import re
-import shutil
-import socket
-import stat
 import sys
 import testhelp
 import time
 import toolframe
-import traceback as tb
-import unittest
 import util
 
 mself = sys.modules[__name__]
