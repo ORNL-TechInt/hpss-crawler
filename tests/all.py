@@ -14,7 +14,7 @@ import time
 import toolframe
 import util
 
-pdb.set_trace()
+# pdb.set_trace()
 def main(args):
     start = time.time()
     mself = sys.modules[__name__]
