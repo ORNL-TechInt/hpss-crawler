@@ -3,7 +3,6 @@
 A generic daemon class
 """
 import atexit
-import errno
 import os
 import resource
 import sys
@@ -44,6 +43,10 @@ class Daemon:
         self.logger = logger
         self.workdir = workdir
         
+    # -------------------------------------------------------------------------
+    def __repr__(self):
+        return("Daemon<pidfile=%s>" % self.pidfile)
+
     # -------------------------------------------------------------------------
     def daemonize(self):
         """
@@ -154,7 +157,7 @@ class Daemon:
     # -------------------------------------------------------------------------
     def get_max_fd(self):
         """
-        Find out what the system's highest file descriptor can be
+        Find out what the system's highest per process file descriptor can be
         """
         limits = resource.getrlimit(resource.RLIMIT_NOFILE)
         result = limits[1]

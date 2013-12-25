@@ -27,6 +27,7 @@ def main(args):
                     'CrawlConfigTest',
                     'CrawlDBITest',
                     'CrawlPluginTest',
+                    'daemonTest',
                     'DimensionTest',
                     'testhelpTest',
                     # 'toolframeTest.py',
