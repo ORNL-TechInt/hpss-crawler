@@ -13,9 +13,6 @@ import time
 import toolframe
 import util
 
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
-
 # ------------------------------------------------------------------------------
 def setUpModule():
     """
@@ -43,7 +40,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     """
     Tests for the code in crawl.py
     """
-    testdir = '%s/test.d' % os.path.dirname(sys.modules[__name__].__file__)
+    testdir = testhelp.testdata(__name__)
     plugdir = '%s/plugins' % testdir
     default_logpath = '%s/test_default_hpss_crawl.log' % testdir
     cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
@@ -673,4 +670,4 @@ class CrawlTest(testhelp.HelpedTestCase):
 
 # ------------------------------------------------------------------------------
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
-toolframe.ez_launch(test='CrawlTest', logfile=logfile)
+toolframe.ez_launch(test='CrawlTest', logfile=testhelp.testlog(__name__))

@@ -17,9 +17,6 @@ import toolframe
 import traceback as tb
 import util
 
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
-
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -41,7 +38,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     """
     This class contains the tests for the CrawlPlugin class.
     """
-    plugdir = '%s/test_plugins' % os.path.dirname(mself.__file__)
+    plugdir = '%s/test_plugins' % testhelp.testroot(__name__)
     
     # -------------------------------------------------------------------------
     def test_fire(self):
@@ -512,4 +509,4 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='CrawlPluginTest',
-                        logfile=logfile)
+                        logfile=testhelp.testlog(__name__))

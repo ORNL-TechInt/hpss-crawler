@@ -13,9 +13,6 @@ import toolframe
 import traceback as tb
 import util
 
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
-
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -33,7 +30,7 @@ def tearDownModule():
 
 # -----------------------------------------------------------------------------
 class CheckableTest(testhelp.HelpedTestCase):
-    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
+    testdir = testhelp.testdata(__name__)
     testdb = '%s/test.db' % testdir
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
     testpath = '/home/tpb/TODO'
@@ -966,5 +963,5 @@ class CheckableTest(testhelp.HelpedTestCase):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='CheckableTest',
-                        logfile=logfile)
+                        logfile=testhelp.testlog(__name__))
     

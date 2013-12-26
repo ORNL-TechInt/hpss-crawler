@@ -369,9 +369,3 @@ class CrawlConfig(ConfigParser.ConfigParser):
             for item in self.options(section):
                 fp.write("%s = %s\n" % (item, self.get(section, item)))
             fp.write("\n")
-
-# -----------------------------------------------------------------------------
-launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
-if __name__ == '__main__':
-    toolframe.ez_launch(test='CrawlConfigTest',
-                        logfile='crawl_test.log')

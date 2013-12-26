@@ -17,19 +17,12 @@ Extensions to python's standard unittest module
     
 """
 import CrawlConfig
-import logging, logging.handlers
+import optparse
 import os
-import pdb
-import pexpect
 import shutil
-import socket
 import sys
-import StringIO
-import toolframe
 import unittest
 import util
-
-from optparse import *
 
 tlogger = None
 
@@ -52,7 +45,7 @@ def main(args=None, filter=None, logfile=None):
     """
     if args == None:
         args = sys.argv
-    p = OptionParser()
+    p = optparse.OptionParser()
     p.add_option('-a', '--args',
                  action='store', default='', dest='testargs',
                  help='args for test routines')
@@ -190,6 +183,18 @@ def testargs(value=''):
         testargs._value = value
 
     return rval
+
+# -----------------------------------------------------------------------------
+def testlog(mname):
+    return "%s/crawl_test.log" % os.path.dirname(sys.modules[mname].__file__)
+
+# -----------------------------------------------------------------------------
+def testdata(mname):
+    return "%s/test.d" % os.path.dirname(sys.modules[mname].__file__)
+
+# -----------------------------------------------------------------------------
+def testroot(mname):
+    return os.path.dirname(sys.modules[mname].__file__)
 
 # -----------------------------------------------------------------------------
 def list_tests(a, final, testlist):
@@ -497,101 +502,6 @@ def write_file(filename, mode=0644, content=None):
     os.chmod(filename, mode)
                         
 # -----------------------------------------------------------------------------
-class TesthelpTest(unittest.TestCase):
-    """
-    Tests for testhelp code.
-    """
-    # -------------------------------------------------------------------------
-    def test_all_tests(self):
-        """
-        The all_test() routine selects tests from a list based on the filter
-        (its second argument). We sort the lists to ensure they'll match as
-        long as they have the same contents.
-        """
-        all = ['TesthelpTest.test_all_tests',
-               'TesthelpTest.test_list_tests',
-               'TesthelpTest.test_expected_vs_got'].sort()
-        l = all_tests('__main__').sort()
-        expectVSgot(all, l)
-        l = all_tests('__main__', 'no such tests')
-        expectVSgot([], l)
-        l = all_tests('__main__', 'helpTest').sort()
-        expectVSgot(all, l)
-
-    # -------------------------------------------------------------------------
-    def test_list_tests(self):
-        """
-        Method redirected_list_test() tests the list_tests() routine. Depending
-        on its arguments, it should select different entries from the list of
-        tests in tlist. Since list_tests() writes directly to stdout, we have
-        to redirect stdout to a StringIO object momentarily.
-        """
-        tlist = ['one', 'two', 'three', 'four', 'five']
-        self.redirected_list_test([],
-                                  '',
-                                  tlist,
-                                  "one\ntwo\nthree\nfour\nfive\n")
-        self.redirected_list_test(['', 'o'],
-                                  '',
-                                  tlist,
-                                  "one\ntwo\nfour\n")
-        self.redirected_list_test(['', 'e'],
-                                  '',
-                                  tlist,
-                                  "one\nthree\nfive\n")
-
-    # -------------------------------------------------------------------------
-    def redirected_list_test(self, args, final, testlist, expected):
-        """
-        Handle one of the list_tests() tests from the routine above.
-        """
-        s = StringIO.StringIO()
-        save_stdout = sys.stdout
-        sys.stdout = s
-        list_tests(args, final, testlist)
-        sys.stdout = save_stdout
-
-        r = s.getvalue()
-        s.close()
-        self.assertEqual(expected, r,
-                         "Expected '%s', got '%s'" %
-                         (expected, r))
-
-    # -------------------------------------------------------------------------
-    def test_expected_vs_got(self):
-        """
-        Test expected_vs_got(). If expected and got match, the output should be
-        empty. If they don't match, this should be reported. Again, we have to
-        redirect stdout.
-        """
-        self.redirected_evg('', '', '')
-        self.redirected_evg('one', 'two',
-                            "EXPECTED: 'one'\n" +
-                            "GOT:      'two'\n")
-
-    # -------------------------------------------------------------------------
-    def redirected_evg(self, exp, got, expected):
-        """
-        Redirect stdout, run expected_vs_got() and return the result
-        """
-        s = StringIO.StringIO()
-        save_stdout = sys.stdout
-        sys.stdout = s
-        try:
-            expectVSgot(exp, got)
-        except AssertionError:
-            pass
-        r = s.getvalue()
-        s.close()
-        sys.stdout = save_stdout
-
-        try:
-            assert(r.startswith(expected))
-        except AssertionError:
-            print "expected: '''\n%s'''" % expected
-            print "got:      '''\n%s'''" % r
-        
-# -----------------------------------------------------------------------------
 class UnderConstructionError(Exception):
     """
     This error class can be used to cause tests that are under construction to
@@ -611,8 +521,3 @@ class UnderConstructionError(Exception):
         Human readable representaton of the error
         """
         return repr(self.value)
-    
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='TesthelpTest',
-                        logfile='crawl_test.log')

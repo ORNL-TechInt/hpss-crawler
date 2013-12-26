@@ -5,13 +5,8 @@ Tests for util.py
 import CrawlConfig
 import logging
 import os
-import pdb
-import socket
-import sys
 import testhelp
-import time
 import toolframe
-import unittest
 import util
 
 # -----------------------------------------------------------------------------
@@ -34,7 +29,7 @@ class UtilTest(testhelp.HelpedTestCase):
     """
     Tests for util.py
     """
-    testdir = './test.d'
+    testdir = testhelp.testdata(__name__)
     
     # -------------------------------------------------------------------------
     def test_csv_list(self):
@@ -254,4 +249,4 @@ class UtilTest(testhelp.HelpedTestCase):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='UtilTest',
-                        logfile='crawl_test.log')
+                        logfile=testhelp.testlog(__name__))
