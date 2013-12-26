@@ -295,7 +295,8 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
 
-        self.assertEqual(crawl.is_running(), True)
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to be running but it is not")
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual('crawl: CONFIG: [other_plugin]' in util.contents(logpath),
@@ -412,7 +413,8 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin("crawler_pid", result)
 
-        self.assertEqual(crawl.is_running(), True)
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to be running but it is not")
         self.assertEqual(os.path.exists('crawler_pid'), True)
 
         cmd = 'crawl status'
