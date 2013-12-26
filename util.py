@@ -3,6 +3,7 @@
 import logging
 import os
 import pdb
+import re
 import socket
 import sys
 import time
@@ -144,6 +145,10 @@ def my_name():
     Return the caller's name
     """
     return sys._getframe(1).f_code.co_name
+
+# -----------------------------------------------------------------------------
+def rgxin(needle, haystack):
+    return bool(re.search(needle, haystack))
 
 # -----------------------------------------------------------------------------
 def setup_logging(logfile='',

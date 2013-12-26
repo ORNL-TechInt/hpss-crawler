@@ -234,6 +234,23 @@ class UtilTest(testhelp.HelpedTestCase):
                          "Expected '%s' to match '%s'" %
                          (expected, actual))
 
+    # -------------------------------------------------------------------------
+    def test_rgxin(self):
+        """
+        Routine rgxin(needle, haystack) is analogous to the Python expression
+        "needle in haystack" with needle being a regexp.
+        """
+        rgx = "a\(?b\)?c"
+        fstring = "The quick brown fox jumps over the lazy dog"
+        tstring1 = "Now we know our abc's"
+        tstring2 = "With parens: a(b)c"
+        self.assertTrue(util.rgxin(rgx, tstring1),
+                        "'%s' should match '%s'" % (rgx, tstring1))
+        self.assertTrue(util.rgxin(rgx, tstring2),
+                        "'%s' should match '%s'" % (rgx, tstring2))
+        self.assertFalse(util.rgxin(rgx, fstring),
+                        "'%s' should NOT match '%s'" % (rgx, fstring))
+                        
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='UtilTest',
