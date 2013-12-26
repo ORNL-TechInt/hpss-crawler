@@ -53,6 +53,9 @@ def main(args=None, filter=None, logfile=None):
     if args == None:
         args = sys.argv
     p = OptionParser()
+    p.add_option('-a', '--args',
+                 action='store', default='', dest='testargs',
+                 help='args for test routines')
     p.add_option('-k', '--keep',
                  action='store_true', default=False, dest='keep',
                  help='keep test files')
@@ -71,6 +74,7 @@ def main(args=None, filter=None, logfile=None):
     (o, a) = p.parse_args(args)
 
     keepfiles(o.keep)
+    testargs(o.testargs)
     
     if o.verbose:
         volume = 2
@@ -168,6 +172,22 @@ def keepfiles(value=None):
 
     if value != None:
         kf_flag = value
+
+    return rval
+
+# -----------------------------------------------------------------------------
+def testargs(value=''):
+    """
+    Cache value and return it
+    """
+    try:
+        rval = testargs._value
+    except AttributeError:
+        testargs._value = value
+        rval = testargs._value
+
+    if value != '':
+        testargs._value = value
 
     return rval
 
@@ -344,6 +364,32 @@ class HelpedTestCase(unittest.TestCase):
             msg += "'%s'"
         
         self.assertEqual(expval, actual, msg % (expval, actual))
+    
+    # -------------------------------------------------------------------------
+    def expected_in(self, exprgx, actual):
+        """
+        If the expected regex (exprgx) does not appear in the actual value
+        (actual), report the assertion failure.
+        """
+        msg = "\nExpected_in: "
+        if type(exprgx) == int:
+            msg += "%d"
+            exprgx = "%d" % exprgx
+        elif type(exprgx) == float:
+            msg += "%g"
+            exprgx = "%g" % exprgx
+        else:
+            msg += "'%s'"
+
+        msg += "\n     Actual: "
+        if type(actual) == int:
+            msg += "%d"
+        elif type(actual) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+        
+        self.assertTrue(util.rgxin(exprgx, actual), msg % (exprgx, actual))
     
     # ------------------------------------------------------------------------
     def write_cfg_file(self, fname, cfgdict, includee=False):

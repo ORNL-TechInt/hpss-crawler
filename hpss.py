@@ -1,5 +1,6 @@
 import pexpect
 import sys
+import util
 
 # -----------------------------------------------------------------------------
 class HSIerror(Exception):
@@ -34,6 +35,12 @@ class HSI(object):
             self.connect()
 
     # -------------------------------------------------------------------------
+    def chdir(self, dirname):
+        self.xobj.sendline("cd %s" % dirname)
+        self.xobj.expect(self.prompt)
+        return self.xobj.before
+
+    # -------------------------------------------------------------------------
     def connect(self):
         if hasattr(self, 'timeout'):
             self.xobj = pexpect.spawn(self.cmd, timeout=self.timeout)
@@ -43,13 +50,99 @@ class HSI(object):
             self.xobj.logfile = sys.stdout
         which = self.xobj.expect([self.prompt,
                                   "HPSS Unavailable",
-                                  "connect: Connection refused"])
+                                  "connect: Connection refused",
+                                  "hpssex_OpenConnection: unable to obtain " +
+                                  "remote site info"])
         if 0 != which or self.unavailable:
             raise HSIerror("HPSS Unavailable")
         
     # -------------------------------------------------------------------------
+    def hashcreate(self, pathnames):
+        """
+        Argument pathnames should reference be one or more files. It may be a
+        string containing one or more space separated file paths, or a list of
+        one or more file paths.
+        """
+        if type(pathnames) == str:
+            pathlist = pathnames.split()
+        elif type(pathnames) == list:
+            pathlist = pathnames
+        else:
+            raise HSIerror("%s: Invalid argument ('%s')" %
+                           (util.my_name(), pathnames))
+        # self.xobj.expect(self.prompt)
+        rval = ""
+        for path in pathlist:
+            self.xobj.sendline("hashcreate %s" % path)
+            self.xobj.expect(self.prompt)
+            rval += self.xobj.before
+        return rval
+    
+    # -------------------------------------------------------------------------
+    def hashdelete(self, pathnames):
+        """
+        Argument pathnames should reference be one or more files. It may be a
+        string containing one or more space separated file paths, or a list of
+        one or more file paths.
+        """
+        if type(pathnames) == str:
+            self.xobj.sendline("hashdelete %s" % pathnames)
+        elif type(pathnames) == list:
+            self.xobj.sendline("hashdelete %s" % " ".join(pathnames))
+        else:
+            raise HSIerror("%s: Invalid argument ('%s')" %
+                           (util.my_name(), pathnames))
+        self.xobj.expect(self.prompt)
+        return self.xobj.before
+    
+    # -------------------------------------------------------------------------
+    def hashlist(self, pathnames):
+        """
+        Argument pathnames should reference be one or more files. It may be a
+        string containing one or more space separated file paths, or a list of
+        one or more file paths.
+        """
+        if type(pathnames) == str:
+            self.xobj.sendline("hashlist %s" % pathnames)
+        elif type(pathnames) == list:
+            self.xobj.sendline("hashlist %s" % " ".join(pathnames))
+        else:
+            raise HSIerror("%s: Invalid argument ('%s')" %
+                           (util.my_name(), pathnames))
+        self.xobj.expect(self.prompt)
+        return self.xobj.before
+    
+    # -------------------------------------------------------------------------
+    def hashverify(self, pathnames):
+        """
+        Argument pathnames should reference be one or more files. It may be a
+        string containing one or more space separated file paths, or a list of
+        one or more file paths.
+        """
+        if type(pathnames) == str:
+            pathlist = pathnames.split()
+        elif type(pathnames) == list:
+            pathlist = pathnames
+        else:
+            raise HSIerror("%s: Invalid argument ('%s')" %
+                           (util.my_name(), pathnames))
+
+        rval = ""
+        for path in pathlist:
+            self.xobj.sendline("hashverify %s" % path)
+            self.xobj.expect(self.prompt)
+            rval += self.xobj.before
+        return rval
+    
+    # -------------------------------------------------------------------------
     def lscos(self):
         self.xobj.sendline("lscos")
+        self.xobj.expect(self.prompt)
+        return self.xobj.before
+    
+    # -------------------------------------------------------------------------
+    def lsP(self, pathname=''):
+        self.xobj.sendline("ls -P %s" % pathname)
         self.xobj.expect(self.prompt)
         return self.xobj.before
     
