@@ -3,15 +3,10 @@
 Tests for hpss.py
 """
 import hpss
-import os
-import sys
 import testhelp
 import toolframe
 import traceback as tb
 import util
-
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
 
 # -----------------------------------------------------------------------------
 def setUpModule():
@@ -32,7 +27,7 @@ class hpssTest(testhelp.HelpedTestCase):
     """
     Tests for the hpss.HSI class
     """
-    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
+    testdir = testhelp.testdata(__name__)
     hdir = "/home/tpb/hic_test"
     stem = "hashable"
     plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1,4)]
@@ -343,6 +338,13 @@ class hpssTest(testhelp.HelpedTestCase):
         """
         vbval = ("verbose" in testhelp.testargs())
         h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        # make sure the hashables all have a checksum stored
+        x = h.hashlist(self.plist)
+        for path in self.plist:
+            if util.rgxin("\(?none\)?  %s" % path, x):
+                h.hashcreate(path)
+
+        # run the test payload
         result = h.hashlist("%s/hash*" % self.hdir)
         h.quit()
         self.expected_in("hashlist", result)
@@ -359,6 +361,13 @@ class hpssTest(testhelp.HelpedTestCase):
         """
         plist = self.plist + [self.hdir + "/hashnot"]
         h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        # make sure the hashables all have a checksum stored
+        x = h.hashlist(self.plist)
+        for path in self.plist:
+            if util.rgxin("\(?none\)?  %s" % path, x):
+                h.hashcreate(path)
+
+        # run the test payload
         result = h.hashlist(plist)
         h.quit()
         self.expected_in("hashlist", result)
@@ -375,6 +384,13 @@ class hpssTest(testhelp.HelpedTestCase):
         """
         paths = self.paths + " %s/hashnot" % self.hdir
         h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        # make sure the hashables all have a checksum stored
+        x = h.hashlist(self.plist)
+        for path in self.plist:
+            if util.rgxin("\(?none\)?  %s" % path, x):
+                h.hashcreate(path)
+
+        # run the test payload
         result = h.hashlist(paths)
         h.quit()
         self.expected_in("hashlist", result)
@@ -491,12 +507,78 @@ class hpssTest(testhelp.HelpedTestCase):
                          result)
 
     # -------------------------------------------------------------------------
-    def test_lsP(self):
+    def test_lscos(self):
         """
-        Issue "ls -P" in hsi, return results
+        Issue "lscos", check result
         """
-        pass
-        raise testhelp.UnderConstructionError()
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        result = h.lscos()
+        h.quit()
+        self.expected_in("3003 Disk Big Backups", result)
+        self.expected_in("5081 Disk X-Small", result)
+        self.expected_in("6001 Disk Small", result)
+        self.expected_in("6054 Disk Large_T", result)
+        self.expected_in("6057 Disk X-Large_T 2-Copy", result)
+
+    # -------------------------------------------------------------------------
+    def test_lsP_argbad(self):
+        """
+        Issue "ls -P" with non-string, non-list arg, expect exception
+        """
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        try:
+            result = h.lsP(19)
+            self.fail("Expected an exception, got nothing")
+        except hpss.HSIerror, e:
+            self.assertTrue("lsP: Invalid argument" in str(e),
+                            "Got the wrong HSIerror: %s" %
+                            util.line_quote(tb.format_exc()))
+        except AssertionError:
+            raise
+        finally:
+            h.quit()
+
+    # -------------------------------------------------------------------------
+    def test_lsP_argnone(self):
+        """
+        Issue "ls -P" in /home/tpb/hic_test with no arg, validate result
+        """
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        h.chdir("/home/tpb/hic_test")
+        result = h.lsP()
+        for path in self.plist:
+            self.expected_in("FILE\s+%s" % path, result)
+
+    # -------------------------------------------------------------------------
+    def test_lsP_glob(self):
+        """
+        Issue "ls -P hash*" in hic_test, validate results
+        """
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        h.chdir("/home/tpb/hic_test")
+        result = h.lsP()
+        for path in self.plist:
+            self.expected_in("FILE\s+%s" % path, result)
+
+    # -------------------------------------------------------------------------
+    def test_lsP_list(self):
+        """
+        Issue "ls -P [foo, bar]" in hic_test, validate results
+        """
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        result = h.lsP(self.plist)
+        for path in self.plist:
+            self.expected_in("FILE\s+%s" % path, result)
+
+    # -------------------------------------------------------------------------
+    def test_lsP_str(self):
+        """
+        Issue "ls -P foo bar" in hic_test, validate results
+        """
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        result = h.lsP(self.paths)
+        for path in self.plist:
+            self.expected_in("FILE\s+%s" % path, result)
 
     # -------------------------------------------------------------------------
     def test_unavailable(self):
@@ -517,5 +599,5 @@ class hpssTest(testhelp.HelpedTestCase):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='hpssTest',
-                        logfile=logfile)
+                        logfile=testhelp.testlog(__name__))
         

@@ -4,7 +4,6 @@ Database interface classes
 """
 import CrawlConfig
 import sqlite3
-import toolframe
 
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
@@ -464,10 +463,3 @@ class DBIsqlite(DBI_abstract):
 # -----------------------------------------------------------------------------
 # class DBImysql(DBI):
 #     pass
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test=['DBITest', 'DBIsqliteTest'],
-                        logfile='crawl_test.log')
-
-                

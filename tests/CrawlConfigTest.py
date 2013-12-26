@@ -12,9 +12,6 @@ import toolframe
 import util
 import warnings
 
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
-
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -37,7 +34,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     default_cfname = 'crawl.cfg'
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
-    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
+    testdir = testhelp.testdata(__name__)
     default_logpath = '%s/test_default_hpss_crawl.log' % testdir
     cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
                          'logpath': default_logpath,
@@ -624,4 +621,4 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 if __name__ == '__main__':
     toolframe.ez_launch(test='CrawlConfigTest',
-                        logfile=logfile)
+                        logfile=testhelp.testlog(__name__))

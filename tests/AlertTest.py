@@ -18,9 +18,6 @@ import testhelp
 import toolframe
 import util
 
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
-
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -37,7 +34,7 @@ def tearDownModule():
 
 # -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):
-    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
+    testdir = testhelp.testdata(__name__)
     
     # -------------------------------------------------------------------------
     def test_init(self):
@@ -150,4 +147,4 @@ class AlertTest(testhelp.HelpedTestCase):
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='AlertTest',
-                        logfile=logfile)
+                        logfile=testhelp.testlog(__name__))

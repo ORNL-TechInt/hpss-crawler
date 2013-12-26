@@ -10,7 +10,6 @@ import re
 import shutil
 import sys
 import time
-import toolframe
 import util
 
 # -----------------------------------------------------------------------------
@@ -115,7 +114,3 @@ class CrawlPlugin(object):
         fire.
         """
         return(self.frequency < (time.time() - self.last_fired))
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch()

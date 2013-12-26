@@ -25,6 +25,7 @@ class HSI(object):
         self.prompt = "]:"
         self.verbose = False
         self.unavailable = False
+        self.xobj = None
         
         cmdopts = " ".join(args)
         for key in kwargs:
@@ -141,8 +142,21 @@ class HSI(object):
         return self.xobj.before
     
     # -------------------------------------------------------------------------
-    def lsP(self, pathname=''):
-        self.xobj.sendline("ls -P %s" % pathname)
+    def lsP(self, pathnames=''):
+        """
+        Argument pathnames should reference be zero or more files. It may be a
+        string containing one or more space separated file paths, or a list of
+        one or more file paths.
+        """
+        if type(pathnames) == str:
+            parg = pathnames
+        elif type(pathnames) == list:
+            parg = " ".join(pathnames)
+        else:
+            raise HSIerror("%s: Invalid argument ('%s')" %
+                           (util.my_name(), pathnames))
+
+        self.xobj.sendline("ls -P %s" % parg)
         self.xobj.expect(self.prompt)
         return self.xobj.before
     

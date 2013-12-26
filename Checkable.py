@@ -30,7 +30,6 @@ import random
 import re
 import testhelp
 import time
-import toolframe
 
 default_dbname = 'HIC.db'
 
@@ -525,8 +524,4 @@ class Checkable(object):
         Set the database name for future Checkable objects
         """
         Checkable.dbname = dbname
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch()
     
