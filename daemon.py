@@ -3,6 +3,7 @@
 A generic daemon class
 """
 import atexit
+import errno
 import os
 import resource
 import sys
