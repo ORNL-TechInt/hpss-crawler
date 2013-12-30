@@ -124,6 +124,40 @@ def all_tests(name, filter=None):
     return cases
 
 # -----------------------------------------------------------------------------
+def db_config(tdir, tname):
+    cfname = '%s/%s.cfg' % (tdir, tname)
+    cfgfile(cfname, {'dbi': {'dbtype': 'sqlite',
+                             'dbname': '%s/test.db' % tdir,
+                             'tbl_prefix': 'test'}})
+    os.environ['CRAWL_CONF'] = cfname
+    CrawlConfig.get_config(reset=True, soft=True)
+
+# -----------------------------------------------------------------------------
+def cfgfile(filename, data):
+    """
+    Turn a dict into a configuration file
+    """
+    cfg = cfgobj(data)
+    f = open(filename, 'w')
+    cfg.write(f)
+    f.close()
+
+# -----------------------------------------------------------------------------
+def cfgobj(data):
+    """
+    Turn a dict into a CrawlConfig object
+    """
+    rval = CrawlConfig.CrawlConfig()
+    for section in data:
+        rval.add_section(section)
+        for option in data[section]:
+            rval.set(section, option, data[section][option])
+    if not 'crawler' in data:
+        rval.add_section('crawler')
+        rval.set('crawler', 'verbose', 'false')
+    return rval
+
+# -----------------------------------------------------------------------------
 def expectVSgot(expected, got):
     """
     Compare an expected value against an actual value and report the results

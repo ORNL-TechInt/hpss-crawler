@@ -11,7 +11,7 @@ class DBI_abstract(object):
     Each of the specific database interface classes (DBIsqlite, DBImysql, etc.)
     inherit from this one
     """
-    settable_attrl = ['dbname', 'host', 'username', 'password']
+    settable_attrl = ['dbname', 'host', 'username', 'password', 'tbl_prefix']
     
 # -----------------------------------------------------------------------------
 class DBI(object):
@@ -30,11 +30,11 @@ class DBI(object):
     def __init__(self, *args, **kwargs):
         """
         Here we look for configuration information indicating which kind of
-        database to use. In the cfg arguement, the caller can pass us 1) the
+        database to use. In the cfg argument, the caller can pass us 1) the
         name of a configuration file, or 2) a CrawlConfig object. If the cfg
         argument is not present, we try to check 'crawl.cfg' as the default
-        configuration file. Anything else is in the cfg argument will generate
-        an exception.
+        configuration file. Anything else in the cfg argument (i.e., not a
+        string and not a CrawlConfig object) will generate an exception.
 
         Once we know which kind of database to use, we create an object
         specific to that database type and forward calls from the caller to
@@ -46,23 +46,51 @@ class DBI(object):
         enough, we may need more control over commits but autocommit will do
         for now.
         """
-        # work out the dbtype
+
+        # Check for invalid arguments in kwargs. Only 'cfg' is accepted. Other
+        # classes should not care about database name, database type, etc. That
+        # should all come from the configuration.
+        for key in kwargs:
+            if key != 'cfg':
+                raise DBIerror("Attribute '%s' is not valid for %s" %
+                               (key, self.__class__))
+        if 0 < len(args):
+            if not isinstance(args[0], CrawlConfig.CrawlConfig):
+                raise DBIerror("Unrecognized argument to %s. " % self.__class__ +
+                               "Only 'cfg=<config>' is accepted")
+
+
+        # Figure out the dbtype
         try:
-            if 'dbtype' in kwargs:
-                dbtype = kwargs['dbtype']
-                del kwargs['dbtype']
-            elif 'cfg' in kwargs:
+            if 'cfg' in kwargs:
                 cfg = kwargs['cfg']
                 del kwargs['cfg']
                 dbtype = cfg.get('dbi', 'dbtype')
+                tbl_pfx = cfg.get('dbi', 'tbl_prefix')
+                dbname = cfg.get('dbi', 'dbname')
             else:
                 cfg = CrawlConfig.get_config()
                 dbtype = cfg.get('dbi', 'dbtype')
+                tbl_pfx = cfg.get('dbi', 'tbl_prefix')
+                dbname = cfg.get('dbi', 'dbname')
         except CrawlConfig.NoSectionError:
             dbtype = 'sqlite'
         except CrawlConfig.NoOptionError:
             dbtype = 'sqlite'
-            
+
+        # Next, get the dbname and table prefix from the config
+        try:
+            dbname = cfg.get('dbi', 'dbname')
+        except:
+            raise DBIerror("A database name is required in configuration")
+
+        try:
+            tbl_pfx = cfg.get('dbi', 'tbl_prefix')
+        except:
+            raise DBIerror("A table prefix is required in configuration")
+        
+        kwargs['dbname'] = dbname
+        kwargs['tbl_prefix'] = tbl_pfx
         if dbtype == 'sqlite':
             self._dbobj = DBIsqlite(*args, **kwargs)
         elif dbtype == 'mysql':
@@ -186,15 +214,13 @@ class DBIsqlite(DBI_abstract):
         for attr in kwargs:
             if attr in self.settable_attrl:
                 setattr(self, attr, kwargs[attr])
-            elif hasattr(self, 'dbname'):
-                raise DBIerror("Attribute '%s'" % attr +
-                               " is not valid for %s" % self.__class__,
-                               dbname=self.dbname)
             else:
                 raise DBIerror("Attribute '%s'" % attr +
                                " is not valid for %s" % self.__class__)
         if not hasattr(self, 'dbname'):
             raise DBIerror("A database name is required")
+        if not hasattr(self, 'tbl_prefix'):
+            raise DBIerror("A table prefix is required")
         try:
             self.dbh = sqlite3.connect(self.dbname)
             # set autocommit mode

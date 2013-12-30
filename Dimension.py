@@ -34,10 +34,10 @@ class Dimension(object):
         
     """
     # The default database to use
-    dbname = 'drill.db'
+    # dbname = 'drill.db'
 
     # attributes that can be set through the constructor
-    settable_attrl = ['dbname', 'name', 'sampsize']
+    settable_attrl = ['name', 'sampsize']
 
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
@@ -49,7 +49,7 @@ class Dimension(object):
 
         Field 'name' in the object corresponds with field 'category' in the db.
         """
-        self.dbname = Dimension.dbname
+        # self.dbname = Dimension.dbname
         self.name = ''          # name must be set by caller
         self.sampsize = 0.01    # default sample size is 1%
         self.p_sum = {}         # population summary starts empty
@@ -70,10 +70,7 @@ class Dimension(object):
         """
         A human readable representation of a Dimension object
         """
-        rv = "Dimension(name='%s'" % self.name
-        if self.dbname != Dimension.dbname:
-            rv += ", dbname='%s'" % self.dbname
-        rv += ")"
+        rv = "Dimension(name='%s')" % self.name
         return rv
 
     # -------------------------------------------------------------------------
@@ -84,7 +81,7 @@ class Dimension(object):
         try:
             return self.dbh
         except AttributeError:
-            self.dbh = CrawlDBI.DBI(dbname=self.dbname)
+            self.dbh = CrawlDBI.DBI()
             return self.dbh
     
     # -------------------------------------------------------------------------

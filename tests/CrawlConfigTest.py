@@ -5,6 +5,7 @@ Test class for CrawlConfig.py
 import CrawlConfig
 import copy
 import os
+import pdb
 import sys
 import testhelp
 import time
@@ -605,8 +606,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Remove $CRAWL_CFG from the environment.
         """
         try:
-            x = os.environ['CRAWL_CFG']
-            del os.environ['CRAWL_CFG']
+            x = os.environ['CRAWL_CONF']
+            del os.environ['CRAWL_CONF']
         except KeyError:
             pass
         
