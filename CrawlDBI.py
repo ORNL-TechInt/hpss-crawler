@@ -2,8 +2,12 @@
 """
 Database interface classes
 """
+import pdb
 import CrawlConfig
+import MySQLdb as mysql
+import _mysql_exceptions as mysql_exc
 import sqlite3
+import warnings
 
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
@@ -11,8 +15,13 @@ class DBI_abstract(object):
     Each of the specific database interface classes (DBIsqlite, DBImysql, etc.)
     inherit from this one
     """
-    settable_attrl = ['dbname', 'host', 'username', 'password', 'tbl_prefix']
+    settable_attrl = ['cfg', 'dbname', 'host', 'username', 'password',
+                      'tbl_prefix']
     
+    # -------------------------------------------------------------------------
+    def prefix(self, tabname):
+        return self.tbl_prefix + tabname
+
 # -----------------------------------------------------------------------------
 class DBI(object):
     """
@@ -64,7 +73,6 @@ class DBI(object):
         try:
             if 'cfg' in kwargs:
                 cfg = kwargs['cfg']
-                del kwargs['cfg']
                 dbtype = cfg.get('dbi', 'dbtype')
                 tbl_pfx = cfg.get('dbi', 'tbl_prefix')
                 dbname = cfg.get('dbi', 'dbname')
@@ -152,6 +160,13 @@ class DBI(object):
         return self._dbobj.delete(**kwargs)
     
     # -------------------------------------------------------------------------
+    def drop(self, **kwargs):
+        """
+        Drop the named table.
+        """
+        return self._dbobj.drop(**kwargs)
+    
+    # -------------------------------------------------------------------------
     def insert(self, **kwargs):
         """
         Insert data into the table. Fields is a list of field names. Data is a
@@ -221,6 +236,8 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror("A database name is required")
         if not hasattr(self, 'tbl_prefix'):
             raise DBIerror("A table prefix is required")
+
+        self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
         try:
             self.dbh = sqlite3.connect(self.dbname)
             # set autocommit mode
@@ -238,23 +255,17 @@ class DBIsqlite(DBI_abstract):
         return rv
 
     # -------------------------------------------------------------------------
-    def table_exists(self, table=''):
+    def close(self):
         """
-        See DBI.table_exists()
+        See DBI.close() 
         """
+        # Close the database connection
         try:
-            dbc = self.dbh.cursor()
-            dbc.execute("""
-                        select name from sqlite_master
-                        where type='table'
-                        and name=?
-                        """, (table,))
-            rows = dbc.fetchall()
-            dbc.close()
-            return 0 < len(rows)
+            self.dbh.close()
+        # Convert any sqlite3 error into a DBIerror
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
-
+    
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
@@ -276,7 +287,7 @@ class DBIsqlite(DBI_abstract):
 
         # Construct and run the create statement
         try:
-            cmd = ("create table if not exists %s(" % table +
+            cmd = ("create table if not exists %s(" % self.prefix(table) +
                    ", ".join(fields) +
                    ")")
             c = self.dbh.cursor()
@@ -285,18 +296,6 @@ class DBIsqlite(DBI_abstract):
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
-    # -------------------------------------------------------------------------
-    def close(self):
-        """
-        See DBI.close() 
-        """
-        # Close the database connection
-        try:
-            self.dbh.close()
-        # Convert any sqlite3 error into a DBIerror
-        except sqlite3.Error, e:
-            raise DBIerror(''.join(e.args), dbname=self.dbname)
-    
     # -------------------------------------------------------------------------
     def cursor(self):
         """
@@ -334,7 +333,7 @@ class DBIsqlite(DBI_abstract):
 
         # Build and run the select statement 
         try:
-            cmd = "delete from %s" % table
+            cmd = "delete from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where
 
@@ -348,6 +347,28 @@ class DBIsqlite(DBI_abstract):
         # Translate any sqlite3 errors to DBIerror
         except sqlite3.Error, e:
             raise DBIerror(cmd + ': ' + ''.join(e.args), dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def drop(self, table=''):
+        """
+        See DBI.create()
+        """
+        # Handle bad arguments
+        if type(table) != str:
+            raise DBIerror("On drop(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On drop(), table name must not be empty",
+                           dbname=self.dbname)
+
+        # Construct and run the drop statement
+        try:
+            cmd = ("drop table if exists %s" % self.prefix(table))
+            c = self.dbh.cursor()
+            c.execute(cmd)
+        # Convert any sqlite3 error into a DBIerror
+        except sqlite3.Error, e:
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
@@ -376,7 +397,7 @@ class DBIsqlite(DBI_abstract):
 
         # Construct and run the insert statement
         try:
-            cmd = ("insert into %s(" % table +
+            cmd = ("insert into %s(" % self.prefix(table) +
                    ",".join(fields) +
                    ") values (" +
                    ",".join(["?" for x in fields]) +
@@ -424,7 +445,7 @@ class DBIsqlite(DBI_abstract):
                 cmd += ",".join(fields)
             else:
                 cmd += "*"
-            cmd += " from %s" % table
+            cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where
             if orderby != '':
@@ -442,6 +463,24 @@ class DBIsqlite(DBI_abstract):
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args),
                            dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def table_exists(self, table=''):
+        """
+        See DBI.table_exists()
+        """
+        try:
+            dbc = self.dbh.cursor()
+            dbc.execute("""
+                        select name from sqlite_master
+                        where type='table'
+                        and name=?
+                        """, (self.prefix(table),))
+            rows = dbc.fetchall()
+            dbc.close()
+            return 0 < len(rows)
+        except sqlite3.Error, e:
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def update(self, table='', where='', fields=[], data=[]):
@@ -473,7 +512,7 @@ class DBIsqlite(DBI_abstract):
 
         # Build and run the update statement
         try:
-            cmd = "update %s" % table
+            cmd = "update %s" % self.prefix(table)
             cmd += " set %s" % ",".join(["%s=?" % x for x in fields])
             if where != '':
                 cmd += " where %s" % where
@@ -487,5 +526,321 @@ class DBIsqlite(DBI_abstract):
                            dbname=self.dbname)
 
 # -----------------------------------------------------------------------------
-# class DBImysql(DBI):
-#     pass
+class DBImysql(DBI_abstract):
+    # -------------------------------------------------------------------------
+    def __init__(self, *args, **kwargs):
+        """
+        See DBI.__init__()
+        """
+        for attr in kwargs:
+            if attr in self.settable_attrl:
+                setattr(self, attr, kwargs[attr])
+            else:
+                raise DBIerror("Attribute '%s'" % attr +
+                               " is not valid for %s" % self.__class__)
+        if not hasattr(self, 'dbname'):
+            raise DBIerror("A database name is required")
+        if not hasattr(self, 'tbl_prefix'):
+            raise DBIerror("A table prefix is required")
+
+        self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
+        cfg = kwargs['cfg']
+        host = cfg.get('dbi', 'host')
+        username = cfg.get('dbi', 'username')
+        password = cfg.get('dbi', 'password')
+        try:
+            self.dbh = mysql.connect(host=host,
+                                     user=username,
+                                     passwd=password,
+                                     db=self.dbname)
+            self.closed = False
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+        
+    # -------------------------------------------------------------------------
+    def __repr__(self):
+        """
+        See DBI.__repr__()
+        """
+        rv = "DBImysql(dbname='%s')" % self.dbname
+        return rv
+
+    # -------------------------------------------------------------------------
+    def close(self):
+        """
+        See DBI.close() 
+        """
+        # Close the database connection
+        if self.closed:
+            raise DBIerror("Cannot operate on a closed database.")
+        try:
+            self.dbh.close()
+            self.closed = True
+        # Convert any mysql error into a DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+    
+    # -------------------------------------------------------------------------
+    def create(self, table='', fields=[]):
+        """
+        See DBI.create()
+        """
+        # Handle bad arguments
+        if type(fields) != list:
+            raise DBIerror("On create(), fields must be a list",
+                           dbname=self.dbname)
+        elif fields == []:
+            raise DBIerror("On create(), fields must not be empty",
+                           dbname=self.dbname)
+        if type(table) != str:
+            raise DBIerror("On create(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On create(), table name must not be empty",
+                           dbname=self.dbname)
+
+        # Construct and run the create statement
+        try:
+            cmd = ("create table if not exists %s(" % self.prefix(table) +
+                   ", ".join(fields) +
+                   ")")
+            c = self.dbh.cursor()
+            c.execute(cmd)
+
+        # Convert any db specific error into a DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def cursor(self):
+        """
+        See DBI.cursor()
+        """
+        try:
+            rval = self.dbh.cursor()
+            return rval
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def delete(self, table='', where='', data=()):
+        """
+        See DBI.delete()
+        """
+        # Handle invalid arguments
+        if type(table) != str:
+            raise DBIerror("On delete(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On delete(), table name must not be empty",
+                           dbname=self.dbname)
+        elif type(where) != str:
+            raise DBIerror("On delete(), where clause must be a string",
+                           dbname=self.dbname)
+        elif type(data) != tuple:
+            raise DBIerror("On delete(), data must be a tuple",
+                           dbname=self.dbname)
+        elif '?' not in where and data != ():
+            raise DBIerror("Data would be ignored", dbname=self.dbname)
+        elif '?' in where and data == ():
+            raise DBIerror("Criteria are not fully specified",
+                           dbname=self.dbname)
+
+        # Build and run the select statement 
+        try:
+            cmd = "delete from %s" % self.prefix(table)
+            if where != '':
+                cmd += " where %s" % where.replace('?', '%s')
+
+            c = self.dbh.cursor()
+            if '%s' in cmd:
+                c.execute(cmd, data)
+            else:
+                c.execute(cmd)
+
+            c.close()
+        # Translate any db specific errors to DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def drop(self, table=''):
+        # Handle bad arguments
+        if type(table) != str:
+            raise DBIerror("On drop(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On drop(), table name must not be empty",
+                           dbname=self.dbname)
+
+        # Construct and run the create statement
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore",
+                                        "Unknown table '.*'")
+                cmd = ("drop table if exists %s" % self.prefix(table))
+                c = self.dbh.cursor()
+                c.execute(cmd)
+
+        # Convert any db specific error into a DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+        
+    # -------------------------------------------------------------------------
+    def insert(self, table='', fields=[], data=[]):
+        """
+        Insert into a mysql database
+        """
+        # Handle any bad arguments
+        if type(table) != str:
+            raise DBIerror("On insert(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On insert(), table name must not be empty",
+                           dbname=self.dbname)
+        elif type(fields) != list:
+            raise DBIerror("On insert(), fields must be a list",
+                           dbname=self.dbname)
+        elif fields == []:
+            raise DBIerror("On insert(), fields list must not be empty",
+                           dbname=self.dbname)
+        elif type(data) != list:
+            raise DBIerror("On insert(), data must be a list",
+                           dbname=self.dbname)
+        elif data == []:
+            raise DBIerror("On insert(), data list must not be empty",
+                           dbname=self.dbname)
+
+        # Construct and run the insert statement
+        try:
+            cmd = ("insert into %s(" % self.prefix(table) +
+                   ",".join(fields) +
+                   ") values (" +
+                   ",".join(["%s" for x in fields]) +
+                   ")")
+            c = self.dbh.cursor()
+            c.executemany(cmd, data)
+            c.close()
+        # Translate sqlite specific exception into a DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+        
+    # -------------------------------------------------------------------------
+    def select(self, table='', fields=[], where='', data=(), orderby=''):
+        """
+        Select from a mysql database.
+        """
+        # Handle invalid arguments
+        if type(table) != str:
+            raise DBIerror("On select(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On select(), table name must not be empty",
+                           dbname=self.dbname)
+        elif type(fields) != list:
+            raise DBIerror("On select(), fields must be a list",
+                           dbname=self.dbname)
+        elif type(where) != str:
+            raise DBIerror("On select(), where clause must be a string",
+                           dbname=self.dbname)
+        elif type(data) != tuple:
+            raise DBIerror("On select(), data must be a tuple",
+                           dbname=self.dbname)
+        elif type(orderby) != str:
+            raise DBIerror("On select(), orderby clause must be a string",
+                           dbname=self.dbname)
+        elif '?' not in where and data != ():
+            raise DBIerror("Data would be ignored",
+                           dbname=self.dbname)
+
+        # Build and run the select statement 
+        try:
+            cmd = "select "
+            if 0 < len(fields):
+                cmd += ",".join(fields)
+            else:
+                cmd += "*"
+            cmd += " from %s" % self.prefix(table)
+            if where != '':
+                cmd += " where %s" % where.replace('?', '%s')
+            if orderby != '':
+                cmd += " order by %s" % orderby
+
+            c = self.dbh.cursor()
+            if '%s' in cmd:
+                c.execute(cmd, data)
+            else:
+                c.execute(cmd)
+            rv = c.fetchall()
+            c.close()
+            return rv
+        # Translate any sqlite3 errors to DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def table_exists(self, table=''):
+        """
+        Check whether a table exists in a mysql database
+        """
+        if self.closed:
+            raise DBIerror("Cannot operate on a closed database.")
+        try:
+            dbc = self.dbh.cursor()
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore",
+                                        "Can't read dir of .*")
+                dbc.execute("""
+                            select table_name from information_schema.tables
+                            where table_name=%s
+                            """, (self.prefix(table),))
+            rows = dbc.fetchall()
+            dbc.close()
+            return 0 < len(rows)
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def update(self, table='', where='', fields=[], data=[]):
+        """
+        See DBI.update()
+        """
+        # Handle invalid arguments
+        if type(table) != str:
+            raise DBIerror("On update(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On update(), table name must not be empty",
+                           dbname=self.dbname)
+        elif type(where) != str:
+            raise DBIerror("On update(), where clause must be a string",
+                           dbname=self.dbname)
+        elif type(fields) != list:
+            raise DBIerror("On update(), fields must be a list",
+                           dbname=self.dbname)
+        elif fields == []:
+            raise DBIerror("On update(), fields must not be empty",
+                           dbname=self.dbname)
+        elif type(data) != list:
+            raise DBIerror("On update(), data must be a list of tuples",
+                           dbname=self.dbname)
+        elif data == []:
+            raise DBIerror("On update(), data must not be empty",
+                           dbname=self.dbname)
+
+        # Build and run the update statement
+        try:
+            cmd = "update %s" % self.prefix(table)
+            cmd += " set %s" % ",".join(["%s=" % x + "%s" for x in fields])
+            if where != '':
+                cmd += " where %s" % where.replace('?', '%s')
+
+            c = self.dbh.cursor()
+            c.executemany(cmd, data)
+            c.close()
+        # Translate database-specific exceptions into DBIerrors
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+
+
