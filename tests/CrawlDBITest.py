@@ -12,19 +12,28 @@ import toolframe
 import traceback as tb
 import util
 
+# -------------------------------------------------------------------------
+def make_tcfg(dbtype):
+    tcfg = CrawlConfig.CrawlConfig()
+    tcfg.add_section('dbi')
+    tcfg.set('dbi', 'dbtype', 'sqlite')
+    tcfg.set('dbi', 'dbname', DBITest.testdb)
+    tcfg.set('dbi', 'tbl_prefix', 'test')
+    return tcfg
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for testing
     """
-    testhelp.module_test_setup(DBIsqliteTest.testdir)
+    testhelp.module_test_setup(DBITest.testdir)
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
     Clean up after testing
     """
-    testhelp.module_test_teardown(DBIsqliteTest.testdir)
+    testhelp.module_test_teardown(DBITest.testdir)
 
 # -----------------------------------------------------------------------------
 class DBITest(testhelp.HelpedTestCase):
@@ -36,15 +45,27 @@ class DBITest(testhelp.HelpedTestCase):
     testdb = '%s/test.db' % testdir
     
     # -------------------------------------------------------------------------
+    def test_ctor_nodbname(self):
+        """
+        CrawlDBI ctor should not accept a dbname argument. It has to take its
+        dbname from the config.
+        """
+        try:
+            a = CrawlDBI.DBI(dbname='foobar')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "Attribute 'dbname' is not valid"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" +
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
     def test_ctor_sqlite(self):
         """
         With a config object specifying sqlite as the database type, DBI should
         instantiate itself with an internal DBIsqlite object.
         """
-        tcfg = CrawlConfig.CrawlConfig()
-        tcfg.add_section('dbi')
-        tcfg.set('dbi', 'dbtype', 'sqlite')
-        a = CrawlDBI.DBI(dbname=self.testdb, cfg=tcfg)
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'))
         self.assertTrue(hasattr(a, '_dbobj'),
                         "Expected to find a _dbobj attribute on %s" % a)
         self.assertTrue(isinstance(a._dbobj, CrawlDBI.DBIsqlite),
@@ -57,11 +78,8 @@ class DBITest(testhelp.HelpedTestCase):
         __repr__ on a DBI object should produce a representation that looks
         like a DBIsqlite object.
         """
-        tcfg = CrawlConfig.CrawlConfig()
-        tcfg.add_section('dbi')
-        tcfg.set('dbi', 'dbtype', 'sqlite')
-        a = CrawlDBI.DBI(dbname=self.testdb, cfg=tcfg)
-        b = CrawlDBI.DBIsqlite(dbname=self.testdb)
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'))
+        b = CrawlDBI.DBIsqlite(dbname=self.testdb, tbl_prefix='test')
         self.expected(str(b), str(a))
 
 # -----------------------------------------------------------------------------
@@ -93,7 +111,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling close() should free up the db resources and make the database
         handle unusable.
         """
-        a = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         a.close()
         try:
             a.table_exists(table='dimension')
@@ -110,7 +128,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling create() with an empty field list should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.create(table='nogood', fields=[])
             self.fail("Expected exception on empty field list, not thrown")
@@ -129,7 +147,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling create() with an empty table name should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.create(table='', fields=['abc text'])
             self.fail("Expected exception on empty table name, not thrown")
@@ -150,7 +168,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling create() with a non-list as the fields argument should
         get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.create(table='create_nlf', fields='notdict')
             self.fail("Expected exception on non-list fields, not thrown")
@@ -171,7 +189,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling create() with correct arguments should create the table
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table='create_yes', fields=['one text',
                                               'two int'])
         dbc = db.cursor()
@@ -189,7 +207,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Verify that a new object has the right attributes with the right
         default values
         """
-        a = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         dirl = [q for q in dir(a) if not q.startswith('_')]
         xattr = ['close', 'create', 'dbname', 'delete', 'insert',
                  'select', 'table_exists', 'update',
@@ -210,8 +228,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         exception
         """
         try:
-            a = CrawlDBI.DBI(dbname=self.testdb, badattr="frooble",
-                             dbtype=self.dbtype)
+            a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), badattr="frooble")
             self.fail("Expected exception on bad attribute not thrown")
         except CrawlDBI.DBIerror, e:
             self.assertTrue("Attribute 'badattr' is not valid" in str(e),
@@ -231,7 +248,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         # first, we create a database file from scratch
         util.conditional_rm(self.testdb)
         tabname = util.my_name()
-        dba = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        dba = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         dba.create(table=tabname, fields=['field1 text'])
         dba.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -241,7 +258,7 @@ class DBItstBase(testhelp.HelpedTestCase):
                             "Expected %s to contain some data" % self.testdb)
 
         # now, when we try to access it, it should be there
-        dbb = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        dbb = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         self.assertTrue(dbb.table_exists(table=tabname))
         dbb.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -258,7 +275,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         os.mkdir(self.testdb, 0777)
         try:
-            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -274,7 +291,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         util.conditional_rm(self.testdb)
         testhelp.touch(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table='testtab', fields=['gru text'])
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -291,7 +308,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         os.mkfifo(self.testdb)
         try:
-            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -306,19 +323,15 @@ class DBItstBase(testhelp.HelpedTestCase):
         Attempt to create an object with no dbname should get an exception
         """
         try:
-            a = CrawlDBI.DBI(dbtype=self.dbtype)
+            tcfg = make_tcfg(self.dbtype)
+            tcfg.remove_option('dbi', 'dbname')
+            a = CrawlDBI.DBI(cfg=tcfg)
             self.fail("Expected an exception but didn't get one")
         except CrawlDBI.DBIerror, e:
             gotx = True
             self.assertTrue("A database name is required" in str(e),
                             "Got the wrong DBIerror: " +
                             '"""\n%s\n"""' % str(e))
-        except AssertionError:
-            raise
-        except:
-            gotx = True
-            self.fail("Got an unexpected exception: " +
-                      '"""\n%s\n"""' % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_nosuch(self):
@@ -327,7 +340,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         create it.
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected %s to exists but it does not" % self.testdb)
@@ -341,8 +354,10 @@ class DBItstBase(testhelp.HelpedTestCase):
         sockname = '%s/%s' % (self.testdir, util.my_name())
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sockname)
+        tcfg = make_tcfg(self.dbtype)
+        tcfg.set('dbi', 'dbname', sockname)
         try:
-            db = CrawlDBI.DBI(dbname=sockname, dbtype=self.dbtype)
+            db = CrawlDBI.DBI(cfg=tcfg)
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -362,7 +377,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         os.mkdir(self.testdb + '_xyz', 0777)
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
         try:
-            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -381,7 +396,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         util.conditional_rm(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table='testtab', fields=['froob text'])
         db.close
 
@@ -403,7 +418,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb + '_xyz')
         testhelp.touch(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table='testtab', fields=['froob text'])
         db.close
 
@@ -425,7 +440,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         f.close()
 
         try:
-            db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
             self.fail("Expected exception was not thrown")
         except AssertionError:
             raise
@@ -653,7 +668,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling insert on fields not in the table should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table='fnox', fields=['one text', 'two text'])
         try:
             db.insert(table='fnox',
@@ -677,7 +692,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling insert with an empty data list should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.insert(table='mtd', fields=['one', 'two'], data=[])
             self.fail("Expected an exception but didn't get one")
@@ -697,7 +712,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling insert with an empty field list should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.insert(table='mtd', fields=[], data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -717,7 +732,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling insert with an empty table name should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.insert(table='', fields=['one', 'two'], data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -737,7 +752,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling insert with a non-string table name should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.insert(table=32, fields=['one', 'two'], data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -757,7 +772,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling insert with a non-list fields arg should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.insert(table='nlf', fields='froo', data=[(1, 2)])
             self.fail("Expected an exception but didn't get one")
@@ -777,7 +792,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         Calling insert with a non-list data arg should get an exception
         """
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.insert(table='nlf', fields=['froo', 'pizzazz'], data={})
             self.fail("Expected an exception but didn't get one")
@@ -798,7 +813,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling insert on a non-existent table should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         # db.create(table='tnox', fields=['one text', 'two text'])
         try:
             db.insert(table='tnox',
@@ -829,7 +844,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         testdata = [(1, 'sinbad', 54),
                     (2, 'zorro', 98)]
 
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=fdef)
         db.insert(table=tname, fields=fnames, data=testdata)
                   
@@ -848,7 +863,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling select() specifying fields should get only the fields requested
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -874,7 +889,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         The data returned should match the where clause.
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -896,7 +911,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -927,7 +942,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         should get an exception -- the data would be ignored
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -958,7 +973,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         data list should return the data matching the where clause
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -980,7 +995,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         empty field list indicates the wildcard option
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1006,7 +1021,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         inserted
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1030,7 +1045,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling select() with an empty table name should get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1060,7 +1075,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling select() with an empty where arg should get all the data
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1085,7 +1100,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1117,7 +1132,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1148,7 +1163,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1179,7 +1194,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1210,7 +1225,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1241,7 +1256,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         order requested
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1265,7 +1280,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling select() specifying where should get only the rows requested
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         tname=util.my_name().replace('test_', '')
         fdef = ['name text', 'size int', 'weight float']
         fnames = [x.split()[0] for x in fdef]
@@ -1290,7 +1305,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         tname = util.my_name().replace('test_', '')
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
         self.expected(True, db.table_exists(table=tname))
 
@@ -1302,7 +1317,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         """
         tname = util.my_name().replace('test_', '')
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         self.expected(False, db.table_exists(table=tname))
         
     # -------------------------------------------------------------------------
@@ -1316,7 +1331,7 @@ class DBItstBase(testhelp.HelpedTestCase):
                  ('zumpy', 47, 202.1)]
         
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1337,7 +1352,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling update() with an empty data list should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table=tname, fields=self.fnames, data =[])
             self.fail("Expected exception not thrown")
@@ -1357,7 +1372,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling update() with an empty field list should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table=tname, fields=[], data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1377,7 +1392,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         Calling update() with an empty table name should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table='', fields=self.fnames, data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1403,7 +1418,7 @@ class DBItstBase(testhelp.HelpedTestCase):
                  ('zumpy', 47, 202.1)]
         
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1425,7 +1440,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table=tname, fields=17, data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1447,7 +1462,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table=tname, fields=self.fnames, data='notalist')
             self.fail("Expected exception not thrown")
@@ -1469,7 +1484,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table=38, fields=self.fnames, data=self.testdata)
             self.fail("Expected exception not thrown")
@@ -1491,7 +1506,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         try:
             db.update(table=tname, fields=self.fnames, data=self.testdata,
                       where=[])
@@ -1518,7 +1533,7 @@ class DBItstBase(testhelp.HelpedTestCase):
                  ('zumpy', 47, 202.1)]
         
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1546,7 +1561,7 @@ class DBItstBase(testhelp.HelpedTestCase):
                              (4, 'meg', 19),
                              (5, 'gertrude', 95)]}
         
-        db = CrawlDBI.DBI(dbname=self.testdb, dbtype=self.dbtype)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=testdata['tabname'],
                   fields=testdata['flist'])
         db.insert(table=testdata['tabname'],
@@ -1559,6 +1574,52 @@ class DBIsqliteTest(DBItstBase):
     dbtype = 'sqlite'
     pass
 
+    # -------------------------------------------------------------------------
+    def test_ctor_sqlite_dbnreq(self):
+        """
+        The DBIsqlite ctor requires 'dbname' and 'tbl_prefix' as keyword
+        arguments
+        """
+        try:
+            a = CrawlDBI.DBIsqlite(tbl_prefix='xyzzy')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "A database name is required"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" +
+                            util.line_quote(str(e)))
+            
+    # -------------------------------------------------------------------------
+    def test_ctor_sqlite_tbpreq(self):
+        """
+        The DBIsqlite ctor requires 'tbl_prefix' as keyword
+        arguments
+        """
+        try:
+            a = CrawlDBI.DBIsqlite(dbname='foobar')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "A table prefix is required"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" +
+                            util.line_quote(str(e)))
+            
+    # -------------------------------------------------------------------------
+    def test_ctor_sqlite_other(self):
+        """
+        The DBIsqlite ctor takes only 'dbname' and 'tbl_prefix' as keyword
+        arguments
+        """
+        try:
+            a = CrawlDBI.DBIsqlite(dbname='foobar', tbl_prefix='xyzzy',
+                                   something='fribble')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "Attribute 'something' is not valid"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" +
+                            util.line_quote(str(e)))
+            
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test=['DBITest', 'DBIsqliteTest'],

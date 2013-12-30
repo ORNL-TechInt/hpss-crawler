@@ -31,7 +31,7 @@ import re
 import testhelp
 import time
 
-default_dbname = 'HIC.db'
+# default_dbname = 'HIC.db'
 
 # -----------------------------------------------------------------------------
 class Checkable(object):
@@ -48,14 +48,14 @@ class Checkable(object):
     type, and last_check. So directories will have a cos field, but it will
     always be empty.
     """
-    dbname = default_dbname
+    # dbname = default_dbname
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
         Initialize a Checkable object -- set the path, type, checksum, cos, and
         last_check to default values, then update them based on the arguments.
         """
-        self.dbname = Checkable.dbname
+        # self.dbname = Checkable.dbname
         self.path = '---'
         self.type = '-'
         self.cos = ''
@@ -231,7 +231,7 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def db_delete(self):
-        db = CrawlDBI.DBI(dbname=self.dbname)
+        db = CrawlDBI.DBI()
         db.delete(table='checkables',
                   where='path=?',
                   data=(self.path,))
@@ -239,13 +239,13 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def ex_nihilo(cls, dbname=default_dbname, dataroot='/'):
+    def ex_nihilo(cls, dataroot='/'):
         """
         Start from scratch. Create the database if necessary. Create the
         table(s) if necessary. Bootstrap the queue by adding the root
         director(ies).
         """
-        db = CrawlDBI.DBI(dbname=dbname)
+        db = CrawlDBI.DBI()
         db.create(table='checkables',
                   fields=['id integer primary key',
                           'path text',
@@ -311,7 +311,7 @@ class Checkable(object):
         Look up the current item in the database based on path, returning the
         database row(s).
         """
-        db = CrawlDBI.DBI(dbname=self.dbname)
+        db = CrawlDBI.DBI()
         rv = db.select(table='checkables',
                        fields=[],
                        where='path=?',
@@ -321,13 +321,13 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def get_list(cls, dbname=default_dbname):
+    def get_list(cls):
         """
         Return the current list of Checkables from the database.
         """
         # Checkable.dbname = filename
         rval = []
-        db = CrawlDBI.DBI(dbname=dbname)
+        db = CrawlDBI.DBI()
         rows = db.select(table='checkables',
                          fields=['rowid', 'path', 'type',
                                  'cos', 'checksum', 'last_check'],
@@ -431,7 +431,7 @@ class Checkable(object):
 
         # assume it's already present
         rval = False
-        db = CrawlDBI.DBI(dbname=self.dbname)
+        db = CrawlDBI.DBI()
         if self.rowid != None:
             # we have a rowid, so it should be in the database
             rows = db.select(table='checkables',
@@ -516,12 +516,4 @@ class Checkable(object):
                                     "of %s in the database" % self)
         db.close()
         return rval
-    
-    # -------------------------------------------------------------------------
-    @classmethod
-    def set_dbname(cls, dbname=default_dbname):
-        """
-        Set the database name for future Checkable objects
-        """
-        Checkable.dbname = dbname
     

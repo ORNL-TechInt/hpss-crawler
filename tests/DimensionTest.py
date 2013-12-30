@@ -6,6 +6,7 @@ import copy
 import CrawlDBI
 from Dimension import Dimension
 import os
+import pdb
 import sys
 import testhelp
 import toolframe
@@ -53,8 +54,8 @@ class DimensionTest(testhelp.HelpedTestCase):
             > load
         """
         dimname = 'ctor_attrs'
-        a = Dimension(dbname=self.testdb,
-                      name=dimname,
+        testhelp.db_config(self.testdir, util.my_name())
+        a = Dimension(name=dimname,
                       sampsize=0.005)
         for attr in ['name',
                      'sampsize',
@@ -76,10 +77,10 @@ class DimensionTest(testhelp.HelpedTestCase):
         settable list should get an exception.
         """
         dimname = 'bad_attr'
+        testhelp.db_config(self.testdir, util.my_name())
         got_exception = False
         try:
-            a = Dimension(dbname=self.testdb,
-                          name=dimname,
+            a = Dimension(name=dimname,
                           catl=[1,2,3])
         except StandardError, e:
             got_exception = True
@@ -95,8 +96,7 @@ class DimensionTest(testhelp.HelpedTestCase):
 
         got_exception = False    
         try:
-            a = Dimension(dbname=self.testdb,
-                          name=dimname,
+            a = Dimension(name=dimname,
                           aardvark='Fanny Brice')
         except StandardError, e:
             got_exception = True
@@ -118,7 +118,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         defaults.
         """
         dimname = 'defaults'
-        a = Dimension(dbname=self.testdb, name=dimname)
+        testhelp.db_config(self.testdir, util.my_name())
+        a = Dimension(name=dimname)
         self.expected(dimname, a.name)
         self.expected(0.01, a.sampsize)
         self.expected({}, a.p_sum)
@@ -131,8 +132,9 @@ class DimensionTest(testhelp.HelpedTestCase):
         exception.
         """
         got_exception = False
+        testhelp.db_config(self.testdir, util.my_name())
         try:
-            a = Dimension(dbname=self.testdb)
+            a = Dimension()
         except StandardError, e:
             got_exception = True
             self.assertTrue("Caller must set attribute 'name'" in
@@ -152,13 +154,14 @@ class DimensionTest(testhelp.HelpedTestCase):
         the existing database if the db exists but the table does not.
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        db = CrawlDBI.DBI()
         self.assertFalse(db.table_exists(table='dimension'),
                         'Did not expect table \'dimension\' in database')
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
 
-        a = Dimension(dbname=self.testdb, name='already_nt')
+        a = Dimension(name='already_nt')
         a.persist()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
@@ -174,13 +177,14 @@ class DimensionTest(testhelp.HelpedTestCase):
         database and table dimension if they do not exist.
         """
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
 
-        a = Dimension(dbname=self.testdb, name='ex_nihilo')
+        a = Dimension(name='ex_nihilo')
         a.persist()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
 
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         self.assertTrue(db.table_exists(table='dimension'),
                         "Expected table 'dimension' in database")
         db.close()
@@ -192,14 +196,15 @@ class DimensionTest(testhelp.HelpedTestCase):
         Dimension object should create the table 'dimension'.
         """
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
         testhelp.touch(self.testdb)
         
-        a = Dimension(dbname=self.testdb, name='ex_nihilo')
+        a = Dimension(name='ex_nihilo')
         a.persist()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected to find database file '%s'" % self.testdb)
 
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         self.assertTrue(db.table_exists(table='dimension'),
                         "Expected table 'dimension' in database")
         db.close()
@@ -213,14 +218,15 @@ class DimensionTest(testhelp.HelpedTestCase):
         the object.
         """
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
         testdata = [('cos', '6002', 24053, 17.2563, 190, 15.2343),
                     ('cos', '5081', 14834, 98.753,  105, 28.4385)]
         # create the dimension table without putting anything in it
-        z = Dimension(dbname=self.testdb, name='foobar')
+        z = Dimension(name='foobar')
         z.persist()
 
         # insert some test data into the table
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         db.insert(table='dimension',
                   fields=['name', 'category',
                           'p_count', 'p_pct', 's_count', 's_pct'],
@@ -228,7 +234,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         db.close()
 
         # get a default Dimension with the same name as the data in the table
-        q = Dimension(dbname=self.testdb, name='cos')
+        q = Dimension(name='cos')
         # this should load the data from the table into the object
         q.load()
 
@@ -264,11 +270,12 @@ class DimensionTest(testhelp.HelpedTestCase):
         # reboot the database and call persist() to create the table without
         # adding any data
         util.conditional_rm(self.testdb)
-        ignore = Dimension(dbname=self.testdb, name='foobar')
+        testhelp.db_config(self.testdir, util.my_name())
+        ignore = Dimension(name='foobar')
         ignore.persist()
 
         # get a Dimension object that is not in the table
-        test = Dimension(dbname=self.testdb, name='notindb')
+        test = Dimension(name='notindb')
         # make a copy of the object for reference (not just a handle to the
         # same ojbect)
         ref = copy.deepcopy(test)
@@ -277,7 +284,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         test.load()
 
         # verify that the object didn't change
-        self.expected(ref.dbname, test.dbname)
+        # self.expected(ref.dbname, test.dbname)
         self.expected(ref.name, test.name)
         self.expected(ref.sampsize, test.sampsize)
         self.expected(ref.p_sum, test.p_sum)
@@ -293,15 +300,16 @@ class DimensionTest(testhelp.HelpedTestCase):
         name should update the database record.
         """
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
 
         # first, we need to stick some records in the table
-        test = Dimension(dbname=self.testdb, name='foobar')
+        test = Dimension(name='foobar')
         test.update_category('<1M')
         test.update_category('<1G')
         test.persist()
 
         # verify that the records are in the table as expected
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         rows = db.select(table='dimension',
                          fields=['name', 'category', 'p_count', 'p_pct',
                                  's_count', 's_pct'])
@@ -333,9 +341,10 @@ class DimensionTest(testhelp.HelpedTestCase):
         the dimension table in the database.
         """
         util.conditional_rm(self.testdb)
-        
+        testhelp.db_config(self.testdir, util.my_name())
+
         # instantiating the object initializes the database
-        new = Dimension(dbname=self.testdb, name='notintable')
+        new = Dimension(name='notintable')
         new.update_category('5081', s_suminc=1)
         new.update_category('6001')
         new.update_category('6002', s_suminc=1)
@@ -343,7 +352,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         new.persist()
 
         # verify that the data is in the table
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         rows = db.select(table='dimension',
                          fields=['name', 'category', 'p_count', 'p_pct',
                                  's_count', 's_pct'])
@@ -365,11 +374,12 @@ class DimensionTest(testhelp.HelpedTestCase):
         Like so: <Dimension(name='baz', dbname='./test.d/test.db')>
         """
         
+        testhelp.db_config(self.testdir, util.my_name())
         exp = "Dimension(name='foo')"
         a = eval(exp)
         self.expected(exp, a.__repr__())
 
-        exp = "Dimension(name='baz', dbname='%s')" % self.testdb
+        exp = "Dimension(name='baz')"
         b = eval(exp)
         self.expected(exp, b.__repr__())
         
@@ -379,7 +389,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         Return the sum of all the 'count' values in either the p_sum or s_sum
         dictionary.
         """
-        a = Dimension(dbname=self.testdb, name='sum_total')
+        testhelp.db_config(self.testdir, util.my_name())
+        a = Dimension(name='sum_total')
         a.update_category('6001')
         a.update_category('6001', s_suminc=2)
         a.update_category('5081')
@@ -396,7 +407,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         be updated appropriately. Call sum_total and sum_pct to check the
         summary counts and percentages.
         """
-        a = Dimension(dbname=self.testdb,
+        testhelp.db_config(self.testdir, util.my_name())
+        a = Dimension(
                       name='xcat',
                       sampsize=0.05)
         a.update_category('6001', p_suminc=1, s_suminc=1)
@@ -416,7 +428,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         appropriately. Call sum_total and sum_pct to check the summary counts
         and percentages.
         """
-        a = Dimension(dbname=self.testdb,
+        testhelp.db_config(self.testdir, util.my_name())
+        a = Dimension(
                       name='newcat',
                       sampsize=0.01)
         a.update_category('5081', p_suminc=1, s_suminc=1)

@@ -18,7 +18,6 @@ def setUpModule():
     """
     Create the test directory in preparation to run the tests.
     """
-    Checkable.set_dbname(CheckableTest.testdb)
     testhelp.module_test_setup(CheckableTest.testdir)
     
 # -----------------------------------------------------------------------------
@@ -42,10 +41,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         objects representing the entries in the directory
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         testdir='/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         
         self.expected(2, len(x))
         dirlist = x[1].check(1.0)
@@ -82,13 +82,14 @@ class CheckableTest(testhelp.HelpedTestCase):
         file and update the item's last_check value.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         testdir='/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
         self.db_add_one(path=testdir + '/crawler.tar', type='f')
         self.db_add_one(path=testdir + '/crawler.tar.idx', type='f')
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         checked = []
         for item in [z for z in x if z.type == 'f']:
             self.expected(0, item.last_check)
@@ -96,7 +97,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             if type(result) == str and result == "unavailable":
                 return
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         for item in [z for z in x if z.type == 'f']:
             self.assertNotEqual(0, item.last_check,
                                 "Expected last_check to be updated but " +
@@ -112,7 +113,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
                              "Checkable object is missing %s method" % method)
-        self.expected(Checkable.dbname, x.dbname)
+        # self.expected(Checkable.dbname, x.dbname)
         self.expected('---', x.path)
         self.expected('-', x.type)
         # self.expected('', x.checksum)
@@ -214,9 +215,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-
+        testhelp.db_config(self.testdir, util.my_name())
+        
         # this call should create it
-        Checkable.ex_nihilo(dbname=self.testdb, dataroot="/home/somebody")
+        Checkable.ex_nihilo(dataroot="/home/somebody")
 
         # check that it exists
         self.assertEqual(os.path.exists(self.testdb), True,
@@ -225,7 +227,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
 
         # there should be one row
         rows = db.select(table='checkables', fields=[])
@@ -255,7 +257,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-
+        testhelp.db_config(self.testdir, util.my_name())
+        
         # create a dummy .db file and set its mtime back by 500 seconds
         testhelp.touch(self.testdb)
         s = os.stat(self.testdb)
@@ -263,12 +266,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
 
         # create a dummy 'checkables' table in the test database
-        Checkable.ex_nihilo(dbname=self.testdb)
+        Checkable.ex_nihilo()
         pre = os.stat(self.testdb)
         
         # call the test target routine
         time.sleep(1.0)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        Checkable.ex_nihilo()
 
         # verify that the file's mtime is unchanged and its size is unchanged
         post = os.stat(self.testdb)
@@ -292,6 +295,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
 
         # create a dummy .db file and set its mtime back by 500 seconds
         testhelp.touch(self.testdb)
@@ -300,12 +304,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
 
         # call the test target routine
-        Checkable.ex_nihilo(dbname=self.testdb)
+        Checkable.ex_nihilo()
 
         # verify that the file exists and the table does also
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected %s to exist" % self.testdb)
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         self.assertTrue(db.table_exists(table='checkables'),
                         "Expected table 'checkables' to exist in db")
         
@@ -317,9 +321,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
 
         # this call should create it
-        Checkable.ex_nihilo(dbname=self.testdb)
+        Checkable.ex_nihilo()
 
         # check that it exists
         self.assertEqual(os.path.exists(self.testdb), True,
@@ -328,7 +333,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         
         # there should be one row
         rows = db.select(table='checkables', fields=[])
@@ -349,9 +354,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
 
         # this call should create it
-        Checkable.ex_nihilo(dbname=self.testdb, dataroot=['abc', 'def'])
+        Checkable.ex_nihilo(dataroot=['abc', 'def'])
 
         # check that it exists
         self.assertEqual(os.path.exists(self.testdb), True,
@@ -360,7 +366,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         
         # there should be two rows, one for each item in the dataroot list
         rows = db.select(table='checkables', fields=[])
@@ -477,9 +483,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .get_list() before .ex_nihilo() should cause an exception
         """
         util.conditional_rm(self.testdb)
-
+        testhelp.db_config(self.testdir, util.my_name())
+        
         try:
-            Checkable.get_list(dbname=self.testdb)
+            Checkable.get_list()
             self.fail("Expected an exception but didn't get one.")
         except CrawlDBI.DBIerror, e:
             self.assertEqual("no such table: checkables" in str(e), True,
@@ -497,7 +504,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-
+        testhelp.db_config(self.testdir, util.my_name())
+        
         # create some test data (path, type, cos, last_check)
         testdata = [('/', 'd', '', 0),
                     ('/abc', 'd', '', 17),
@@ -510,17 +518,17 @@ class CheckableTest(testhelp.HelpedTestCase):
         testdata.sort(key=lambda x : x[3])
 
         # create the .db file
-        Checkable.ex_nihilo(dbname=self.testdb)
+        Checkable.ex_nihilo()
 
         # put the test data into the database
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=testdata[1:])
         db.close()
         
         # run the target routine
-        x = Checkable.get_list(self.testdb)
+        x = Checkable.get_list()
 
         # we should have gotten back the same number of records as went into
         # the database
@@ -540,16 +548,17 @@ class CheckableTest(testhelp.HelpedTestCase):
         Verify that last_check gets stored by persist().
         """
         util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
         testpath = 'Checkable.py'
-        Checkable.ex_nihilo(dbname=self.testdb, dataroot=testpath)
+        Checkable.ex_nihilo(dataroot=testpath)
 
         when = time.time()
         
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         x[0].last_check = when
         x[0].persist()
 
-        y = Checkable.get_list(dbname=self.testdb)
+        y = Checkable.get_list()
         self.expected(when, y[0].last_check)
 
     # -------------------------------------------------------------------------
@@ -560,9 +569,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         thrown.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         self.db_duplicates()
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(3, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
@@ -577,7 +587,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(3, len(x))
         self.assertEqual(foo in x, True,
                          "Object foo not found in database")
@@ -592,14 +602,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         path does not match). New record should be added.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
-        x = Checkable.get_list(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
+        x = Checkable.get_list()
         self.expected(1, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
         foo.persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.assertEqual(foo in x, True,
                          "Object foo not found in database")
@@ -614,12 +625,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'd'). Existing path should not be updated.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
 
         now = time.time()
         self.db_add_one(path=self.testpath, type='d', last_check=now)
         
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
@@ -629,7 +641,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x[1].rowid = None
         x[1].persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('d', x[1].type)
@@ -644,13 +656,14 @@ class CheckableTest(testhelp.HelpedTestCase):
         updated.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
 
         now = time.time()
         self.db_add_one(path=self.testpath, type='f',
                         cos='1234', last_check=now)
         
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
@@ -662,7 +675,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x[1].type = 'd'
         x[1].persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('d', x[1].type)
@@ -676,11 +689,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         'd'). Exception should be thrown.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         now = time.time()
         self.db_add_one(path='/home', type='d', last_check=now)
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
 
         self.expected(2, len(x))
         c = Checkable(path='/', type='d')
@@ -703,7 +717,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         c = Checkable(path='/', type='d')
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
@@ -719,16 +733,17 @@ class CheckableTest(testhelp.HelpedTestCase):
         should be updated.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(1, len(x))
         self.expected(0, x[0].last_check)
 
         x[0].last_check = now = time.time()
         x[0].persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(1, len(x))
         self.expected('/', x[0].path)
         self.expected('d', x[0].type)
@@ -741,11 +756,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         None, last_check == 0, type == 'f'). Exception should be thrown.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         self.db_add_one(path=self.testpath, type='f')
         self.db_add_one(path=self.testpath, type='f')
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(3, len(x))
         self.assertEqual(x[1], x[2],
                          "There should be a duplicate entry in the database.")
@@ -762,7 +778,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(3, len(x))
         self.assertEqual(foo in x, True,
                          "Object foo not found in database")
@@ -779,9 +795,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         match, type == 'f'). New record should be added.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(1, len(x))
         self.expected("/", x[0].path)
         self.expected(0, x[0].last_check)
@@ -789,7 +806,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         foo = Checkable(path=self.testpath, type='f')
         foo.persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
@@ -801,10 +818,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'f'). Existing path should be updated.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         now = time.time()
         self.db_add_one(last_check=now, type='d')
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
@@ -816,7 +834,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x[1].type = 'f'
         x[1].persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
@@ -831,10 +849,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'f'). Existing path should not be updated.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         now = time.time()
         self.db_add_one(last_check=now, type='f', cos='1111')
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
@@ -844,7 +863,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x[1].rowid = None
         x[1].persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
@@ -858,9 +877,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         Exception should be thrown.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         self.db_add_one()
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
@@ -879,7 +899,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
@@ -892,9 +912,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         be updated.
         """
         util.conditional_rm(self.testdb)
-        Checkable.ex_nihilo(dbname=self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.ex_nihilo()
         self.db_add_one()
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
@@ -903,7 +924,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x[1].last_check = now
         x[1].persist()
 
-        x = Checkable.get_list(dbname=self.testdb)
+        x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
 
@@ -932,7 +953,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Add one record to the database. All arguments except self are optional.
         """
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[(path, type, cos, last_check)])
@@ -943,7 +964,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Store a duplicate entry in the file table.
         """
-        db = CrawlDBI.DBI(dbname=self.testdb)
+        db = CrawlDBI.DBI()
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', 0)])
