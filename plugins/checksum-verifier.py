@@ -22,34 +22,34 @@ def main(cfg):
     hsi_prompt = "]:"
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = util.csv_list(cfg.get('checksum-verifier', 'dataroot'))
-    dbfilename = cfg.get('checksum-verifier', 'dbfile')
+    # dbfilename = cfg.get('checksum-verifier', 'dbfile')
     odds = cfg.getfloat('checksum-verifier', 'odds')
     n_ops = int(cfg.get('checksum-verifier', 'operations'))
 
-    Checkable.Checkable.set_dbname(dbfilename)
+    # Checkable.Checkable.set_dbname(dbfilename)
     
     # Initialize our statistics
-    (t_checksums, t_matches, t_failures) = get_stats(dbfilename)
+    (t_checksums, t_matches, t_failures) = get_stats()
     (checksums, matches, failures) = (0, 0, 0)
 
     # Fetch the list of HPSS objects that we're looking at from the
     # database
     try:
-        clist = Checkable.Checkable.get_list(dbname=dbfilename)
+        clist = Checkable.Checkable.get_list()
     except CrawlDBI.DBIerror, e:
-        if "no such table: checkables" in str(e):
+        sqlite_msg = "no such table: checkables"
+        mysql_msg = "Table '.*' doesn't exist"
+        if util.rgxin(sqlite_msg, str(e)) or util.rgxin(mysql_msg, str(e)):
             clog.info("checksum-verifier: calling ex_nihilo")
-            Checkable.Checkable.ex_nihilo(dbname=dbfilename,
-                                          dataroot=dataroot)
-            clist = Checkable.Checkable.get_list(dbname=dbfilename)
+            Checkable.Checkable.ex_nihilo(dataroot=dataroot)
+            clist = Checkable.Checkable.get_list()
         else:
             raise
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
             clog.info("checksum-verifier: calling ex_nihilo")
-            Checkable.Checkable.ex_nihilo(filename=dbfilename,
-                                          dataroot=dataroot)
-            clist = Checkable.Checkable.get_list(dbname=dbfilename)
+            Checkable.Checkable.ex_nihilo(dataroot=dataroot)
+            clist = Checkable.Checkable.get_list()
         else:
             raise
 
@@ -97,13 +97,13 @@ def main(cfg):
                 clog.info("checksum-verifier: in %s, found:" % item.path)
                 for n in ilist:
                     clog.info("checksum-verifier: >>> %s" % str(n))
-                    if 'f' == n.type:
+                    if 'f' == n.type and n.checksum != 0:
                         clog.info("checksum-verifier: ..... checksummed")
                         checksums += 1
-            elif isinstance(ilist, Checkable.Checkable):
-                clog.info("checksum-verifier: file checksummed - %s, %s" %
-                          (ilist.path, ilist.checksum))
-                checksums += 1
+            # elif isinstance(ilist, Checkable.Checkable):
+            #     clog.info("checksum-verifier: file checksummed - %s, %s" %
+            #               (ilist.path, ilist.checksum))
+            #     checksums += 1
             elif isinstance(ilist, Alert.Alert):
                 clog.info("checksum-verifier: Alert generated: '%s'" %
                           ilist.msg())
@@ -124,7 +124,7 @@ def main(cfg):
               "failures: %d" % t_failures)
 
     # Record the current totals in the database
-    update_stats(dbfilename, (t_checksums, t_matches, t_failures))
+    update_stats((t_checksums, t_matches, t_failures))
 
     # Report the dimension data in the log
     d = Dimension.Dimension(name='cos')
@@ -132,55 +132,45 @@ def main(cfg):
 
 stats_table = 'cvstats'
 # -----------------------------------------------------------------------------
-def get_stats(dbfilename):
+def get_stats():
     """
     Return the number of files checksummed, checksums matched, and checksums
     failed.
     """
-    db = sql.connect(dbfilename)
-    cx = db.cursor()
-    cx.execute("select name from sqlite_master " +
-               "where type = 'table' and name = '%s'" % stats_table)
-    rows = cx.fetchall()
-    if 0 == len(rows):
-        rval = (0, 0, 0)
-    else:
-        cx.execute("""select checksums, matches, failures from %s
-                      where rowid = 1""" % stats_table)
-        rows = cx.fetchall()
+    db = CrawlDBI.DBI()
+    if db.table_exists(table=stats_table):
+        rows = db.select(table=stats_table,
+                         fields=["checksums", "matches", "failures"],
+                         where="rowid = 1")
         rval = rows[0]
-
+    else:
+        rval = (0, 0, 0)
     db.close()
     return rval
 
 # -----------------------------------------------------------------------------
-def update_stats(dbfilename, cmf):
+def update_stats(cmf):
     """
     Record the three values in tuple cmf in table cvstats in the database. If
     the table does not exist, create it.
     """
-    db = sql.connect(dbfilename)
-    cx = db.cursor()
-    cx.execute("select name from sqlite_master " +
-               "where type = 'table' and name = '%s'" % stats_table)
-    rows = cx.fetchall()
-    if 0 == len(rows):
-        cx.execute("""create table %s(rowid         int,
-                                      checksums     int,
-                                      matches       int,
-                                      failures      int)""" % stats_table)
-        cx.execute("""insert into %s(rowid, checksums, matches, failures)
-                                  values(     1,         0,       0,        0)
-                   """ % stats_table)
-    cx.execute("""update %s set checksums=?,
-                                     matches=?,
-                                     failures=?
-                         where rowid = 1""" % stats_table,
-               cmf)
+    db = CrawlDBI.DBI()
+    if not db.table_exists(table=stats_table):
+        db.create(table=stats_table,
+                  fields=["rowid int",
+                          "checksums int",
+                          "matches int",
+                          "failures int",])
+        db.insert(table=stats_table,
+                  fields=["rowid", "checksums", "matches", "failures"],
+                  data=[(1, 0, 0, 0)])
 
-    db.commit()
+    db.update(table=stats_table,
+              fields=["checksums", "matches", "failures"],
+              data=[cmf],
+              where="rowid = 1")
     db.close()
-
+                  
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     pdb.set_trace()
