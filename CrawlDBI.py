@@ -237,7 +237,8 @@ class DBIsqlite(DBI_abstract):
         if not hasattr(self, 'tbl_prefix'):
             raise DBIerror("A table prefix is required")
 
-        self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
+        if self.tbl_prefix != '':
+            self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
         try:
             self.dbh = sqlite3.connect(self.dbname)
             # set autocommit mode
@@ -543,7 +544,8 @@ class DBImysql(DBI_abstract):
         if not hasattr(self, 'tbl_prefix'):
             raise DBIerror("A table prefix is required")
 
-        self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
+        if self.tbl_prefix != '':
+            self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
         cfg = kwargs['cfg']
         host = cfg.get('dbi', 'host')
         username = cfg.get('dbi', 'username')
