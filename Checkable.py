@@ -25,6 +25,7 @@ have a cos or a checksum.
 import Alert
 import CrawlDBI
 import Dimension
+import hpss
 import pexpect
 import random
 import re
@@ -152,13 +153,11 @@ class Checkable(object):
         # fire up hsi
         self.probability = probability
         rval = []
-        S = pexpect.spawn('hsi -q', timeout=300)
-        which = S.expect([self.hsi_prompt,
-                          "HPSS Unavailable",
-                          "connect: Connection refused"])
-        if 0 != which:
-            return "unavailable"    # outcome 5
-
+        try:
+            h = hpss.HSI(timeout=300)
+        except hpss.HSIerror, e:
+            return "unavailable"
+        
         # if the current object is a directory,
         #    cd to it
         #    run 'ls -P'
@@ -174,20 +173,18 @@ class Checkable(object):
         #    raise an exception for invalid Checkable type
 
         if self.type == 'd':
-            S.sendline("cd %s" % self.path)
-            S.expect(self.hsi_prompt)
-            if 'Not a directory' in S.before:
+            rsp = h.chdir(self.path)
+            if 'Not a directory' in rsp:
                 # it's not a directory. get the file info (ls -P) and decide
                 # whether to add it to the sample.
-                S.sendline("ls -P %s" % self.path)
-                S.expect(self.hsi_prompt)
-                result = self.harvest(S)
+                h.lsP(self.path)
+                result = self.harvest(h)
                 if 0 != self.checksum:
                     rval = "checksummed"
                 else:
                     rval = "skipped"
 
-            elif "Access denied" in S.before:
+            elif "Access denied" in rsp:
                 # it's a directory I don't have access to. Drop it from the
                 # database and continue
                 self.db_delete()
@@ -199,31 +196,29 @@ class Checkable(object):
                 # the database and add it to the list to return. For each file,
                 # we decide whether to add it to the sample. If so, we persist
                 # it and add it to rval. Otherwise , we drop it.
-                S.sendline("ls -P")
-                S.expect(self.hsi_prompt)
-                rval = self.harvest(S)
+                h.lsP("")
+                rval = self.harvest(h)
                 
         elif self.type == 'f':
-            S.sendline("hashverify %s" % self.path)
-            S.expect(self.hsi_prompt)
-            if "%s: (md5) OK" % self.path in S.before:
+            rsp = h.hashverify(self.path)
+            if "%s: (md5) OK" % self.path in rsp:
                 # hash was verified successfully
                 rval = "matched"
-            elif "no valid checksum found" in S.before:
-                S.sendline("hashcreate %s" % self.path)
-                S.expect(self.hsi_prompt)
+            elif "no valid checksum found" in rsp:
+                l = util.get_logger()
+                l.info("%s: starting hashcreate on %s",
+                       util.my_name(), self.path)
+                h.hashcreate(self.path)
                 self.checksum = 1
                 rval = "checksummed"
             else:
                 # hash verification failed
-                rval = Alert.Alert("Checksum mismatch: %s" % S.before)
+                rval = Alert.Alert("Checksum mismatch: %s" % rsp)
         else:
             # we have an invalid Checkable type (not 'd' or 'f')
             raise StandardError("Invalid Checkable type: %s" % self.type)
 
-        S.sendline("quit")
-        S.expect(pexpect.EOF)
-        S.close()
+        h.quit()
 
         self.last_check = time.time()
         self.persist()
@@ -344,7 +339,7 @@ class Checkable(object):
         return rval
 
     # -------------------------------------------------------------------------
-    def harvest(self, S):
+    def harvest(self, hsi):
         """
         Given a list of files and directories from hsi, step through them and
         handle each one.
@@ -353,7 +348,7 @@ class Checkable(object):
             setattr(self, 'dim', {})
             self.dim['cos'] = Dimension.Dimension(name='cos')
         rval = []
-        data = S.before
+        data = hsi.before()
         for line in data.split("\n"):
             r = Checkable.fdparse(line)
             if None != r:
@@ -374,16 +369,17 @@ class Checkable(object):
                                                         p_suminc=0,
                                                         s_suminc=1)
                         new.checksum = 1
-                        S.sendline("hashcreate %s" % new.path)
-                        S.expect(self.hsi_prompt)
+                        l = util.get_logger()
+                        l.info("%s: starting hashcreate on %s",
+                               util.my_name(), new.path)
+                        hsi.hashcreate(new.path)
                     else:
                         # we're not adding it to the sample, but if it already
                         # has a checksum, it's already part of the sample and
                         # we need to reflect that.
-                        S.sendline("hashlist %s" % new.path)
-                        S.expect(self.hsi_prompt)
+                        rsp = hsi.hashlist(new.path)
                         if re.search("\n[0-9a-f]+\smd5\s%s" % new.path,
-                                    S.before):
+                                     rsp):
                             new.checksum = 1
                             self.dim['cos'].update_category(new.cos,
                                                             p_suminc=0,
