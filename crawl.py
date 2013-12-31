@@ -308,6 +308,7 @@ class CrawlDaemon(daemon.Daemon):
                 
                 heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
                 ecount = ewhen = 0
+                tlimit = 7.0
                 while keep_going:
                     #
                     # Fire any plugins that are due
@@ -322,13 +323,14 @@ class CrawlDaemon(daemon.Daemon):
                             self.dlog("crawl: '%s'" % line)
                         ecount += 1
                         dt = time.time() - ewhen
-                        if 3 < ecount and dt < 5.0:
-                            self.dlog("crawl: too many exceptions in a " +
-                                      "short time -- shutting down")
+                        if 3 < ecount and dt < tlimit:
+                            self.dlog("crawl: %d exceptions in %f " %
+                                      (ecount, dt) +
+                                      "seconds -- shutting down")
                             keep_going = False
-                        elif 5.0 <= dt:
+                        elif tlimit <= dt:
                             ewhen = time.time()
-                            ecount = 0
+                            ecount = 1
 
                     #
                     # Issue the heartbeat if it's time
