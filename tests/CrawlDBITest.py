@@ -12,6 +12,7 @@ import testhelp
 import toolframe
 import traceback as tb
 import util
+import warnings
 
 # -------------------------------------------------------------------------
 def make_tcfg(dbtype):
@@ -41,6 +42,18 @@ def tearDownModule():
     Clean up after testing
     """
     testhelp.module_test_teardown(DBITest.testdir)
+    pdb.set_trace()
+    tcfg = make_tcfg('mysql')
+    tcfg.set('dbi', 'tbl_prefix', '')
+    db = CrawlDBI.DBI(cfg=tcfg)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore",
+                                "Can't read dir of .*")
+        tlist = db.select(table="information_schema.tables",
+                          fields=['table_name'],
+                          where='table_name like "test_%"')
+    for (tname,) in tlist:
+        db.drop(table=tname)
 
 # -----------------------------------------------------------------------------
 class DBITest(testhelp.HelpedTestCase):
