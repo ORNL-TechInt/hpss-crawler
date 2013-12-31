@@ -247,7 +247,7 @@ class Checkable(object):
         """
         db = CrawlDBI.DBI()
         db.create(table='checkables',
-                  fields=['id integer primary key',
+                  fields=['rowid integer primary key autoincrement',
                           'path text',
                           'type text',
                           'cos text',
