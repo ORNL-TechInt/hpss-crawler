@@ -81,6 +81,7 @@ class DBI(object):
                 dbtype = cfg.get('dbi', 'dbtype')
                 tbl_pfx = cfg.get('dbi', 'tbl_prefix')
                 dbname = cfg.get('dbi', 'dbname')
+                kwargs['cfg'] = cfg
         except CrawlConfig.NoSectionError:
             dbtype = 'sqlite'
         except CrawlConfig.NoOptionError:
@@ -602,9 +603,11 @@ class DBImysql(DBI_abstract):
                            dbname=self.dbname)
 
         # Construct and run the create statement
+        mysql_f = [x.replace('autoincrement', 'auto_increment')
+                   for x in fields]
         try:
             cmd = ("create table if not exists %s(" % self.prefix(table) +
-                   ", ".join(fields) +
+                   ", ".join(mysql_f) +
                    ")")
             c = self.dbh.cursor()
             c.execute(cmd)

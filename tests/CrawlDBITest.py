@@ -14,6 +14,7 @@ import traceback as tb
 import util
 import warnings
 
+
 # -------------------------------------------------------------------------
 def make_tcfg(dbtype):
     tcfg = CrawlConfig.CrawlConfig()
@@ -42,7 +43,6 @@ def tearDownModule():
     Clean up after testing
     """
     testhelp.module_test_teardown(DBITest.testdir)
-    pdb.set_trace()
     tcfg = make_tcfg('mysql')
     tcfg.set('dbi', 'tbl_prefix', '')
     db = CrawlDBI.DBI(cfg=tcfg)
