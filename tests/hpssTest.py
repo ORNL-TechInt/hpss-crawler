@@ -104,6 +104,17 @@ class hpssTest(testhelp.HelpedTestCase):
                         (exp, util.line_quote(result)))
 
     # -------------------------------------------------------------------------
+    def test_chdir_unicode(self):
+        """
+        Unicode argument to chdir should work
+        """
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        ucdir = unicode("hic_test")
+        result = h.chdir(ucdir)
+        exp = "/home/tpb/hic_test"
+        self.expected_in(exp, result)
+
+    # -------------------------------------------------------------------------
     def test_hashcreate_argbad(self):
         """
         If hashcreate gets an invalid argument (not a str or list), it should
@@ -497,6 +508,21 @@ class hpssTest(testhelp.HelpedTestCase):
         Issue "hashverify" in hsi, return results
         """
         paths = self.paths + " %s/hashnot" % self.hdir
+        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+        result = h.hashverify(paths)
+        h.quit()
+        self.expected_in("hashverify", result)
+        for path in self.plist:
+            self.expected_in("%s: \(?md5\)? OK" % path, result)
+        self.expected_in("hashnot failed: no valid checksum found",
+                         result)
+
+    # -------------------------------------------------------------------------
+    def test_hashverify_ok_unicode(self):
+        """
+        Issue "hashverify" in hsi with a unicode arg, return results
+        """
+        paths = unicode(self.paths + " %s/hashnot" % self.hdir)
         h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         result = h.hashverify(paths)
         h.quit()

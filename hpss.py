@@ -36,6 +36,10 @@ class HSI(object):
             self.connect()
 
     # -------------------------------------------------------------------------
+    def before(self):
+        return self.xobj.before
+
+    # -------------------------------------------------------------------------
     def chdir(self, dirname):
         self.xobj.sendline("cd %s" % dirname)
         self.xobj.expect(self.prompt)
@@ -60,17 +64,20 @@ class HSI(object):
     # -------------------------------------------------------------------------
     def hashcreate(self, pathnames):
         """
-        Argument pathnames should reference be one or more files. It may be a
+        Argument pathnames should reference one or more files. It may be a
         string containing one or more space separated file paths, or a list of
-        one or more file paths.
+        one or more file paths. If it has type unicode, it will be encoded to
+        'ascii' before being treated as a string.
         """
         if type(pathnames) == str:
             pathlist = pathnames.split()
         elif type(pathnames) == list:
             pathlist = pathnames
+        elif type(pathnames) == unicode:
+            pathlist = pathnames.encode('ascii', 'ignore').split()
         else:
-            raise HSIerror("%s: Invalid argument ('%s')" %
-                           (util.my_name(), pathnames))
+            raise HSIerror("%s: Invalid argument (%s: '%s')" %
+                           (util.my_name(), type(pathnames), pathnames))
         # self.xobj.expect(self.prompt)
         rval = ""
         for path in pathlist:
@@ -87,12 +94,16 @@ class HSI(object):
         one or more file paths.
         """
         if type(pathnames) == str:
-            self.xobj.sendline("hashdelete %s" % pathnames)
+            pargs = pathnames
         elif type(pathnames) == list:
-            self.xobj.sendline("hashdelete %s" % " ".join(pathnames))
+            pargs = " ".join(pathnames)
+        elif type(pathnames) == unicode:
+            pargs = pathname.encode('ascii', 'ignore')
         else:
-            raise HSIerror("%s: Invalid argument ('%s')" %
-                           (util.my_name(), pathnames))
+            raise HSIerror("%s: Invalid argument (%s: '%s')" %
+                           (util.my_name(), type(pathnames), pathnames))
+
+        self.xobj.sendline("hashdelete %s" % pargs)
         self.xobj.expect(self.prompt)
         return self.xobj.before
     
@@ -104,12 +115,16 @@ class HSI(object):
         one or more file paths.
         """
         if type(pathnames) == str:
-            self.xobj.sendline("hashlist %s" % pathnames)
+            pargs = pathnames
         elif type(pathnames) == list:
-            self.xobj.sendline("hashlist %s" % " ".join(pathnames))
+            pargs = " ".join(pathnames)
+        elif type(pathnames) == unicode:
+            pargs = pathname.encode('ascii', 'ignore')
         else:
-            raise HSIerror("%s: Invalid argument ('%s')" %
-                           (util.my_name(), pathnames))
+            raise HSIerror("%s: Invalid argument (%s: '%s')" %
+                           (util.my_name(), type(pathnames), pathnames))
+
+        self.xobj.sendline("hashlist %s" % pargs)
         self.xobj.expect(self.prompt)
         return self.xobj.before
     
@@ -124,9 +139,11 @@ class HSI(object):
             pathlist = pathnames.split()
         elif type(pathnames) == list:
             pathlist = pathnames
+        elif type(pathnames) == unicode:
+            pathlist = pathnames.encode('ascii', 'ignore').split()
         else:
-            raise HSIerror("%s: Invalid argument ('%s')" %
-                           (util.my_name(), pathnames))
+            raise HSIerror("%s: Invalid argument (%s: '%s')" %
+                           (util.my_name(), type(pathnames), pathnames))
 
         rval = ""
         for path in pathlist:
@@ -144,17 +161,19 @@ class HSI(object):
     # -------------------------------------------------------------------------
     def lsP(self, pathnames=''):
         """
-        Argument pathnames should reference be zero or more files. It may be a
-        string containing one or more space separated file paths, or a list of
-        one or more file paths.
+        Argument pathnames should reference zero or more files. It may be a
+        string containing zero or more space separated file paths, or a list of
+        zero or more file paths.
         """
         if type(pathnames) == str:
             parg = pathnames
         elif type(pathnames) == list:
             parg = " ".join(pathnames)
+        elif type(pathnames) == unicode:
+            parg = pathnames.encode('ascii', 'ignore')
         else:
-            raise HSIerror("%s: Invalid argument ('%s')" %
-                           (util.my_name(), pathnames))
+            raise HSIerror("%s: Invalid argument (%s: '%s')" %
+                           (util.my_name(), type(pathnames), pathnames))
 
         self.xobj.sendline("ls -P %s" % parg)
         self.xobj.expect(self.prompt)
