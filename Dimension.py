@@ -94,7 +94,7 @@ class Dimension(object):
         db = self.db()
         if not db.table_exists(table='dimension'):
             db.create(table='dimension',
-                      fields=['id int primary key',
+                      fields=['rowid integer primary key autoincrement',
                               'name text',
                               'category text',
                               'p_count int',
