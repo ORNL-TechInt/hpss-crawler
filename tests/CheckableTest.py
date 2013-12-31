@@ -489,12 +489,9 @@ class CheckableTest(testhelp.HelpedTestCase):
             Checkable.get_list()
             self.fail("Expected an exception but didn't get one.")
         except CrawlDBI.DBIerror, e:
-            self.assertEqual("no such table: checkables" in str(e), True,
+            self.assertEqual("no such table: test_checkables" in str(e), True,
                              "Got the wrong DBIerror: %s" %
                              util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Expected a CrawlDBI.DBIerror but got this instead: %s" %
-                      util.line_quote(tb.format_exc()))
     
     # -------------------------------------------------------------------------
     def test_get_list_known(self):
