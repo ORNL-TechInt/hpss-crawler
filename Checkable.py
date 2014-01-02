@@ -23,6 +23,7 @@ Note that directories are only used to find more files. A directory does not
 have a cos or a checksum.
 """
 import Alert
+import CrawlConfig
 import CrawlDBI
 import Dimension
 import hpss
@@ -187,8 +188,10 @@ class Checkable(object):
         # fire up hsi
         # self.probability = probability
         rval = []
+        cfg = CrawlConfig.get_config()
+        hsi_timeout = int(cfg.get_d('crawler', 'hsi_timeout', 300))
         try:
-            h = hpss.HSI(timeout=300)
+            h = hpss.HSI(timeout=hsi_timeout)
         except hpss.HSIerror, e:
             return "unavailable"
         
