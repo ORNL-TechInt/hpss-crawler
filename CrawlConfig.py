@@ -116,6 +116,22 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return rval
 
     # -------------------------------------------------------------------------
+    def get_d(self, section, option, default=None, logger=None):
+        try:
+            value = self.get(section, option)
+        except ConfigParser.NoSectionError:
+            if default != None:
+                value = default
+            else:
+                raise
+        except ConfigParser.NoOptionError:
+            if default != None:
+                value = default
+            else:
+                raise
+        return value
+
+    # -------------------------------------------------------------------------
     def get_size(self, section, option, default=None, logger=None):
         """
         Unit specs are case insensitive.

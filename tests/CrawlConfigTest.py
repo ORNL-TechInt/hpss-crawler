@@ -424,6 +424,53 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
     # -------------------------------------------------------------------------
+    def test_get_d_with(self):
+        """
+        Calling get_d() with a default value should 
+
+          1) return the option value if it's defined
+          2) return the default value otherwise
+
+        If a default value is provided, get_d should not throw NoOptionError or
+        NoSectionError
+        """
+        obj = CrawlConfig.CrawlConfig()
+        obj.load_dict(self.sample)
+        # section and option are in the config object
+        self.expected('quack', obj.get_d('sounds', 'duck', 'foobar'))
+        # section is defined, option is not, should get the default
+        self.expected('whistle', obj.get_d('sounds', 'dolphin', 'whistle'))
+        # section not defined, should get the default
+        self.expected('buck', obj.get_d('malename', 'deer', 'buck'))
+        
+    # -------------------------------------------------------------------------
+    def test_get_d_without(self):
+        """
+        Calling get_d() without a default value should
+
+          1) return the option value if it's defined
+          2) otherwise throw a NoSectionError or NoOptionError
+        """
+        obj = CrawlConfig.CrawlConfig()
+        obj.load_dict(self.sample)
+        # section and option are in the config object
+        self.expected('quack', obj.get_d('sounds', 'duck'))
+
+        # section is defined, option is not, should get exception
+        try:
+            self.expected('whistle', obj.get_d('sounds', 'dolphin'))
+            self.fail("Expected exception not thrown")
+        except CrawlConfig.NoOptionError:
+            pass
+        
+        # section not defined, should get the default
+        try:
+            self.expected('buck', obj.get_d('malename', 'deer'))
+            self.fail("Expected exception not thrown")
+        except CrawlConfig.NoSectionError:
+            pass
+        
+    # -------------------------------------------------------------------------
     def test_get_size(self):
         """
         Routine get_size() translates expressions like '30 mib' to 30 * 1024 *
