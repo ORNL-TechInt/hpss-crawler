@@ -3,6 +3,7 @@
 Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import CrawlConfig
+import CrawlDBI
 import CrawlPlugin
 import daemon
 import glob
@@ -82,6 +83,97 @@ def crl_cleanup(argv):
         else:
             shutil.rmtree(td)
 
+# ------------------------------------------------------------------------------
+def crl_cvreport(argv):
+    """cvreport - show the database status
+
+    select count(*) from checkables where type = 'f';
+    select count(*) from checkables where checksum <> 0;
+    select sum(p_count), sum(s_count) from dimension;
+    select checksum from cvstats;
+    """
+    p = optparse.OptionParser()
+    p.add_option('-c', '--cfg',
+                 action='store', default='', dest='config',
+                 help='config file name')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug: pdb.set_trace()
+
+    db = CrawlDBI.DBI()
+    rows = db.select(table="checkables",
+                     fields=["count(*)"],
+                     where="type = 'f'")
+    (files_in_pop) = rows[0][0]
+
+    rows = db.select(table="checkables",
+                     fields=["count(*)"],
+                     where="checksum <> 0")
+    (files_in_sample) = rows[0][0]
+
+    rows = db.select(table="dimension",
+                     fields=["sum(p_count)", "sum(s_count)"])
+    (dim_p_count, dim_s_count) = rows[0]
+
+    rows = db.select(table="cvstats",
+                     fields=[])
+    (total_checksums) = rows[0][1]
+
+    pflag = sflag = cflag = ""
+    if files_in_pop != dim_p_count:
+        pflag = "!"
+    if files_in_sample != dim_s_count:
+        sflag = "!"
+    if total_checksums != files_in_sample:
+        cflag = "!"
+        
+    print("%15s %10s  %10s" % (" ", "Population", "Sample"))
+    print("%15s %10d  %10d" % ("checkables", files_in_pop, files_in_sample))
+    print("%15s %10d%1s %10d%1s" % ("dimension", dim_p_count, pflag, dim_s_count, sflag))
+    print("%15s %10s  %10d%1s" % ("cvstats", " ", total_checksums, cflag))
+
+
+    
+    db.close()
+    
+# ------------------------------------------------------------------------------
+def crl_dbdrop(argv):
+    """dbdrop - drop a database table
+
+    usage: crawl dbdrop [-f] <table-name>
+
+    Drop database table <table-name>
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-f', '--force',
+                 action='store_true', default=False, dest='force',
+                 help='proceed without confirmation')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug: pdb.set_trace()
+
+    cfg = CrawlConfig.get_config()
+    tbpfx = cfg.get('dbi', 'tbl_prefix')
+    tname = a[0]
+    answer = raw_input("About to drop db table %s_%s. Are you sure? > " %
+                       (tbpfx, tname))
+    if answer[0].lower() != "y":
+        sys.exit()
+        
+    db = CrawlDBI.DBI()
+    db.drop(table=tname)
+    if db.table_exists(table=tname):
+        print("Attempt to drop table '%s_%s' failed" % (tbpfx, tname))
+    else:
+        print("Attempt to drop table '%s_%s' was successful" % (tbpfx, tname))
+    db.close()
+    
 # ------------------------------------------------------------------------------
 def crl_fire(argv):
     """fire - run a plugin
