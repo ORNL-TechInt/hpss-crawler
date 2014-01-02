@@ -102,6 +102,37 @@ class Checkable(object):
                 (self.type == other.type))
 
     # -------------------------------------------------------------------------
+    def add_to_sample(self, hsi, already_hashed=False):
+        """
+        Add the current Checkable to the sample. If already_hashed is True,
+        this is a file for which a checksum has already been computed. We just
+        need to record that fact by setting its checksum member to 1 and
+        updating the sample count.
+
+        If already_hashed is False, we need to carry out the following steps:
+
+         1) run hashcreate on the file
+         2) set checksum to non-zero to record that we have a checksum
+         3) update the sample count in the Dimension object
+        """
+        if not hasattr(self, 'dim'):
+            setattr(self, 'dim', {})
+            self.dim['cos'] = Dimension.Dimension(name='cos')
+
+        if not already_hashed:
+            l = util.get_logger()
+            l.info("%s: starting hashcreate on %s", util.my_name(), self.path)
+            hsi.hashcreate(self.path)
+            l.info("%s: completed hashcreate on %s", util.my_name(), self.path)
+
+        if self.checksum == 0:
+            self.checksum = 1
+            self.dim['cos'].update_category(self.cos,
+                                            p_suminc=0,
+                                            s_suminc=1)
+        self.dim['cos'].persist()
+
+    # -------------------------------------------------------------------------
     def addable(self, category):
         # determine which dimensions vote for this item
         rval = False
@@ -191,10 +222,7 @@ class Checkable(object):
                 
             else:
                 # we have cd'd into a directory. We run "ls -P" for the
-                # directory contents. For each subdirectory, we persist it to
-                # the database and add it to the list to return. For each file,
-                # we decide whether to add it to the sample. If so, we persist
-                # it and add it to rval. Otherwise , we drop it.
+                # directory contents and run harvest on that.
                 h.lsP("")
                 rval = self.harvest(h)
                 
@@ -204,11 +232,12 @@ class Checkable(object):
                 # hash was verified successfully
                 rval = "matched"
             elif "no valid checksum found" in rsp:
-                l = util.get_logger()
-                l.info("%s: starting hashcreate on %s",
-                       util.my_name(), self.path)
-                h.hashcreate(self.path)
-                self.checksum = 1
+                self.add_to_sample(h)
+                # l = util.get_logger()
+                # l.info("%s: starting hashcreate on %s",
+                #        util.my_name(), self.path)
+                # h.hashcreate(self.path)
+                # self.checksum = 1
                 rval = "checksummed"
             else:
                 # hash verification failed
@@ -342,6 +371,12 @@ class Checkable(object):
         """
         Given a list of files and directories from hsi, step through them and
         handle each one.
+
+        For each file, we have to decide whether we're adding it to the sample
+        or not. In any case, we persist it to the database. If we're adding it
+        to the sample, we have to 1) issue hashcreate on it, 2) set its
+        checksum to 1, and 3) update the sample count for it in the Dimension
+        object.
         """
         if not hasattr(self, 'dim'):
             setattr(self, 'dim', {})
@@ -364,28 +399,32 @@ class Checkable(object):
                             self.dim['cos'].update_category(new.cos)
 
                     if self.addable(new.cos):
-                        self.dim['cos'].update_category(new.cos,
-                                                        p_suminc=0,
-                                                        s_suminc=1)
-                        new.checksum = 1
-                        l = util.get_logger()
-                        l.info("%s: starting hashcreate on %s",
-                               util.my_name(), new.path)
-                        hsi.hashcreate(new.path)
+                        # new.dim = self.dim
+                        new.add_to_sample(hsi)
+                        # self.dim['cos'].update_category(new.cos,
+                        #                                 p_suminc=0,
+                        #                                 s_suminc=1)
+                        # new.checksum = 1
+                        # l = util.get_logger()
+                        # l.info("%s: starting hashcreate on %s",
+                        #        util.my_name(), new.path)
+                        # hsi.hashcreate(new.path)
                     else:
                         # we're not adding it to the sample, but if it already
                         # has a checksum, it's already part of the sample and
                         # we need to reflect that.
                         rsp = hsi.hashlist(new.path)
-                        if re.search("\n[0-9a-f]+\smd5\s%s" % new.path,
-                                     rsp):
-                            new.checksum = 1
-                            self.dim['cos'].update_category(new.cos,
-                                                            p_suminc=0,
-                                                            s_suminc=1)
+                        if ((new.checksum == 0) and
+                            (re.search("\n[0-9a-f]+\smd5\s%s" % new.path,
+                                       rsp))):
+                            new.add_to_sample(hsi, already_hashed=True)
+                            # new.checksum = 1
+                            # self.dim['cos'].update_category(new.cos,
+                            #                                 p_suminc=0,
+                            #                                 s_suminc=1)
                     new.persist()
                     rval.append(new)
-        self.dim['cos'].persist()
+        # self.dim['cos'].persist()
         return rval
 
     # -------------------------------------------------------------------------
