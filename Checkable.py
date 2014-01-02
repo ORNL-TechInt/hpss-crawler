@@ -31,8 +31,7 @@ import random
 import re
 import testhelp
 import time
-
-# default_dbname = 'HIC.db'
+import util
 
 # -----------------------------------------------------------------------------
 class Checkable(object):
