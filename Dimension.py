@@ -5,6 +5,22 @@ Track stratum proportions in a sample against a population
 import CrawlDBI
 
 # -----------------------------------------------------------------------------
+def get_dim(dname):
+    """
+    Ensure that each named dimension is a singleton object.
+    """
+    try:
+        rval = get_dim._dims[dname]
+    except AttributeError:
+        get_dim._dims = {}
+        get_dim._dims[dname] = Dimension(name=dname)
+        rval = get_dim._dims[dname]
+    except KeyError:
+        get_dim._dims[dname] = Dimension(name=dname)
+        rval = get_dim._dims[dname]
+    return rval
+
+# -----------------------------------------------------------------------------
 class Dimension(object):
     """
     The Dimension object has a name, for example, 'cos', indicating what the
@@ -33,9 +49,6 @@ class Dimension(object):
         ...
         
     """
-    # The default database to use
-    # dbname = 'drill.db'
-
     # attributes that can be set through the constructor
     settable_attrl = ['name', 'sampsize']
 
@@ -49,7 +62,6 @@ class Dimension(object):
 
         Field 'name' in the object corresponds with field 'category' in the db.
         """
-        # self.dbname = Dimension.dbname
         self.name = ''          # name must be set by caller
         self.sampsize = 0.01    # default sample size is 1%
         self.p_sum = {}         # population summary starts empty
@@ -63,7 +75,6 @@ class Dimension(object):
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
         self.db_init()
-        self.load()
 
     # -------------------------------------------------------------------------
     def __repr__(self):
@@ -74,53 +85,44 @@ class Dimension(object):
         return rv
 
     # -------------------------------------------------------------------------
-    def db(self):
-        """
-        Get our database connection (initialize it if necessary)
-        """
-        try:
-            return self.dbh
-        except AttributeError:
-            self.dbh = CrawlDBI.DBI()
-            return self.dbh
-    
-    # -------------------------------------------------------------------------
     def db_init(self):
         """
         Get a database handle. If our table has not yet been created, do so.
         """
-        if hasattr(self,'dbh'):
-            return
-        db = self.db()
-        if not db.table_exists(table='dimension'):
-            db.create(table='dimension',
-                      fields=['rowid integer primary key autoincrement',
-                              'name text',
-                              'category text',
-                              'p_count int',
-                              'p_pct real',
-                              's_count int',
-                              's_pct real'])
+        self.db = CrawlDBI.DBI()
+        if not self.db.table_exists(table='dimension'):
+            self.db.create(table='dimension',
+                           fields=['rowid integer primary key autoincrement',
+                                   'name text',
+                                   'category text',
+                                   'p_count int',
+                                   'p_pct real',
+                                   's_count int',
+                                   's_pct real'])
+        self.load(already_open=True)
+        self.db.close()
         
     # -------------------------------------------------------------------------
-    def load(self):
+    def load(self, already_open=False):
         """
         Load this object with data from the database
         """
-        db = self.db()
-        rows = db.select(table='dimension',
-                         fields=['category', 'p_count', 'p_pct', 's_count',
-                                 's_pct'],
-                         where='name = ?',
-                         data=(self.name,))
+        if not already_open:
+            self.db = CrawlDBI.DBI()
+        rows = self.db.select(table='dimension',
+                              fields=['category', 'p_count', 'p_pct',
+                                      's_count', 's_pct'],
+                              where='name = ?',
+                              data=(self.name,))
         for row in rows:
             (cval, p_count, p_pct, s_count, s_pct) = row
             self.p_sum.setdefault(cval, {'count': p_count,
                                          'pct': p_pct})
             self.s_sum.setdefault(cval, {'count': s_count,
                                          'pct': s_pct})
-        pass
-    
+        if not already_open:
+            self.db.close()
+
     # -------------------------------------------------------------------------
     def persist(self):
         """
@@ -141,8 +143,8 @@ class Dimension(object):
         u_data = []
         
         # Find out which rows are already in the database.
-        db = self.db()
-        rows = db.select(table='dimension',
+        self.db = CrawlDBI.DBI()
+        rows = self.db.select(table='dimension',
                          fields=['name', 'category'],
                          where='name = ?',
                          data=(self.name,))
@@ -167,7 +169,7 @@ class Dimension(object):
         # If the data tuple list is not empty, issue an update against the
         # database
         if u_data != []:
-            db.update(table='dimension',
+            self.db.update(table='dimension',
                       fields=['p_count', 'p_pct', 's_count', 's_pct'],
                       where='name=? and category=?',
                       data=u_data)
@@ -183,12 +185,12 @@ class Dimension(object):
                            self.s_sum[cat]['pct']))
         # If the insert data tuple list is not empty, issue the insert
         if i_data != []:
-            db.insert(table='dimension',
+            self.db.insert(table='dimension',
                       fields=['name', 'category', 'p_count',
                               'p_pct', 's_count', 's_pct'],
                       data=i_data)
                           
-        pass
+        self.db.close()
     
     # -------------------------------------------------------------------------
     def report(self):
@@ -251,7 +253,8 @@ class Dimension(object):
             self.s_sum[catval]['count'] += s_suminc
 
         self._update_pct()
-    
+        self.persist()
+
     # -------------------------------------------------------------------------
     def _update_pct(self):
         """

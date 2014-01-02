@@ -48,14 +48,12 @@ class Checkable(object):
     type, and last_check. So directories will have a cos field, but it will
     always be empty.
     """
-    # dbname = default_dbname
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
         Initialize a Checkable object -- set the path, type, checksum, cos, and
         last_check to default values, then update them based on the arguments.
         """
-        # self.dbname = Checkable.dbname
         self.path = '---'
         self.type = '-'
         self.cos = ''
@@ -77,6 +75,8 @@ class Checkable(object):
             setattr(self, k, kwargs[k])
         if self.checksum == None:
             self.checksum = 0
+        self.dim = {}
+        self.dim['cos'] = Dimension.get_dim('cos')
         super(Checkable, self).__init__()
         
     # -------------------------------------------------------------------------
@@ -115,10 +115,6 @@ class Checkable(object):
          2) set checksum to non-zero to record that we have a checksum
          3) update the sample count in the Dimension object
         """
-        if not hasattr(self, 'dim'):
-            setattr(self, 'dim', {})
-            self.dim['cos'] = Dimension.Dimension(name='cos')
-
         if not already_hashed:
             l = util.get_logger()
             l.info("%s: starting hashcreate on %s", util.my_name(), self.path)
@@ -188,24 +184,10 @@ class Checkable(object):
         except hpss.HSIerror, e:
             return "unavailable"
         
-        # if the current object is a directory,
-        #    cd to it
-        #    run 'ls -P'
-        #    add subdirectories to the list of checkables
-        #    decide whether to add each file to the sample
-        #    if we add the file to the sample, we run hashcreate for it and set
-        #       its checksum member to 1
-        # elif the current object is a file,
-        #    run hashverify on it
-        #    assess the result
-        #    raise an alert if the hashverify failed
-        # else
-        #    raise an exception for invalid Checkable type
-
         if self.type == 'd':
             rsp = h.chdir(self.path)
             if 'Not a directory' in rsp:
-                # it's not a directory. get the file info (ls -P) and decide
+                # It's not a directory. Get the file info (ls -P) and decide
                 # whether to add it to the sample.
                 h.lsP(self.path)
                 result = self.harvest(h)
@@ -215,33 +197,33 @@ class Checkable(object):
                     rval = "skipped"
 
             elif "Access denied" in rsp:
-                # it's a directory I don't have access to. Drop it from the
-                # database and continue
-                self.db_delete()
+                # It's a directory we don't have access to. Carry on.
                 rval = "access denied"
                 
             else:
-                # we have cd'd into a directory. We run "ls -P" for the
+                # We have cd'd into a directory. We run "ls -P" for the
                 # directory contents and run harvest on that.
                 h.lsP("")
                 rval = self.harvest(h)
                 
         elif self.type == 'f':
-            rsp = h.hashverify(self.path)
-            if "%s: (md5) OK" % self.path in rsp:
-                # hash was verified successfully
-                rval = "matched"
-            elif "no valid checksum found" in rsp:
-                self.add_to_sample(h)
-                # l = util.get_logger()
-                # l.info("%s: starting hashcreate on %s",
-                #        util.my_name(), self.path)
-                # h.hashcreate(self.path)
-                # self.checksum = 1
-                rval = "checksummed"
+            if self.checksum == 0:
+                if self.addable(self.cos):
+                    self.add_to_sample(h)
+                    rval = "checksummed"
             else:
-                # hash verification failed
-                rval = Alert.Alert("Checksum mismatch: %s" % rsp)
+                rsp = h.hashverify(self.path)
+                if "%s: (md5) OK" % self.path in rsp:
+                    # hash was verified successfully
+                    rval = "matched"
+                elif "no valid checksum found" in rsp:
+                    # no hash is available -- see if we want to add it
+                    if self.addable(self.cos):
+                        self.add_to_sample(h)
+                        rval = "checksummed"
+                else:
+                    # hash verification failed
+                    rval = Alert.Alert("Checksum mismatch: %s" % rsp)
         else:
             # we have an invalid Checkable type (not 'd' or 'f')
             raise StandardError("Invalid Checkable type: %s" % self.type)
@@ -378,9 +360,6 @@ class Checkable(object):
         checksum to 1, and 3) update the sample count for it in the Dimension
         object.
         """
-        if not hasattr(self, 'dim'):
-            setattr(self, 'dim', {})
-            self.dim['cos'] = Dimension.Dimension(name='cos')
         rval = []
         data = hsi.before()
         for line in data.split("\n"):
@@ -399,32 +378,20 @@ class Checkable(object):
                             self.dim['cos'].update_category(new.cos)
 
                     if self.addable(new.cos):
-                        # new.dim = self.dim
                         new.add_to_sample(hsi)
-                        # self.dim['cos'].update_category(new.cos,
-                        #                                 p_suminc=0,
-                        #                                 s_suminc=1)
-                        # new.checksum = 1
-                        # l = util.get_logger()
-                        # l.info("%s: starting hashcreate on %s",
-                        #        util.my_name(), new.path)
-                        # hsi.hashcreate(new.path)
                     else:
-                        # we're not adding it to the sample, but if it already
-                        # has a checksum, it's already part of the sample and
-                        # we need to reflect that.
+                        # If it's not in the sample, but already has a
+                        # checksum, it's already part of the sample and we need
+                        # to reflect that.
                         rsp = hsi.hashlist(new.path)
                         if ((new.checksum == 0) and
                             (re.search("\n[0-9a-f]+\smd5\s%s" % new.path,
                                        rsp))):
                             new.add_to_sample(hsi, already_hashed=True)
-                            # new.checksum = 1
-                            # self.dim['cos'].update_category(new.cos,
-                            #                                 p_suminc=0,
-                            #                                 s_suminc=1)
+
                     new.persist()
                     rval.append(new)
-        # self.dim['cos'].persist()
+
         return rval
 
     # -------------------------------------------------------------------------
