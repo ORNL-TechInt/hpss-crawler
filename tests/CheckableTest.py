@@ -48,7 +48,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable.get_list()
         
         self.expected(2, len(x))
-        dirlist = x[1].check(1.0)
+        dirlist = x[1].check()
         if type(dirlist) == str and dirlist == "unavailable":
             return
         
@@ -93,7 +93,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         checked = []
         for item in [z for z in x if z.type == 'f']:
             self.expected(0, item.last_check)
-            result = item.check(-1)
+            result = item.check()
             if type(result) == str and result == "unavailable":
                 return
 
@@ -116,10 +116,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         # self.expected(Checkable.dbname, x.dbname)
         self.expected('---', x.path)
         self.expected('-', x.type)
-        # self.expected('', x.checksum)
+        self.expected(0, x.checksum)
         self.expected('', x.cos)
         self.expected(0, x.last_check)
         self.expected(None, x.rowid)
+        self.expected(0.1, x.probability)
             
     # -------------------------------------------------------------------------
     def test_ctor_args(self):
@@ -128,7 +129,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         cos, and last_check
         """
         x = Checkable(rowid=3, path='/one/two/three', type='f', cos='6002',
-                      last_check=72)
+                      last_check=72, probability=0.01)
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
                          "Checkable object is missing %s method" % method)
@@ -137,6 +138,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('f', x.type)
         self.expected('6002', x.cos)
         self.expected(72, x.last_check)
+        self.expected(0.01, x.probability)
 
     # -------------------------------------------------------------------------
     def test_ctor_bad_args(self):
@@ -706,8 +708,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             x[0].persist()
             self.fail("Expected an exception but didn't get one.")
-        except AssertionError:
-            raise
         except StandardError, e:
             self.assertEqual("has rowid != None, last_check == 0.0" in str(e),
                              True,
@@ -888,8 +888,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             x[1].persist()
             self.fail("Expected exception but didn't get one")
-        except AssertionError:
-            raise
         except StandardError, e:
             self.assertEqual("has rowid == None, last_check != 0.0" in str(e),
                              True,

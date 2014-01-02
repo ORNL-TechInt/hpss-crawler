@@ -61,6 +61,7 @@ class Checkable(object):
         self.last_check = 0
         self.rowid = None
         self.args = args
+        self.probability = 0.1
         self.hsi_prompt = "]:"
         for k in kwargs:
             if k not in ['rowid',
@@ -69,11 +70,12 @@ class Checkable(object):
                          'checksum',
                          'cos',
                          'dim',
+                         'probability',
                          'last_check']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
-        if self.checksum == None:
+        if self.checksum is None:
             self.checksum = 0
         self.dim = {}
         self.dim['cos'] = Dimension.get_dim('cos')
@@ -143,7 +145,7 @@ class Checkable(object):
         return rval
     
     # -------------------------------------------------------------------------
-    def check(self, probability):
+    def check(self):
         """
         For a directory:
          - get a list of its contents if possible,
@@ -177,7 +179,7 @@ class Checkable(object):
          hpss unavailable             "unavailable"
         """
         # fire up hsi
-        self.probability = probability
+        # self.probability = probability
         rval = []
         try:
             h = hpss.HSI(timeout=300)
@@ -211,6 +213,8 @@ class Checkable(object):
                 if self.addable(self.cos):
                     self.add_to_sample(h)
                     rval = "checksummed"
+                else:
+                    rval = "skipped"
             else:
                 rsp = h.hashverify(self.path)
                 if "%s: (md5) OK" % self.path in rsp:
@@ -326,7 +330,7 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def get_list(cls):
+    def get_list(cls, prob=0.1):
         """
         Return the current list of Checkables from the database.
         """
@@ -343,7 +347,8 @@ class Checkable(object):
                             type=row[2],
                             cos=row[3],
                             checksum=row[4],
-                            last_check=row[5])
+                            last_check=row[5],
+                            probability=prob)
             rval.append(new)
         db.close()
         return rval
@@ -366,18 +371,20 @@ class Checkable(object):
             r = Checkable.fdparse(line)
             if None != r:
                 if 'd' == r[0]:
-                    new = Checkable(path=r[1], type=r[0], cos=r[2])
+                    new = Checkable(path=r[1], type=r[0], cos=r[2],
+                                    probability=self.probability)
                     new.persist()
                     rval.append(new)
                 elif 'f' == r[0]:
                     if r[1] == self.path and r[0] == self.type:
                         new = self
                     else:
-                        new = Checkable(path=r[1], type=r[0], cos=r[2])
+                        new = Checkable(path=r[1], type=r[0], cos=r[2],
+                                        probability=self.probability)
                         if new.persist():
                             self.dim['cos'].update_category(new.cos)
 
-                    if self.addable(new.cos):
+                    if new.addable(new.cos):
                         new.add_to_sample(hsi)
                     else:
                         # If it's not in the sample, but already has a
