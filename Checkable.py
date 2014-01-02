@@ -132,7 +132,13 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def addable(self, category):
-        # determine which dimensions vote for this item
+        """
+        Determine which Dimensions want this item added. Note that we want this
+        routine to be general across dimensions so we don't want it to assume
+        anything about the dimension it's checking (like that it's named 'cos'
+        for example). That why calls to this pass in cos rather than looking at
+        the value in the object.
+        """
         rval = False
         votes = {}
         for k in self.dim:
