@@ -35,21 +35,21 @@ def main(cfg):
     # Fetch the list of HPSS objects that we're looking at from the
     # database
     try:
-        clist = Checkable.Checkable.get_list()
+        clist = Checkable.Checkable.get_list(odds)
     except CrawlDBI.DBIerror, e:
         sqlite_msg = "no such table: checkables"
         mysql_msg = "Table '.*' doesn't exist"
         if util.rgxin(sqlite_msg, str(e)) or util.rgxin(mysql_msg, str(e)):
             clog.info("checksum-verifier: calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
-            clist = Checkable.Checkable.get_list()
+            clist = Checkable.Checkable.get_list(odds)
         else:
             raise
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
             clog.info("checksum-verifier: calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
-            clist = Checkable.Checkable.get_list()
+            clist = Checkable.Checkable.get_list(odds)
         else:
             raise
 
@@ -61,7 +61,7 @@ def main(cfg):
             item = clist.pop(0)
             clog.info("checksum-verifier: [%d] checking %s" %
                       (item.rowid, item.path))
-            ilist = item.check(odds)
+            ilist = item.check()
 
             # Expected outcomes that check can return:
             #  list of Checkables: read dir or checksummed files (may be empty)
@@ -94,7 +94,8 @@ def main(cfg):
                     clog.info("checksum-verifier: unexpected string returned " +
                               "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
-                clog.info("checksum-verifier: in %s, found:" % item.path)
+                clog.info("checksum-verifier: in %s, found:" % item)
+                clog.info("checksum-verifier: %s" % str(ilist))
                 for n in ilist:
                     clog.info("checksum-verifier: >>> %s" % str(n))
                     if 'f' == n.type and n.checksum != 0:
