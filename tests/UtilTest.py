@@ -25,6 +25,10 @@ def tearDownModule():
     testhelp.module_test_teardown(UtilTest.testdir)
     
 # -----------------------------------------------------------------------------
+def logErr(record):
+    raise
+
+# -----------------------------------------------------------------------------
 class UtilTest(testhelp.HelpedTestCase):
     """
     Tests for util.py
@@ -218,6 +222,162 @@ class UtilTest(testhelp.HelpedTestCase):
         self.assertEqual(exp, act,
                          "Expected %s, got %s" % (exp, act))
 
+    # -------------------------------------------------------------------------
+    def test_log_default(self):
+        """
+        If util.log() is called with no logger already instantiated, it should
+        attempt /var/log/crawl.log and fail if the user is not root.
+        """
+        raise testhelp.UnderConstructionError()
+        
+    # -------------------------------------------------------------------------
+    def test_log_simple(self):
+        """
+        Tests for routine util.log():
+         - simple string in first argument
+         - 1 % formatter in first arg
+         - multiple % formatters in first arg
+         - too many % formatters for args
+         - too many args for % formatters
+        """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # simple string in first arg
+        exp = util.my_name() + ": " + "This is a simple string"
+        util.log(exp)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+                        
+    # -------------------------------------------------------------------------
+    def test_log_onefmt(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # 1 % formatter in first arg
+        a1 = "This has a formatter and one argument: %s"
+        a2 = "did that work?"
+        exp = util.my_name() + ": " + a1 % a2
+        util.log(a1, a2)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+    # -------------------------------------------------------------------------
+    def test_log_multfmt(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # multiple % formatters in first arg
+        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
+        a2 = "zebedee"
+        a3 = 94
+        a4 = 23.12348293402
+        exp = util.my_name() + ": " + a1 % (a2, a3, a4)
+        util.log(a1, a2, a3, a4)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+    # -------------------------------------------------------------------------
+    def test_log_toomany_fmt(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # this allows exceptions thrown from inside the logging handler to
+        # propagate up so we can catch it.
+        log.handlers[0].handleError = logErr
+        
+        # multiple % formatters in first arg
+        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f; %g"
+        a2 = "zebedee"
+        a3 = 94
+        a4 = 23.12348293402
+        exp = util.my_name() + ": " + a1 % (a2, a3, a4, 17.9)
+        try:
+            util.log(a1, a2, a3, a4)
+            self.fail("Expected exception not thrown")
+        except TypeError,e:
+            self.assertEqual("not enough arguments for format string", str(e),
+                             "Wrong TypeError thrown")
+    
+        result = util.contents(fpath)
+        self.assertFalse(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+
+        
+    # -------------------------------------------------------------------------
+    def test_log_toomany_args(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # this allows exceptions thrown from inside the logging handler to
+        # propagate up so we can catch it.
+        log.handlers[0].handleError = logErr
+        
+        # multiple % formatters in first arg
+        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
+        a2 = "zebedee"
+        a3 = 94
+        a4 = 23.12348293402
+        a5 = "friddle"
+        exp = util.my_name() + ": " + a1 % (a2, a3, a4)
+        try:
+            util.log(a1, a2, a3, a4, a5)
+            self.fail("Expected exception not thrown")
+        except TypeError, e:
+            exc = "not all arguments converted during string formatting"
+            self.assertEqual(exc, str(e),
+                             "Expected '%s', got '%s'" % (exc, str(e)))
+        
+        result = util.contents(fpath)
+        self.assertFalse(exp in result,
+                         "Expected '%s' in %s" %
+                         (exp, util.line_quote(result)))
+        
     # -------------------------------------------------------------------------
     def test_my_name(self):
         """

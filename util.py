@@ -140,6 +140,17 @@ def line_quote(value):
     return '\n"""\n%s\n"""' % str(rv)
 
 # -----------------------------------------------------------------------------
+def log(*args):
+    parent = sys._getframe(1).f_code.co_name
+    fmt = parent + ": " + args[0]
+    nargs = (fmt,) + args[1:]
+    try:
+        log._logger.info(*nargs)
+    except AttributeError:
+        log._logger = get_logger()
+        log._logger.info(*nargs)
+
+# -----------------------------------------------------------------------------
 def my_name():
     """
     Return the caller's name
