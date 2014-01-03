@@ -60,7 +60,7 @@ def main(cfg):
             # but it's not, so grab the first item and check it
             item = clist.pop(0)
             clog.info("checksum-verifier: [%d] checking %s" %
-                      (item.rowid, item.path))
+                      (item.rowid, item))
             ilist = item.check()
 
             # Expected outcomes that check can return:
@@ -77,7 +77,7 @@ def main(cfg):
                 if ilist == "access denied":
                     clog.info("checksum-verifier: dir %s not accessible" %
                               item.path)
-                    clist.remove(item)
+                    # clist.remove(item)
                 elif ilist == "matched":
                     matches += 1
                     clog.info("checksum-verifier: %s checksums matched" %
@@ -101,10 +101,10 @@ def main(cfg):
                     if 'f' == n.type and n.checksum != 0:
                         clog.info("checksum-verifier: ..... checksummed")
                         checksums += 1
-            # elif isinstance(ilist, Checkable.Checkable):
-            #     clog.info("checksum-verifier: file checksummed - %s, %s" %
-            #               (ilist.path, ilist.checksum))
-            #     checksums += 1
+            elif isinstance(ilist, Checkable.Checkable):
+                clog.info("checksum-verifier: Checkable returned - file checksummed - %s, %s" %
+                          (ilist.path, ilist.checksum))
+                checksums += 1
             elif isinstance(ilist, Alert.Alert):
                 clog.info("checksum-verifier: Alert generated: '%s'" %
                           ilist.msg())
