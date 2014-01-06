@@ -20,7 +20,7 @@ class CrawlPlugin(object):
     and this class loads them from there.
     """
     # -------------------------------------------------------------------------
-    def __init__(self, name=None, cfg=None, logger=None):
+    def __init__(self, name=None, cfg=None):
         """
         Configuration data is read and copied into the object by method
         init_cfg_data(), called by both the constructor and reload().
@@ -35,31 +35,22 @@ class CrawlPlugin(object):
         assert(name != None)
         assert(cfg != None)
         self.cfg = cfg
-        self.log = logger
-        self.clog("%s: Initializing plugin data" % name)
+        util.log("%s: Initializing plugin data" % name)
         self.init_cfg_data(name, cfg)
         self.last_fired = time.time() - self.frequency - 1
         super(CrawlPlugin, self).__init__()
 
-    # -------------------------------------------------------------------------
-    def clog(self, *args):
-        """
-        Conditional log. Only try to log if the logger is defined
-        """
-        if self.log:
-            self.log.info(*args)
-            
     # -------------------------------------------------------------------------
     def fire(self):
         """
         Run the plugin.
         """
         if self.firable:
-            self.clog("%s: firing" % self.name)
+            util.log("%s: firing" % self.name)
             sys.modules[self.name].main(self.cfg)
             self.last_fired = time.time()
         elif self.cfg.getboolean('crawler', 'verbose'):
-            self.clog("%s: not firable" % self.name)
+            util.log("%s: not firable" % self.name)
             self.last_fired = time.time()
 
     # -------------------------------------------------------------------------

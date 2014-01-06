@@ -259,8 +259,6 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
                             "dir(sys.modules[%s]) not found" % (pname))
         except ImportError:
             self.fail("Expected import to succeed but it did not.")
-        except Exception, e:
-            self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_init_plugin_ninmod(self):
