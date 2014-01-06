@@ -21,7 +21,8 @@ def tearDownModule():
     """
     Clean up after testing
     """
-    util.conditional_rm("/tmp/crawl.log")
+    if not testhelp.keepfiles():
+        util.conditional_rm("/tmp/crawl.log")
     testhelp.module_test_teardown(UtilTest.testdir)
     
 # -----------------------------------------------------------------------------
@@ -225,10 +226,26 @@ class UtilTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_log_default(self):
         """
-        If util.log() is called with no logger already instantiated, it should
-        attempt /var/log/crawl.log and fail if the user is not root.
+        If util.log() is called with no logger already instantiated, 
         """
-        raise testhelp.UnderConstructionError()
+        # reset any logger already initialized
+        util.get_logger(reset=True, soft=True)
+
+        # now attempt to log a message to the default file
+        msg = "This is a test log message %s"
+        arg = "with a format specifier"
+        exp = util.my_name() + ": " + msg % arg
+        if 0 == os.getuid():
+            exp_logfile = "/var/log/crawl.log"
+        else:
+            exp_logfile = "/tmp/crawl.log"
+        
+        util.log(msg, arg)
+        result = util.contents(exp_logfile)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+            
         
     # -------------------------------------------------------------------------
     def test_log_simple(self):
