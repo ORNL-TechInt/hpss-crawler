@@ -141,8 +141,13 @@ def line_quote(value):
 
 # -----------------------------------------------------------------------------
 def log(*args):
-    parent = sys._getframe(1).f_code.co_name
-    fmt = parent + ": " + args[0]
+    cframe = sys._getframe(1)
+    caller_name = cframe.f_code.co_name
+    caller_file = cframe.f_code.co_filename
+    caller_lineno = cframe.f_lineno
+    fmt = (caller_name +
+           "(%s:%d): " % (caller_file, caller_lineno) +
+           args[0])
     nargs = (fmt,) + args[1:]
     try:
         log._logger.info(*nargs)

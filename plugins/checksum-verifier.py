@@ -17,8 +17,8 @@ def main(cfg):
     # Get stuff we need -- the logger object, hsi prompt string, dataroot,
     # etc.
     # clog = sys.modules['__main__'].get_logger()
-    clog = util.get_logger()
-    clog.info("checksum-verifier: firing up")
+    # clog = util.get_logger()
+    util.log("checksum-verifier: firing up")
     hsi_prompt = "]:"
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = util.csv_list(cfg.get('checksum-verifier', 'dataroot'))
@@ -40,14 +40,14 @@ def main(cfg):
         sqlite_msg = "no such table: checkables"
         mysql_msg = "Table '.*' doesn't exist"
         if util.rgxin(sqlite_msg, str(e)) or util.rgxin(mysql_msg, str(e)):
-            clog.info("checksum-verifier: calling ex_nihilo")
+            util.log("checksum-verifier: calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
             clist = Checkable.Checkable.get_list(odds)
         else:
             raise
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
-            clog.info("checksum-verifier: calling ex_nihilo")
+            util.log("checksum-verifier: calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
             clist = Checkable.Checkable.get_list(odds)
         else:
@@ -59,7 +59,7 @@ def main(cfg):
         if 0 < len(clist):
             # but it's not, so grab the first item and check it
             item = clist.pop(0)
-            clog.info("checksum-verifier: [%d] checking %s" %
+            util.log("checksum-verifier: [%d] checking %s" %
                       (item.rowid, item))
             ilist = item.check()
 
@@ -75,52 +75,52 @@ def main(cfg):
             #
             if type(ilist) == str:
                 if ilist == "access denied":
-                    clog.info("checksum-verifier: dir %s not accessible" %
+                    util.log("checksum-verifier: dir %s not accessible" %
                               item.path)
                     # clist.remove(item)
                 elif ilist == "matched":
                     matches += 1
-                    clog.info("checksum-verifier: %s checksums matched" %
+                    util.log("checksum-verifier: %s checksums matched" %
                               item.path)
                 elif ilist == "checksummed":
                     checksums += 1
-                    clog.info("checksum-verifier: %s checksummed" % item.path)
+                    util.log("checksum-verifier: %s checksummed" % item.path)
                 elif ilist == "skipped":
-                    clog.info("checksum-verifier: %s skipped" % item.path)
+                    util.log("checksum-verifier: %s skipped" % item.path)
                 elif ilist == "unavailable":
-                    clog.info("checksum-verifier: HPSS is not available")
+                    util.log("checksum-verifier: HPSS is not available")
                     break
                 else:
-                    clog.info("checksum-verifier: unexpected string returned " +
+                    util.log("checksum-verifier: unexpected string returned " +
                               "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
-                clog.info("checksum-verifier: in %s, found:" % item)
-                clog.info("checksum-verifier: %s" % str(ilist))
+                util.log("checksum-verifier: in %s, found:" % item)
+                util.log("checksum-verifier: %s" % str(ilist))
                 for n in ilist:
-                    clog.info("checksum-verifier: >>> %s" % str(n))
+                    util.log("checksum-verifier: >>> %s" % str(n))
                     if 'f' == n.type and n.checksum != 0:
-                        clog.info("checksum-verifier: ..... checksummed")
+                        util.log("checksum-verifier: ..... checksummed")
                         checksums += 1
             elif isinstance(ilist, Checkable.Checkable):
-                clog.info("checksum-verifier: Checkable returned - file checksummed - %s, %s" %
+                util.log("checksum-verifier: Checkable returned - file checksummed - %s, %s" %
                           (ilist.path, ilist.checksum))
                 checksums += 1
             elif isinstance(ilist, Alert.Alert):
-                clog.info("checksum-verifier: Alert generated: '%s'" %
+                util.log("checksum-verifier: Alert generated: '%s'" %
                           ilist.msg())
                 failures += 1
             else:
-                clog.info("checksum-verifier: unexpected return val from " +
+                util.log("checksum-verifier: unexpected return val from " +
                           "Checkable.check: %s: %r" % (type(ilist), ilist))
 
     # Report the statistics in the log
-    clog.info("checksum-verifier: files checksummed: %d; " % checksums +
+    util.log("checksum-verifier: files checksummed: %d; " % checksums +
               "checksums matched: %d; " % matches +
               "failures: %d" % failures)
     t_checksums += checksums
     t_matches += matches
     t_failures += failures
-    clog.info("checksum-verifier: totals checksummed: %d; " % t_checksums +
+    util.log("checksum-verifier: totals checksummed: %d; " % t_checksums +
               "matches: %d; " % t_matches +
               "failures: %d" % t_failures)
 
@@ -129,7 +129,7 @@ def main(cfg):
 
     # Report the dimension data in the log
     d = Dimension.Dimension(name='cos')
-    clog.info(d.report())
+    util.log(d.report())
 
 stats_table = 'cvstats'
 # -----------------------------------------------------------------------------

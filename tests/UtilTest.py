@@ -5,6 +5,7 @@ Tests for util.py
 import CrawlConfig
 import logging
 import os
+import sys
 import testhelp
 import toolframe
 import util
@@ -234,12 +235,14 @@ class UtilTest(testhelp.HelpedTestCase):
         # now attempt to log a message to the default file
         msg = "This is a test log message %s"
         arg = "with a format specifier"
-        exp = util.my_name() + ": " + msg % arg
         if 0 == os.getuid():
             exp_logfile = "/var/log/crawl.log"
         else:
             exp_logfile = "/tmp/crawl.log"
-        
+        exp = (util.my_name() +
+               "(%s:%d): " % (sys._getframe().f_code.co_filename,
+                              sys._getframe().f_lineno + 2) +
+               msg % arg)
         util.log(msg, arg)
         result = util.contents(exp_logfile)
         self.assertTrue(exp in result,

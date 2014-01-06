@@ -119,10 +119,9 @@ class Checkable(object):
          3) update the sample count in the Dimension object
         """
         if not already_hashed:
-            l = util.get_logger()
-            l.info("%s: starting hashcreate on %s", util.my_name(), self.path)
+            util.log("%s: starting hashcreate on %s", util.my_name(), self.path)
             hsi.hashcreate(self.path)
-            l.info("%s: completed hashcreate on %s", util.my_name(), self.path)
+            util.log("%s: completed hashcreate on %s", util.my_name(), self.path)
 
         if self.checksum == 0:
             self.checksum = 1
