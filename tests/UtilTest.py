@@ -289,7 +289,9 @@ class UtilTest(testhelp.HelpedTestCase):
         # 1 % formatter in first arg
         a1 = "This has a formatter and one argument: %s"
         a2 = "did that work?"
-        exp = util.my_name() + ": " + a1 % a2
+        exp = (util.my_name() +
+               "(%s:%d): " % (util.filename(), util.lineno()+2) +
+               a1 % a2)
         util.log(a1, a2)
         result = util.contents(fpath)
         self.assertTrue(exp in result,
@@ -315,7 +317,9 @@ class UtilTest(testhelp.HelpedTestCase):
         a2 = "zebedee"
         a3 = 94
         a4 = 23.12348293402
-        exp = util.my_name() + ": " + a1 % (a2, a3, a4)
+        exp = (util.my_name() +
+               "(%s:%d): " % (util.filename(), util.lineno()+2) +
+               a1 % (a2, a3, a4))
         util.log(a1, a2, a3, a4)
         result = util.contents(fpath)
         self.assertTrue(exp in result,
@@ -384,7 +388,7 @@ class UtilTest(testhelp.HelpedTestCase):
         a3 = 94
         a4 = 23.12348293402
         a5 = "friddle"
-        exp = util.my_name() + ": " + a1 % (a2, a3, a4)
+        exp = (util.my_name() + ": " + a1 % (a2, a3, a4))
         try:
             util.log(a1, a2, a3, a4, a5)
             self.fail("Expected exception not thrown")
