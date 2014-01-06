@@ -23,6 +23,7 @@ import stat
 import StringIO
 import sys
 import time
+import util
 import warnings
 
 # ------------------------------------------------------------------------------
@@ -116,7 +117,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return rval
 
     # -------------------------------------------------------------------------
-    def get_d(self, section, option, default=None, logger=None):
+    def get_d(self, section, option, default=None):
         try:
             value = self.get(section, option)
         except ConfigParser.NoSectionError:
@@ -132,7 +133,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return value
 
     # -------------------------------------------------------------------------
-    def get_size(self, section, option, default=None, logger=None):
+    def get_size(self, section, option, default=None):
         """
         Unit specs are case insensitive.
         
@@ -160,7 +161,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return rval
 
     # -------------------------------------------------------------------------
-    def get_time(self, section, option, default=None, logger=None):
+    def get_time(self, section, option, default=None):
         """
         Retrieve the value of section/option. It is assumed to be a duration
         specification, like -- '10 seconds', '2hr', '7 minutes', or the like. We
@@ -178,15 +179,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
         except ConfigParser.NoOptionError as e:
             if default != None:
                 rval = default
-                if logger != None:
-                    logger.info(str(e) + '; using default value %d' % default)
+                util.log(str(e) + '; using default value %d' % default)
             else:
                 raise
         except ConfigParser.NoSectionError as e:
             if default != None:
                 rval = default
-                if logger != None:
-                    log.info(str(e) + '; using default value %d' % default)
+                util.log(str(e) + '; using default value %d' % default)
             else:
                 raise
 

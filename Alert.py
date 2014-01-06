@@ -57,7 +57,6 @@ class Alert(object):
             cfg = self.cfg
         else:
             cfg = CrawlConfig.get_config()
-        log = util.get_logger()
         if self.caller != '':
             section = cfg.get(self.caller, 'alerts')
         else:
@@ -69,7 +68,7 @@ class Alert(object):
                 if opt == 'log':
                     # write to log
                     fmt = cfg.get(section, 'log')
-                    log.info(fmt, self.msg)
+                    util.log(fmt, self.msg)
                     done = True
 
                 elif opt == 'email':
@@ -84,7 +83,7 @@ class Alert(object):
                     payload['To'] = addrs
                     s = smtplib.SMTP(hostname)
                     s.sendmail(sender, addrlist, payload.as_string())
-                    log.info("sent mail to %s", addrlist)
+                    util.log("sent mail to %s", addrlist)
                     done = True
                     
                 elif opt == 'shell':
@@ -92,7 +91,7 @@ class Alert(object):
                     cmd = cfg.get(section, 'shell')
                     cmdline = '%s %s' % (cmd, self.msg)
                     os.system(cmdline)
-                    log.info("ran: '%s'" % (cmdline))
+                    util.log("ran: '%s'" % (cmdline))
                     done = True
                     
                 elif opt == 'use':
