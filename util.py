@@ -93,7 +93,7 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
             pass
     
         try:
-            maxbytes = cfg.get_size('crawler', 'logsize')  # !@! write this
+            maxbytes = cfg.get_size('crawler', 'logsize')
             kwargs['maxBytes'] = maxbytes
         except:
             pass
@@ -141,6 +141,10 @@ def line_quote(value):
 
 # -----------------------------------------------------------------------------
 def log(*args):
+    """
+    Here we use the same logger as the one cached in get_logger() so that if it
+    is reset, all handles to it get reset.
+    """
     cframe = sys._getframe(1)
     caller_name = cframe.f_code.co_name
     caller_file = cframe.f_code.co_filename
@@ -150,10 +154,18 @@ def log(*args):
            args[0])
     nargs = (fmt,) + args[1:]
     try:
-        log._logger.info(*nargs)
+        get_logger._logger.info(*nargs)
     except AttributeError:
-        log._logger = get_logger()
-        log._logger.info(*nargs)
+        get_logger._logger = get_logger()
+        get_logger._logger.info(*nargs)
+
+# -----------------------------------------------------------------------------
+def filename():
+    return sys._getframe(1).f_code.co_filename
+
+# -----------------------------------------------------------------------------
+def lineno():
+    return sys._getframe(1).f_lineno
 
 # -----------------------------------------------------------------------------
 def my_name():
@@ -161,6 +173,10 @@ def my_name():
     Return the caller's name
     """
     return sys._getframe(1).f_code.co_name
+
+# -----------------------------------------------------------------------------
+def raiseError(record):
+    raise
 
 # -----------------------------------------------------------------------------
 def rgxin(needle, haystack):
@@ -205,7 +221,8 @@ def setup_logging(logfile='',
         strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
         fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
         fh.setFormatter(fmt)
-
+        fh.handleError = raiseError
+        
         rval.addHandler(fh)
     if bumper:
         rval.info('-' * (55 - len(host)))
