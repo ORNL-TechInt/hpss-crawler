@@ -135,8 +135,21 @@ def crl_cvreport(argv):
     print("%15s %10d%1s %10d%1s" % ("dimension", dim_p_count, pflag, dim_s_count, sflag))
     print("%15s %10s  %10d%1s" % ("cvstats", " ", total_checksums, cflag))
 
+    print("-----")
 
-    
+    rows = db.select(table="dimension",
+                     fields=[])
+    print("%8s %8s %15s %15s" % ("Name",
+                                 "Category",
+                                 "==Population===",
+                                 "====Sample====="))
+    psum = ssum = 0
+    for r in rows:
+        print("%8s %8s %7d %7.2f %7d %7.2f" % r[1:])
+        psum += r[3]
+        ssum += r[5]
+    print("%8s %8s %7d %7s %7d" % (" ", "Total", psum, " ", ssum))
+          
     db.close()
     
 # ------------------------------------------------------------------------------
@@ -390,8 +403,7 @@ class CrawlDaemon(daemon.Daemon):
                         plugin_d[s].reload(cfg)
                     else:
                         plugin_d[s] = CrawlPlugin.CrawlPlugin(name=s,
-                                                 cfg=cfg,
-                                                 logger=util.get_logger())
+                                                              cfg=cfg)
 
                 # remove any plugins that are not in the new configuration
                 for p in plugin_d.keys():

@@ -99,7 +99,7 @@ def main(cfg):
                 for n in ilist:
                     util.log("checksum-verifier: >>> %s" % str(n))
                     if 'f' == n.type and n.checksum != 0:
-                        util.log("checksum-verifier: ..... checksummed")
+                        util.log("checksum-verifier: .. previously checksummed")
                         checksums += 1
             elif isinstance(ilist, Checkable.Checkable):
                 util.log("checksum-verifier: Checkable returned - file checksummed - %s, %s" %
