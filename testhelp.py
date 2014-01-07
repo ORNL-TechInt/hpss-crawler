@@ -456,31 +456,6 @@ class HelpedTestCase(unittest.TestCase):
         f.close()
 
 # -----------------------------------------------------------------------------
-class Chdir(object):
-    """
-    This class allows for doing the following:
-
-        with Chdir('/some/other/directory'):
-            assert(in '/some/other/directory')
-            do_stuff()
-        assert(back at our starting point)
-
-    No matter what happens in do_stuff(), we're guaranteed that at the assert,
-    we'll be back in the directory we started from.
-    """
-    # ------------------------------------------------------------------------
-    def __init__(self, target):
-        self.start = os.getcwd()
-        self.target = target
-    # ------------------------------------------------------------------------
-    def __enter__(self):
-        os.chdir(self.target)
-        return self.target
-    # ------------------------------------------------------------------------
-    def __exit__(self, type, value, traceback):
-        os.chdir(self.start)
-
-# -----------------------------------------------------------------------------
 def show_stdout(value=None):
     """
     Return value of global value show_stdout. Optionally set it if
