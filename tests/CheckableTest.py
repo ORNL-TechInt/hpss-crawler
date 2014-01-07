@@ -4,6 +4,7 @@ Tests for Checkable.py
 """
 from Checkable import Checkable
 import CrawlDBI
+import Dimension
 import os
 import stat
 import sys
@@ -82,6 +83,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         file and update the item's last_check value.
         """
         util.conditional_rm(self.testdb)
+        Dimension.get_dim('ignore', reset=True)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.ex_nihilo()
         testdir='/home/tpb/hic_test'
@@ -113,7 +115,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
                              "Checkable object is missing %s method" % method)
-        # self.expected(Checkable.dbname, x.dbname)
         self.expected('---', x.path)
         self.expected('-', x.type)
         self.expected(0, x.checksum)
@@ -390,11 +391,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         n = Checkable(path='xyx', type='d')
         line = ('drwx------    2 tpb       ccsstaff         ' +
                 '512 Oct 17 13:54 subdir1')
-        (t,f,c) = n.fdparse(line)
-        self.expected('d', t)
-        self.expected('subdir1', f)
-        self.expected('', c)
-    
+        r = n.fdparse(line)
+        self.expected('d', r.type)
+        self.expected('subdir1', r.path)
+        self.expected('', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable(), got %s" % r)
+
     # -------------------------------------------------------------------------
     def test_fdparse_ldy(self):
         """
@@ -404,11 +407,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         n = Checkable(path='xyx', type='d')
         line = ('drwxr-xr-x    2 tpb       ccsstaff         ' +
                 '512 Dec 17  2004 incase')
-        (t,f,c) = n.fdparse(line)
-        self.expected('d', t)
-        self.expected('incase', f)
-        self.expected('', c)
-    
+        r = n.fdparse(line)
+        self.expected('d', r.type)
+        self.expected('incase', r.path)
+        self.expected('', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable(), got %s" % r)
+
     # -------------------------------------------------------------------------
     def test_fdparse_lfr(self):
         """
@@ -419,11 +424,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff     ' +
                 '1720832 Oct 17 13:56 crawler.tar')
-        (t,f,c) = n.fdparse(line)
-        self.expected('f', t)
-        self.expected('crawler.tar', f)
-        self.expected('', c)
-    
+        r = n.fdparse(line)
+        self.expected('f', r.type)
+        self.expected('crawler.tar', r.path)
+        self.expected('', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable, got %s" % r)
+
     # -------------------------------------------------------------------------
     def test_fdparse_lfy(self):
         """
@@ -433,10 +440,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         n = Checkable(path='xyx', type='d')
         line = ('-rw-------    1 tpb       ccsstaff        4896' +
                 ' Dec 30  2011 pytest.tar.idx')
-        (t,f,c) = n.fdparse(line)
-        self.expected('f', t)
-        self.expected('pytest.tar.idx', f)
-        self.expected('', c)
+        r = n.fdparse(line)
+        self.expected('f', r.type)
+        self.expected('pytest.tar.idx', r.path)
+        self.expected('', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable, got %s" % r)
 
     # -------------------------------------------------------------------------
     def test_fdparse_nomatch(self):
@@ -459,10 +468,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         n = Checkable(path='xyx', type='d')
         line = "DIRECTORY       /home/tpb/apache"
-        (t,f,c) = n.fdparse(line)
-        self.expected('d', t)
-        self.expected('/home/tpb/apache', f)
-        self.expected('', c)
+        r = n.fdparse(line)
+        self.expected('d', r.type)
+        self.expected('/home/tpb/apache', r.path)
+        self.expected('', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable(), got %s" % r)
+                                   
     
     # -------------------------------------------------------------------------
     def test_fdparse_Pf(self):
@@ -474,10 +486,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         line = ("FILE    /home/tpb/LoadL_admin   88787   88787   " +
                 "3962+411820     X0352700        5081    0       1       " +
                 "03/14/2003      07:12:43        03/19/2012       13:09:50")
-        (t,f,c) = n.fdparse(line)
-        self.expected('f', t)
-        self.expected('/home/tpb/LoadL_admin', f)
-        self.expected('5081', c)
+        r = n.fdparse(line)
+        self.expected('f', r.type)
+        self.expected('/home/tpb/LoadL_admin', r.path)
+        self.expected('5081', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable(), got %s" % r)
     
     # -------------------------------------------------------------------------
     def test_get_list_nosuch(self):
@@ -684,7 +698,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_persist_dir_invalid(self):
         """
-        Send in an invalid directory (rowid != None, last_check == 0, type ==
+        Send in an invalid directory (rowid == None, last_check != 0, type ==
         'd'). Exception should be thrown.
         """
         util.conditional_rm(self.testdb)
@@ -700,16 +714,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
         c = Checkable(path='/home', type='d')
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
-                      
+
+        x[0].rowid = None
         x[0].last_check = now = time.time()
-        x[0].persist()
-        
-        x[0].last_check = 0
+
         try:
             x[0].persist()
             self.fail("Expected an exception but didn't get one.")
         except StandardError, e:
-            self.assertEqual("has rowid != None, last_check == 0.0" in str(e),
+            self.assertEqual("has rowid == None, last_check != 0.0" in str(e),
                              True,
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
@@ -868,10 +881,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('2222', x[1].cos)
         
     # -------------------------------------------------------------------------
-    def test_persist_file_invalid(self):
+    def test_persist_file_ok(self):
         """
-        Send in an invalid file (rowid == None, last_check != 0, type == 'f')
-        Exception should be thrown.
+        Send in a (formerly invalid) file (rowid != None, last_check == 0,
+        type == 'f') No exception should be thrown.
         """
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
@@ -881,18 +894,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
-
-        now = time.time()
-        x[1].last_check = now
-        x[1].rowid = None
-        try:
-            x[1].persist()
-            self.fail("Expected exception but didn't get one")
-        except StandardError, e:
-            self.assertEqual("has rowid == None, last_check != 0.0" in str(e),
-                             True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        x[1].persist()
 
         x = Checkable.get_list()
         self.expected(2, len(x))
