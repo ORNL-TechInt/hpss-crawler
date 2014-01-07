@@ -120,15 +120,18 @@ class Checkable(object):
         """
         if not already_hashed:
             util.log("%s: starting hashcreate on %s", util.my_name(), self.path)
-            hsi.hashcreate(self.path)
+            rsp = hsi.hashcreate(self.path)
             util.log("%s: completed hashcreate on %s", util.my_name(), self.path)
-
+            if "Access denied" in rsp:
+                return "access denied"
+            
         if self.checksum == 0:
             self.checksum = 1
             self.dim['cos'].update_category(self.cos,
                                             p_suminc=0,
                                             s_suminc=1)
-        self.dim['cos'].persist()
+            self.persist()
+            return "checksummed"
 
     # -------------------------------------------------------------------------
     def addable(self, category):
@@ -159,23 +162,15 @@ class Checkable(object):
            database
          - return the list of Checkables found in the directory
         For a file:
-         - if it's readable, decide whether to make it an official check
-         - if no, no Checkable is created for this file
-         - if yes,
-            - if we have a checksum for the file:
-                - retrieve the file and compute the checksum and verify it
-            - else:
-                - retrieve the file, compute the checksum and record it
-            - record/verify the file's COS
-            - update last_check with the current time
-            - persist the object to the database
+         - if it already has a hash, add it to the sample if not already
+           and verify it
+         - if it does not have a hash, decide whether to add it or not
 
         The value of probability [0.0 .. 1.0] indicates the likelihood with
         which we should check files.
 
         potential outcomes            return
          read a directory             list of Checkable objects
-                                         (files checksummed)
          file checksum fail           Alert
          invalid Checkable type       raise StandardError
          access denied                "access denied"
@@ -195,64 +190,43 @@ class Checkable(object):
             return "unavailable"
         
         if self.type == 'd':
-            rsp = h.chdir(self.path)
-            if 'Not a directory' in rsp:
-                # It's not a directory. Get the file info (ls -P) and decide
-                # whether to add it to the sample.
-                h.lsP(self.path)
-                result = self.harvest(h)
-                if 0 != self.checksum:
-                    rval = "checksummed"
-                else:
-                    rval = "skipped"
-
-            elif "Access denied" in rsp:
-                # It's a directory we don't have access to. Carry on.
+            rsp = h.lsP(self.path)
+            if "Access denied" in rsp:
                 rval = "access denied"
-                
             else:
-                # We have cd'd into a directory. We run "ls -P" for the
-                # directory contents and run harvest on that.
-                h.lsP("")
-                rval = self.harvest(h)
-                
+                for line in rsp.split("\n"):
+                    new = Checkable.fdparse(line)
+                    if None != new:
+                        rval.append(new)
+                        p = new.persist()
+                        if new.type == 'f':
+                            if p:
+                                self.dim['cos'].update_category(new.cos)
+                            if new.has_hash(h):
+                                new.add_to_sample(h, already_hashed=True)
+                        # returning list of items found in the directory
         elif self.type == 'f':
             if self.checksum == 0:
-                if self.addable(self.cos):
-                    self.add_to_sample(h)
-                    rval = "checksummed"
+                if self.has_hash(h):
+                    self.add_to_sample(h, already_hashed=True)
+                    rval = self.verify(h)
+                    # returning "matched", "checksummed", "skipped", or Alert()
+                elif self.addable():
+                    rval = self.add_to_sample(h)
+                    # returning "access denied" or "checksummed"
                 else:
                     rval = "skipped"
             else:
-                rsp = h.hashverify(self.path)
-                if "%s: (md5) OK" % self.path in rsp:
-                    # hash was verified successfully
-                    rval = "matched"
-                elif "no valid checksum found" in rsp:
-                    # no hash is available -- see if we want to add it
-                    if self.addable(self.cos):
-                        self.add_to_sample(h)
-                        rval = "checksummed"
-                else:
-                    # hash verification failed
-                    rval = Alert.Alert("Checksum mismatch: %s" % rsp)
+                rval = self.verify(h)
+                # returning "matched", "checksummed", "skipped", or Alert()
         else:
-            # we have an invalid Checkable type (not 'd' or 'f')
             raise StandardError("Invalid Checkable type: %s" % self.type)
-
+        
         h.quit()
 
         self.last_check = time.time()
         self.persist()
         return rval
-
-    # -------------------------------------------------------------------------
-    def db_delete(self):
-        db = CrawlDBI.DBI()
-        db.delete(table='checkables',
-                  where='path=?',
-                  data=(self.path,))
-        db.close()
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -313,12 +287,12 @@ class Checkable(object):
         ltup = re.findall(cls.rgxP, value)
         if ltup:
             (type, fname, ign1, cos) = ltup[0]
-            return(cls.map[type], fname, cos)
+            return Checkable(path=fname, type=cls.map[type], cos=cos)
 
         ltup = re.findall(cls.rgxl, value)
         if ltup:
             (type, ign1, ign2, ign3, ign4, fname) = ltup[0]
-            return(cls.map[type], fname, '')
+            return Checkable(path=fname, type=cls.map[type])
 
         return None
 
@@ -362,51 +336,15 @@ class Checkable(object):
         return rval
 
     # -------------------------------------------------------------------------
-    def harvest(self, hsi):
+    def has_hash(self, h):
         """
-        Given a list of files and directories from hsi, step through them and
-        handle each one.
-
-        For each file, we have to decide whether we're adding it to the sample
-        or not. In any case, we persist it to the database. If we're adding it
-        to the sample, we have to 1) issue hashcreate on it, 2) set its
-        checksum to 1, and 3) update the sample count for it in the Dimension
-        object.
+        Return True if the current file has a hash, False otherwise.
         """
-        rval = []
-        data = hsi.before()
-        for line in data.split("\n"):
-            r = Checkable.fdparse(line)
-            if None != r:
-                if 'd' == r[0]:
-                    new = Checkable(path=r[1], type=r[0], cos=r[2],
-                                    probability=self.probability)
-                    new.persist()
-                    rval.append(new)
-                elif 'f' == r[0]:
-                    if r[1] == self.path and r[0] == self.type:
-                        new = self
-                    else:
-                        new = Checkable(path=r[1], type=r[0], cos=r[2],
-                                        probability=self.probability)
-                        if new.persist():
-                            self.dim['cos'].update_category(new.cos)
-
-                    if new.addable(new.cos):
-                        new.add_to_sample(hsi)
-                    else:
-                        # If it's not in the sample, but already has a
-                        # checksum, it's already part of the sample and we need
-                        # to reflect that.
-                        rsp = hsi.hashlist(new.path)
-                        if ((new.checksum == 0) and
-                            (re.search("\n[0-9a-f]+\smd5\s%s" % new.path,
-                                       rsp))):
-                            new.add_to_sample(hsi, already_hashed=True)
-
-                    new.persist()
-                    rval.append(new)
-
+        rsp = h.hashlist(self.path)
+        if re.search("\n[0-9a-f]+\smd5\s%s" % self.path, rsp):
+            rval = True
+        else:
+            rval = False
         return rval
 
     # -------------------------------------------------------------------------
@@ -432,9 +370,6 @@ class Checkable(object):
         Return True if the item was added to the database, otherwise False.
         This is used to decide whether the count the item in the population.
         """
-        if self.rowid != None and self.last_check == 0.0:
-            raise StandardError("%s has rowid != None, last_check == 0.0" %
-                                self)
         if self.rowid == None and self.last_check != 0.0:
             raise StandardError("%s has rowid == None, last_check != 0.0" %
                                 self)
@@ -533,3 +468,22 @@ class Checkable(object):
         db.close()
         return rval
     
+    # -------------------------------------------------------------------------
+    def verify(self, h):
+        """
+        Attempt to verify the current file.
+        """
+        rsp = h.hashverify(self.path)
+        if "%s: (md5) OK" % self.path in rsp:
+            rval = "matched"
+        elif "no valid checksum found" in rsp:
+            if self.addable(self.cos):
+                self.add_to_sample(h)
+                rval = "checksummed"
+            else:
+                self.checksum = 0
+                self.persist()
+                rval = "skipped"
+        else:
+            rval = Alert.Alert("Checksum mismatch: %s" % rsp)
+        return rval
