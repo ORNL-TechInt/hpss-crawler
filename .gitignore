@@ -9,6 +9,7 @@ DODO
 ls.PR*
 NOTES*
 TAGS
+tcc
 test.d
 *.cfg
 *.db
