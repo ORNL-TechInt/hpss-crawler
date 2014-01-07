@@ -119,7 +119,7 @@ class HSI(object):
         elif type(pathnames) == list:
             pargs = " ".join(pathnames)
         elif type(pathnames) == unicode:
-            pargs = pathname.encode('ascii', 'ignore')
+            pargs = pathnames.encode('ascii', 'ignore')
         else:
             raise HSIerror("%s: Invalid argument (%s: '%s')" %
                            (util.my_name(), type(pathnames), pathnames))
