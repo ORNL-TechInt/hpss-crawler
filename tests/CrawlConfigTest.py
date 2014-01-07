@@ -136,7 +136,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             self.clear_env()
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
@@ -177,7 +177,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             self.clear_env()
             util.conditional_rm(self.default_cfname)
 
@@ -215,7 +215,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config() or get_config('') should load the config
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             self.clear_env()
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
@@ -250,7 +250,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             os.environ['CRAWL_CONF'] = self.env_cfname
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -290,7 +290,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             os.environ['CRAWL_CONF'] = self.env_cfname
             util.conditional_rm(self.env_cfname)
 
@@ -323,7 +323,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config(), get_config('') should load the config
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             os.environ['CRAWL_CONF'] = self.env_cfname
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -352,7 +352,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
              readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             os.environ['CRAWL_CONF'] = self.env_cfname
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -382,7 +382,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
              about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             os.environ['CRAWL_CONF'] = self.env_cfname
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -408,7 +408,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config('explicit.cfg') should load the explicit.cfg
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with testhelp.Chdir(self.testdir):
+        with util.Chdir(self.testdir):
             os.environ['CRAWL_CONF'] = self.env_cfname
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
