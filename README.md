@@ -19,6 +19,12 @@ The high level design for the HIC is documented in a Google document here:
 These documents are owned by Tom Barron. Please contact him for access if
 needed.
 
+## Documentation
+
+User Guide: 
+
+Reference Manual: 
+
 ## Running Tests
 
    $ tests/all
@@ -28,7 +34,7 @@ history is available.
 
 The tests for a specific component can be run like this:
 
-   $ tests/<component-testfile>.py
+   $ tests/_component-testfile_.py
 
 ## Git Repo Branches
 

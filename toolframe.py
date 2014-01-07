@@ -70,14 +70,15 @@ def tf_main(args, prefix=None):
         try:
             method = getattr(mainmod, "%s_%s" % (prefix, args[1]))
             method(args[2:])
+
         except IndexError, e:
             if len(a) < 2:
                 print(str(e))
                 tf_help([], prefix=prefix)
             else:
                 tb.print_exc()
-        except NameError, e:
-            if args[1] not in dir(mainmod):
+        except AttributeError, e:
+            if 'module' in str(e):
                 print(str(e))
                 print("unrecognized subfunction: %s" % args[1])
                 tf_help([], prefix=prefix)
