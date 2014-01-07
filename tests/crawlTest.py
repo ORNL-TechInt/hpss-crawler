@@ -460,66 +460,6 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists('crawler_pid'), False)
 
     # --------------------------------------------------------------------------
-    def test_get_logger_config(self):
-        """
-        TEST: Call get_logger('', cfg) with an empty path and a config object
-
-        EXP: Attempts to log to cfg.get('crawler', 'logpath')
-        """
-        util.get_logger(reset=True, soft=True)
-        t = copy.deepcopy(self.cdict)
-        logpath = '%s/test_get_logger_config.log' % self.testdir
-        t['crawler']['logpath'] = logpath
-        util.conditional_rm(logpath)
-        self.assertEqual(os.path.exists(logpath), False,
-                         '%s should not exist but does' % logpath)
-
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(t)
-        lobj = util.get_logger('', cfg)
-
-        self.assertEqual(os.path.exists(logpath), True,
-                         '%s should exist but does not' % logpath)
-        self.assertNotEqual(lobj, None)
-        
-    # --------------------------------------------------------------------------
-    def test_get_logger_default(self):
-        """
-        TEST: Call get_logger() with no argument
-
-        EXP: Attempts to log to '/var/log/crawl.log', falls back to
-        '/tmp/crawl.log' if we can't access the protected file
-        """
-        util.get_logger(reset=True, soft=True)
-        lobj = util.get_logger()
-
-        # if I'm root, I should be looking at /var/log/crawl.log
-        if os.getuid() == 0:
-            self.expected('/var/log/crawl.log',
-                          lobj.handlers[0].stream.name)
-            
-        # otherwise, I should be looking at /tmp/crawl.log
-        else:
-            self.expected('/tmp/crawl.log',
-                          lobj.handlers[0].stream.name)
-        
-    # --------------------------------------------------------------------------
-    def test_get_logger_path(self):
-        """
-        TEST: Call get_logger() with a pathname
-
-        EXP: Attempts to log to pathname
-        """
-        util.get_logger(reset=True, soft=True)
-        logpath = '%s/test_get_logger_path.log' % self.testdir
-        util.conditional_rm(logpath)
-        self.assertEqual(os.path.exists(logpath), False,
-                         '%s should not exist but does' % logpath)
-        lobj = util.get_logger(logpath)
-        self.assertEqual(os.path.exists(logpath), True,
-                         '%s should exist but does not' % logpath)
-        
-    # --------------------------------------------------------------------------
     def test_get_timeval(self):
         """
         TEST: various calls to CrawlConfig.get_time()

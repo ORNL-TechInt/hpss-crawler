@@ -179,11 +179,36 @@ class UtilTest(testhelp.HelpedTestCase):
         l = util.get_logger(cfg=c)
 
         # and check that it has the right handler
+        self.assertNotEqual(l, None)
         self.expected(1, len(l.handlers))
         self.expected(os.path.abspath(lfname), l.handlers[0].stream.name)
         self.expected(17*1000*1000, l.handlers[0].maxBytes)
         self.expected(13, l.handlers[0].backupCount)
 
+        self.assertTrue(os.path.exists(lfname),
+                        "%s should exist but does not" % lfname)
+        
+    # --------------------------------------------------------------------------
+    def test_get_logger_default(self):
+        """
+        TEST: Call get_logger() with no argument
+
+        EXP: Attempts to log to '/var/log/crawl.log', falls back to
+        '/tmp/crawl.log' if we can't access the protected file
+        """
+        util.get_logger(reset=True, soft=True)
+        lobj = util.get_logger()
+
+        # if I'm root, I should be looking at /var/log/crawl.log
+        if os.getuid() == 0:
+            self.expected('/var/log/crawl.log',
+                          lobj.handlers[0].stream.name)
+            
+        # otherwise, I should be looking at /tmp/crawl.log
+        else:
+            self.expected('/tmp/crawl.log',
+                          lobj.handlers[0].stream.name)
+        
     # -------------------------------------------------------------------------
     def test_get_logger_nocfg(self):
         """
@@ -198,10 +223,29 @@ class UtilTest(testhelp.HelpedTestCase):
 
         # and check that it has the right handler
         self.expected(1, len(l.handlers))
-        self.expected("/tmp/crawl.log", l.handlers[0].stream.name)
+        if os.getuid() == 0:
+            self.expected("/var/log/crawl.log", l.handlers[0].stream.name)
+        else:
+            self.expected("/tmp/crawl.log", l.handlers[0].stream.name)
         self.expected(10*1024*1024, l.handlers[0].maxBytes)
         self.expected(5, l.handlers[0].backupCount)
 
+    # --------------------------------------------------------------------------
+    def test_get_logger_path(self):
+        """
+        TEST: Call get_logger() with a pathname
+
+        EXP: Attempts to log to pathname
+        """
+        util.get_logger(reset=True, soft=True)
+        logpath = '%s/%s.log' % (self.testdir, util.my_name())
+        util.conditional_rm(logpath)
+        self.assertEqual(os.path.exists(logpath), False,
+                         '%s should not exist but does' % logpath)
+        lobj = util.get_logger(logpath)
+        self.assertEqual(os.path.exists(logpath), True,
+                         '%s should exist but does not' % logpath)
+        
     # -------------------------------------------------------------------------
     def test_line_quote(self):
         """
