@@ -5,10 +5,15 @@ Track stratum proportions in a sample against a population
 import CrawlDBI
 
 # -----------------------------------------------------------------------------
-def get_dim(dname):
+def get_dim(dname, reset=False):
     """
     Ensure that each named dimension is a singleton object.
     """
+    if reset:
+        if hasattr(get_dim, '_dims'):
+            del get_dim._dims
+        return None
+    
     try:
         rval = get_dim._dims[dname]
     except AttributeError:
