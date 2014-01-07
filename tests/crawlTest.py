@@ -33,8 +33,6 @@ def tearDownModule():
     if crawl.is_running():
         testhelp.touch(crawl.exit_file)
 
-    os.chdir(launch_dir)
-
 # -----------------------------------------------------------------------------
 class CrawlTest(testhelp.HelpedTestCase):
     """
@@ -590,9 +588,6 @@ class CrawlTest(testhelp.HelpedTestCase):
         """
         Clean up to do after each test
         """
-        if os.getcwd().endswith('/test.d'):
-            os.chdir(launch_dir)
-
         if crawl.is_running():
             testhelp.touch(crawl.exit_file)
             time.sleep(1.0)
@@ -609,5 +604,4 @@ class CrawlTest(testhelp.HelpedTestCase):
         util.conditional_rm(crawl.exit_file)
 
 # ------------------------------------------------------------------------------
-launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
 toolframe.ez_launch(test='CrawlTest', logfile=testhelp.testlog(__name__))
