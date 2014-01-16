@@ -2,6 +2,7 @@
 """
 Database interface classes
 """
+import base64
 import CrawlConfig
 import CrawlDBI
 import os
@@ -15,7 +16,7 @@ import util
 import warnings
 
 
-# -------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def make_tcfg(dbtype):
     tcfg = CrawlConfig.CrawlConfig()
     tcfg.add_section('dbi')
@@ -26,7 +27,10 @@ def make_tcfg(dbtype):
         tcfg.set('dbi', 'dbname', 'hpssic')
         tcfg.set('dbi', 'host', 'db-hpssic.ccs.ornl.gov')
         tcfg.set('dbi', 'username', 'hpssic_user')
-        tcfg.set('dbi', 'password', 'RiK;J2Wri')
+        # this pulls the mysql password from crawl.cfg so we don't have to keep
+        # multiple copies in sync
+        xcfg = CrawlConfig.get_config()
+        tcfg.set('dbi', 'password', xcfg.get('dbi', 'password'))
     return tcfg
 
 # -----------------------------------------------------------------------------
@@ -43,17 +47,18 @@ def tearDownModule():
     Clean up after testing
     """
     testhelp.module_test_teardown(DBITest.testdir)
-    tcfg = make_tcfg('mysql')
-    tcfg.set('dbi', 'tbl_prefix', '')
-    db = CrawlDBI.DBI(cfg=tcfg)
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore",
-                                "Can't read dir of .*")
-        tlist = db.select(table="information_schema.tables",
-                          fields=['table_name'],
-                          where='table_name like "test_%"')
-    for (tname,) in tlist:
-        db.drop(table=tname)
+    if not testhelp.keepfiles():
+        tcfg = make_tcfg('mysql')
+        tcfg.set('dbi', 'tbl_prefix', '')
+        db = CrawlDBI.DBI(cfg=tcfg)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",
+                                    "Can't read dir of .*")
+            tlist = db.select(table="information_schema.tables",
+                              fields=['table_name'],
+                              where='table_name like "test_%"')
+        for (tname,) in tlist:
+            db.drop(table=tname)
 
 # -----------------------------------------------------------------------------
 class DBITest(testhelp.HelpedTestCase):

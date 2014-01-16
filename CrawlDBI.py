@@ -2,6 +2,7 @@
 """
 Database interface classes
 """
+import base64
 import pdb
 import CrawlConfig
 import MySQLdb as mysql
@@ -550,7 +551,7 @@ class DBImysql(DBI_abstract):
         cfg = kwargs['cfg']
         host = cfg.get('dbi', 'host')
         username = cfg.get('dbi', 'username')
-        password = cfg.get('dbi', 'password')
+        password = base64.b64decode(cfg.get('dbi', 'password'))
         try:
             self.dbh = mysql.connect(host=host,
                                      user=username,
