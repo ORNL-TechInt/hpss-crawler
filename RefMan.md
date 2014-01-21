@@ -1,3 +1,4 @@
+<head><title>HPSSIC Reference Manual</title></head>
 
 # HPSS Integrity Crawler Reference Manual
 
@@ -9,6 +10,10 @@ To install the HPSS Integrity Crawler, clone the git repository.
 
 ### Prerequisites
 
+* git
+
+        yum install git.x86_64
+
 * Python 2.6 
 
         http://www.python.org/ftp/python/2.6.9/Python-2.6.9.tgz
@@ -16,6 +21,10 @@ To install the HPSS Integrity Crawler, clone the git repository.
 * MySQL database interface
 
         yum install MySQL-python
+
+* DB2 client
+
+        <to be added>
 
 * ibm-db
 
