@@ -1,3 +1,4 @@
+<head><title>HPSSIC README</title></head>
 
 # HPSS Integrity Crawler
 
@@ -10,46 +11,51 @@ organization:
 
 A white paper motivating the HIC is available in Google documents here:
 
-   http://tinyurl.com/n2xlof3
+* [HPSS Quality Assurance at ORNL](http://tinyurl.com/n2xlof3)
 
 The high level design for the HIC is documented in a Google document here:
 
-   http://tinyurl.com/n5b4cxy
+* [HPSS System Integrity Crawler High Level Design](http://tinyurl.com/n5b4cxy)
 
 These documents are owned by Tom Barron. Please contact him for access if
 needed.
 
 ## Documentation
 
-User Guide: 
+* [User Guide](http://users.nccs.gov/~tpb/hpss/hpssic/UserGuide.html)
 
-Reference Manual: 
+* [Reference Manual](http://users.nccs.gov/~tpb/hpss/hpssic/ReferenceManual.html)
 
 ## Running Tests
 
-   $ tests/all
+> $ tests/all
 
 Test results are written to stdout and also logged in crawl_test.log so a
 history is available.
 
 The tests for a specific component can be run like this:
 
-   $ tests/_component-testfile_.py
+> $ tests/_component-testfile_.py
 
 ## Git Repo Branches
 
 The git repo has the following branches used for the indicated intentions
 
-   devel - current development
-   master - last stable release
+        devel
+            Current development
 
-   post - this branch is historic and the material from it has been merged to
-          dev. it can be deleted
+        master
+            Last stable release
 
-   prehistory - This branch contains the history of the work from before the
-                github repo was established. It is fully incorporated into
-                devel, however deleting this branch would lose the steps from
-                project inception to when the github repo was set up.
+        post
+            This branch is historic and the material from it has been merged to
+            dev. it can be deleted
+
+        prehistory
+            This branch contains the history of the work from before the
+            github repo was established. It is fully incorporated into
+            devel, however deleting this branch would lose the steps from
+            project inception to when the github repo was set up.
 
 
 ## Configuration
