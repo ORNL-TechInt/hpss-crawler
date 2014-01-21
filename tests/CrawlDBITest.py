@@ -29,7 +29,7 @@ def make_tcfg(dbtype):
         tcfg.set('dbi', 'username', 'hpssic_user')
         # this pulls the mysql password from crawl.cfg so we don't have to keep
         # multiple copies in sync
-        xcfg = CrawlConfig.get_config()
+        xcfg = CrawlConfig.get_config('crawl.cfg', reset=True)
         tcfg.set('dbi', 'password', xcfg.get('dbi', 'password'))
     return tcfg
 
