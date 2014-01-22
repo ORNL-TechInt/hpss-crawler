@@ -330,7 +330,7 @@ def tcc_selbf(args):
 def tcc_sql(args):
     """sql - run arbitrary sql
 
-    usage: tcc sql <sql statement>
+    usage: tcc sql [-d/--debug] -D/--db cfg-section <sql statement>
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
