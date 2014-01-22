@@ -22,10 +22,6 @@ To install the HPSS Integrity Crawler, clone the git repository.
 
         yum install MySQL-python
 
-* DB2 client
-
-        <to be added>
-
 * ibm-db
 
         yum install python-devel.x86_64
@@ -40,6 +36,44 @@ To install the HPSS Integrity Crawler, clone the git repository.
 
         echo $IBM_DB_HOME/lib64 > /etc/ld.so.conf.d/db2-x86_64.conf
         ldconfig
+
+* DB2 client
+
+        Fetch /hpss_prereq/db2_10.5/DB2_Svr_V10.5_Linux_x86-64.tar.gz
+
+                scp [server]:[path] .
+        
+        Unpack
+
+                tar zxf DB2_Svr_V10.5_Linux_x86-64.tar.gz
+
+        Install
+
+                cd server
+                ./db2_install
+                [specify "CLIENT" at product prompt]
+                [confirm default install location when prompted]
+
+* DB2 client support on the server instance. On DB2 server:
+
+        Added "db2c_hpssdb   50000/tcp" to /etc/services.
+        db2 update database manager configuration using svcename db2c_hpssdb
+        db2set DB2COMM=tcpip
+        db2stop
+        db2start
+
+    to verify:
+
+        db2 get dbm config | grep SVCENAME
+        db2set -all DB2COMM
+        
+* DB2 client support on the client machine
+
+        root: groupadd -g 9999 hpssc
+        root: useradd  -u 9999 -g hpssc -m -d /home/hpssc
+        root: passwd hpssc
+        root: db2icrt -a CLIENT -s client hpssc
+        hpssc: . /home/hpssc/sqllib/db2profile
 
 ## The 'crawl' command
 
