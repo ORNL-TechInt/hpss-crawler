@@ -11,6 +11,7 @@ import pexpect
 import pprint
 import re
 import sys
+import tcc_common
 import time
 import toolframe
 
@@ -166,7 +167,7 @@ def tcc_bfid(args):
                      dbsect=o.dbsect):
         ct = time.strftime("%Y.%m%d %H:%M:%S",
                            time.localtime(row['BFATTR_CREATE_TIME']))
-        print "%s %d %s" % (hexstr(row['BFID']),
+        print "%s %d %s" % (tcc_common.hexstr(row['BFID']),
                             row['BFATTR_COS_ID'],
                             ct)
 
@@ -189,7 +190,8 @@ def tcc_bfts(args):
     
     for row in query("select bfid, storage_class from bftapeseg",
                      dbsect=o.dbsect):
-        print("%s %s" % (hexstr(row['BFID']), row['STORAGEE_CLASS']))
+        print("%s %s" % (tcc_common.hexstr(row['BFID']),
+                         row['STORAGEE_CLASS']))
         
 # -----------------------------------------------------------------------------
 def tcc_copies_by_cos(args):
@@ -315,7 +317,7 @@ def tcc_selbf(args):
         record += 1
         for k in sorted(row):
             if k == 'BFID':
-                print("%s: %s" % (k, hexstr(row[k])))
+                print("%s: %s" % (k, tcc_common.hexstr(row[k])))
             elif k == 'ALLOC_METHOD':
                 print("%s: %s" % (k, ord(row[k])))
             elif '_TIME' in k and int(row[k]) != 0:
@@ -410,17 +412,6 @@ def cos_parse(line):
         rval = q.groups()
     else:
         rval = None
-    return rval
-
-# -----------------------------------------------------------------------------
-def hexstr(bfid):
-    """
-    Convert a raw bitfile id into a hexadecimal string as presented by DB2.
-    """
-    rval = "x'"
-    for c in list(bfid):
-        rval += "%02x" % ord(c)
-    rval += "'"
     return rval
 
 # -----------------------------------------------------------------------------

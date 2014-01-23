@@ -8,6 +8,8 @@ import pdb
 import pprint
 import re
 import sys
+import tcc_common
+import util
 
 sectname = 'tape-copy-checker'
 # -----------------------------------------------------------------------------
@@ -19,13 +21,16 @@ def main(cfg):
     """
     # retrieve configuration items as needed
     how_many = int(cfg.get_d(sectname, 'operations', 10))
+    util.log("tape-copy-checker: firing up for %d items" % how_many)
     
-    # retrieve
+    # retrieve COS info
     cosinfo = get_cos_info(cfg)
-    pprint.pprint(cosinfo)
+    for cos_id in cosinfo:
+        util.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
 
     # get the nsobject_id of the next bitfile to process from mysql
     next_nsobj_id = get_next_nsobj_id(cfg)
+    util.log("next nsobject id = %d" % next_nsobj_id)
     
     # fetch the next N bitfiles from DB2
     bfl = get_bitfile_set(cfg, int(next_nsobj_id), int(next_nsobj_id + how_many))
@@ -35,8 +40,21 @@ def main(cfg):
     for bf in bfl:
         if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
             tcc_report(bf)
+            util.log("%s %s %d != %d" %
+                     (bf['OBJECT_ID'],
+                      tcc_common.hexstr(bf['BFID']),
+                      bf['SC_COUNT'],
+                      cosinfo[bf['BFATTR_COS_ID']]))
+        elif cfg.getboolean(sectname, 'verbose'):
+            util.log("%s %s %d == %d" %
+                     (bf['OBJECT_ID'],
+                      tcc_common.hexstr(bf['BFID']),
+                      bf['SC_COUNT'],
+                      cosinfo[bf['BFATTR_COS_ID']]))
+            
         update_next_nsobj_id(cfg, bf['OBJECT_ID'])
-    
+        util.log("recording next nsobject id: %d" % bf['OBJECT_ID'])
+
 # -----------------------------------------------------------------------------
 def db2cxn(dbsel):
     """
@@ -89,7 +107,7 @@ def get_bitfile_path(bitfile):
 
     if 1 < len(bfl):
         raise StandardError("Multiple objects found for bf %s" %
-                            hexstr(bitfile['BFID']))
+                            tcc_common.hexstr(bitfile['BFID']))
 
     rval = bfl[0]['NAME']
 
@@ -183,9 +201,18 @@ def tcc_report(bitfile, cosinfo):
     """
     # Compute the bitfile's path
     bfp = get_bitfile_path(bitfile)
-    print("%5d %5d %s" % (cosinfo[bitfile['BFATTR_COS_ID']],
+    rpt = "%5d %5d %s" % (cosinfo[bitfile['BFATTR_COS_ID']],
                           bitfile['SC_COUNT'],
-                          bfp))
+                          bfp)
+    util.log(rpt)
+    try:
+        tcc_report._f.write(rpt + "\n")
+    except AttributeError:
+        cfg = CrawlConfig.get_config()
+        rptfname = cfg.get(sectname, 'report_file')
+        tcc_report._f = open(rptfname, 'w')
+        tcc_report._f.write(rpt + "\n")
+
 
 # -----------------------------------------------------------------------------
 def update_next_nsobj_id(cfg, value):
