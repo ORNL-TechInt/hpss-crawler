@@ -72,7 +72,7 @@ To install the HPSS Integrity Crawler, clone the git repository.
         root: groupadd -g 9999 hpssc
         root: useradd  -u 9999 -g hpssc -m -d /home/hpssc
         root: passwd hpssc
-        root: db2icrt -a CLIENT -s client hpssc
+        root: db2icrt -s client hpssc
         hpssc: . /home/hpssc/sqllib/db2profile
 
 ## The 'crawl' command
