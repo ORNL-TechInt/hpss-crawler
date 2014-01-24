@@ -211,7 +211,7 @@ class Checkable(object):
                     self.add_to_sample(h, already_hashed=True)
                     rval = self.verify(h)
                     # returning "matched", "checksummed", "skipped", or Alert()
-                elif self.addable():
+                elif self.addable(self.cos):
                     rval = self.add_to_sample(h)
                     # returning "access denied" or "checksummed"
                 else:
