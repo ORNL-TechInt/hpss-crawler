@@ -74,7 +74,10 @@ class Alert(object):
                 elif opt == 'shell':
                     # run the program
                     cmd = cfg.get(section, 'shell')
-                    cmdline = cmd % (self.msg)
+                    if '%s' in cmd:
+                        cmdline = cmd % (self.msg)
+                    else:
+                        cmdline = cmd
                     os.system(cmdline)
                     util.log("ran: '%s'" % (cmdline))
                     done = True
