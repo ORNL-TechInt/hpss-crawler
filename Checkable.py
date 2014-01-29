@@ -119,11 +119,20 @@ class Checkable(object):
          3) update the sample count in the Dimension object
         """
         if not already_hashed:
-            util.log("%s: starting hashcreate on %s", util.my_name(), self.path)
+            util.log("starting hashcreate on %s", self.path)
             rsp = hsi.hashcreate(self.path)
-            util.log("%s: completed hashcreate on %s", util.my_name(), self.path)
-            if "Access denied" in rsp:
+            if "TRANSFER FAIL" in rsp:
+                util.log("hashcreate transfer failed on %s", self.path)
+                return "skipped"
+            elif "STALLED" in rsp:
+                util.log("hashcreate stalled on %s", self.path)
+                return "skipped"
+            elif "Access denied" in rsp:
+                util.log("hashcreate failed with 'access denied' on %s",
+                         self.path)
                 return "access denied"
+            else:
+                util.log("completed hashcreate on %s", self.path)
             
         if self.checksum == 0:
             self.checksum = 1
@@ -183,9 +192,11 @@ class Checkable(object):
         # self.probability = probability
         rval = []
         cfg = CrawlConfig.get_config()
-        hsi_timeout = int(cfg.get_d('crawler', 'hsi_timeout', 300))
+        # hsi_timeout = int(cfg.get_d('crawler', 'hsi_timeout', 300))
         try:
-            h = hpss.HSI(timeout=hsi_timeout)
+            # h = hpss.HSI(timeout=hsi_timeout, verbose=True)
+            h = hpss.HSI(verbose=True)
+            util.log("started hsi with pid %d" % h.pid())
         except hpss.HSIerror, e:
             return "unavailable"
         
@@ -473,17 +484,30 @@ class Checkable(object):
         """
         Attempt to verify the current file.
         """
+        util.log("hsi(%d) attempting to verify %s" % (h.pid(), self.path))
         rsp = h.hashverify(self.path)
-        if "%s: (md5) OK" % self.path in rsp:
+            
+        if "STALLED" in rsp:
+            rval = "skipped"
+            util.log("hashverify stalled on %s" % self.path)
+        elif "TRANSFER FAIL" in rsp:
+            rval = "skipped"
+            util.log("hashverify transfer failed on %s" % self.path)
+        elif "%s: (md5) OK" % self.path in rsp:
             rval = "matched"
+            util.log("hashverify matched on %s" % self.path)
         elif "no valid checksum found" in rsp:
             if self.addable(self.cos):
                 self.add_to_sample(h)
                 rval = "checksummed"
+                util.log("hashverify checksummed %s" % self.path)
             else:
                 self.checksum = 0
                 self.persist()
                 rval = "skipped"
+                util.log("hashverify skipped %s" % self.path)
         else:
             rval = Alert.Alert("Checksum mismatch: %s" % rsp)
+            util.log("hashverify generated 'Checksum mismatch' " +
+                     "alert on %s" % self.path)
         return rval
