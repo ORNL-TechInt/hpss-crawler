@@ -94,7 +94,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.add_section('alert_section')
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
-        cfg.set('alert_section', 'shell', '%s/runme' % self.testdir)
+        cfg.set('alert_section', 'shell', '%s/runme' % self.testdir + " %s")
         util.get_logger(cmdline=logfile, reset=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
