@@ -25,8 +25,8 @@ def main(cfg):
     
     # retrieve COS info
     cosinfo = get_cos_info(cfg)
-    for cos_id in cosinfo:
-        util.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
+    # for cos_id in cosinfo:
+    #     util.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
 
     # get the nsobject_id of the next bitfile to process from mysql
     next_nsobj_id = get_next_nsobj_id(cfg)
@@ -53,7 +53,7 @@ def main(cfg):
                       cosinfo[bf['BFATTR_COS_ID']]))
             
         update_next_nsobj_id(cfg, bf['OBJECT_ID'])
-        util.log("recording next nsobject id: %d" % bf['OBJECT_ID'])
+        # util.log("recording next nsobject id: %d" % bf['OBJECT_ID'])
 
 # -----------------------------------------------------------------------------
 def db2cxn(dbsel):
