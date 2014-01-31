@@ -99,11 +99,18 @@ def crl_cvreport(argv):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-p', '--prefix',
+                 action='store', default='', dest='prefix',
+                 help='table name prefix')
     (o, a) = p.parse_args(argv)
 
     if o.debug: pdb.set_trace()
 
-    db = CrawlDBI.DBI()
+    cfg = CrawlConfig.get_config('crawl.cfg')
+    if o.prefix != '':
+        cfg.set('dbi', 'tbl_prefix', o.prefix)
+        
+    db = CrawlDBI.DBI(cfg=cfg)
     rows = db.select(table="checkables",
                      fields=["count(*)"],
                      where="type = 'f'")

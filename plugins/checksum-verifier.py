@@ -85,7 +85,6 @@ def main(cfg):
                               "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
                 util.log("in %s, found:" % item)
-                util.log("%s" % str(ilist))
                 for n in ilist:
                     util.log(">>> %s" % str(n))
                     if 'f' == n.type and n.checksum != 0:
