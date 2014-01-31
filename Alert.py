@@ -71,6 +71,17 @@ class Alert(object):
                     util.log(fmt, self.msg)
                     done = True
 
+                elif opt == 'shell':
+                    # run the program
+                    cmd = cfg.get(section, 'shell')
+                    if '%s' in cmd:
+                        cmdline = cmd % (self.msg)
+                    else:
+                        cmdline = cmd
+                    os.system(cmdline)
+                    util.log("ran: '%s'" % (cmdline))
+                    done = True
+                    
                 elif opt == 'email':
                     # send mail
                     hostname = socket.gethostname()
@@ -81,17 +92,10 @@ class Alert(object):
                     payload['Subject'] = 'HPSS Integrity Crawler ALERT'
                     payload['From'] = sender
                     payload['To'] = addrs
-                    s = smtplib.SMTP(hostname)
+                    s = smtplib.SMTP('localhost')
                     s.sendmail(sender, addrlist, payload.as_string())
+                    s.quit()
                     util.log("sent mail to %s", addrlist)
-                    done = True
-                    
-                elif opt == 'shell':
-                    # run the program
-                    cmd = cfg.get(section, 'shell')
-                    cmdline = '%s %s' % (cmd, self.msg)
-                    os.system(cmdline)
-                    util.log("ran: '%s'" % (cmdline))
                     done = True
                     
                 elif opt == 'use':

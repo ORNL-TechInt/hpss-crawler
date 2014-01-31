@@ -49,13 +49,14 @@ History
 import os
 import pdb
 import re
+import shlex
 import sys
 import testhelp
 import traceback as tb
 import unittest
 
 # -----------------------------------------------------------------------------
-def tf_main(args, prefix=None):
+def tf_main(args, prefix=None, noarg='help'):
     """
     Dispatch a subfunction from mainmod
     """
@@ -63,7 +64,10 @@ def tf_main(args, prefix=None):
     if prefix == None:
         prefix = mainmod.prefix()
     if len(args) < 2:
-        tf_help([], prefix=prefix)
+        if noarg == 'shell':
+            tf_shell(prefix, args)
+        else:
+            tf_help([], prefix=prefix)
     elif args[1] == "help":
         tf_help(args[2:], prefix=prefix)
     else:
@@ -128,6 +132,7 @@ def tf_launch(prefix,
               modname,
               setup_tests=None,
               cleanup_tests=None,
+              noarg='help',
               testclass='',
               logfile=''):
     """
@@ -154,7 +159,32 @@ def tf_launch(prefix,
             if None != cleanup_tests and not keep:
                 cleanup_tests()
         else:
-            tf_main(sys.argv, prefix=prefix)
+            tf_main(sys.argv, prefix=prefix, noarg=noarg)
+
+# -----------------------------------------------------------------------------
+def tf_dispatch(prefix, args):
+    if len(args) < 1:
+        return
+    elif args[0] == 'help':
+        tf_help(args[1:], prefix=prefix)
+    else:
+        try:
+            func = getattr(sys.modules['__main__'],
+                           '%s_%s' % (prefix, args[0]))
+            func(args[1:])
+        except AttributeError:
+            print("No such subcommand '%s'" % args[0])
+        except:
+            tb.print_exc()
+            
+# -----------------------------------------------------------------------------
+def tf_shell(prefix, args):
+    prompt = "%s> " % prefix
+    cmd = raw_input(prompt)
+    while cmd != 'quit':
+        r = shlex.split(cmd)
+        tf_dispatch(prefix, r)
+        cmd = raw_input(prompt)
 
 # -----------------------------------------------------------------------------
 def ez_launch(main = None,

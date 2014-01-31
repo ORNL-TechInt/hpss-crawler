@@ -1,4 +1,6 @@
+import os
 import pexpect
+import pwd
 import sys
 import util
 
@@ -20,18 +22,31 @@ class HSIerror(Exception):
     
 # -----------------------------------------------------------------------------
 class HSI(object):
+    hsierrs = ["Aborting transfer",
+               "HPSS Unavailable",
+               "connect: Connection refused",
+               "hpssex_OpenConnection: unable to obtain " +
+               "remote site info",
+               "Error -?\d+ on transfer"]
+    
     # -------------------------------------------------------------------------
     def __init__(self, connect=True, *args, **kwargs):
         self.prompt = "]:"
         self.verbose = False
         self.unavailable = False
         self.xobj = None
+        self.timeout = 60
         
         cmdopts = " ".join(args)
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-        self.cmd = "hsi " + cmdopts
+        os.environ['HPSS_PFTPC_PORT_RANGE'] = 'ncacn_ip_tpc[10100-12100]'
+        os.environ['HPSS_PRINCIPAL'] = pwd.getpwuid(os.getuid()).pw_name
+        os.environ['HPSS_CFG_FILE_PATH'] = "/sw/sources/hpss/etc"
+        self.cmd = ("/sw/sources/hpss/bin/4.0.1.2/hsi_rhel_6.4.x86_64 " +
+                    "-q -l tpb -A keytab -k /ccs/keytabs/tpb.kt " +
+                    cmdopts)
         if connect:
             self.connect()
 
@@ -47,17 +62,10 @@ class HSI(object):
 
     # -------------------------------------------------------------------------
     def connect(self):
-        if hasattr(self, 'timeout'):
-            self.xobj = pexpect.spawn(self.cmd, timeout=self.timeout)
-        else:
-            self.xobj = pexpect.spawn(self.cmd)
+        self.xobj = pexpect.spawn(self.cmd, timeout=self.timeout)
         if self.verbose:
-            self.xobj.logfile = sys.stdout
-        which = self.xobj.expect([self.prompt,
-                                  "HPSS Unavailable",
-                                  "connect: Connection refused",
-                                  "hpssex_OpenConnection: unable to obtain " +
-                                  "remote site info"])
+            self.xobj.logfile = open("hsi.out", 'a')
+        which = self.xobj.expect([self.prompt] + self.hsierrs)
         if 0 != which or self.unavailable:
             raise HSIerror("HPSS Unavailable")
         
@@ -80,10 +88,21 @@ class HSI(object):
                            (util.my_name(), type(pathnames), pathnames))
         # self.xobj.expect(self.prompt)
         rval = ""
+        if self.xobj.before == "":
+            self.xobj.before = "   "
         for path in pathlist:
             self.xobj.sendline("hashcreate %s" % path)
-            self.xobj.expect(self.prompt)
-            rval += self.xobj.before
+            which = 1
+            while which == 1 and self.xobj.before != '':
+                which = self.xobj.expect([self.prompt,
+                                          pexpect.TIMEOUT] +
+                                         self.hsierrs)
+                rval += self.xobj.before
+            if 1 < which:
+                rval += "  TRANSFER FAIL"
+            elif self.xobj.before == '':
+                rval += "  STALLED... "
+                break
         return rval
     
     # -------------------------------------------------------------------------
@@ -146,10 +165,21 @@ class HSI(object):
                            (util.my_name(), type(pathnames), pathnames))
 
         rval = ""
+        if self.xobj.before == "":
+            self.xobj.before = "   "
         for path in pathlist:
             self.xobj.sendline("hashverify %s" % path)
-            self.xobj.expect(self.prompt)
-            rval += self.xobj.before
+            which = 1
+            while which == 1 and self.xobj.before != '':
+                which = self.xobj.expect([self.prompt,
+                                          pexpect.TIMEOUT] +
+                                         self.hsierrs)
+                rval += self.xobj.before
+            if 1 < which:
+                rval += "  TRANSFER FAIL"
+            elif self.xobj.before == '':
+                rval += "  STALLED... "
+                break
         return rval
     
     # -------------------------------------------------------------------------
@@ -179,6 +209,10 @@ class HSI(object):
         self.xobj.expect(self.prompt)
         return self.xobj.before
     
+    # -------------------------------------------------------------------------
+    def pid(self):
+        return self.xobj.pid
+
     # -------------------------------------------------------------------------
     def quit(self):
         self.xobj.sendline("quit")
