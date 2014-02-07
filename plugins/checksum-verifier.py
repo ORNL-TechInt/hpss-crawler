@@ -73,7 +73,7 @@ def main(cfg):
                     matches += 1
                     util.log("%s checksums matched" % item.path)
                 elif ilist == "checksummed":
-                    checksums += 1
+                    # checksums += 1
                     util.log("%s checksummed" % item.path)
                 elif ilist == "skipped":
                     util.log("%s skipped" % item.path)
@@ -89,11 +89,11 @@ def main(cfg):
                     util.log(">>> %s" % str(n))
                     if 'f' == n.type and n.checksum != 0:
                         util.log(".. previously checksummed")
-                        checksums += 1
+                        # checksums += 1
             elif isinstance(ilist, Checkable.Checkable):
                 util.log("Checkable returned - file checksummed - %s, %s" %
                           (ilist.path, ilist.checksum))
-                checksums += 1
+                # checksums += 1
             elif isinstance(ilist, Alert.Alert):
                 util.log("Alert generated: '%s'" %
                           ilist.msg())
@@ -103,18 +103,22 @@ def main(cfg):
                           "Checkable.check: %s: %r" % (type(ilist), ilist))
 
     # Report the statistics in the log
-    util.log("files checksummed: %d; " % checksums +
-              "checksums matched: %d; " % matches +
-              "failures: %d" % failures)
-    t_checksums += checksums
+    # ** For checksums, we report the current total minus the previous
+    # ** For matches and failures, we counted them up during the iteration
+    # ** See the description of update_stats for why we don't store total
+    #    checksums
+    p_checksums = t_checksums
     t_matches += matches
     t_failures += failures
+    update_stats((t_matches, t_failures))
+
+    (t_checksums, t_matches, t_failures) = get_stats()
+    util.log("files checksummed: %d; " % (t_checksums - p_checksums) +
+              "checksums matched: %d; " % matches +
+              "failures: %d" % failures)
     util.log("totals checksummed: %d; " % t_checksums +
               "matches: %d; " % t_matches +
               "failures: %d" % t_failures)
-
-    # Record the current totals in the database
-    update_stats((t_checksums, t_matches, t_failures))
 
     # Report the dimension data in the log
     d = Dimension.Dimension(name='cos')
@@ -126,37 +130,50 @@ def get_stats():
     """
     Return the number of files checksummed, checksums matched, and checksums
     failed.
+
+    Matches and failures are stored in the cvstats table but total checksum
+    count is retrieved from the checkables table by counting records with
+    checksum = 1. This avoids discrepancies where the checksum count in cvstats
+    might get out of synch with the records in checkables.
     """
     db = CrawlDBI.DBI()
+    if db.table_exists(table="checkables"):
+        rows = db.select(table='checkables',
+                         fields="count(path)",
+                         where="checksum = 1")
+        checksums = rows[0][0]
+    else:
+        checksums = 0
+
     if db.table_exists(table=stats_table):
         rows = db.select(table=stats_table,
-                         fields=["checksums", "matches", "failures"],
+                         fields=["matches", "failures"],
                          where="rowid = 1")
-        rval = rows[0]
+        (matches, failures) = rval = rows[0]
     else:
-        rval = (0, 0, 0)
+        (matches, failures) = (0, 0)
+    
     db.close()
-    return rval
+    return (checksums, matches, failures)
 
 # -----------------------------------------------------------------------------
 def update_stats(cmf):
     """
-    Record the three values in tuple cmf in table cvstats in the database. If
-    the table does not exist, create it.
+    Record the values in tuple cmf in table cvstats in the database. If the
+    table does not exist, create it.
     """
     db = CrawlDBI.DBI()
     if not db.table_exists(table=stats_table):
         db.create(table=stats_table,
                   fields=["rowid int",
-                          "checksums int",
                           "matches int",
                           "failures int",])
         db.insert(table=stats_table,
-                  fields=["rowid", "checksums", "matches", "failures"],
-                  data=[(1, 0, 0, 0)])
+                  fields=["rowid", "matches", "failures"],
+                  data=[(1, 0, 0)])
 
     db.update(table=stats_table,
-              fields=["checksums", "matches", "failures"],
+              fields=["matches", "failures"],
               data=[cmf],
               where="rowid = 1")
     db.close()
