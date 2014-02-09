@@ -417,6 +417,9 @@ class DBIsqlite(DBI_abstract):
     def select(self, table='', fields=[], where='', data=(), orderby=''):
         """
         See DBI.select()
+
+        !@! need to support groupby argument. Per docs, group by must follow
+         where and precede order by in the constructed SQL.
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -735,6 +738,9 @@ class DBImysql(DBI_abstract):
     def select(self, table='', fields=[], where='', data=(), orderby=''):
         """
         Select from a mysql database.
+
+        !@! need to support groupby argument. Per docs, group by should follow
+         where and precede order by in the constructed SQL.
         """
         # Handle invalid arguments
         if type(table) != str:

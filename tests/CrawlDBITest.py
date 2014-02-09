@@ -126,9 +126,14 @@ class DBItstBase(testhelp.HelpedTestCase):
     testdb = '%s/test.db' % testdir
     fdef = ['name text', 'size int', 'weight double']
     fnames = [x.split()[0] for x in fdef]
+    # tests below depend on testdata fulfilling the following conditions:
+    #  * only one record with size = 92
+    #  * only one record with name = 'zippo'
     testdata = [('frodo', 17, 108.5),
                 ('zippo', 92, 12341.23),
-                ('zumpy', 45, 9.3242)]
+                ('zumpy', 45, 9.3242),
+                ('frodo', 23, 212.5),
+                ('zumpy', 55, 90.6758)]
     
     # -------------------------------------------------------------------------
     def test_close(self):
@@ -705,6 +710,45 @@ class DBItstBase(testhelp.HelpedTestCase):
     
 
     # -------------------------------------------------------------------------
+    def test_select_gb_f(self):
+        """
+        Select with a group by clause on a field that is present in the table.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=['sum(size)'], groupby='name')
+        self.expect(3, len(rows))
+        self.expect(True, ((40,)) in rows)
+        self.expect(True, ((92,)) in rows)
+        self.expect(True, ((100,)) in rows)
+        
+    # -------------------------------------------------------------------------
+    def test_select_gb_u(self):
+        """
+        Select with a group by clause on a field that is unknown should get an
+        exception.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=['sum(size)'], groupby='fiddle')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("Group by field not in table" in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+        
+    # -------------------------------------------------------------------------
     def test_select_nq_mtd(self):
         """
         Calling select() with where with no '?' and an empty data list is fine.
@@ -865,11 +909,11 @@ class DBItstBase(testhelp.HelpedTestCase):
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+#         except AssertionError:
+#             raise
+#         except Exception, e:
+#             self.fail("Expected DBIerror, got %s" %
+#                       util.line_quote(tb.format_exc()))
 
     # -------------------------------------------------------------------------
     def test_select_mtw(self):
