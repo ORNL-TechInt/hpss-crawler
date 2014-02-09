@@ -79,7 +79,7 @@ class Dimension(object):
                                     " is not valid for Dimension" )
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
-        self.db_init()
+        # self.db_init()
 
     # -------------------------------------------------------------------------
     def __repr__(self):
@@ -90,22 +90,32 @@ class Dimension(object):
         return rv
 
     # -------------------------------------------------------------------------
-    def db_init(self):
-        """
-        Get a database handle. If our table has not yet been created, do so.
-        """
-        self.db = CrawlDBI.DBI()
-        if not self.db.table_exists(table='dimension'):
-            self.db.create(table='dimension',
-                           fields=['rowid integer primary key autoincrement',
-                                   'name text',
-                                   'category text',
-                                   'p_count int',
-                                   'p_pct real',
-                                   's_count int',
-                                   's_pct real'])
-        self.load(already_open=True)
-        self.db.close()
+    def _compute_dict(self, rows):
+        d = {}
+        for (pcount, cos) in rows:
+            d[cos] = {'count': pcount}
+        total = sum(map(lambda x: x['count'], d.values()))
+        for cos in d:
+            d[cos]['pct'] = 100.0 * d[cos]['count'] / total
+        return d
+
+    # -------------------------------------------------------------------------
+#     def db_init(self):
+#         """
+#         Get a database handle. If our table has not yet been created, do so.
+#         """
+#         self.db = CrawlDBI.DBI()
+#         if not self.db.table_exists(table='dimension'):
+#             self.db.create(table='dimension',
+#                            fields=['rowid integer primary key autoincrement',
+#                                    'name text',
+#                                    'category text',
+#                                    'p_count int',
+#                                    'p_pct real',
+#                                    's_count int',
+#                                    's_pct real'])
+#         self.load(already_open=True)
+#         self.db.close()
         
     # -------------------------------------------------------------------------
     def load(self, already_open=False):
@@ -114,24 +124,49 @@ class Dimension(object):
         """
         if not already_open:
             self.db = CrawlDBI.DBI()
-        rows = self.db.select(table='dimension',
-                              fields=['category', 'p_count', 'p_pct',
-                                      's_count', 's_pct'],
-                              where='name = ?',
-                              data=(self.name,))
-        for row in rows:
-            (cval, p_count, p_pct, s_count, s_pct) = row
-            self.p_sum.setdefault(cval, {'count': p_count,
-                                         'pct': p_pct})
-            self.s_sum.setdefault(cval, {'count': s_count,
-                                         'pct': s_pct})
+
+        # populate the p_sum structure
+        rows = self.db.select(table='checkables',
+                              fields=["count(path)", "cos"],
+                              where='type="f"',
+                              group_by='cos')
+        self.p_sum = self._compute_dict(rows)
+
+        # populate the s_sum structure
+        rows = self.db.select(table='checkables',
+                              fields=["count(path)", "cos"],
+                              where='type = "f" and checksum = 1',
+                              group_by='cos')
+        self.s_sum = self._compute_dict(rows)
+        
         if not already_open:
             self.db.close()
+            
+#         if not already_open:
+#             self.db = CrawlDBI.DBI()
+#         rows = self.db.select(table='dimension',
+#                               fields=['category', 'p_count', 'p_pct',
+#                                       's_count', 's_pct'],
+#                               where='name = ?',
+#                               data=(self.name,))
+#         for row in rows:
+#             (cval, p_count, p_pct, s_count, s_pct) = row
+#             self.p_sum.setdefault(cval, {'count': p_count,
+#                                          'pct': p_pct})
+#             self.s_sum.setdefault(cval, {'count': s_count,
+#                                          'pct': s_pct})
+#         if not already_open:
+#             self.db.close()
+
 
     # -------------------------------------------------------------------------
     def persist(self):
         """
         Save this object to the database.
+
+        This has become a no-op since we are loading the Dimension object by
+        computing from the checkables table, not by maintaining separate data
+        that could get out of synch.
 
         First, we have to find out which rows are already in the database.
         Then, comparing the rows from the database with the object, we
@@ -139,68 +174,72 @@ class Dimension(object):
         There's no way for categories to be removed from a summary dictionary,
         so we don't have to worry about deleting entries from the database.
         """
-        if self.p_sum == {}:
-            return
-        
-        i_list = []
-        i_data = []
-        u_list = []
-        u_data = []
-        
-        # Find out which rows are already in the database.
-        self.db = CrawlDBI.DBI()
-        rows = self.db.select(table='dimension',
-                         fields=['name', 'category'],
-                         where='name = ?',
-                         data=(self.name,))
-        
-        # Based on the population data, sort the database entries into items to
-        # be updated versus those to be inserted.
-        for k in self.p_sum:
-            if (self.name, k) in rows:
-                u_list.append((self.name, k))
-            else:
-                i_list.append((self.name, k))
-
-        # For each item in the update list, build the data tuple and add it to
-        # the update list
-        for (name, cat) in u_list:
-            u_data.append((self.p_sum[cat]['count'],
-                           self.p_sum[cat]['pct'],
-                           self.s_sum[cat]['count'],
-                           self.s_sum[cat]['pct'],
-                           self.name,
-                           cat))
-        # If the data tuple list is not empty, issue an update against the
-        # database
-        if u_data != []:
-            self.db.update(table='dimension',
-                      fields=['p_count', 'p_pct', 's_count', 's_pct'],
-                      where='name=? and category=?',
-                      data=u_data)
-            
-        # For each item in the insert list, build the data tuple and add it to
-        # the insert list
-        for (name, cat) in i_list:
-            i_data.append((self.name,
-                           cat,
-                           self.p_sum[cat]['count'],
-                           self.p_sum[cat]['pct'],
-                           self.s_sum[cat]['count'],
-                           self.s_sum[cat]['pct']))
-        # If the insert data tuple list is not empty, issue the insert
-        if i_data != []:
-            self.db.insert(table='dimension',
-                      fields=['name', 'category', 'p_count',
-                              'p_pct', 's_count', 's_pct'],
-                      data=i_data)
-                          
-        self.db.close()
+        return
+#         if self.p_sum == {}:
+#             return
+#         
+#         i_list = []
+#         i_data = []
+#         u_list = []
+#         u_data = []
+#         
+#         # Find out which rows are already in the database.
+#         self.db = CrawlDBI.DBI()
+#         rows = self.db.select(table='dimension',
+#                          fields=['name', 'category'],
+#                          where='name = ?',
+#                          data=(self.name,))
+#         
+#         # Based on the population data, sort the database entries into items to
+#         # be updated versus those to be inserted.
+#         for k in self.p_sum:
+#             if (self.name, k) in rows:
+#                 u_list.append((self.name, k))
+#             else:
+#                 i_list.append((self.name, k))
+# 
+#         # For each item in the update list, build the data tuple and add it to
+#         # the update list
+#         for (name, cat) in u_list:
+#             u_data.append((self.p_sum[cat]['count'],
+#                            self.p_sum[cat]['pct'],
+#                            self.s_sum[cat]['count'],
+#                            self.s_sum[cat]['pct'],
+#                            self.name,
+#                            cat))
+#         # If the data tuple list is not empty, issue an update against the
+#         # database
+#         if u_data != []:
+#             self.db.update(table='dimension',
+#                       fields=['p_count', 'p_pct', 's_count', 's_pct'],
+#                       where='name=? and category=?',
+#                       data=u_data)
+#             
+#         # For each item in the insert list, build the data tuple and add it to
+#         # the insert list
+#         for (name, cat) in i_list:
+#             i_data.append((self.name,
+#                            cat,
+#                            self.p_sum[cat]['count'],
+#                            self.p_sum[cat]['pct'],
+#                            self.s_sum[cat]['count'],
+#                            self.s_sum[cat]['pct']))
+#         # If the insert data tuple list is not empty, issue the insert
+#         if i_data != []:
+#             self.db.insert(table='dimension',
+#                       fields=['name', 'category', 'p_count',
+#                               'p_pct', 's_count', 's_pct'],
+#                       data=i_data)
+#                           
+#         self.db.close()
     
     # -------------------------------------------------------------------------
     def report(self):
         """
         Generate a string reflecting the current contents of the dimension
+
+        !@! Review how this is used in Checkable. Need to make sure p_sum and
+        s_sum get updated properly just before this operation happens.
         """
         rval = ("\n%-8s     %17s   %17s" % (self.name,
                                             "Population",
@@ -230,6 +269,9 @@ class Dimension(object):
         Return the total of all the 'count' entries in one of the dictionaries.
         The dictionary to sum up can be indicated by passing an argument to
         dict, or by passing abbreviations of 'population' or 'sample' to which.
+
+        !@! Review how this is used in Checkable. Need to make sure p_sum and
+        s_sum get updated properly just before this operation happens.
         """
         if dict is not None:
             rv = sum(map(lambda x: x['count'], dict.values()))
@@ -246,6 +288,9 @@ class Dimension(object):
         If the category is new, it is added to the population and sample
         dictionaries. Once the counts are updated, we call _update_pct() to
         update the percent values as well.
+
+        !@! Review how this is used in Checkable. Need to make sure p_sum and
+        s_sum get updated properly just before this operation happens.
         """
         if catval not in self.p_sum:
             self.p_sum[catval] = {'count': p_suminc, 'pct': 0.0}
@@ -279,6 +324,10 @@ class Dimension(object):
 
     # -------------------------------------------------------------------------
     def vote(self, category):
+        """
+        !@! Review how this is used in Checkable. Need to make sure p_sum and
+         s_sum get updated properly just before this operation happens.
+        """
         if ((category in self.s_sum) and
             (self.s_sum[category]['pct'] < self.p_sum[category]['pct'])):
             return 1
