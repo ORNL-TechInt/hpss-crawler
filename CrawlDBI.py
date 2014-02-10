@@ -414,12 +414,14 @@ class DBIsqlite(DBI_abstract):
                            dbname=self.dbname)
         
     # -------------------------------------------------------------------------
-    def select(self, table='', fields=[], where='', data=(), orderby=''):
+    def select(self, table='',
+               fields=[],
+               where='',
+               data=(),
+               groupby='',
+               orderby=''):
         """
         See DBI.select()
-
-        !@! need to support groupby argument. Per docs, group by must follow
-         where and precede order by in the constructed SQL.
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -436,6 +438,9 @@ class DBIsqlite(DBI_abstract):
                            dbname=self.dbname)
         elif type(data) != tuple:
             raise DBIerror("On select(), data must be a tuple",
+                           dbname=self.dbname)
+        elif type(groupby) != str:
+            raise DBIerror("On select(), groupby clause must be a string",
                            dbname=self.dbname)
         elif type(orderby) != str:
             raise DBIerror("On select(), orderby clause must be a string",
@@ -454,6 +459,8 @@ class DBIsqlite(DBI_abstract):
             cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where
+            if groupby != '':
+                cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
 
@@ -735,12 +742,15 @@ class DBImysql(DBI_abstract):
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
         
     # -------------------------------------------------------------------------
-    def select(self, table='', fields=[], where='', data=(), orderby=''):
+    def select(self,
+               table='',
+               fields=[],
+               where='',
+               data=(),
+               groupby='',
+               orderby=''):
         """
         Select from a mysql database.
-
-        !@! need to support groupby argument. Per docs, group by should follow
-         where and precede order by in the constructed SQL.
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -757,6 +767,9 @@ class DBImysql(DBI_abstract):
                            dbname=self.dbname)
         elif type(data) != tuple:
             raise DBIerror("On select(), data must be a tuple",
+                           dbname=self.dbname)
+        elif type(groupby) != str:
+            raise DBIerror("On select(), groupby clause must be a string",
                            dbname=self.dbname)
         elif type(orderby) != str:
             raise DBIerror("On select(), orderby clause must be a string",
@@ -775,6 +788,8 @@ class DBImysql(DBI_abstract):
             cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where.replace('?', '%s')
+            if groupby != '':
+                cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
 

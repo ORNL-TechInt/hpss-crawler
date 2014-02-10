@@ -139,7 +139,7 @@ def get_stats():
     db = CrawlDBI.DBI()
     if db.table_exists(table="checkables"):
         rows = db.select(table='checkables',
-                         fields="count(path)",
+                         fields=["count(path)"],
                          where="checksum = 1")
         checksums = rows[0][0]
     else:

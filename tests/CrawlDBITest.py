@@ -722,10 +722,33 @@ class DBItstBase(testhelp.HelpedTestCase):
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
         rows = db.select(table=tname, fields=['sum(size)'], groupby='name')
-        self.expect(3, len(rows))
-        self.expect(True, ((40,)) in rows)
-        self.expect(True, ((92,)) in rows)
-        self.expect(True, ((100,)) in rows)
+        self.expected(3, len(rows))
+        self.expected(True, ((40,)) in rows)
+        self.expected(True, ((92,)) in rows)
+        self.expected(True, ((100,)) in rows)
+        
+    # -------------------------------------------------------------------------
+    def test_select_gb_ns(self):
+        """
+        Select with a group by clause that is not a string -- should get an
+        exception.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=['sum(size)'],
+                             groupby=['fiddle'])
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), groupby clause must be a string"
+                            in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
         
     # -------------------------------------------------------------------------
     def test_select_gb_u(self):
@@ -739,12 +762,16 @@ class DBItstBase(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
+        ns_field = 'fiddle'
 
         try:
-            rows = db.select(table=tname, fields=['sum(size)'], groupby='fiddle')
+            rows = db.select(table=tname, fields=['sum(size)'],
+                             groupby=ns_field)
             self.fail("Expected exception not thrown")
         except CrawlDBI.DBIerror, e:
-            self.assertTrue("Group by field not in table" in str(e),
+            sqlite_msg = 'no such column: %s' % ns_field
+            mysql_msg = "Unknown column '%s' in 'group statement'" % ns_field
+            self.assertTrue(sqlite_msg in str(e) or mysql_msg in str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
         
@@ -774,11 +801,6 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
@@ -804,11 +826,6 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
@@ -869,11 +886,6 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        fdef = ['name text', 'size int', 'weight float']
-        fnames = [x.split()[0] for x in fdef]
-        testdata = [('frodo', 17, 108.5),
-                    ('zippo', 92, 12341.23),
-                    ('zumpy', 45, 9.3242)]
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
@@ -881,9 +893,9 @@ class DBItstBase(testhelp.HelpedTestCase):
         self.assertEqual(len(rows[0]), 3,
                          "Expected three fields in each row, got %d" %
                          len(rows[0]))
-        self.assertEqual(list(testdata), list(rows),
+        self.assertEqual(list(self.testdata), list(rows),
                          "Expected %s and %s to match" %
-                         (list(testdata), list(rows)))
+                         (list(self.testdata), list(rows)))
     
     # -------------------------------------------------------------------------
     def test_select_mtt(self):
@@ -893,27 +905,17 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        fdef = ['name text', 'size int', 'weight float']
-        fnames = [x.split()[0] for x in fdef]
-        testdata = [('frodo', 17, 108.5),
-                    ('zippo', 92, 12341.23),
-                    ('zumpy', 45, 9.3242)]
-        db.create(table=tname, fields=fdef)
-        db.insert(table=tname, fields=fnames, data=testdata)
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
         try:
-            rows = db.select(table='', fields=[], orderby='')
+            rows = db.select(table='', fields=[])
             self.fail("Expected exception not thrown")
         except CrawlDBI.DBIerror, e:
             self.assertTrue("On select(), table name must not be empty" in
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-#         except AssertionError:
-#             raise
-#         except Exception, e:
-#             self.fail("Expected DBIerror, got %s" %
-#                       util.line_quote(tb.format_exc()))
 
     # -------------------------------------------------------------------------
     def test_select_mtw(self):
@@ -923,11 +925,6 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        fdef = ['name text', 'size int', 'weight float']
-        fnames = [x.split()[0] for x in fdef]
-        testdata = [('frodo', 17, 108.5),
-                    ('zippo', 92, 12341.23),
-                    ('zumpy', 45, 9.3242)]
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
@@ -935,9 +932,9 @@ class DBItstBase(testhelp.HelpedTestCase):
         self.assertEqual(len(rows[0]), 3,
                          "Expected three fields in each row, got %d" %
                          len(rows[0]))
-        self.assertEqual(list(testdata), list(rows),
+        self.assertEqual(list(self.testdata), list(rows),
                          "Expected %s and %s to match" %
-                         (list(testdata), list(rows)))
+                         (list(self.testdata), list(rows)))
     
     # -------------------------------------------------------------------------
     def test_select_nld(self):
@@ -948,11 +945,6 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 
@@ -1079,7 +1071,8 @@ class DBItstBase(testhelp.HelpedTestCase):
         tname=util.my_name().replace('test_', '')
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        exp = [self.testdata[2], self.testdata[0], self.testdata[1]]
+        exp = [self.testdata[2], self.testdata[4], self.testdata[0],
+               self.testdata[3], self.testdata[1]]
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
 

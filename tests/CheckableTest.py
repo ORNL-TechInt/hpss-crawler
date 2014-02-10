@@ -68,9 +68,9 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         for c in dirlist:
             if c.path == "%s/crawler.tar" % testdir:
-                self.expected(1, c.checksum)
+                self.expected(0, c.checksum)
             elif c.path == "%s/crawler.tar.idx" % testdir:
-                self.expected(1, c.checksum)
+                self.expected(0, c.checksum)
             elif c.path == "%s/subdir1" % testdir:
                 self.expected(0, c.checksum)
             elif c.path == "%s/subdir2" % testdir:
