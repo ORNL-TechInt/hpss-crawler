@@ -136,10 +136,6 @@ class Checkable(object):
             
         if self.checksum == 0:
             self.checksum = 1
-            self.dim['cos'].update_category(self.cos,
-                                            p_suminc=0,
-                                            s_suminc=1)
-            self.persist()
             return "checksummed"
 
     # -------------------------------------------------------------------------
@@ -187,6 +183,17 @@ class Checkable(object):
          checksum a file              "checksummed"
          skipped a file               "skipped"
          hpss unavailable             "unavailable"
+
+        Here we examine a population member, count it as a member of the
+        population, decide whether to add it to the sample, and if so, count it
+        as a sample member.
+
+        First, we have to make all the decisions and update the object
+        accordingly.
+
+        Then, we persist the object to the database.
+
+        Finally, we load the dimension object to ensure it's up to date.
         """
         # fire up hsi
         # self.probability = probability
@@ -209,12 +216,7 @@ class Checkable(object):
                     new = Checkable.fdparse(line)
                     if None != new:
                         rval.append(new)
-                        p = new.persist()
-                        if new.type == 'f':
-                            if p:
-                                self.dim['cos'].update_category(new.cos)
-                            if new.has_hash(h):
-                                new.add_to_sample(h, already_hashed=True)
+                        new.persist()
                         # returning list of items found in the directory
         elif self.type == 'f':
             if self.checksum == 0:
@@ -476,6 +478,8 @@ class Checkable(object):
             else:
                 raise StandardError("There appears to be more than one copy " +
                                     "of %s in the database" % self)
+
+        self.dim['cos'].load()
         db.close()
         return rval
     

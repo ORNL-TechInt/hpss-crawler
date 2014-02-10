@@ -79,6 +79,7 @@ class Dimension(object):
                                     " is not valid for Dimension" )
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
+        self.load()
         # self.db_init()
 
     # -------------------------------------------------------------------------
@@ -129,14 +130,14 @@ class Dimension(object):
         rows = self.db.select(table='checkables',
                               fields=["count(path)", "cos"],
                               where='type="f"',
-                              group_by='cos')
+                              groupby='cos')
         self.p_sum = self._compute_dict(rows)
 
         # populate the s_sum structure
         rows = self.db.select(table='checkables',
                               fields=["count(path)", "cos"],
                               where='type = "f" and checksum = 1',
-                              group_by='cos')
+                              groupby='cos')
         self.s_sum = self._compute_dict(rows)
         
         if not already_open:
@@ -237,9 +238,6 @@ class Dimension(object):
     def report(self):
         """
         Generate a string reflecting the current contents of the dimension
-
-        !@! Review how this is used in Checkable. Need to make sure p_sum and
-        s_sum get updated properly just before this operation happens.
         """
         rval = ("\n%-8s     %17s   %17s" % (self.name,
                                             "Population",
@@ -269,9 +267,6 @@ class Dimension(object):
         Return the total of all the 'count' entries in one of the dictionaries.
         The dictionary to sum up can be indicated by passing an argument to
         dict, or by passing abbreviations of 'population' or 'sample' to which.
-
-        !@! Review how this is used in Checkable. Need to make sure p_sum and
-        s_sum get updated properly just before this operation happens.
         """
         if dict is not None:
             rv = sum(map(lambda x: x['count'], dict.values()))
@@ -288,9 +283,6 @@ class Dimension(object):
         If the category is new, it is added to the population and sample
         dictionaries. Once the counts are updated, we call _update_pct() to
         update the percent values as well.
-
-        !@! Review how this is used in Checkable. Need to make sure p_sum and
-        s_sum get updated properly just before this operation happens.
         """
         if catval not in self.p_sum:
             self.p_sum[catval] = {'count': p_suminc, 'pct': 0.0}
@@ -325,11 +317,19 @@ class Dimension(object):
     # -------------------------------------------------------------------------
     def vote(self, category):
         """
-        !@! Review how this is used in Checkable. Need to make sure p_sum and
-         s_sum get updated properly just before this operation happens.
+        If the category value does not yet appear in the sample, we want to
+        vote for it.
+
+        If the category value is in the sample, we want to vote for it if the
+        percentage of the sample it represents is smaller than the percentage
+        of the population it represents.
+
+        Even if we vote for a category here, it only has a probability of
+        getting intothe sample. It's not a sure thing.
         """
-        if ((category in self.s_sum) and
-            (self.s_sum[category]['pct'] < self.p_sum[category]['pct'])):
+        if category not in self.s_sum:
+            return 1
+        elif self.s_sum[category]['pct'] < self.p_sum[category]['pct']:
             return 1
         else:
             return 0

@@ -2,6 +2,7 @@
 """
 Track stratum proportions in a sample against a population
 """
+import Checkable
 import copy
 import CrawlDBI
 from Dimension import Dimension
@@ -55,6 +56,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         dimname = 'ctor_attrs'
         testhelp.db_config(self.testdir, util.my_name())
+        Checkable.Checkable.ex_nihilo()
         a = Dimension(name=dimname,
                       sampsize=0.005)
         for attr in ['name',
@@ -148,116 +150,117 @@ class DimensionTest(testhelp.HelpedTestCase):
                         "Expected an exception but didn't get one")
         
     # -------------------------------------------------------------------------
-    def test_db_already_no_table(self):
-        """
-        Creating a Dimension object should initialize the dimension table in
-        the existing database if the db exists but the table does not.
-        """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
-        db = CrawlDBI.DBI()
-        self.assertFalse(db.table_exists(table='dimension'),
-                        'Did not expect table \'dimension\' in database')
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected to find database file '%s'" % self.testdb)
-
-        a = Dimension(name='already_nt')
-        a.persist()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected to find database file '%s'" % self.testdb)
-
-        self.assertTrue(db.table_exists(table='dimension'),
-                        'Expected table \'dimension\' in database')
-        db.close()
+    # def test_db_already_no_table(self):
+    #     """
+    #     Creating a Dimension object should initialize the dimension table in
+    #     the existing database if the db exists but the table does not.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     db = CrawlDBI.DBI()
+    #     self.assertFalse(db.table_exists(table='dimension'),
+    #                     'Did not expect table \'dimension\' in database')
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     a = Dimension(name='already_nt')
+    #     a.persist()
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     self.assertTrue(db.table_exists(table='dimension'),
+    #                     'Expected table \'dimension\' in database')
+    #     db.close()
         
     # -------------------------------------------------------------------------
-    def test_ex_nihilo_nofile(self):
-        """
-        Creating and persisting a Dimension object should initialize the
-        database and table dimension if they do not exist.
-        """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
-
-        a = Dimension(name='ex_nihilo')
-        a.persist()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected to find database file '%s'" % self.testdb)
-
-        db = CrawlDBI.DBI()
-        self.assertTrue(db.table_exists(table='dimension'),
-                        "Expected table 'dimension' in database")
-        db.close()
+    # def test_ex_nihilo_nofile(self):
+    #     """
+    #     Creating and persisting a Dimension object should initialize the
+    #     database and table dimension if they do not exist.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    # 
+    #     a = Dimension(name='ex_nihilo')
+    #     a.persist()
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     db = CrawlDBI.DBI()
+    #     self.assertTrue(db.table_exists(table='dimension'),
+    #                     "Expected table 'dimension' in database")
+    #     db.close()
         
     # -------------------------------------------------------------------------
-    def test_ex_nihilo_notable(self):
-        """
-        If the db file exists but the table does not, creating and persisting a
-        Dimension object should create the table 'dimension'.
-        """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
-        testhelp.touch(self.testdb)
-        
-        a = Dimension(name='ex_nihilo')
-        a.persist()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected to find database file '%s'" % self.testdb)
-
-        db = CrawlDBI.DBI()
-        self.assertTrue(db.table_exists(table='dimension'),
-                        "Expected table 'dimension' in database")
-        db.close()
+    # def test_ex_nihilo_notable(self):
+    #     """
+    #     If the db file exists but the table does not, creating and persisting a
+    #     Dimension object should create the table 'dimension'.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     testhelp.touch(self.testdb)
+    #     
+    #     a = Dimension(name='ex_nihilo')
+    #     a.persist()
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     db = CrawlDBI.DBI()
+    #     self.assertTrue(db.table_exists(table='dimension'),
+    #                     "Expected table 'dimension' in database")
+    #     db.close()
         
     # -------------------------------------------------------------------------
-    def test_load_already(self):
-        """
-        With the database and dimension table in place and a named Dimension in
-        place in the table, calling load() on a Dimension with the same name as
-        the one in the table should load the information from the table into
-        the object.
-        """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
-        testdata = [('cos', '6002', 24053, 17.2563, 190, 15.2343),
-                    ('cos', '5081', 14834, 98.753,  105, 28.4385)]
-        # create the dimension table without putting anything in it
-        z = Dimension(name='foobar')
-        z.persist()
-
-        # insert some test data into the table
-        db = CrawlDBI.DBI()
-        db.insert(table='dimension',
-                  fields=['name', 'category',
-                          'p_count', 'p_pct', 's_count', 's_pct'],
-                  data=testdata)
-        db.close()
-
-        # get a default Dimension with the same name as the data in the table
-        q = Dimension(name='cos')
-        # this should load the data from the table into the object
-        q.load()
-
-        # verify the loaded data in the object
-        self.expected('cos', q.name)
-        self.assertTrue(testdata[0][1] in q.p_sum.keys(),
-                        "Expected '%s' in p_sum.keys()" % testdata[0][1])
-        self.assertTrue(testdata[0][1] in q.s_sum.keys(),
-                        "Expected '%s' in s_sum.keys()" % testdata[0][1])
-        self.assertTrue(testdata[1][1] in q.p_sum.keys(),
-                        "Expected '%s' in p_sum.keys()" % testdata[1][1])
-        self.assertTrue(testdata[1][1] in q.s_sum.keys(),
-                        "Expected '%s' in s_sum.keys()" % testdata[1][1])
-
-        self.expected(testdata[0][2], q.p_sum[testdata[0][1]]['count'])
-        self.expected(testdata[0][3], q.p_sum[testdata[0][1]]['pct'])
-        self.expected(testdata[0][4], q.s_sum[testdata[0][1]]['count'])
-        self.expected(testdata[0][5], q.s_sum[testdata[0][1]]['pct'])
-
-        self.expected(testdata[1][2], q.p_sum[testdata[1][1]]['count'])
-        self.expected(testdata[1][3], q.p_sum[testdata[1][1]]['pct'])
-        self.expected(testdata[1][4], q.s_sum[testdata[1][1]]['count'])
-        self.expected(testdata[1][5], q.s_sum[testdata[1][1]]['pct'])
+    # def test_load_already(self):
+    #     """
+    #     With the database and dimension table in place and a named Dimension in
+    #     place in the table, calling load() on a Dimension with the same name as
+    #     the one in the table should load the information from the table into
+    #     the object.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     Checkable.Checkable.ex_nihilo()
+    #     testdata = [('cos', '6002', 24053, 17.2563, 190, 15.2343),
+    #                 ('cos', '5081', 14834, 98.753,  105, 28.4385)]
+    #     # create the dimension table without putting anything in it
+    #     z = Dimension(name='foobar')
+    #     z.persist()
+    # 
+    #     # insert some test data into the table
+    #     db = CrawlDBI.DBI()
+    #     # db.insert(table='dimension',
+    #     #           fields=['name', 'category',
+    #     #                   'p_count', 'p_pct', 's_count', 's_pct'],
+    #     #           data=testdata)
+    #     db.close()
+    # 
+    #     # get a default Dimension with the same name as the data in the table
+    #     q = Dimension(name='cos')
+    #     # this should load the data from the table into the object
+    #     q.load()
+    # 
+    #     # verify the loaded data in the object
+    #     self.expected('cos', q.name)
+    #     self.assertTrue(testdata[0][1] in q.p_sum.keys(),
+    #                     "Expected '%s' in p_sum.keys()" % testdata[0][1])
+    #     self.assertTrue(testdata[0][1] in q.s_sum.keys(),
+    #                     "Expected '%s' in s_sum.keys()" % testdata[0][1])
+    #     self.assertTrue(testdata[1][1] in q.p_sum.keys(),
+    #                     "Expected '%s' in p_sum.keys()" % testdata[1][1])
+    #     self.assertTrue(testdata[1][1] in q.s_sum.keys(),
+    #                     "Expected '%s' in s_sum.keys()" % testdata[1][1])
+    # 
+    #     self.expected(testdata[0][2], q.p_sum[testdata[0][1]]['count'])
+    #     self.expected(testdata[0][3], q.p_sum[testdata[0][1]]['pct'])
+    #     self.expected(testdata[0][4], q.s_sum[testdata[0][1]]['count'])
+    #     self.expected(testdata[0][5], q.s_sum[testdata[0][1]]['pct'])
+    # 
+    #     self.expected(testdata[1][2], q.p_sum[testdata[1][1]]['count'])
+    #     self.expected(testdata[1][3], q.p_sum[testdata[1][1]]['pct'])
+    #     self.expected(testdata[1][4], q.s_sum[testdata[1][1]]['count'])
+    #     self.expected(testdata[1][5], q.s_sum[testdata[1][1]]['pct'])
 
     # -------------------------------------------------------------------------
     def test_load_new(self):
@@ -271,6 +274,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         # adding any data
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
+        Checkable.Checkable.ex_nihilo()
+
         ignore = Dimension(name='foobar')
         ignore.persist()
 
@@ -293,78 +298,81 @@ class DimensionTest(testhelp.HelpedTestCase):
         # TODO: verify that the object still is not in the table
         
     # -------------------------------------------------------------------------
-    def test_persist_already(self):
-        """
-        With the database and dimension table in place and a named Dimension in
-        place in the table, updating and persisting a Dimension with the same
-        name should update the database record.
-        """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
-
-        # first, we need to stick some records in the table
-        test = Dimension(name='foobar')
-        test.update_category('<1M')
-        test.update_category('<1G')
-        test.persist()
-
-        # verify that the records are in the table as expected
-        db = CrawlDBI.DBI()
-        rows = db.select(table='dimension',
-                         fields=['name', 'category', 'p_count', 'p_pct',
-                                 's_count', 's_pct'])
-        self.expected(2, len(rows))
-        self.expected(('foobar', '<1M', 1, 50.0, 0, 0.0), rows[0])
-        self.expected(('foobar', '<1G', 1, 50.0, 0, 0.0), rows[1])
-
-        # update the Dimension values
-        test.update_category('<1M', s_suminc=1)
-        test.update_category('<1G', s_suminc=2)
-        test.update_category('<1T', s_suminc=1)
-        test.persist()
-        
-        # verify that the records in the database got updated
-        rows = db.select(table='dimension',
-                         fields=['name', 'category', 'p_count', 'p_pct',
-                                 's_count', 's_pct'])
-        db.close()
-        self.expected(3, len(rows))
-        self.expected(('foobar', '<1M', 2, 40.0, 1, 25.0), rows[0])
-        self.expected(('foobar', '<1G', 2, 40.0, 2, 50.0), rows[1])
-        self.expected(('foobar', '<1T', 1, 20.0, 1, 25.0), rows[2])
+    # def test_persist_already(self):
+    #     """
+    #     With the database and dimension table in place and a named Dimension in
+    #     place in the table, updating and persisting a Dimension with the same
+    #     name should update the database record.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    # 
+    #     # first, we need to stick some records in the table
+    #     test = Dimension(name='foobar')
+    #     test.update_category('<1M')
+    #     test.update_category('<1G')
+    #     test.persist()
+    # 
+    #     # verify that the records are in the table as expected
+    #     db = CrawlDBI.DBI()
+    #     rows = db.select(table='dimension',
+    #                      fields=['name', 'category', 'p_count', 'p_pct',
+    #                              's_count', 's_pct'])
+    #     self.expected(2, len(rows))
+    #     self.expected(('foobar', '<1M', 1, 50.0, 0, 0.0), rows[0])
+    #     self.expected(('foobar', '<1G', 1, 50.0, 0, 0.0), rows[1])
+    # 
+    #     # update the Dimension values
+    #     test.update_category('<1M', s_suminc=1)
+    #     test.update_category('<1G', s_suminc=2)
+    #     test.update_category('<1T', s_suminc=1)
+    #     test.persist()
+    #     
+    #     # verify that the records in the database got updated
+    #     rows = db.select(table='dimension',
+    #                      fields=['name', 'category', 'p_count', 'p_pct',
+    #                              's_count', 's_pct'])
+    #     db.close()
+    #     self.expected(3, len(rows))
+    #     self.expected(('foobar', '<1M', 2, 40.0, 1, 25.0), rows[0])
+    #     self.expected(('foobar', '<1G', 2, 40.0, 2, 50.0), rows[1])
+    #     self.expected(('foobar', '<1T', 1, 20.0, 1, 25.0), rows[2])
         
     # -------------------------------------------------------------------------
-    def test_persist_new(self):
+    # def test_persist_new(self):
         """
         With the database and dimension table in place, create a new Dimension
         that is not in the table. Calling persist() on it should store it in
         the dimension table in the database.
+
+        We no longer persist the Dimension object -- this test is obsolete
         """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
-
-        # instantiating the object initializes the database
-        new = Dimension(name='notintable')
-        new.update_category('5081', s_suminc=1)
-        new.update_category('6001')
-        new.update_category('6002', s_suminc=1)
-        new.update_category('6003')
-        new.persist()
-
-        # verify that the data is in the table
-        db = CrawlDBI.DBI()
-        rows = db.select(table='dimension',
-                         fields=['name', 'category', 'p_count', 'p_pct',
-                                 's_count', 's_pct'])
-        db.close()
-        self.expected(4, len(rows))
-        testdata = [('notintable', '5081', 1, 25.0, 1, 50.0),
-                    ('notintable', '6001', 1, 25.0, 0, 0.0),
-                    ('notintable', '6002', 1, 25.0, 1, 50.0),
-                    ('notintable', '6003', 1, 25.0, 0, 0.0)]
-        for row in testdata:
-            self.assertTrue(row in rows,
-                            "Expected '%s' to be in rows (%s)" % (row, rows))
+        # util.conditional_rm(self.testdb)
+        # testhelp.db_config(self.testdir, util.my_name())
+        # Checkable.Checkable.ex_nihilo()
+        # 
+        # # instantiating the object initializes the database
+        # new = Dimension(name='notintable')
+        # new.update_category('5081', s_suminc=1)
+        # new.update_category('6001')
+        # new.update_category('6002', s_suminc=1)
+        # new.update_category('6003')
+        # new.persist()
+        # 
+        # # verify that the data is in the table
+        # db = CrawlDBI.DBI()
+        # rows = db.select(table='dimension',
+        #                  fields=['name', 'category', 'p_count', 'p_pct',
+        #                          's_count', 's_pct'])
+        # db.close()
+        # self.expected(4, len(rows))
+        # testdata = [('notintable', '5081', 1, 25.0, 1, 50.0),
+        #             ('notintable', '6001', 1, 25.0, 0, 0.0),
+        #             ('notintable', '6002', 1, 25.0, 1, 50.0),
+        #             ('notintable', '6003', 1, 25.0, 0, 0.0)]
+        # for row in testdata:
+        #     self.assertTrue(row in rows,
+        #                     "Expected '%s' to be in rows (%s)" % (row, rows))
         
     # -------------------------------------------------------------------------
     def test_repr(self):
@@ -375,6 +383,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         
         testhelp.db_config(self.testdir, util.my_name())
+        Checkable.Checkable.ex_nihilo()
         exp = "Dimension(name='foo')"
         a = eval(exp)
         self.expected(exp, a.__repr__())
@@ -390,6 +399,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         dictionary.
         """
         testhelp.db_config(self.testdir, util.my_name())
+        Checkable.Checkable.ex_nihilo()
         a = Dimension(name='sum_total')
         a.update_category('6001')
         a.update_category('6001', s_suminc=2)
