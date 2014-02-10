@@ -48,10 +48,7 @@ class DimensionTest(testhelp.HelpedTestCase):
          - p_sum (empty dict)
          - s_sum (empty dict)
          - methods
-            > update_category
-            > update_pct
             > sum_total
-            > persist
             > load
         """
         dimname = 'ctor_attrs'
@@ -63,10 +60,7 @@ class DimensionTest(testhelp.HelpedTestCase):
                      'sampsize',
                      'p_sum',
                      's_sum',
-                     'update_category',
-                     '_update_pct',
                      'sum_total',
-                     'persist',
                      'load',]:
             self.assertTrue(hasattr(a, attr),
                             "Object %s does not have expected attribute %s" %
@@ -277,7 +271,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         Checkable.Checkable.ex_nihilo()
 
         ignore = Dimension(name='foobar')
-        ignore.persist()
+        # ignore.persist()
 
         # get a Dimension object that is not in the table
         test = Dimension(name='notindb')
@@ -401,52 +395,54 @@ class DimensionTest(testhelp.HelpedTestCase):
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.Checkable.ex_nihilo()
         a = Dimension(name='sum_total')
-        a.update_category('6001')
-        a.update_category('6001', s_suminc=2)
-        a.update_category('5081')
-        a.update_category('5081', s_suminc=3)
+        a.p_sum = {'6001': {'count': 2, 'pct': 50.0},
+                   '5081': {'count': 2, 'pct': 50.0}
+                   }
+        a.s_sum = {'6001': {'count': 2, 'pct': 40.0},
+                   '5081': {'count': 3, 'pct': 60.0}
+                   }
         self.expected(4, a.sum_total())
         self.expected(4, a.sum_total(dict=a.p_sum))
         self.expected(5, a.sum_total(which='s'))
         self.expected(5, a.sum_total(dict=a.s_sum))
         
-    # -------------------------------------------------------------------------
-    def test_update_category_already(self):
-        """
-        If the category exists, the psum and ssum counts and percentages should
-        be updated appropriately. Call sum_total and sum_pct to check the
-        summary counts and percentages.
-        """
-        testhelp.db_config(self.testdir, util.my_name())
-        a = Dimension(
-                      name='xcat',
-                      sampsize=0.05)
-        a.update_category('6001', p_suminc=1, s_suminc=1)
-        a.update_category('5081')
-        self.expected('xcat', a.name)
-        self.expected(0.05, a.sampsize)
-        self.expected({'count': 1, 'pct': 50.0}, a.p_sum['5081'])
-        self.expected({'count': 1, 'pct': 50.0}, a.p_sum['6001'])
-        self.expected({'count': 1, 'pct': 100.0}, a.s_sum['6001'])
-        self.expected({'count': 0, 'pct': 0.0}, a.s_sum['5081'])
-
-    # -------------------------------------------------------------------------
-    def test_update_category_new(self):
-        """
-        If the category does not exist, it should be added to psum and ssum as
-        dictionary keys and the counts and percentages should be updated
-        appropriately. Call sum_total and sum_pct to check the summary counts
-        and percentages.
-        """
-        testhelp.db_config(self.testdir, util.my_name())
-        a = Dimension(
-                      name='newcat',
-                      sampsize=0.01)
-        a.update_category('5081', p_suminc=1, s_suminc=1)
-        self.expected('newcat', a.name)
-        self.expected(0.01, a.sampsize)
-        self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.p_sum)
-        self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.s_sum)
+    # # -------------------------------------------------------------------------
+    # def test_update_category_already(self):
+    #     """
+    #     If the category exists, the psum and ssum counts and percentages should
+    #     be updated appropriately. Call sum_total and sum_pct to check the
+    #     summary counts and percentages.
+    #     """
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     a = Dimension(
+    #                   name='xcat',
+    #                   sampsize=0.05)
+    #     a.update_category('6001', p_suminc=1, s_suminc=1)
+    #     a.update_category('5081')
+    #     self.expected('xcat', a.name)
+    #     self.expected(0.05, a.sampsize)
+    #     self.expected({'count': 1, 'pct': 50.0}, a.p_sum['5081'])
+    #     self.expected({'count': 1, 'pct': 50.0}, a.p_sum['6001'])
+    #     self.expected({'count': 1, 'pct': 100.0}, a.s_sum['6001'])
+    #     self.expected({'count': 0, 'pct': 0.0}, a.s_sum['5081'])
+    # 
+    # # -------------------------------------------------------------------------
+    # def test_update_category_new(self):
+    #     """
+    #     If the category does not exist, it should be added to psum and ssum as
+    #     dictionary keys and the counts and percentages should be updated
+    #     appropriately. Call sum_total and sum_pct to check the summary counts
+    #     and percentages.
+    #     """
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     a = Dimension(
+    #                   name='newcat',
+    #                   sampsize=0.01)
+    #     a.update_category('5081', p_suminc=1, s_suminc=1)
+    #     self.expected('newcat', a.name)
+    #     self.expected(0.01, a.sampsize)
+    #     self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.p_sum)
+    #     self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.s_sum)
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
