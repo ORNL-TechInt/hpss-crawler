@@ -85,8 +85,13 @@ class HSI(object):
         rval = ""
         for path in pathlist:
             self.xobj.sendline("hashcreate %s" % path)
-            self.xobj.expect(self.prompt)
+            which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
+                                     self.hsierrs)
             rval += self.xobj.before
+            if 1 == which:
+                rval += " TIMEOUT"
+            elif 0 != which:
+                rval += " ERROR"
         return rval
     
     # -------------------------------------------------------------------------
@@ -151,8 +156,13 @@ class HSI(object):
         rval = ""
         for path in pathlist:
             self.xobj.sendline("hashverify %s" % path)
-            self.xobj.expect(self.prompt)
+            which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
+                                     self.hsierrs)
             rval += self.xobj.before
+            if 1 == which:
+                rval += " TIMEOUT"
+            elif 0 != which:
+                rval += " ERROR"
         return rval
     
     # -------------------------------------------------------------------------
