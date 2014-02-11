@@ -120,6 +120,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, x.checksum)
         self.expected('', x.cos)
         self.expected(0, x.last_check)
+        self.expected(0, x.fails)
         self.expected(None, x.rowid)
         self.expected(0.1, x.probability)
             
@@ -140,6 +141,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('6002', x.cos)
         self.expected(72, x.last_check)
         self.expected(0.01, x.probability)
+        self.expected(0, x.fails)
 
     # -------------------------------------------------------------------------
     def test_ctor_bad_args(self):
@@ -154,9 +156,6 @@ class CheckableTest(testhelp.HelpedTestCase):
                              in str(e), True,
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
-        except Exception, e:
-            self.fail("Expected a StandardError but got this instead: %s" %
-                      util.line_quote(tb.format_exc()))
             
     # -------------------------------------------------------------------------
     def test_eq(self):
@@ -242,7 +241,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/home/somebody', rows[0][1])    # path
         self.expected('d', rows[0][2])                 # type
         self.expected('', rows[0][3])                  # cos
-        self.expected(0, rows[0][4])                   # last_check
+        self.expected(0, rows[0][4])                   # checksum
+        self.expected(0, rows[0][5])                   # last_check
+        self.expected(0, rows[0][6])                   # fails
 
     # -------------------------------------------------------------------------
     def test_ex_nihilo_exist(self):
@@ -348,8 +349,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/', rows[0][1])     # path
         self.expected('d', rows[0][2])     # type
         self.expected('', rows[0][3])      # cos
-        self.expected(0, rows[0][4])       # last_check
-        
+        self.expected(0, rows[0][4])       # checksum
+        self.expected(0, rows[0][5])       # last_check
+        self.expected(0, rows[0][6])       # fails
+
     # -------------------------------------------------------------------------
     def test_ex_nihilo_rootlist(self):
         """
@@ -568,7 +571,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         when = time.time()
         
         x = Checkable.get_list()
-        x[0].last_check = when
+        x[0].set('last_check', when)
         x[0].persist()
 
         y = Checkable.get_list()
@@ -590,6 +593,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         foo = Checkable(path='/abc/def', type='d')
         try:
+            foo.load()
             foo.persist()
             self.fail("Expected an exception but didn't get one.")
         except AssertionError:
@@ -682,10 +686,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(now, x[1].last_check)
         self.expected('1234', x[1].cos)
         
-        x[1].last_check = 0
-        x[1].cos= ''
-        x[1].rowid = None
-        x[1].type = 'd'
+        x[1].set('last_check', 0)
+        x[1].set('cos', '')
+        x[1].set('rowid', None)
+        x[1].set('type', 'd')
         x[1].persist()
 
         x = Checkable.get_list()
@@ -750,7 +754,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(1, len(x))
         self.expected(0, x[0].last_check)
 
-        x[0].last_check = now = time.time()
+        now = time.time()
+        x[0].set('last_check', now)
         x[0].persist()
 
         x = Checkable.get_list()
@@ -778,6 +783,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         
         foo = Checkable(path=self.testpath, type='f')
         try:
+            foo.load()
             foo.persist()
             self.fail("Expected an exception but didn't get one.")
         except AssertionError:
@@ -837,26 +843,29 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
 
-        x[1].last_check = 0
-        x[1].cos = '1234'
-        x[1].checksum = 1
-        x[1].rowid = None
-        x[1].type = 'f'
+        x[1].set('last_check', 0)
+        x[1].set('cos', '1234')
+        x[1].set('checksum', 1)
+        x[1].set('rowid', None)
+        x[1].set('type', 'f')
         x[1].persist()
 
         x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
-        self.expected(0, x[1].checksum)
+        self.expected(1, x[1].checksum)
         self.expected(0, x[1].last_check)
-        self.expected('', x[1].cos)
+        self.expected('1234', x[1].cos)
     
     # -------------------------------------------------------------------------
     def test_persist_file_exist_ff(self):
         """
         Send in a new file with matching path (rowid == None, last_check
         == 0, type == 'f'). Existing path should not be updated.
+
+        !@! last_check should not be persisted when it's already set and type
+        doesn't change
         """
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
@@ -868,16 +877,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
 
-        x[1].last_check = 0
-        x[1].cos = '2222'
-        x[1].rowid = None
+        x[1].set('last_check', 0)
+        x[1].set('cos', '2222')
+        x[1].set('rowid', None)
         x[1].persist()
 
         x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected('f', x[1].type)
-        self.expected(now, x[1].last_check)
+        self.expected(0, x[1].last_check)
         self.expected('2222', x[1].cos)
         
     # -------------------------------------------------------------------------
@@ -918,7 +927,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, x[1].last_check)
 
         now = time.time()
-        x[1].last_check = now
+        x[1].set('last_check', now)
         x[1].persist()
 
         x = Checkable.get_list()
