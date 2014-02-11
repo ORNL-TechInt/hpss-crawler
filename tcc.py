@@ -16,7 +16,7 @@ import time
 import toolframe
 
 # -----------------------------------------------------------------------------
-def tcc_remote(args):
+def tccp_remote(args):
     """remote - test connecting to a remote database
 
     usage: tcc remote -C <config-file>
@@ -147,7 +147,7 @@ def tcc_remote(args):
     db2.close(db)
 
 # -----------------------------------------------------------------------------
-def tcc_bfid(args):
+def tccp_bfid(args):
     """bfid - report  a list of bfids
 
     usage: tcc bfid
@@ -172,7 +172,7 @@ def tcc_bfid(args):
                             ct)
 
 # -----------------------------------------------------------------------------
-def tcc_bfts(args):
+def tccp_bfts(args):
     """bfts - whats in bftapeseg?
 
     usage: tcc bfts
@@ -194,7 +194,7 @@ def tcc_bfts(args):
                          row['STORAGEE_CLASS']))
         
 # -----------------------------------------------------------------------------
-def tcc_copies_by_cos(args):
+def tccp_copies_by_cos(args):
     """copies_by_cos - get a list of cos and the copy count for each
 
     usage: tcc copies_by_cos
@@ -215,7 +215,7 @@ def tcc_copies_by_cos(args):
         print("%s %d" % (cos, cbc[cos]))
 
 # -----------------------------------------------------------------------------
-def tcc_copies_by_file(args):
+def tccp_copies_by_file(args):
     """copies_by_file - get a list of bitfiles and storage class counts
 
     usage: tcc copies_by_file
@@ -240,7 +240,7 @@ def tcc_copies_by_file(args):
         print row
 
 # -----------------------------------------------------------------------------
-def tcc_dblist(args):
+def tccp_dblist(args):
     """dblist - display a list of accessible databases
 
     usage: tcc dblist
@@ -261,7 +261,7 @@ def tcc_dblist(args):
         print("   %s" % s)
 
 # -----------------------------------------------------------------------------
-def tcc_report(args):
+def tccp_report(args):
     """report - report files with the wrong number of copies
 
     usage: tcc report
@@ -295,7 +295,7 @@ def tcc_report(args):
                    int(cbc[file['BFATTR_COS_ID']])))
 
 # -----------------------------------------------------------------------------
-def tcc_selbf(args):
+def tccp_selbf(args):
     """selbf - select records from bitfile table
 
     usage: tcc selbf
@@ -329,7 +329,7 @@ def tcc_selbf(args):
                 print("%s: %s" % (k, row[k]))
 
 # -----------------------------------------------------------------------------
-def tcc_sql(args):
+def tccp_sql(args):
     """sql - run arbitrary sql
 
     usage: tcc sql [-d/--debug] -D/--db cfg-section <sql statement>
@@ -351,7 +351,7 @@ def tcc_sql(args):
         pprint.pprint(row)
 
 # -----------------------------------------------------------------------------
-def tcc_tables(args):
+def tccp_tables(args):
     """tables - print a list of tables
 
     usage: tcc tables
@@ -439,24 +439,29 @@ def hpss_userpass():
     return (username, password)
 
 # -----------------------------------------------------------------------------
-def query(sql, dbsect=''):
+def query(sql, dbsect='cfg'):
     """
     Connect to a DB2 database, run an sql command (assumed to be a select), and
     return the result.
     """
-    if dbsect == '':
-        dbsect = 'dev1-subsys'
 
-    cfg = CrawlConfig.get_config('tcc.cfg')
-    username = cfg.get(dbsect, 'username')
-    password = base64.b64decode(cfg.get(dbsect, 'password'))
+    cfg = CrawlConfig.get_config()
+    if dbsect == 'cfg':
+        dbname = cfg.get('db2', 'db_cfg_name')
+    elif dbsect == 'sub':
+        dbname = cfg.get('db2', 'db_sub_name')
+    else:
+        raise StandardError("Unknonwn database: '%s'" % dbsect)
+    
+    username = cfg.get('db2', 'username')
+    password = base64.b64decode(cfg.get('db2', 'password'))
     if username == 'retrieve':
         (username, password) = hpss_userpass()
-    dbname = cfg.get(dbsect, 'dbname')
+    # dbname = cfg.get(dbsect, 'dbname')
     dbargs = [dbname, username, password]
-    if cfg.has_option(dbsect, 'hostname'):
-        hostname = cfg.get(dbsect, 'hostname')
-        port = cfg.get(dbsect, 'port')
+    if cfg.has_option('db2', 'hostname'):
+        hostname = cfg.get('db2', 'hostname')
+        port = cfg.get('db2', 'port')
         dbargs = ["database=%s;" % dbname +
                   "hostname=%s;" % hostname +
                   "port=%s;" % port +
@@ -475,4 +480,4 @@ def query(sql, dbsect=''):
     return rval
 
 # -----------------------------------------------------------------------------
-toolframe.tf_launch('tcc', __name__)
+toolframe.tf_launch('tccp', __name__)
