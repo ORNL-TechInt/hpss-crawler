@@ -55,15 +55,31 @@ class Checkable(object):
         Initialize a Checkable object -- set the path, type, checksum, cos, and
         last_check to default values, then update them based on the arguments.
         """
+        # where the item is in HPSS
         self.path = '---'
+        # file ('f') or directory ('d')
         self.type = '-'
+        # which COS the file is in (empty for directories)
         self.cos = ''
+        # 1 if we have a checksum stored, else 0
         self.checksum = 0
+        # how many times we've tried and failed to retrieve the file content
+        self.fails = 0
+        # whether we've reported that retrievals are failing for this file
+        self.reported = 0
+        # when was the last check of this file (epoch time)
         self.last_check = 0
+        # this item's row id in the database
         self.rowid = None
-        self.args = args
+        # how likely are we to add an item to the sample?
         self.probability = 0.1
-        self.hsi_prompt = "]:"
+        # whether this object is in the database
+        self.in_db = False
+        # whether this object has been changed
+        self.dirty = False
+        # non keyword arguments
+        self.args = args
+
         for k in kwargs:
             if k not in ['rowid',
                          'path',
@@ -71,8 +87,12 @@ class Checkable(object):
                          'checksum',
                          'cos',
                          'dim',
+                         'fails',
+                         'reported',
+                         'last_check',
                          'probability',
-                         'last_check']:
+                         'in_db',
+                         'dirty']:
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
@@ -121,11 +141,9 @@ class Checkable(object):
         if not already_hashed:
             util.log("starting hashcreate on %s", self.path)
             rsp = hsi.hashcreate(self.path)
-            if "TRANSFER FAIL" in rsp:
+            if "TIMEOUT" in rsp or "ERROR" in rsp:
                 util.log("hashcreate transfer failed on %s", self.path)
-                return "skipped"
-            elif "STALLED" in rsp:
-                util.log("hashcreate stalled on %s", self.path)
+                self.set('fails', self.fails + 1)
                 return "skipped"
             elif "Access denied" in rsp:
                 util.log("hashcreate failed with 'access denied' on %s",
@@ -135,7 +153,7 @@ class Checkable(object):
                 util.log("completed hashcreate on %s", self.path)
             
         if self.checksum == 0:
-            self.checksum = 1
+            self.set('checksum', 1)
             return "checksummed"
 
     # -------------------------------------------------------------------------
@@ -206,7 +224,7 @@ class Checkable(object):
             util.log("started hsi with pid %d" % h.pid())
         except hpss.HSIerror, e:
             return "unavailable"
-        
+
         if self.type == 'd':
             rsp = h.lsP(self.path)
             if "Access denied" in rsp:
@@ -216,6 +234,7 @@ class Checkable(object):
                     new = Checkable.fdparse(line)
                     if None != new:
                         rval.append(new)
+                        new.load()
                         new.persist()
                         # returning list of items found in the directory
         elif self.type == 'f':
@@ -234,10 +253,14 @@ class Checkable(object):
                 # returning "matched", "checksummed", "skipped", or Alert()
         else:
             raise StandardError("Invalid Checkable type: %s" % self.type)
-        
+
+        if (3 < self.fails) and (0 == self.reported):
+            self.fail_report(h.before())
+            rval = "skipped"
+
         h.quit()
 
-        self.last_check = time.time()
+        self.set('last_check', time.time())
         self.persist()
         return rval
 
@@ -251,18 +274,21 @@ class Checkable(object):
         """
         db = CrawlDBI.DBI()
         db.create(table='checkables',
-                  fields=['rowid integer primary key autoincrement',
-                          'path text',
-                          'type text',
-                          'cos text',
-                          'checksum int',
-                          'last_check int'])
+                  fields=['rowid      integer primary key autoincrement',
+                          'path       text',
+                          'type       text',
+                          'cos        text',
+                          'checksum   int',
+                          'last_check int',
+                          'fails      int',
+                          'reported   int'])
         if type(dataroot) == str:
             dataroot = [ dataroot ]
 
         if type(dataroot) == list:
             for root in dataroot:
-                r = Checkable(path=root, type='d')
+                r = Checkable(path=root, type='d', in_db=False, dirty=True)
+                r.load()
                 r.persist()
 
         db.close()
@@ -334,19 +360,42 @@ class Checkable(object):
         db = CrawlDBI.DBI()
         rows = db.select(table='checkables',
                          fields=['rowid', 'path', 'type',
-                                 'cos', 'checksum', 'last_check'],
+                                 'cos', 'checksum', 'last_check',
+                                 'fails', 'reported'],
                          orderby='last_check')
         for row in rows:
+            if row[6] is None:
+                fails = 0
+            else:
+                fails = row[6]
             new = Checkable(rowid=row[0],
                             path=row[1],
                             type=row[2],
                             cos=row[3],
                             checksum=row[4],
                             last_check=row[5],
-                            probability=prob)
+                            fails=fails,
+                            reported=row[7],
+                            probability=prob,
+                            in_db=True,
+                            dirty=False)
             rval.append(new)
         db.close()
         return rval
+
+    # -------------------------------------------------------------------------
+    def fail_report(self, msg):
+        try:
+            f = self.fail_report_fh
+        except AttributeError:
+            cfg = CrawlConfig.get_config()
+            filename = cfg.get('checksum-verifier', 'fail_report')
+            self.fail_report_fh = open(filename, 'a')
+            f = self.fail_report_fh
+            
+        f.write("Failure retrieving file %s: '%s'\n" % (self.path, msg))
+        self.set('reported', 1)
+        f.flush()
 
     # -------------------------------------------------------------------------
     def has_hash(self, h):
@@ -360,6 +409,48 @@ class Checkable(object):
             rval = False
         return rval
 
+    # -------------------------------------------------------------------------
+    def load(self):
+        db = CrawlDBI.DBI()
+        if self.rowid is not None:
+            rows = db.select(table='checkables',
+                             fields=['rowid', 'path', 'type', 'cos',
+                                     'checksum', 'last_check', 'fails',
+                                     'reported'],
+                             where="rowid = ?",
+                             data=(self.rowid,))
+        else:
+            rows = db.select(table='checkables',
+                             fields=['rowid', 'path', 'type', 'cos',
+                                     'checksum', 'last_check', 'fails',
+                                     'reported'],
+                             where="path = ?",
+                             data=(self.path,))
+        if 0 == len(rows):
+            self.in_db = False
+        elif 1 == len(rows):
+            self.in_db = True
+            self.rowid = rows[0][0]
+            self.path = rows[0][1]
+            self.type = rows[0][2]
+            self.cos = rows[0][3]
+            self.checksum = rows[0][4]
+            self.last_check = rows[0][5]
+            if rows[0][6] is None:
+                self.fails = 0
+            else:
+                self.fails = int(rows[0][6])
+            if rows[0][7] is None:
+                self.reported = 0
+            else:
+                self.reported = int(rows[0][7])
+            self.dirty = False
+        else:
+            raise StandardError("There appears to be more than one copy " +
+                                "of %s in the database" % self)
+            
+        db.close()
+        
     # -------------------------------------------------------------------------
     def persist(self):
         """
@@ -379,9 +470,6 @@ class Checkable(object):
         occurrence exists, raise an exception. If only one occurrence exists,
         update it (setting last_check to 0 if type changes). If no occurrence
         exists, insert it.
-
-        Return True if the item was added to the database, otherwise False.
-        This is used to decide whether the count the item in the population.
         """
         if self.rowid == None and self.last_check != 0.0:
             raise StandardError("%s has rowid == None, last_check != 0.0" %
@@ -393,96 +481,157 @@ class Checkable(object):
         if self.type != 'f' and self.type != 'd':
             raise StandardError("%s has invalid type" % self)
 
-        # assume it's already present
-        rval = False
         db = CrawlDBI.DBI()
-        if self.rowid != None:
-            # we have a rowid, so it should be in the database
-            rows = db.select(table='checkables',
-                             fields=[],
-                             where='rowid=?',
-                             data=(self.rowid,))
-            # it wasn't there! raise an exception
-            if 0 == len(rows):
-                raise StandardError("%s has rowid, should be in database" %
-                                    self)
-            # exactly one copy is in database. That's good.
-            elif 1 == len(rows):
-                # oops! the paths don't match. raise an exception
-                if rows[0][1] != self.path:
-                    raise StandardError("Path value does not match for " +
-                                        "%s and %s" % (self, rows[0][1]))
-                # The type is changing. Let's set last_check to 0.0. We can
-                # also reset checksum and cos. If it's going 'f' -> 'd',
-                # checksum should be 0 and cos should be '' for a directory. If
-                # it's going 'd' -> 'f', we assume we don't have a checksum for
-                # the new file and we don't know what the cos is.
-                if rows[0][2] != self.type:
-                    self.cos = ''
-                    self.checksum = 0
-                    self.last_check = 0.0
-                # update it
+        if not self.in_db:
+            # insert it
+            db.insert(table='checkables',
+                      fields=['path',
+                              'type',
+                              'cos',
+                              'checksum',
+                              'last_check',
+                              'fails',
+                              'reported'],
+                      data=[(self.path,
+                             self.type,
+                             self.cos,
+                             self.checksum,
+                             self.last_check,
+                             self.fails,
+                             self.reported)])
+            self.in_db = True
+        elif self.dirty:
+            # update it
+            if self.rowid is not None:
                 db.update(table='checkables',
-                          fields=['type', 'cos', 'checksum', 'last_check'],
-                          where='rowid=?',
-                          data=[(self.type, self.cos, self.checksum,
-                                 self.last_check, self.rowid)])
-            # hmm... we found more than one copy in the database. raise an
-            # exception
+                          fields=['path',
+                                  'type',
+                                  'cos',
+                                  'checksum',
+                                  'last_check',
+                                  'fails',
+                                  'reported'],
+                          where="rowid = ?",
+                          data=[(self.path,
+                                 self.type,
+                                 self.cos,
+                                 self.checksum,
+                                 self.last_check,
+                                 self.fails,
+                                 self.reported,
+                                 self.rowid)])
             else:
-                raise StandardError("There appears to be more than one copy " +
-                                    "of %s in the database" % self)
-
-        else:
-            rows = self.find_by_path()
-            # it's not there -- we need to insert it
-            if 0 == len(rows):
-                db.insert(table='checkables',
-                          fields=['path', 'type', 'cos', 'checksum',
-                                  'last_check'],
-                          data=[(self.path, self.type, self.cos, self.checksum,
-                                 self.last_check)])
-                rval = True
-            # it is in the database -- we need to update it
-            elif 1 == len(rows):
-                # if type is changing, last_check resets to 0.0, checksum to 0,
-                # cos to ''
-                if rows[0][2] != self.type:
-                    self.last_check = 0.0
-                    self.checksum = 0
-                    self.cos = ''
-                    flist=['type', 'cos', 'checksum', 'last_check']
-                    dlist=[(self.type, self.cos, self.checksum,
-                            self.last_check, rows[0][0])]
-                elif rows[0][5] < self.last_check:
-                    flist=['type', 'cos', 'checksum', 'last_check']
-                    dlist=[(self.type, self.cos, self.checksum,
-                            self.last_check, rows[0][0])]
-                elif ((self.cos == rows[0][3]) and
-                      (self.checksum == rows[0][4]) and
-                      (self.last_check == rows[0][5])):
-                    # everything matches -- no need to update it
-                    flist = []
-                    dlist = []
-                else:
-                    flist=['type', 'cos', 'checksum']
-                    dlist=[(self.type, self.cos, self.checksum, rows[0][0])]
-
-                # if an update is needed, do it
-                if flist != []:
-                    db.update(table='checkables',
-                              fields=flist,
-                              where='rowid=?',
-                              data=dlist)
-            # more than a single copy in the database -- raise an exception
-            else:
-                raise StandardError("There appears to be more than one copy " +
-                                    "of %s in the database" % self)
+                db.update(table='checkables',
+                          fields=['type',
+                                  'cos',
+                                  'checksum',
+                                  'last_check',
+                                  'fails',
+                                  'reported'],
+                          where="path = ?",
+                          data=[(self.type,
+                                 self.cos,
+                                 self.checksum,
+                                 self.last_check,
+                                 self.fails,
+                                 self.reported,
+                                 self.path)])
+            self.dirty = False
 
         self.dim['cos'].load()
         db.close()
-        return rval
     
+        # # assume it's already present
+        # rval = False
+        # db = CrawlDBI.DBI()
+        # if self.rowid != None:
+        #     # we have a rowid, so it should be in the database
+        #     rows = db.select(table='checkables',
+        #                      fields=[],
+        #                      where='rowid=?',
+        #                      data=(self.rowid,))
+        #     # it wasn't there! raise an exception
+        #     if 0 == len(rows):
+        #         raise StandardError("%s has rowid, should be in database" %
+        #                             self)
+        #     # exactly one copy is in database. That's good.
+        #     elif 1 == len(rows):
+        #         # oops! the paths don't match. raise an exception
+        #         if rows[0][1] != self.path:
+        #             raise StandardError("Path value does not match for " +
+        #                                 "%s and %s" % (self, rows[0][1]))
+        #         # The type is changing. Let's set last_check to 0.0. We can
+        #         # also reset checksum and cos. If it's going 'f' -> 'd',
+        #         # checksum should be 0 and cos should be '' for a directory. If
+        #         # it's going 'd' -> 'f', we assume we don't have a checksum for
+        #         # the new file and we don't know what the cos is.
+        #         if rows[0][2] != self.type:
+        #             self.cos = ''
+        #             self.checksum = 0
+        #             self.last_check = 0.0
+        #         # update it
+        #         db.update(table='checkables',
+        #                   fields=['type', 'cos', 'checksum', 'last_check'],
+        #                   where='rowid=?',
+        #                   data=[(self.type, self.cos, self.checksum,
+        #                          self.last_check, self.rowid)])
+        #     # hmm... we found more than one copy in the database. raise an
+        #     # exception
+        #     else:
+        #         raise StandardError("There appears to be more than one copy " +
+        #                             "of %s in the database" % self)
+        # 
+        # else:
+        #     rows = self.find_by_path()
+        #     # it's not there -- we need to insert it
+        #     if 0 == len(rows):
+        #         db.insert(table='checkables',
+        #                   fields=['path', 'type', 'cos', 'checksum',
+        #                           'last_check'],
+        #                   data=[(self.path, self.type, self.cos, self.checksum,
+        #                          self.last_check)])
+        #         rval = True
+        #     # it is in the database -- we need to update it
+        #     elif 1 == len(rows):
+        #         # if type is changing, last_check resets to 0.0, checksum to 0,
+        #         # cos to ''
+        #         if rows[0][2] != self.type:
+        #             self.last_check = 0.0
+        #             self.checksum = 0
+        #             self.cos = ''
+        #             flist=['type', 'cos', 'checksum', 'last_check']
+        #             dlist=[(self.type, self.cos, self.checksum,
+        #                     self.last_check, rows[0][0])]
+        #         elif rows[0][5] < self.last_check:
+        #             flist=['type', 'cos', 'checksum', 'last_check']
+        #             dlist=[(self.type, self.cos, self.checksum,
+        #                     self.last_check, rows[0][0])]
+        #         elif ((self.cos == rows[0][3]) and
+        #               (self.checksum == rows[0][4]) and
+        #               (self.last_check == rows[0][5])):
+        #             # everything matches -- no need to update it
+        #             flist = []
+        #             dlist = []
+        #         else:
+        #             flist=['type', 'cos', 'checksum']
+        #             dlist=[(self.type, self.cos, self.checksum, rows[0][0])]
+        # 
+        #         # if an update is needed, do it
+        #         if flist != []:
+        #             db.update(table='checkables',
+        #                       fields=flist,
+        #                       where='rowid=?',
+        #                       data=dlist)
+        #     # more than a single copy in the database -- raise an exception
+        #     else:
+        #         raise StandardError("There appears to be more than one copy " +
+        #                             "of %s in the database" % self)
+
+    # -------------------------------------------------------------------------
+    def set(self, attrname, value):
+        setattr(self, attrname, value)
+        self.dirty = True
+
     # -------------------------------------------------------------------------
     def verify(self, h):
         """
@@ -491,23 +640,18 @@ class Checkable(object):
         util.log("hsi(%d) attempting to verify %s" % (h.pid(), self.path))
         rsp = h.hashverify(self.path)
             
-        if "STALLED" in rsp:
+        if "TIMEOUT" in rsp or "ERROR" in rsp:
             rval = "skipped"
-            util.log("hashverify stalled on %s" % self.path)
-        elif "TRANSFER FAIL" in rsp:
-            rval = "skipped"
-            util.log("hashverify transfer failed on %s" % self.path)
+            self.set('fails', self.fails + 1)
+            util.log("hashverify transfer incomplete on %s" % self.path)
         elif "%s: (md5) OK" % self.path in rsp:
             rval = "matched"
             util.log("hashverify matched on %s" % self.path)
         elif "no valid checksum found" in rsp:
             if self.addable(self.cos):
-                self.add_to_sample(h)
-                rval = "checksummed"
-                util.log("hashverify checksummed %s" % self.path)
+                rval = self.add_to_sample(h)
             else:
-                self.checksum = 0
-                self.persist()
+                self.set('checksum', 0)
                 rval = "skipped"
                 util.log("hashverify skipped %s" % self.path)
         else:
