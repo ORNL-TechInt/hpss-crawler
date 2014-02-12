@@ -5,6 +5,7 @@ crawl
 CrawlConfig
 crawler_pid
 crawler.exit
+cvtool
 DODO
 ls.PR*
 NOTES*
