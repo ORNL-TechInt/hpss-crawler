@@ -1156,6 +1156,32 @@ class DBItstBase(testhelp.HelpedTestCase):
                             (str(exp), util.line_quote(r)))
     
     # -------------------------------------------------------------------------
+    def test_update_qp(self):
+        """
+        Calling update() specifying fields should update the fields requested.
+        However, placeholders should not be quoted.
+        """
+        tname = util.my_name().replace('test_', '')
+        udata = [('frodo', 23, 199.7),
+                 ('zippo', 14, 201.3),
+                 ('zumpy', 47, 202.1)]
+        
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+        try:
+            db.update(table=tname,
+                      fields=['size'],
+                      data=[(x[1], x[0]) for x in udata],
+                      where='name = "?"')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("Parameter placeholders should not be quoted"
+                            in str(e),
+                            "Expected message not found in exception")
+        
+    # -------------------------------------------------------------------------
     def test_update_mtd(self):
         """
         Calling update() with an empty data list should get an exception
