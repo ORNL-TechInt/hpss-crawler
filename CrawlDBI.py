@@ -414,7 +414,12 @@ class DBIsqlite(DBI_abstract):
                            dbname=self.dbname)
         
     # -------------------------------------------------------------------------
-    def select(self, table='', fields=[], where='', data=(), orderby=''):
+    def select(self, table='',
+               fields=[],
+               where='',
+               data=(),
+               groupby='',
+               orderby=''):
         """
         See DBI.select()
         """
@@ -434,6 +439,9 @@ class DBIsqlite(DBI_abstract):
         elif type(data) != tuple:
             raise DBIerror("On select(), data must be a tuple",
                            dbname=self.dbname)
+        elif type(groupby) != str:
+            raise DBIerror("On select(), groupby clause must be a string",
+                           dbname=self.dbname)
         elif type(orderby) != str:
             raise DBIerror("On select(), orderby clause must be a string",
                            dbname=self.dbname)
@@ -451,6 +459,8 @@ class DBIsqlite(DBI_abstract):
             cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where
+            if groupby != '':
+                cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
 
@@ -512,6 +522,8 @@ class DBIsqlite(DBI_abstract):
         elif data == []:
             raise DBIerror("On update(), data must not be empty",
                            dbname=self.dbname)
+        elif '"?"' in where or "'?'" in where:
+            raise DBIerror("Parameter placeholders should not be quoted")
 
         # Build and run the update statement
         try:
@@ -732,7 +744,13 @@ class DBImysql(DBI_abstract):
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
         
     # -------------------------------------------------------------------------
-    def select(self, table='', fields=[], where='', data=(), orderby=''):
+    def select(self,
+               table='',
+               fields=[],
+               where='',
+               data=(),
+               groupby='',
+               orderby=''):
         """
         Select from a mysql database.
         """
@@ -752,6 +770,9 @@ class DBImysql(DBI_abstract):
         elif type(data) != tuple:
             raise DBIerror("On select(), data must be a tuple",
                            dbname=self.dbname)
+        elif type(groupby) != str:
+            raise DBIerror("On select(), groupby clause must be a string",
+                           dbname=self.dbname)
         elif type(orderby) != str:
             raise DBIerror("On select(), orderby clause must be a string",
                            dbname=self.dbname)
@@ -769,6 +790,8 @@ class DBImysql(DBI_abstract):
             cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where.replace('?', '%s')
+            if groupby != '':
+                cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
 
@@ -833,6 +856,8 @@ class DBImysql(DBI_abstract):
         elif data == []:
             raise DBIerror("On update(), data must not be empty",
                            dbname=self.dbname)
+        elif '"?"' in where or "'?'" in where:
+            raise DBIerror("Parameter placeholders should not be quoted")
 
         # Build and run the update statement
         try:

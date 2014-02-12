@@ -79,7 +79,8 @@ class Dimension(object):
                                     " is not valid for Dimension" )
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
-        self.db_init()
+        self.load()
+        # self.db_init()
 
     # -------------------------------------------------------------------------
     def __repr__(self):
@@ -90,23 +91,15 @@ class Dimension(object):
         return rv
 
     # -------------------------------------------------------------------------
-    def db_init(self):
-        """
-        Get a database handle. If our table has not yet been created, do so.
-        """
-        self.db = CrawlDBI.DBI()
-        if not self.db.table_exists(table='dimension'):
-            self.db.create(table='dimension',
-                           fields=['rowid integer primary key autoincrement',
-                                   'name text',
-                                   'category text',
-                                   'p_count int',
-                                   'p_pct real',
-                                   's_count int',
-                                   's_pct real'])
-        self.load(already_open=True)
-        self.db.close()
-        
+    def _compute_dict(self, rows):
+        d = {}
+        for (pcount, cos) in rows:
+            d[cos] = {'count': pcount}
+        total = sum(map(lambda x: x['count'], d.values()))
+        for cos in d:
+            d[cos]['pct'] = 100.0 * d[cos]['count'] / total
+        return d
+
     # -------------------------------------------------------------------------
     def load(self, already_open=False):
         """
@@ -114,89 +107,24 @@ class Dimension(object):
         """
         if not already_open:
             self.db = CrawlDBI.DBI()
-        rows = self.db.select(table='dimension',
-                              fields=['category', 'p_count', 'p_pct',
-                                      's_count', 's_pct'],
-                              where='name = ?',
-                              data=(self.name,))
-        for row in rows:
-            (cval, p_count, p_pct, s_count, s_pct) = row
-            self.p_sum.setdefault(cval, {'count': p_count,
-                                         'pct': p_pct})
-            self.s_sum.setdefault(cval, {'count': s_count,
-                                         'pct': s_pct})
+
+        # populate the p_sum structure
+        rows = self.db.select(table='checkables',
+                              fields=["count(path)", "cos"],
+                              where='type="f"',
+                              groupby='cos')
+        self.p_sum = self._compute_dict(rows)
+
+        # populate the s_sum structure
+        rows = self.db.select(table='checkables',
+                              fields=["count(path)", "cos"],
+                              where='type = "f" and checksum = 1',
+                              groupby='cos')
+        self.s_sum = self._compute_dict(rows)
+        
         if not already_open:
             self.db.close()
-
-    # -------------------------------------------------------------------------
-    def persist(self):
-        """
-        Save this object to the database.
-
-        First, we have to find out which rows are already in the database.
-        Then, comparing the rows from the database with the object, we
-        construct two lists: rows to be updated, and rows to be inserted.
-        There's no way for categories to be removed from a summary dictionary,
-        so we don't have to worry about deleting entries from the database.
-        """
-        if self.p_sum == {}:
-            return
-        
-        i_list = []
-        i_data = []
-        u_list = []
-        u_data = []
-        
-        # Find out which rows are already in the database.
-        self.db = CrawlDBI.DBI()
-        rows = self.db.select(table='dimension',
-                         fields=['name', 'category'],
-                         where='name = ?',
-                         data=(self.name,))
-        
-        # Based on the population data, sort the database entries into items to
-        # be updated versus those to be inserted.
-        for k in self.p_sum:
-            if (self.name, k) in rows:
-                u_list.append((self.name, k))
-            else:
-                i_list.append((self.name, k))
-
-        # For each item in the update list, build the data tuple and add it to
-        # the update list
-        for (name, cat) in u_list:
-            u_data.append((self.p_sum[cat]['count'],
-                           self.p_sum[cat]['pct'],
-                           self.s_sum[cat]['count'],
-                           self.s_sum[cat]['pct'],
-                           self.name,
-                           cat))
-        # If the data tuple list is not empty, issue an update against the
-        # database
-        if u_data != []:
-            self.db.update(table='dimension',
-                      fields=['p_count', 'p_pct', 's_count', 's_pct'],
-                      where='name=? and category=?',
-                      data=u_data)
             
-        # For each item in the insert list, build the data tuple and add it to
-        # the insert list
-        for (name, cat) in i_list:
-            i_data.append((self.name,
-                           cat,
-                           self.p_sum[cat]['count'],
-                           self.p_sum[cat]['pct'],
-                           self.s_sum[cat]['count'],
-                           self.s_sum[cat]['pct']))
-        # If the insert data tuple list is not empty, issue the insert
-        if i_data != []:
-            self.db.insert(table='dimension',
-                      fields=['name', 'category', 'p_count',
-                              'p_pct', 's_count', 's_pct'],
-                      data=i_data)
-                          
-        self.db.close()
-    
     # -------------------------------------------------------------------------
     def report(self):
         """
@@ -240,47 +168,21 @@ class Dimension(object):
         return rv
     
     # -------------------------------------------------------------------------
-    def update_category(self, catval, p_suminc=1, s_suminc=0):
-        """
-        Update the population (and optionally the sample) count for a category.
-        If the category is new, it is added to the population and sample
-        dictionaries. Once the counts are updated, we call _update_pct() to
-        update the percent values as well.
-        """
-        if catval not in self.p_sum:
-            self.p_sum[catval] = {'count': p_suminc, 'pct': 0.0}
-        else:
-            self.p_sum[catval]['count'] += p_suminc
-
-        if catval not in self.s_sum:
-            self.s_sum[catval] = {'count': s_suminc, 'pct': 0.0}
-        else:
-            self.s_sum[catval]['count'] += s_suminc
-
-        self._update_pct()
-        self.persist()
-
-    # -------------------------------------------------------------------------
-    def _update_pct(self):
-        """
-        Update the 'pct' values in the population and sample dictionaries. This
-        is called by update_category and is tested as part of the tests for it.
-        This routine should not normally be called from outside the class.
-        """
-        for d in [self.p_sum, self.s_sum]:
-            total = sum(map(lambda x: x['count'], d.values()))
-            if 0 < total:
-                for key in d:
-                    d[key]['pct'] = 100.0 * d[key]['count'] / total
-            else:
-                for key in d:
-                    d[key]['pct'] = 0.0
-        pass
-
-    # -------------------------------------------------------------------------
     def vote(self, category):
-        if ((category in self.s_sum) and
-            (self.s_sum[category]['pct'] < self.p_sum[category]['pct'])):
+        """
+        If the category value does not yet appear in the sample, we want to
+        vote for it.
+
+        If the category value is in the sample, we want to vote for it if the
+        percentage of the sample it represents is smaller than the percentage
+        of the population it represents.
+
+        Even if we vote for a category here, it only has a probability of
+        getting intothe sample. It's not a sure thing.
+        """
+        if category not in self.s_sum:
+            return 1
+        elif self.s_sum[category]['pct'] < self.p_sum[category]['pct']:
             return 1
         else:
             return 0

@@ -4,6 +4,7 @@ import CrawlConfig
 import CrawlDBI
 import hpss
 import ibm_db as db2
+import os
 import pdb
 import pprint
 import re
@@ -24,7 +25,7 @@ def main(cfg):
     util.log("tape-copy-checker: firing up for %d items" % how_many)
     
     # retrieve COS info
-    cosinfo = get_cos_info(cfg)
+    cosinfo = tcc_common.get_cos_info()
     # for cos_id in cosinfo:
     #     util.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
 
@@ -33,140 +34,38 @@ def main(cfg):
     util.log("next nsobject id = %d" % next_nsobj_id)
     
     # fetch the next N bitfiles from DB2
-    bfl = get_bitfile_set(cfg, int(next_nsobj_id), int(next_nsobj_id + how_many))
+    bfl = tcc_common.get_bitfile_set(cfg,
+                                     int(next_nsobj_id),
+                                     int(next_nsobj_id + how_many))
     
-    # for each bitfile, if it does not have the right number of copies, report
-    # it
-    for bf in bfl:
-        if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
-            tcc_report(bf)
-            util.log("%s %s %d != %d" %
-                     (bf['OBJECT_ID'],
-                      tcc_common.hexstr(bf['BFID']),
-                      bf['SC_COUNT'],
-                      cosinfo[bf['BFATTR_COS_ID']]))
-        elif cfg.getboolean(sectname, 'verbose'):
-            util.log("%s %s %d == %d" %
-                     (bf['OBJECT_ID'],
-                      tcc_common.hexstr(bf['BFID']),
-                      bf['SC_COUNT'],
-                      cosinfo[bf['BFATTR_COS_ID']]))
-            
-        update_next_nsobj_id(cfg, bf['OBJECT_ID'])
-        # util.log("recording next nsobject id: %d" % bf['OBJECT_ID'])
+    util.log("got %d bitfiles" % len(bfl))
 
-# -----------------------------------------------------------------------------
-def db2cxn(dbsel):
-    """
-    Cache and return the DB2 connection for either the 'cfg' or 'subsys' database
-    """
-    try:
-        rval = db2cxn._db[dbsel]
-    except AttributeError:
-        db2cxn._db = {}
-        cfg = CrawlConfig.get_config()
-        cfgname = cfg.get('db2', 'db_cfg_name')
-        subname = cfg.get('db2', 'db_sub_name')
-        dbhost = cfg.get('db2', 'hostname')
-        dbport = cfg.get('db2', 'port')
-        dbuser = cfg.get('db2', 'username')
-        dbpwd = base64.b64decode(cfg.get('db2', 'password'))
-        db2cxn._db['cfg'] = db2.connect("database=%s;" % cfgname +
-                                        "hostname=%s;" % dbhost +
-                                        "port=%s;" % dbport +
-                                        "uid=%s;" % dbuser +
-                                        "pwd=%s;" % dbpwd,
-                                        "",
-                                        "")
-        db2cxn._db['subsys'] = db2.connect("database=%s;" % subname +
-                                        "hostname=%s;" % dbhost +
-                                        "port=%s;" % dbport +
-                                        "uid=%s;" % dbuser +
-                                        "pwd=%s;" % dbpwd,
-                                        "",
-                                        "")
-        rval = db2cxn._db[dbsel]
-    return rval
-        
-# -----------------------------------------------------------------------------
-def get_bitfile_path(bitfile):
-    """
-    Given a bitfile id, walk back up the tree in HPSS to generate the bitfile's
-    path
-    """
-    db = db2cxn('subsys')
+    if len(bfl) == 0:
+        util.log("No bitfiles in range -- updating to %s" %
+                 (next_nsobj_id + how_many))
+        update_next_nsobj_id(cfg, next_nsobj_id + how_many)
+    else:
+        # for each bitfile, if it does not have the right number of copies,
+        # report it
+        for bf in bfl:
+            if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
+                tcc_common.tcc_report(bf, cosinfo)
+                util.log("%s %s %d != %d" %
+                         (bf['OBJECT_ID'],
+                          tcc_common.hexstr(bf['BFID']),
+                          bf['SC_COUNT'],
+                          cosinfo[bf['BFATTR_COS_ID']]))
+            elif cfg.getboolean(sectname, 'verbose'):
+                util.log("%s %s %d == %d" %
+                         (bf['OBJECT_ID'],
+                          tcc_common.hexstr(bf['BFID']),
+                          bf['SC_COUNT'],
+                          cosinfo[bf['BFATTR_COS_ID']]))
 
-    stmt = db.prepare("""
-                      select parent_id, name from nsobject where bitfile_id = ?
-                      """)
-    r = db.execute(stmt, (bitfile['BFID'], ))
-    x = db2.fetch_assoc(r)
-    while (x):
-        bfl.append(x)
-        x = db2.fetch_assoc(r)
+            update_next_nsobj_id(cfg, bf['OBJECT_ID'])
+            last_obj_id = bf['OBJECT_ID']
 
-    if 1 < len(bfl):
-        raise StandardError("Multiple objects found for bf %s" %
-                            tcc_common.hexstr(bitfile['BFID']))
-
-    rval = bfl[0]['NAME']
-
-    stmt = db.prepare("""
-                      select parent_id, name from nsobject where object_id = ?
-                      """)
-
-    x = bfl[0]
-    while x['NAME'] != '/':
-        r = db.execute(stmt, (x['PARENT_ID'], ))
-        x = db2.fetch_assoc(r)
-        rval = os.path.join([x['NAME'], rval])
-
-    return rval
-
-# -----------------------------------------------------------------------------
-def get_bitfile_set(cfg, first_nsobj_id, last_nsobj_id):
-    """
-    Get a collection of bitfiles from DB2 returning a dict. The bitfiles in the
-    set begin with object_id first_nsobj_id and end with the one before
-    last_nsobj_id.
-    """
-    rval = {}
-    db = db2cxn('subsys')
-    sql = """
-          select A.object_id,
-                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
-                 count(C.storage_class) as sc_count
-          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
-          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
-                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id and A.object_id < ?
-          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
-          """
-    rval = []
-    stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, last_nsobj_id))
-    x = db2.fetch_assoc(stmt)
-    while (x):
-        rval.append(x)
-        x = db2.fetch_assoc(stmt)
-    return rval
-
-# -----------------------------------------------------------------------------
-def get_cos_info(cfg):
-    """
-    Read COS info from tables COS and HIER in the DB2 database
-    """
-    rval = {}
-    db = db2cxn('cfg')
-    sql = """select a.cos_id, a.hier_id, b.slevel0_migrate_list_count
-             from hpss.cos as a, hpss.hier as b
-             where a.hier_id = b.hier_id"""
-    r = db2.exec_immediate(db, sql)
-    x = db2.fetch_assoc(r)
-    while (x):
-        rval[x['COS_ID']] = x['SLEVEL0_MIGRATE_LIST_COUNT']
-        x = db2.fetch_assoc(r)
-    return rval
+        util.log("last nsobject in range: %s" % last_obj_id)
 
 # -----------------------------------------------------------------------------
 def get_next_nsobj_id(cfg):
@@ -193,27 +92,6 @@ def get_next_nsobj_id(cfg):
     db.close()
     return rval + 1
         
-# -----------------------------------------------------------------------------
-def tcc_report(bitfile, cosinfo):
-    """
-    The bitfile appears to not have the right number of copies. We're going to
-    write its information out to a report for manual followup.
-    """
-    # Compute the bitfile's path
-    bfp = get_bitfile_path(bitfile)
-    rpt = "%5d %5d %s" % (cosinfo[bitfile['BFATTR_COS_ID']],
-                          bitfile['SC_COUNT'],
-                          bfp)
-    util.log(rpt)
-    try:
-        tcc_report._f.write(rpt + "\n")
-    except AttributeError:
-        cfg = CrawlConfig.get_config()
-        rptfname = cfg.get(sectname, 'report_file')
-        tcc_report._f = open(rptfname, 'w')
-        tcc_report._f.write(rpt + "\n")
-
-
 # -----------------------------------------------------------------------------
 def update_next_nsobj_id(cfg, value):
     """

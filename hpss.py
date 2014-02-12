@@ -41,12 +41,7 @@ class HSI(object):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
-        os.environ['HPSS_PFTPC_PORT_RANGE'] = 'ncacn_ip_tpc[10100-12100]'
-        os.environ['HPSS_PRINCIPAL'] = pwd.getpwuid(os.getuid()).pw_name
-        os.environ['HPSS_CFG_FILE_PATH'] = "/sw/sources/hpss/etc"
-        self.cmd = ("/sw/sources/hpss/bin/4.0.1.2/hsi_rhel_6.4.x86_64 " +
-                    "-q -l tpb -A keytab -k /ccs/keytabs/tpb.kt " +
-                    cmdopts)
+        self.cmd = "./hsi " + cmdopts
         if connect:
             self.connect()
 
@@ -88,21 +83,15 @@ class HSI(object):
                            (util.my_name(), type(pathnames), pathnames))
         # self.xobj.expect(self.prompt)
         rval = ""
-        if self.xobj.before == "":
-            self.xobj.before = "   "
         for path in pathlist:
             self.xobj.sendline("hashcreate %s" % path)
-            which = 1
-            while which == 1 and self.xobj.before != '':
-                which = self.xobj.expect([self.prompt,
-                                          pexpect.TIMEOUT] +
-                                         self.hsierrs)
-                rval += self.xobj.before
-            if 1 < which:
-                rval += "  TRANSFER FAIL"
-            elif self.xobj.before == '':
-                rval += "  STALLED... "
-                break
+            which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
+                                     self.hsierrs)
+            rval += self.xobj.before
+            if 1 == which:
+                rval += " TIMEOUT"
+            elif 0 != which:
+                rval += " ERROR"
         return rval
     
     # -------------------------------------------------------------------------
@@ -165,21 +154,15 @@ class HSI(object):
                            (util.my_name(), type(pathnames), pathnames))
 
         rval = ""
-        if self.xobj.before == "":
-            self.xobj.before = "   "
         for path in pathlist:
             self.xobj.sendline("hashverify %s" % path)
-            which = 1
-            while which == 1 and self.xobj.before != '':
-                which = self.xobj.expect([self.prompt,
-                                          pexpect.TIMEOUT] +
-                                         self.hsierrs)
-                rval += self.xobj.before
-            if 1 < which:
-                rval += "  TRANSFER FAIL"
-            elif self.xobj.before == '':
-                rval += "  STALLED... "
-                break
+            which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
+                                     self.hsierrs)
+            rval += self.xobj.before
+            if 1 == which:
+                rval += " TIMEOUT"
+            elif 0 != which:
+                rval += " ERROR"
         return rval
     
     # -------------------------------------------------------------------------
