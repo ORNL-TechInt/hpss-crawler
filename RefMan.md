@@ -67,13 +67,33 @@ To install the HPSS Integrity Crawler, clone the git repository.
         db2 get dbm config | grep SVCENAME
         db2set -all DB2COMM
         
+* Optionally, create a read-only user on the server instance:
+
+        groupadd -g 9903 hpssic
+        useradd -u 9903 -g hpssic -m -d /home/hpssic hpssic
+        passwd hpssic
+
+        For each database (HCFG, HSUBSYS1, etc.), do the following to
+        grant select access on all the HPSS tables.
+
+        db2 connect to DATABASE
+        db2 -x "select 'grant select on table ' || rtrim(tabschema) || '.' ||
+            rtrim(tabname) || ' to user hpssic' from syscat.tables 
+            where tabschema = 'HPSS'"
+
+        To execute the output of the above command, append '| db2 +p -tv' 
+        or pipe the output to a temp file and then pipe that to 
+        'db2 +p -tv'
+    
+        db2 connect reset
+
 * DB2 client support on the client machine
 
-        root: groupadd -g 9999 hpssc
-        root: useradd  -u 9999 -g hpssc -m -d /home/hpssc
-        root: passwd hpssc
-        root: db2icrt -s client hpssc
-        hpssc: . /home/hpssc/sqllib/db2profile
+        root: groupadd -g 9903 hpssic
+        root: useradd  -u 9903 -g hpssic -m -d /home/hpssic hpssic
+        root: passwd hpssic
+        root: db2icrt -s client hpssic
+        hpssc: . /home/hpssic/sqllib/db2profile
 
 ## The 'crawl' command
 

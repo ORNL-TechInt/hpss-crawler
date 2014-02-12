@@ -106,6 +106,8 @@ def crl_cvreport(argv):
 
     if o.debug: pdb.set_trace()
 
+    print("This routine is deprecated. Please use cvtool instead.")
+
     cfg = CrawlConfig.get_config('crawl.cfg')
     if o.prefix != '':
         cfg.set('dbi', 'tbl_prefix', o.prefix)
