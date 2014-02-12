@@ -4,6 +4,7 @@ import CrawlConfig
 import CrawlDBI
 import hpss
 import ibm_db as db2
+import os
 import pdb
 import pprint
 import re
@@ -35,25 +36,55 @@ def main(cfg):
     # fetch the next N bitfiles from DB2
     bfl = get_bitfile_set(cfg, int(next_nsobj_id), int(next_nsobj_id + how_many))
     
-    # for each bitfile, if it does not have the right number of copies, report
-    # it
-    for bf in bfl:
-        if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
-            tcc_report(bf)
-            util.log("%s %s %d != %d" %
-                     (bf['OBJECT_ID'],
-                      tcc_common.hexstr(bf['BFID']),
-                      bf['SC_COUNT'],
-                      cosinfo[bf['BFATTR_COS_ID']]))
-        elif cfg.getboolean(sectname, 'verbose'):
-            util.log("%s %s %d == %d" %
-                     (bf['OBJECT_ID'],
-                      tcc_common.hexstr(bf['BFID']),
-                      bf['SC_COUNT'],
-                      cosinfo[bf['BFATTR_COS_ID']]))
-            
-        update_next_nsobj_id(cfg, bf['OBJECT_ID'])
-        # util.log("recording next nsobject id: %d" % bf['OBJECT_ID'])
+    util.log("got %d bitfiles" % len(bfl))
+
+    if len(bfl) == 0:
+        util.log("No bitfiles in range -- updating to %s" %
+                 (next_nsobj_id + how_many))
+        update_next_nsobj_id(cfg, next_nsobj_id + how_many)
+    else:
+        # for each bitfile, if it does not have the right number of copies,
+        # report it
+        for bf in bfl:
+            if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
+                tcc_report(bf, cosinfo)
+                util.log("%s %s %d != %d" %
+                         (bf['OBJECT_ID'],
+                          tcc_common.hexstr(bf['BFID']),
+                          bf['SC_COUNT'],
+                          cosinfo[bf['BFATTR_COS_ID']]))
+            elif cfg.getboolean(sectname, 'verbose'):
+                util.log("%s %s %d == %d" %
+                         (bf['OBJECT_ID'],
+                          tcc_common.hexstr(bf['BFID']),
+                          bf['SC_COUNT'],
+                          cosinfo[bf['BFATTR_COS_ID']]))
+
+            update_next_nsobj_id(cfg, bf['OBJECT_ID'])
+            last_obj_id = bf['OBJECT_ID']
+
+        util.log("last nsobject in range: %s" % last_obj_id)
+
+
+    # # for each bitfile, if it does not have the right number of copies, report
+    # # it
+    # for bf in bfl:
+    #     if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
+    #         tcc_report(bf)
+    #         util.log("%s %s %d != %d" %
+    #                  (bf['OBJECT_ID'],
+    #                   tcc_common.hexstr(bf['BFID']),
+    #                   bf['SC_COUNT'],
+    #                   cosinfo[bf['BFATTR_COS_ID']]))
+    #     elif cfg.getboolean(sectname, 'verbose'):
+    #         util.log("%s %s %d == %d" %
+    #                  (bf['OBJECT_ID'],
+    #                   tcc_common.hexstr(bf['BFID']),
+    #                   bf['SC_COUNT'],
+    #                   cosinfo[bf['BFATTR_COS_ID']]))
+    #         
+    #     update_next_nsobj_id(cfg, bf['OBJECT_ID'])
+    #     # util.log("recording next nsobject id: %d" % bf['OBJECT_ID'])
 
 # -----------------------------------------------------------------------------
 def db2cxn(dbsel):
@@ -96,11 +127,14 @@ def get_bitfile_path(bitfile):
     """
     db = db2cxn('subsys')
 
-    stmt = db.prepare("""
-                      select parent_id, name from nsobject where bitfile_id = ?
-                      """)
-    r = db.execute(stmt, (bitfile['BFID'], ))
+    sql = """
+          select parent_id, name from nsobject where bitfile_id = %s
+          """ % tcc_common.hexstr(bitfile['BFID'])
+
+    util.log("Query: %s" % sql)
+    r = db.exec_immediate(db, sql)
     x = db2.fetch_assoc(r)
+    bfl = []
     while (x):
         bfl.append(x)
         x = db2.fetch_assoc(r)
@@ -111,13 +145,12 @@ def get_bitfile_path(bitfile):
 
     rval = bfl[0]['NAME']
 
-    stmt = db.prepare("""
-                      select parent_id, name from nsobject where object_id = ?
-                      """)
-
     x = bfl[0]
     while x['NAME'] != '/':
-        r = db.execute(stmt, (x['PARENT_ID'], ))
+        sql = """
+              select parent_id, name from nsobject where object_id = %s
+              """ % x['PARENT_ID']
+        r = db2.exec_immediate(db, sql)
         x = db2.fetch_assoc(r)
         rval = os.path.join([x['NAME'], rval])
 
