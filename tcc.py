@@ -172,6 +172,31 @@ def tccp_bfid(args):
                             ct)
 
 # -----------------------------------------------------------------------------
+def tccp_bfpath(args):
+    """bfpath - construct a bitfile path from a bitfile id
+
+    usage: tcc bfpath BFID
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-D', '--db',
+                 action='store', default='', dest='dbsect',
+                 help='which database to access')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    try:
+        bitfile = a[0]
+    except:
+        print("usage: tcc zreport BITFILE_ID")
+
+    bfpath = tcc_common.get_bitfile_path(bitfile)
+    print(bfpath)
+    
+# -----------------------------------------------------------------------------
 def tccp_bfts(args):
     """bfts - whats in bftapeseg?
 
@@ -369,6 +394,37 @@ def tccp_tables(args):
     x = cxn.tables('HPSS', '%')
     pprint.pprint(x)
     cxn.close()
+    
+# -----------------------------------------------------------------------------
+def tccp_zreport(args):
+    """zreport - show what tcc_report will do with a bitfile id
+
+    usage: tcc zreport NSOBJECT-ID
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-D', '--db',
+                 action='store', default='', dest='dbsect',
+                 help='which database to access')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    try:
+        nsobj_id = a[0]
+    except:
+        print("usage: tcc zreport BITFILE_ID")
+        
+    cfg = CrawlConfig.get_config()
+    outfile = cfg.get(tcc_common.sectname(), 'report_file')
+
+    cosinfo = tcc_common.get_cos_info()
+    bfl = tcc_common.get_bitfile_set(cfg, int(nsobj_id), int(nsobj_id) + 1)
+    print("Writing output to %s" % outfile)
+    for bf in bfl:
+        tcc_common.tcc_report(bf, cosinfo)
     
 # -----------------------------------------------------------------------------
 def copies_by_cos():
