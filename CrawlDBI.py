@@ -522,6 +522,8 @@ class DBIsqlite(DBI_abstract):
         elif data == []:
             raise DBIerror("On update(), data must not be empty",
                            dbname=self.dbname)
+        elif '"?"' in where or "'?'" in where:
+            raise DBIerror("Parameter placeholders should not be quoted")
 
         # Build and run the update statement
         try:
@@ -854,6 +856,8 @@ class DBImysql(DBI_abstract):
         elif data == []:
             raise DBIerror("On update(), data must not be empty",
                            dbname=self.dbname)
+        elif '"?"' in where or "'?'" in where:
+            raise DBIerror("Parameter placeholders should not be quoted")
 
         # Build and run the update statement
         try:
