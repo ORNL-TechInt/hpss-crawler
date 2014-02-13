@@ -27,7 +27,8 @@ class HSI(object):
                "connect: Connection refused",
                "hpssex_OpenConnection: unable to obtain " +
                "remote site info",
-               "Error -?\d+ on transfer"]
+               "Error -?\d+ on transfer",
+               "HPSS_ESYSTEM"]
     
     # -------------------------------------------------------------------------
     def __init__(self, connect=True, *args, **kwargs):
@@ -158,7 +159,10 @@ class HSI(object):
             self.xobj.sendline("hashverify %s" % path)
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
-            rval += self.xobj.before
+            while which == 1 and 1 < len(self.xobj.before):
+                rval += self.xobj.before
+                which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
+                                         self.hsierrs)
             if 1 == which:
                 rval += " TIMEOUT"
             elif 0 != which:
@@ -199,6 +203,6 @@ class HSI(object):
     # -------------------------------------------------------------------------
     def quit(self):
         self.xobj.sendline("quit")
-        self.xobj.expect(pexpect.EOF)
+        self.xobj.expect([pexpect.EOF, pexpect.TIMEOUT])
         self.xobj.close()
 
