@@ -143,11 +143,13 @@ class Checkable(object):
             rsp = hsi.hashcreate(self.path)
             if "TIMEOUT" in rsp or "ERROR" in rsp:
                 util.log("hashcreate transfer failed on %s", self.path)
+                hsi.quit()
                 self.set('fails', self.fails + 1)
                 return "skipped"
             elif "Access denied" in rsp:
                 util.log("hashcreate failed with 'access denied' on %s",
                          self.path)
+                hsi.quit()
                 return "access denied"
             else:
                 util.log("completed hashcreate on %s", self.path)
@@ -261,6 +263,8 @@ class Checkable(object):
         h.quit()
 
         self.set('last_check', time.time())
+        util.log("Persisting checkable '%s' with last_check = %f, fails = %d" %
+                 (self.path, self.last_check, self.fails))
         self.persist()
         return rval
 
@@ -644,6 +648,7 @@ class Checkable(object):
             rval = "skipped"
             self.set('fails', self.fails + 1)
             util.log("hashverify transfer incomplete on %s" % self.path)
+            h.quit()
         elif "%s: (md5) OK" % self.path in rsp:
             rval = "matched"
             util.log("hashverify matched on %s" % self.path)
