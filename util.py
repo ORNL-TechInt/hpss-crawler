@@ -75,6 +75,27 @@ def csv_list(value, delimiter=","):
     rval = [x.strip() for x in value.split(delimiter)]
     return rval
 
+# ------------------------------------------------------------------------------
+def env_update(cfg):
+    """
+    Update the environment based on the contents of the 'env' section of the
+    config object.
+    """
+    if not cfg.has_section('env'):
+        return
+
+    for var in cfg.options('env'):
+        uvar = var.upper()
+        value = re.sub("\n\s*", "", cfg.get('env', var))
+        pre = os.getenv(uvar)
+        if pre is not None and value.startswith('+'):
+            os.environ[uvar] = ':'.join(os.environ[uvar].split(':') +
+                                        value[1:].split(':'))
+        elif value.startswith('+'):
+            os.environ[uvar] = value[1:]
+        else:
+            os.environ[uvar] = value
+
 default_logfile_name = "/var/log/crawl.log"
 # ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False, soft=False):
