@@ -285,7 +285,7 @@ def tccp_zreport(args):
     outfile = cfg.get(tcc_common.sectname(), 'report_file')
 
     cosinfo = tcc_common.get_cos_info()
-    bfl = tcc_common.get_bitfile_set(cfg, int(nsobj_id), int(nsobj_id) + 1)
+    bfl = tcc_common.get_bitfile_set(cfg, int(nsobj_id), 1)
     print("Writing output to %s" % outfile)
     for bf in bfl:
         tcc_common.tcc_report(bf, cosinfo)

@@ -36,7 +36,7 @@ def main(cfg):
     # fetch the next N bitfiles from DB2
     bfl = tcc_common.get_bitfile_set(cfg,
                                      int(next_nsobj_id),
-                                     int(next_nsobj_id + how_many))
+                                     how_many)
     
     util.log("got %d bitfiles" % len(bfl))
 

@@ -83,7 +83,7 @@ def get_bitfile_path(bitfile):
     return rval
 
 # -----------------------------------------------------------------------------
-def get_bitfile_set(cfg, first_nsobj_id, last_nsobj_id):
+def get_bitfile_set(cfg, first_nsobj_id, limit):
     """
     Get a collection of bitfiles from DB2 returning a dict. The bitfiles in the
     set begin with object_id first_nsobj_id and end with the one before
@@ -98,8 +98,9 @@ def get_bitfile_set(cfg, first_nsobj_id, last_nsobj_id):
           from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
           where A.bitfile_id = B.bfid and B.bfid = C.bfid and
                  B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id and A.object_id < ?
+                 ? <= A.object_id
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
+          fetch first %d rows only
           """
     rval = []
     stmt = db2.prepare(db, sql)
