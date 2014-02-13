@@ -14,6 +14,7 @@ def db2cxn(dbsel):
     except AttributeError:
         db2cxn._db = {}
         cfg = CrawlConfig.get_config()
+        util.env_update(cfg)
         cfgname = cfg.get('db2', 'db_cfg_name')
         subname = cfg.get('db2', 'db_sub_name')
         dbhost = cfg.get('db2', 'hostname')
