@@ -369,7 +369,9 @@ def tccp_sql(args):
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
-    
+
+    cfg = CrawlConfig.get_config()
+    util.env_update(cfg)
     sql = " ".join(a)
     print sql
     for row in query(sql, dbsect=o.dbsect):
