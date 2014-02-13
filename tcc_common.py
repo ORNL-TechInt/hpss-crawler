@@ -168,7 +168,7 @@ def tcc_report(bitfile, cosinfo):
     except AttributeError:
         cfg = CrawlConfig.get_config()
         rptfname = cfg.get(sectname(), 'report_file')
-        tcc_report._f = open(rptfname, 'w')
+        tcc_report._f = open(rptfname, 'a')
         tcc_report._f.write(fmt % ("COS", "Ccopies", "Fcopies", "Filepath"))
         tcc_report._f.write(rpt)
         tcc_report._f.flush()
