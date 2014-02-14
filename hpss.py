@@ -2,6 +2,7 @@ import os
 import pexpect
 import pwd
 import sys
+import traceback as tb
 import util
 
 # -----------------------------------------------------------------------------
@@ -28,6 +29,7 @@ class HSI(object):
                "hpssex_OpenConnection: unable to obtain " +
                "remote site info",
                "Error -?\d+ on transfer",
+               "checksum not set",
                "HPSS_ESYSTEM"]
     
     # -------------------------------------------------------------------------
@@ -88,6 +90,12 @@ class HSI(object):
             self.xobj.sendline("hashcreate %s" % path)
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
+            while which == 1 and 1 < len(self.xobj.before):
+                util.log("got a timeout, continuing because before is not" +
+                         " empty and does not contain an error")
+                rval += self.xobj.before
+                which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
+                                         self.hsierrs)
             rval += self.xobj.before
             if 1 == which:
                 rval += " TIMEOUT"
@@ -160,9 +168,12 @@ class HSI(object):
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
             while which == 1 and 1 < len(self.xobj.before):
+                util.log("got a timeout, continuing because before is not" +
+                         " empty and does not contain an error")
                 rval += self.xobj.before
                 which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                          self.hsierrs)
+            rval += self.xobj.before
             if 1 == which:
                 rval += " TIMEOUT"
             elif 0 != which:
@@ -202,7 +213,12 @@ class HSI(object):
 
     # -------------------------------------------------------------------------
     def quit(self):
-        self.xobj.sendline("quit")
-        self.xobj.expect([pexpect.EOF, pexpect.TIMEOUT])
-        self.xobj.close()
-
+        try:
+            self.xobj.sendline("quit")
+            self.xobj.expect([pexpect.EOF, pexpect.TIMEOUT])
+            self.xobj.close()
+        except OSError, e:
+            tbstr = tb.format_exc()
+            util.log("Ignoring OSError '%s'" % str(e))
+            for line in tbstr.split("\n"):
+                util.log(line)
