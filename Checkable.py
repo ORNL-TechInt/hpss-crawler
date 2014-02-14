@@ -96,8 +96,9 @@ class Checkable(object):
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
-        if self.checksum is None:
-            self.checksum = 0
+        for attr in ['checksum', 'fails', 'reported']:
+            if getattr(self, attr) is None:
+                setattr(self, attr, 0)
         self.dim = {}
         self.dim['cos'] = Dimension.get_dim('cos')
         super(Checkable, self).__init__()
@@ -355,7 +356,7 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def get_list(cls, prob=0.1):
+    def get_list(cls, prob=0.1, rootlist=[]):
         """
         Return the current list of Checkables from the database.
         """
@@ -367,18 +368,33 @@ class Checkable(object):
                                  'cos', 'checksum', 'last_check',
                                  'fails', 'reported'],
                          orderby='last_check')
+
+        # check whether any roots from rootlist are missing and if so, add them
+        # to the table
+        reselect = False
+        pathlist = [x[1] for x in rows]
+        for root in rootlist:
+            if root not in pathlist:
+                nr = Checkable(path=root, type='d')
+                nr.load()
+                nr.persist()
+                reselect = True
+
+        if reselect:
+            rows = db.select(table='checkables',
+                             fields=['rowid', 'path', 'type',
+                                     'cos', 'checksum', 'last_check',
+                                     'fails', 'reported'],
+                             orderby='last_check')
+            
         for row in rows:
-            if row[6] is None:
-                fails = 0
-            else:
-                fails = row[6]
             new = Checkable(rowid=row[0],
                             path=row[1],
                             type=row[2],
                             cos=row[3],
                             checksum=row[4],
                             last_check=row[5],
-                            fails=fails,
+                            fails=row[6],
                             reported=row[7],
                             probability=prob,
                             in_db=True,

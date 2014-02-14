@@ -559,6 +559,64 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.expected(testdata[idx][3], item.last_check)
     
     # -------------------------------------------------------------------------
+    def test_get_list_newroot(self):
+        """
+        Calling .get_list() when a new item has been added to dataroot in the
+        config should add the new dataroot before giving us back a list of
+        Checkable objects representing what is in the table
+
+        This test succeeding depends upon the select in get_list() ordering the
+        objects returned by pathname within last_check. Both '/' and 'newroot'
+        are going to have a last_check time of 0. The testdata list assumes '/'
+        comes first. As long as the select fulfills that assumption, we're
+        fine.
+        """
+        # make sure the .db file does not exist
+        util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        
+        # create some test data (path, type, cos, last_check)
+        testdata = [('/', 'd', '', 0),
+                    ('/abc', 'd', '', 17),
+                    ('/xyz', 'f', '', 92),
+                    ('/abc/foo', 'f', '', 5),
+                    ('/abc/bar', 'f', '', time.time())]
+
+        nrpath = '/newroot'
+        nrtup = (nrpath, 'd', '', 0)
+        
+        # create the .db file
+        Checkable.ex_nihilo()
+
+        # put the test data into the database (but not newroot)
+        db = CrawlDBI.DBI()
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'cos', 'last_check'],
+                  data=testdata[1:])
+        db.close()
+        
+        # run the target routine
+        x = Checkable.get_list(rootlist=['/abc', nrpath])
+
+        # we should have gotten back the same number of records as went into
+        # the database plus 1 for the new root
+        testdata.append(nrtup)
+
+        # testdata has to be sorted by last_check since that's the way get_list
+        # will order the list it returns
+        testdata.sort(key=lambda x : x[3])
+
+        self.expected(len(testdata), len(x))
+
+        # verify that the data from the database matches the testdata that was
+        # inserted
+        for idx, item in enumerate(x):
+            self.expected(testdata[idx][0], item.path)
+            self.expected(testdata[idx][1], item.type)
+            self.expected(testdata[idx][2], item.cos)
+            self.expected(testdata[idx][3], item.last_check)
+    
+    # -------------------------------------------------------------------------
     def test_persist_last_check(self):
         """
         Verify that last_check gets stored by persist().

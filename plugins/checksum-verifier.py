@@ -28,7 +28,7 @@ def main(cfg):
     # Fetch the list of HPSS objects that we're looking at from the
     # database
     try:
-        clist = Checkable.Checkable.get_list(odds)
+        clist = Checkable.Checkable.get_list(odds, rootlist=dataroot)
     except CrawlDBI.DBIerror, e:
         sqlite_msg = "no such table: checkables"
         mysql_msg = "Table '.*' doesn't exist"
