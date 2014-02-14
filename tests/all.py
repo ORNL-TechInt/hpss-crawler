@@ -29,7 +29,7 @@ def main(args):
                     'CrawlPluginTest',
                     'daemonTest',
                     'DimensionTest',
-                    # 'hpssTest',
+                    'hpssTest',
                     'testhelpTest',
                     # 'toolframeTest.py',
                     'UtilTest',
