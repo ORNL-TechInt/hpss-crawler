@@ -708,8 +708,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.ex_nihilo()
-        now = time.time()
-        self.db_add_one(path='/home', type='d', last_check=now)
+        t1 = time.time()
+        self.db_add_one(path='/home', type='d', last_check=t1)
 
         x = Checkable.get_list()
 
@@ -720,7 +720,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
 
         x[0].rowid = None
-        x[0].last_check = now = time.time()
+        x[0].last_check = t0 = time.time()
 
         try:
             x[0].persist()
@@ -735,9 +735,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(2, len(x))
         c = Checkable(path='/', type='d')
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
-        Checkable(path='/home', type='d')
+        c = Checkable(path='/home', type='d')
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
-        self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
+        self.expected(self.ymdhms(t1), self.ymdhms(x[1].last_check))
         
     # -------------------------------------------------------------------------
     def test_persist_dir_update(self):
