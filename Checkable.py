@@ -96,8 +96,9 @@ class Checkable(object):
                 raise StandardError("Attribute %s is invalid for Checkable" %
                                     k)
             setattr(self, k, kwargs[k])
-        if self.checksum is None:
-            self.checksum = 0
+        for attr in ['checksum', 'fails', 'reported']:
+            if getattr(self, attr) is None:
+                setattr(self, attr, 0)
         self.dim = {}
         self.dim['cos'] = Dimension.get_dim('cos')
         super(Checkable, self).__init__()
@@ -143,11 +144,13 @@ class Checkable(object):
             rsp = hsi.hashcreate(self.path)
             if "TIMEOUT" in rsp or "ERROR" in rsp:
                 util.log("hashcreate transfer failed on %s", self.path)
+                hsi.quit()
                 self.set('fails', self.fails + 1)
                 return "skipped"
             elif "Access denied" in rsp:
                 util.log("hashcreate failed with 'access denied' on %s",
                          self.path)
+                hsi.quit()
                 return "access denied"
             else:
                 util.log("completed hashcreate on %s", self.path)
@@ -261,6 +264,8 @@ class Checkable(object):
         h.quit()
 
         self.set('last_check', time.time())
+        util.log("Persisting checkable '%s' with last_check = %f, fails = %d" %
+                 (self.path, self.last_check, self.fails))
         self.persist()
         return rval
 
@@ -351,7 +356,7 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def get_list(cls, prob=0.1):
+    def get_list(cls, prob=0.1, rootlist=[]):
         """
         Return the current list of Checkables from the database.
         """
@@ -363,18 +368,33 @@ class Checkable(object):
                                  'cos', 'checksum', 'last_check',
                                  'fails', 'reported'],
                          orderby='last_check')
+
+        # check whether any roots from rootlist are missing and if so, add them
+        # to the table
+        reselect = False
+        pathlist = [x[1] for x in rows]
+        for root in rootlist:
+            if root not in pathlist:
+                nr = Checkable(path=root, type='d')
+                nr.load()
+                nr.persist()
+                reselect = True
+
+        if reselect:
+            rows = db.select(table='checkables',
+                             fields=['rowid', 'path', 'type',
+                                     'cos', 'checksum', 'last_check',
+                                     'fails', 'reported'],
+                             orderby='last_check')
+            
         for row in rows:
-            if row[6] is None:
-                fails = 0
-            else:
-                fails = row[6]
             new = Checkable(rowid=row[0],
                             path=row[1],
                             type=row[2],
                             cos=row[3],
                             checksum=row[4],
                             last_check=row[5],
-                            fails=fails,
+                            fails=row[6],
                             reported=row[7],
                             probability=prob,
                             in_db=True,
@@ -644,6 +664,7 @@ class Checkable(object):
             rval = "skipped"
             self.set('fails', self.fails + 1)
             util.log("hashverify transfer incomplete on %s" % self.path)
+            h.quit()
         elif "%s: (md5) OK" % self.path in rsp:
             rval = "matched"
             util.log("hashverify matched on %s" % self.path)

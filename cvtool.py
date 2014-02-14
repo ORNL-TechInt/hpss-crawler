@@ -1,10 +1,12 @@
 #!/usr/bin/env python
+import Checkable
 import CrawlConfig
 import CrawlDBI
 import hpss
 import optparse
 import pdb
 import pexpect
+import time
 import toolframe
 
 prefix = "cv"
@@ -12,7 +14,7 @@ H = None
 
 # -----------------------------------------------------------------------------
 def cv_report(argv):
-    """cvreport - show the checksum verifier database status
+    """report - show the checksum verifier database status
 
     select count(*) from checkables where type = 'f';
     select count(*) from checkables where checksum <> 0;
@@ -156,5 +158,89 @@ def cv_fail_reset(argv):
 
     db.close()
  
+# -----------------------------------------------------------------------------
+def cv_show_next(argv):
+    """show_next - Report the Checkables in the order they will be checked
+
+    usage: cvtool shownext
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-i', '--id',
+                 action='store', default='', dest='id',
+                 help='id of entry to be checked')
+    p.add_option('-p', '--path',
+                 action='store', default='', dest='path',
+                 help='name of path to be checked')
+    p.add_option('-v', '--verbose',
+                 action='store_true', default=False, dest='verbose',
+                 help='more information')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug: pdb.set_trace()
+
+    clist = Checkable.Checkable.get_list()
+    for c in clist:
+        if c.last_check == 0:
+            print("%18d %s %s" % (c.last_check,
+                                  c.type,
+                                  c.path))
+        else:
+            print("%s %s %s" % (ymdhms(c.last_check),
+                                c.type,
+                                c.path))
+    
+# -----------------------------------------------------------------------------
+def cv_test_check(argv):
+    """test_check - Run Checkable.check() on a specified entry
+
+    usage: cvtool test_check [-p/--path PATH] [-i/--id ROWID]
+    
+    The options are mutually exclusive.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-i', '--id',
+                 action='store', default='', dest='id',
+                 help='id of entry to be checked')
+    p.add_option('-p', '--path',
+                 action='store', default='', dest='path',
+                 help='name of path to be checked')
+    p.add_option('-v', '--verbose',
+                 action='store_true', default=False, dest='verbose',
+                 help='more information')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug: pdb.set_trace()
+
+    if o.path != '' and o.id != '':
+        print("Only --path or --id is allowed, not both.")
+        return
+    elif o.path != '':
+        c = Checkable.Checkable(path=o.path)
+    elif o.id != '':
+        c = Checkable.Checkable(rowid=int(o.id))
+    else:
+        print("One of --path or --id is required.")
+        return
+        
+    c.load()
+    c.check()
+ 
+# -----------------------------------------------------------------------------
+def ymdhms(epoch):
+    return time.strftime("%Y.%m%d %H:%M:%S",
+                         time.localtime(epoch))
+
 # -----------------------------------------------------------------------------
 toolframe.tf_launch(prefix, __name__)
