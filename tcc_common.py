@@ -14,6 +14,7 @@ def db2cxn(dbsel):
     except AttributeError:
         db2cxn._db = {}
         cfg = CrawlConfig.get_config()
+        util.env_update(cfg)
         cfgname = cfg.get('db2', 'db_cfg_name')
         subname = cfg.get('db2', 'db_sub_name')
         dbhost = cfg.get('db2', 'hostname')
@@ -82,7 +83,7 @@ def get_bitfile_path(bitfile):
     return rval
 
 # -----------------------------------------------------------------------------
-def get_bitfile_set(cfg, first_nsobj_id, last_nsobj_id):
+def get_bitfile_set(cfg, first_nsobj_id, limit):
     """
     Get a collection of bitfiles from DB2 returning a dict. The bitfiles in the
     set begin with object_id first_nsobj_id and end with the one before
@@ -97,8 +98,9 @@ def get_bitfile_set(cfg, first_nsobj_id, last_nsobj_id):
           from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
           where A.bitfile_id = B.bfid and B.bfid = C.bfid and
                  B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id and A.object_id < ?
+                 ? <= A.object_id
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
+          fetch first %d rows only
           """
     rval = []
     stmt = db2.prepare(db, sql)
@@ -167,7 +169,7 @@ def tcc_report(bitfile, cosinfo):
     except AttributeError:
         cfg = CrawlConfig.get_config()
         rptfname = cfg.get(sectname(), 'report_file')
-        tcc_report._f = open(rptfname, 'w')
+        tcc_report._f = open(rptfname, 'a')
         tcc_report._f.write(fmt % ("COS", "Ccopies", "Fcopies", "Filepath"))
         tcc_report._f.write(rpt)
         tcc_report._f.flush()

@@ -5,6 +5,7 @@ Tests for util.py
 import CrawlConfig
 import logging
 import os
+import re
 import sys
 import testhelp
 import toolframe
@@ -65,6 +66,248 @@ class UtilTest(testhelp.HelpedTestCase):
                       "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
                       (expected, x))
 
+    # --------------------------------------------------------------------------
+    def test_env_add_folded_none(self):
+        """
+        TEST: add to an undefined environment variable from a folded [env]
+        entry
+
+        EXP: the value gets set to the payload with the whitespace squeezed out
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        add = "four:\n   five:\n   six"
+        exp = re.sub("\n\s*", "", add)
+
+        # make sure the target env variable is not defined
+        if evname in os.environ:
+            del os.environ[evname]
+            
+        # create a config object with an 'env' section and a '+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, '+' + add)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the variable was set to the expected value
+        self.expected(exp, os.environ[evname])
+        
+        # raise testhelp.UnderConstructionError()
+    
+    # --------------------------------------------------------------------------
+    def test_env_add_folded_pre(self):
+        """
+        TEST: add to a preset environment variable from a folded [env]
+        entry
+
+        EXP: the value gets set to the payload with the whitespace squeezed out
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        pre_val = "one:two:three"
+        add = "four:\n   five:\n   six"
+        exp = ":".join([pre_val, re.sub("\n\s*", "", add)])
+
+        # make sure the target env variable has the expected value
+        os.environ[evname] = pre_val
+            
+        # create a config object with an 'env' section and a folded '+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, '+' + add)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the variable was set to the expected value
+        self.expected(exp, os.environ[evname])
+        
+        # raise testhelp.UnderConstructionError()
+    
+    # --------------------------------------------------------------------------
+    def test_env_add_none(self):
+        """
+        TEST: add to an undefined environment variable from [env] entry
+
+        EXP: the value gets set to the payload
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        add = "four:five:six"
+        exp = add
+
+        # make sure the target env variable is not defined
+        if evname in os.environ:
+            del os.environ[evname]
+            
+        # create a config object with an 'env' section and a '+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, '+' + add)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the variable was set to the expected value
+        self.expected(exp, os.environ[evname])
+        
+        # raise testhelp.UnderConstructionError()
+    
+    # --------------------------------------------------------------------------
+    def test_env_add_pre(self):
+        """
+        TEST: add to a predefined environment variable from [env] entry
+
+        EXP: payload is appended to the old value
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        pre_val = "one:two:three"
+        add = "four:five:six"
+        exp = ":".join([pre_val, add])
+
+        # make sure the target env variable is set to a known value
+        os.environ[evname] = pre_val
+
+        # create a config object with an 'env' section and a '+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, "+" + add)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the target env variable now contains both old and added
+        # values
+        self.expected(exp, os.environ[evname])
+
+        # raise testhelp.UnderConstructionError()
+        
+    # --------------------------------------------------------------------------
+    def test_env_set_folded_none(self):
+        """
+        TEST: set undefined environment variable from a folded [env] entry
+        unconditionally
+
+        EXP: the value gets set
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        newval = "one:\n   two:\n   three"
+        exp = re.sub("\n\s*", "", newval)
+
+        # make sure the target env variable is not defined
+        if evname in os.environ:
+            del os.environ[evname]
+
+        # create a config object with an 'env' section and a non-'+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, newval)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the variable was set to the expected value
+        self.expected(exp, os.environ[evname])
+    
+    # --------------------------------------------------------------------------
+    def test_env_set_pre_folded(self):
+        """
+        TEST: set predefined environment variable from a folded [env] entry
+        unconditionally
+
+        EXP: the old value gets overwritten
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        pre_val = "one:two:three"
+        add = "four:\n   five:\n   six"
+        exp = re.sub("\n\s*", "", add)
+
+        # make sure the target env variable is set to a known value
+        os.environ[evname] = pre_val
+
+        # create a config object with an 'env' section and a non-'+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, add)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the target env variable now contains the new value and
+        # the old value is gone
+        self.expected(exp, os.environ[evname])
+        self.assertTrue(pre_val not in os.environ[evname],
+                        "The old value should be gone but still seems to be " +
+                        " hanging around")
+        
+    # --------------------------------------------------------------------------
+    def test_env_set_none(self):
+        """
+        TEST: set undefined environment variable from [env] entry
+        unconditionally
+
+        EXP: the value gets set
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        exp = "newval"
+
+        # make sure the target env variable is not defined
+        if evname in os.environ:
+            del os.environ[evname]
+
+        # create a config object with an 'env' section and a non-'+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, exp)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the variable was set to the expected value
+        self.expected(exp, os.environ[evname])
+        
+        # raise testhelp.UnderConstructionError()
+    
+    # --------------------------------------------------------------------------
+    def test_env_set_pre(self):
+        """
+        TEST: set predefined environment variable from [env] entry
+        unconditionally
+
+        EXP: the old value gets overwritten
+        """
+        sname = 'env'
+        evname = 'UTIL_TEST'
+        pre_val = "one:two:three"
+        add = "four:five:six"
+        exp = add
+
+        # make sure the target env variable is set to a known value
+        os.environ[evname] = pre_val
+
+        # create a config object with an 'env' section and a non-'+' option
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section(sname)
+        cfg.set(sname, evname, add)
+        
+        # pass the config object to util.env_update()
+        util.env_update(cfg)
+        
+        # verify that the target env variable now contains the new value and
+        # the old value is gone
+        self.expected(exp, os.environ[evname])
+        self.assertTrue(pre_val not in os.environ[evname],
+                        "The old value should be gone but still seems to be " +
+                        " hanging around")
+
+        # raise testhelp.UnderConstructionError()
+        
     # -------------------------------------------------------------------------
     def test_get_logger_00(self):
         """
