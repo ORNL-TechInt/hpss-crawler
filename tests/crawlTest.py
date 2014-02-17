@@ -235,7 +235,105 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists('crawler_pid'), True)
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual('leaving daemonize' in util.contents(logpath), True)
-        
+
+        testhelp.touch(crawl.exit_file)
+
+        time.sleep(2)
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+                
+    # --------------------------------------------------------------------------
+    def test_crawl_start_cfgctx(self):
+        """
+        TEST: 'crawl start' should fire up a daemon crawler which will exit
+        when the exit file is touched. Verify that the crawler is started with
+        the context specified in the config file.
+        """
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        logpath = '%s/test_start.log' % self.testdir
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        self.write_cfg_file(cfgpath, xdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = ('crawl start --log %s --cfg %s'
+               % (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to still be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+        x = util.contents('crawler_pid').strip().split()
+        self.assertEqual('TEST', x[1],
+                         "Expected context to be 'TEST' but it is '%s'" % x[1])
+        self.assertEqual(os.path.exists(logpath), True)
+        self.assertEqual('leaving daemonize' in util.contents(logpath), True)
+
+        testhelp.touch(crawl.exit_file)
+
+        time.sleep(2)
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+                
+    # --------------------------------------------------------------------------
+    def test_crawl_start_cmdctx(self):
+        """
+        TEST: 'crawl start' should fire up a daemon crawler which will exit
+        when the exit file is touched. Verify that the crawler is started with
+        the context provided on the command line.
+        """
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        logpath = '%s/test_start.log' % self.testdir
+        self.write_cfg_file(cfgpath, self.cdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = ('crawl start --log %s --cfg %s --context TEST'
+               % (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to still be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+        x = util.contents('crawler_pid').strip().split()
+        self.assertEqual('TEST', x[1],
+                         "Expected context to be 'TEST' but it is '%s'" % x[1])
+        self.assertEqual(os.path.exists(logpath), True)
+        self.assertEqual('leaving daemonize' in util.contents(logpath), True)
+
+        testhelp.touch(crawl.exit_file)
+
+        time.sleep(2)
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+                
+    # --------------------------------------------------------------------------
+    def test_crawl_start_defctx(self):
+        """
+        TEST: 'crawl start' should fire up a daemon crawler which will exit
+        when the exit file is touched. Verify that the crawler is started with
+        the default context, which should be 'PROD'.
+        """
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        logpath = '%s/test_start.log' % self.testdir
+        self.write_cfg_file(cfgpath, self.cdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = ('crawl start --log %s --cfg %s'
+               % (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to still be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+        x = util.contents('crawler_pid').strip().split()
+        self.assertEqual('PROD', x[1],
+                         "Expected context to be 'PROD' but it is '%s'" % x[1])
+        self.assertEqual(os.path.exists(logpath), True)
+        self.assertEqual('leaving daemonize' in util.contents(logpath), True)
+
         testhelp.touch(crawl.exit_file)
 
         time.sleep(2)
@@ -396,13 +494,15 @@ class CrawlTest(testhelp.HelpedTestCase):
         """
         logpath = '%s/%s.log' % (self.testdir, util.my_name())
         cfgpath = '%s/%s.cfg' % (self.testdir, util.my_name())
-        self.write_cfg_file(cfgpath, self.cdict)
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = 'crawl status'
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), "The crawler is not running.")
         
-        cmd = ('crawl start --log %s --cfg %s --context TEST'
+        cmd = ('crawl start --log %s --cfg %s'
                % (logpath, cfgpath))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
@@ -416,6 +516,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         result = pexpect.run(cmd)
         self.assertEqual('The crawler is running as process' in result,
                          True)
+        self.assertEqual('context=TEST' in result, True)
 
         cmd = 'crawl stop --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
@@ -430,13 +531,85 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(result.strip(), "The crawler is not running.")
 
     # --------------------------------------------------------------------------
-    def test_crawl_stop(self):
+    def test_crawl_status_multi(self):
         """
-        TEST: 'crawl stop' should cause a running daemon to shut down.
+        TEST: 'crawl status' should report the crawler status correctly.
+        """
+        logpath = '%s/%s.log' % (self.testdir, util.my_name())
+        cfgpath_a = '%s/%s_a.cfg' % (self.testdir, util.my_name())
+        cfgpath_b = "%s/%s_b.cfg" % (self.testdir, util.my_name())
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        xdict['crawler']['exitfile'] = 'exit_a'
+        xdict['crawler']['pidfile'] = 'crawl_pidfile_a'
+        self.write_cfg_file(cfgpath_a, xdict)
+
+        xdict['crawler']['context'] = 'DEV'
+        xdict['crawler']['exitfile'] = 'exit_b'
+        xdict['crawler']['pidfile'] = 'crawl_pidfile_b'
+        self.write_cfg_file(cfgpath_b, xdict)
+
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual(result.strip(), "The crawler is not running.")
+
+        # start crawler A
+        cmd = ('crawl start --log %s --cfg %s'
+               % (logpath, cfgpath_a))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid_a", result)
+
+        # start crawler B
+        cmd = ('crawl start --log %s --cfg %s'
+               % (logpath, cfgpath_a))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid_b", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid_a'), True)
+        self.assertEqual(os.path.exists('crawler_pid_b'), True)
+
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual('The crawler is running as process' in result,
+                         True)
+        self.assertEqual('context=TEST' in result, True)
+        self.assertEqual('context=DEV' in result, True)
+
+        cmd = 'crawl stop --log %s --cfg %s --context TEST' % (logpath,
+                                                               cfgpath_a)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        time.sleep(1.5)
+        
+        cmd = 'crawl stop --log %s --cfg %s --context DEV' % (logpath,
+                                                              cfgpath_b)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        time.sleep(1.5)
+        
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual(result.strip(), "The crawler is not running.")
+
+    # --------------------------------------------------------------------------
+    def test_crawl_stop_confirm(self):
+        """
+        TEST: 'crawl stop' should cause a running daemon to shut down. If no
+        context is specified, the user should be asked to confirm the shutdown.
         """
         logpath = '%s/test_start.log' % self.testdir
         cfgpath = '%s/test_start.cfg' % self.testdir
-        self.write_cfg_file(cfgpath, self.cdict)
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = ('crawl start --log %s --cfg %s --context TEST' %
                (logpath, cfgpath))
@@ -450,6 +623,199 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "File 'crawler_pid' should exist but does not")
 
         cmd = 'crawl stop --log %s' % (logpath)
+        S = pexpect.spawn(cmd)
+        S.expect("Preparing to stop TEST crawler. Proceed? > ")
+        S.sendline("no")
+        S.expect(pexpect.EOF)
+        self.vassert_in("No action taken", S.before)
+        S.close()
+
+        self.assertEqual(crawl.is_running(), True)
+        self.assertEqual(os.path.exists('crawler_pid'), True)
+        
+        cmd = 'crawl stop --log %s' % (logpath)
+        S = pexpect.spawn(cmd)
+        S.expect("Preparing to stop TEST crawler. Proceed? > ")
+        S.sendline("yes")
+        S.expect(pexpect.EOF)
+        self.vassert_in("Stopping the crawler...", S.before)
+        S.close()
+
+        time.sleep(2)
+        
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_stop_ctx(self):
+        """
+        TEST: 'crawl stop' should cause a running daemon to shut down. If the
+        correct context is specified, the crawler will be shutdown without
+        prompting.
+        """
+        logpath = '%s/test_start.log' % self.testdir
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        self.write_cfg_file(cfgpath, xdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = ('crawl start --log %s --cfg %s --context TEST' %
+               (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected the crawler to be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True,
+                         "File 'crawler_pid' should exist but does not")
+
+        cmd = 'crawl stop --log %s --context TEST' % (logpath)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_in("Stopping the TEST crawler", result)
+        time.sleep(2)
+        
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_stop_ctxoth(self):
+        """
+        TEST: 'crawl stop' with a context other than the running crawler will
+        do nothing.
+        """
+        logpath = '%s/test_start.log' % self.testdir
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        self.write_cfg_file(cfgpath, xdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = ('crawl start --log %s --cfg %s --context TEST' %
+               (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected the crawler to be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True,
+                         "File 'crawler_pid' should exist but does not")
+
+        cmd = 'crawl stop --log %s --context DEV' % (logpath)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_in("No DEV crawler is running", result)
+
+        self.assertEqual(crawl.is_running(), True)
+
+        cmd = 'crawl stop --log %s --context TEST' % (logpath)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_in("No DEV crawler is running", result)
+
+        time.sleep(2)
+        
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_stop_noctx(self):
+        """
+        TEST: 'crawl stop' with multiple crawlers running and no args should
+        ask the user to specify a context.
+        """
+        logpath = '%s/%s.log' % (self.testdir, util.my_name())
+        cfgpath_a = '%s/%s_a.cfg' % (self.testdir, util.my_name())
+        cfgpath_b = "%s/%s_b.cfg" % (self.testdir, util.my_name())
+        xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = 'TEST'
+        xdict['crawler']['exitfile'] = 'exit_a'
+        xdict['crawler']['pidfile'] = 'crawl_pidfile_a'
+        self.write_cfg_file(cfgpath_a, xdict)
+
+        xdict['crawler']['context'] = 'DEV'
+        xdict['crawler']['exitfile'] = 'exit_b'
+        xdict['crawler']['pidfile'] = 'crawl_pidfile_b'
+        self.write_cfg_file(cfgpath_b, xdict)
+
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual(result.strip(), "The crawler is not running.")
+
+        # start crawler A
+        cmd = ('crawl start --log %s --cfg %s'
+               % (logpath, cfgpath_a))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid_a", result)
+
+        # start crawler B
+        cmd = ('crawl start --log %s --cfg %s'
+               % (logpath, cfgpath_a))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid_b", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected crawler to be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid_a'), True)
+        self.assertEqual(os.path.exists('crawler_pid_b'), True)
+
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual('The crawler is running as process' in result,
+                         True)
+        self.assertEqual('context=TEST' in result, True)
+        self.assertEqual('context=DEV' in result, True)
+
+        cmd = 'crawl stop --log %s --cfg %s' % (logpath, cfgpath_a)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_in("Please specify a context", result)
+        
+        cmd = 'crawl stop --log %s --cfg %s --context TEST' % (logpath,
+                                                               cfgpath_a)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        time.sleep(1.5)
+        
+        cmd = 'crawl stop --log %s --cfg %s --context DEV' % (logpath,
+                                                              cfgpath_b)
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        time.sleep(1.5)
+        
+        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(os.path.exists('crawler_pid'), False)
+
+        cmd = 'crawl status'
+        result = pexpect.run(cmd)
+        self.assertEqual(result.strip(), "The crawler is not running.")
+
+    # --------------------------------------------------------------------------
+    def test_crawl_stop_none(self):
+        """
+        TEST: 'crawl stop' should cause a running daemon to shut down.
+        """
+        logpath = '%s/test_start.log' % self.testdir
+        cfgpath = '%s/test_start.cfg' % self.testdir
+        self.cdict['crawler']['context'] = 'TEST'
+        self.write_cfg_file(cfgpath, self.cdict)
+        self.write_plugmod(self.plugdir, 'plugin_A')
+        cmd = ('crawl start --log %s --cfg %s --context TEST' %
+               (logpath, cfgpath))
+        result = pexpect.run(cmd)
+        self.vassert_nin("Traceback", result)
+        self.vassert_nin("crawler_pid", result)
+
+        self.assertEqual(crawl.is_running(), True,
+                         "Expected the crawler to be running but it is not")
+        self.assertEqual(os.path.exists('crawler_pid'), True,
+                         "File 'crawler_pid' should exist but does not")
+
+        cmd = 'crawl stop --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(2)
