@@ -281,16 +281,19 @@ def crl_start(argv):
     
     if o.debug: pdb.set_trace()
 
-    if os.path.exists('crawler_pid'):
-        print('crawler_pid exists. If you are sure it is not running,\n' +
+    cfg = CrawlConfig.get_config(o.config)
+    pidfile = cfg.get_d('crawler', 'pidfile', 'crawler_pid')
+    if os.path.exists(pidfile):
+        print('%s exists. If you are sure it is not running,\n' % pidfile +
               'please remove crawler_pid and try again.')
     else:
         #
         # Initialize the configuration
         #
-        cfg = CrawlConfig.get_config(o.config)
+        if o.context != '':
+            cfg.set('crawler', 'context', o.context)
         log = util.get_logger(o.logfile, cfg)
-        crawler = CrawlDaemon('crawler_pid',
+        crawler = CrawlDaemon(pidfile,
                               stdout="crawler.stdout",
                               stderr="crawler.stderr",
                               logger=log,
@@ -318,6 +321,12 @@ def crl_status(argv):
         print("The crawler is not running.")
     else:
         for rpid in running_pid():
+            for cand in glob.glob("/proc/%d/cwd/crawler_pid*"):
+                if os.path.exists(cand):
+                    cval = util.contents(cand).strip().split()
+                    if int(cval[0]) == rpid:
+                        print("The crawler is running as process %s (context=%s)" %
+                              (cval[0], cval[1]))
             pidfile = "/proc/%d/cwd/crawler_pid" % rpid
             try:
                 cval = util.contents(pidfile).strip()
@@ -434,7 +443,9 @@ def running_pid():
     result = pexpect.run("ps -ef")
     for line in result.split("\n"):
         if 'crawl start' in line:
-            rval.append(int(line.split()[1]))
+            pid = int(line.split()[1])
+            if os.path.exists("/proc/%d" % pid):
+                rval.append(int(line.split()[1]))
     return rval
     
 # ------------------------------------------------------------------------------
