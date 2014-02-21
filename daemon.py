@@ -2,7 +2,6 @@
 """
 A generic daemon class
 """
-import atexit
 import errno
 import os
 import resource
@@ -114,12 +113,6 @@ class Daemon:
         sys.stdin = si
         sys.stdout = so
         sys.stderr = se
-
-        # write pidfile
-        self.dlog("atexit register, write pid file")
-        atexit.register(self.delpid)
-        pid = str(os.getpid())
-        file(self.pidfile,'w+').write("%s\n" % pid)
 
         self.dlog("leaving daemonize")
         

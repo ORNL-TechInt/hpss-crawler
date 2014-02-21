@@ -8,6 +8,7 @@ import copy
 import glob
 import os
 import pexpect
+import shutil
 import sys
 import testhelp
 import time
@@ -228,7 +229,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_in(msg, util.contents(lfname))
         
     # --------------------------------------------------------------------------
-    def test_make_pidfile_nodir():
+    def test_make_pidfile_nodir(self):
         """
         Preconditions:
          - /tmp/crawler does not exist
@@ -238,7 +239,7 @@ class CrawlTest(testhelp.HelpedTestCase):
          - the pid file contains the right context and exitpath
         """
         # make sure /tmp/crawler does not exist
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         
         # run the target routine
         pid = 6700
@@ -249,7 +250,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         # verify the post conditions
         self.assertTrue(os.path.isdir(self.piddir),
                         "Directory %s should exist" % self.piddir)
-        (pidfile) = glob.glob("%s/%d" % (self.piddir, pid))
+        [pidfile] = glob.glob("%s/%d" % (self.piddir, pid))
         self.assertTrue(pidfile == ("%s/6700" % self.piddir),
                         "Pidfile '%s' does not look right" % pidfile)
         (rctx, rxpath) = util.contents(pidfile).strip().split()
@@ -259,7 +260,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "'%s' should match '%s'" % (rxpath, exitpath))
 
     # --------------------------------------------------------------------------
-    def test_make_pidfile_mtdir():
+    def test_make_pidfile_mtdir(self):
         """
         Preconditions:
          - /tmp/crawler does exist and is empty
@@ -269,7 +270,7 @@ class CrawlTest(testhelp.HelpedTestCase):
          - the pid file contains the right context and exitpath
         """
         # make sure /tmp/crawler exists and is empty
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         os.mkdir(self.piddir)
         
         # run the target routine
@@ -281,7 +282,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         # verify the post conditions
         self.assertTrue(os.path.isdir(self.piddir),
                         "Directory %s should exist" % self.piddir)
-        (pidfile) = glob.glob("%s/%d" % (self.piddir, pid))
+        [pidfile] = glob.glob("%s/%d" % (self.piddir, pid))
         exp = "%s/6700" % self.piddir
         self.assertEqual(pidfile, exp,
                         "Pidfile: '%s' should match '%s'" % (pidfile, exp))
@@ -294,7 +295,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
 
     # --------------------------------------------------------------------------
-    def test_make_pidfile_ctx():
+    def test_make_pidfile_ctx(self):
         """
         Preconditions:
          - /tmp/crawler does exist and contains a pid file with known context
@@ -303,7 +304,7 @@ class CrawlTest(testhelp.HelpedTestCase):
            "The pidfile for context XXX exists"
         """
         # make sure /tmp/crawler exists and is empty
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         os.mkdir(self.piddir)
         pid = 6700
         ctx = "TEST"
@@ -318,10 +319,10 @@ class CrawlTest(testhelp.HelpedTestCase):
         except StandardError, e:
             exp = "The pidfile for context TEST exists"
             self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % exp, str(e))
+                            "Expected '%s', got '%s'" % (exp, str(e)))
 
     # --------------------------------------------------------------------------
-    def test_running_pid_nodir():
+    def test_running_pid_nodir(self):
         """
         Preconditions:
          - /tmp/crawler does not exist
@@ -329,7 +330,7 @@ class CrawlTest(testhelp.HelpedTestCase):
          - running_pid() returns an empty list
         """
         # make sure /tmp/crawler does not exist
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
 
         # run the target routine
         result = crawl.running_pid()
@@ -339,7 +340,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected [], got '%s'" % result)
         
     # --------------------------------------------------------------------------
-    def test_running_pid_mtdir():
+    def test_running_pid_mtdir(self):
         """
         Preconditions:
          - /tmp/crawler exists but is empty
@@ -347,7 +348,7 @@ class CrawlTest(testhelp.HelpedTestCase):
          - running_pid() returns an empty list
         """
         # make sure /tmp/crawler is empty
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         os.mkdir(self.piddir)
 
         # run the target routine
@@ -358,7 +359,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected [], got '%s'" % result)
         
     # --------------------------------------------------------------------------
-    def test_running_pid_proc1():
+    def test_running_pid_proc1(self):
         """
         Preconditions:
          - /tmp/crawler contains a single pid file, pid not running (use
@@ -368,7 +369,10 @@ class CrawlTest(testhelp.HelpedTestCase):
          - running_pid() returns an empty list
         """
         # set up single pidfile
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
+        pid = 6700
+        context = 'TEST'
+        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
         crawl.make_pidfile(pid, context, exitpath)
 
         # run the target routine
@@ -379,7 +383,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected [], got '%s'" % result)
         
     # --------------------------------------------------------------------------
-    def test_running_pid_noproc1():
+    def test_running_pid_noproc1(self):
         """
         Preconditions:
          - /tmp/crawler contains a single pid file, proc not running (use
@@ -390,7 +394,7 @@ class CrawlTest(testhelp.HelpedTestCase):
            context, exitpath
         """
         # set up single pidfile
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         pid = 6700
         context = 'TEST'
         exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
@@ -405,7 +409,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected '%s', got '%s'" % (exp, result))
         
     # --------------------------------------------------------------------------
-    def test_running_pid_proc2():
+    def test_running_pid_proc2(self):
         """
         Preconditions:
          - /tmp/crawler contains a two pid files, procs not running (use
@@ -417,7 +421,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testdata = [(6700, 'TEST', '%s/first.exit' % self.piddir),
                     (6701, 'DEV',  '%s/other.exit' % self.piddir)]
         # set up two pidfiles
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         for tup in testdata:
             crawl.make_pidfile(*tup)
 
@@ -430,7 +434,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected '%s', got '%s'" % (exp, result))
         
     # --------------------------------------------------------------------------
-    def test_running_pid_noproc1():
+    def test_running_pid_noproc1(self):
         """
         Preconditions:
          - /tmp/crawler contains a two pid files, procs not running (use
@@ -443,7 +447,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testdata = [(6700, 'TEST', '%s/first.exit' % self.piddir),
                     (6701, 'DEV',  '%s/other.exit' % self.piddir)]
         # set up two pidfiles
-        shutil.rmtree(self.piddir)
+        util.conditional_rm(self.piddir, tree=True)
         for tup in testdata:
             crawl.make_pidfile(*tup)
 
@@ -561,11 +565,11 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(crawl.is_running(), True,
                          "Expected crawler to still be running but it is not")
         up_l = glob.glob(self.pidglob)
-        pidfile = (set(up_l), set(pre_l)).pop()
+        pidfile = (set(up_l) - set(pre_l)).pop()
         x = util.contents(pidfile).strip().split()
-        self.assertEqual(ctx, x[1],
+        self.assertEqual(ctx, x[0],
                          "Expected context to be '%s' but it is '%s'" %
-                         (ctx, x[1]))
+                         (ctx, x[0]))
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual(self.cstr['ldaemon'] in util.contents(logpath), True)
 
@@ -587,6 +591,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
         ctx = 'PROD'
         xdict = copy.deepcopy(self.cdict)
+        xdict['crawler']['context'] = ctx
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
@@ -603,8 +608,8 @@ class CrawlTest(testhelp.HelpedTestCase):
         pidfile = (set(up_l) - set(pre_l)).pop()
 
         x = util.contents(pidfile).strip().split()
-        self.assertEqual('PROD', x[1],
-                         "Expected context to be 'PROD' but it is '%s'" % x[1])
+        self.assertEqual('PROD', x[0],
+                         "Expected context to be 'PROD' but it is '%s'" % x[0])
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual(self.cstr['ldaemon'] in util.contents(logpath), True)
 
@@ -624,7 +629,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
         ctx = 'TEST'
         xdict = copy.deepcopy(self.cdict)
-        x['crawler']['exitpath'] = exitpath
+        xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = ('crawl start --log %s --cfg %s --context %s' %
@@ -637,7 +642,8 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected crawler to be running but it is not")
 
         result = pexpect.run(cmd)
-        self.assertEqual(self.cstr['pfctx'] in result, True)
+        self.assertTrue(self.cstr['pfctx'] in result,
+                        "Expected '%s' but didn't see it" % self.cstr['pfctx'])
         
         testhelp.touch(exitpath)
 
@@ -818,6 +824,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         ctx = 'TEST'
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['context'] = ctx
+        xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = 'crawl status'
@@ -893,7 +900,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         # start crawler B
         cmd = ('crawl start --log %s --cfg %s'
-               % (logpath, cfgpath_a))
+               % (logpath, cfgpath_b))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
@@ -914,16 +921,12 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual('context=%s' % ctx_a in result, True)
         self.assertEqual('context=%s' % ctx_b in result, True)
 
-        cmd = 'crawl stop --log %s --cfg %s --context %s' % (logpath,
-                                                             cfgpath_a,
-                                                             ctx_a)
+        cmd = 'crawl stop --log %s --context %s' % (logpath, ctx_a)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
         
-        cmd = 'crawl stop --log %s --cfg %s --context %s' % (logpath,
-                                                             cfgpath_b,
-                                                             ctx_b)
+        cmd = 'crawl stop --log %s --context %s' % (logpath, ctx_b)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
@@ -957,7 +960,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                (logpath, cfgpath, ctx))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        self.vassert_nin(sel.cstr['pfctx'], result)
+        self.vassert_nin(self.cstr['pfctx'], result)
 
         self.assertEqual(crawl.is_running(), True,
                          "Expected the crawler to be running but it is not")
@@ -1038,7 +1041,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         ctx = 'TEST'
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['context'] = ctx
-        xdict['crawler'][exitpath] = exitpath
+        xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
 
@@ -1089,11 +1092,11 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['context'] = ctx_a
-        xdict['crawler']['exitfile'] = exitpath_a
+        xdict['crawler']['exitpath'] = exitpath_a
         self.write_cfg_file(cfgpath_a, xdict)
 
         xdict['crawler']['context'] = ctx_b
-        xdict['crawler']['exitfile'] = exitpath_b
+        xdict['crawler']['exitpath'] = exitpath_b
         self.write_cfg_file(cfgpath_b, xdict)
 
         self.write_plugmod(self.plugdir, 'plugin_A')
@@ -1116,7 +1119,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         # start crawler B
         cmd = ('crawl start --log %s --cfg %s'
-               % (logpath, cfgpath_a))
+               % (logpath, cfgpath_b))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
@@ -1136,32 +1139,31 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual('context=TEST' in result, True)
         self.assertEqual('context=DEV' in result, True)
 
-        cmd = 'crawl stop --log %s --cfg %s' % (logpath, cfgpath_a)
+        cmd = 'crawl stop --log %s' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.vassert_in("Please specify a context", result)
         
-        cmd = 'crawl stop --log %s --cfg %s --context TEST' % (logpath,
-                                                               cfgpath_a)
+        cmd = 'crawl stop --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
-        self.assertEqual(os.path.exists(pidfile_a), False,
-                         "%s should have been removed" % pidfile_a)
         
-        cmd = 'crawl stop --log %s --cfg %s --context DEV' % (logpath,
-                                                              cfgpath_b)
+        cmd = 'crawl stop --log %s --context DEV' % (logpath)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
         
         self.assertEqual(crawl.is_running(), False)
-        self.assertEqual(os.path.exists(pidfile_b), False,
-                         "%s should have been removed" % pidfile_b)
 
         cmd = 'crawl status'
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), "The crawler is not running.")
+
+        self.assertEqual(os.path.exists(pidfile_a), False,
+                         "%s should have been removed" % pidfile_a)
+        self.assertEqual(os.path.exists(pidfile_b), False,
+                         "%s should have been removed" % pidfile_b)
 
     # --------------------------------------------------------------------------
     def test_crawl_stop_none(self):
@@ -1324,9 +1326,9 @@ class CrawlTest(testhelp.HelpedTestCase):
             for line in result.split("\n"):
                 if 'crawl start' in line:
                     pid = line.split()[1]
-                    print("pid = %s <- kill this" % pid)
+                    # print("pid = %s <- kill this" % pid)
 
-        shutil.rmtree("/tmp/crawler")
+        util.conditional_rm(self.piddir, tree=True)
 
 # ------------------------------------------------------------------------------
 toolframe.ez_launch(test='CrawlTest', logfile=testhelp.testlog(__name__))
