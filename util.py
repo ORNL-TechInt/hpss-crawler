@@ -5,6 +5,7 @@ import logging.handlers
 import os
 import pdb
 import re
+import shutil
 import socket
 import sys
 import time
@@ -35,10 +36,15 @@ class Chdir(object):
         os.chdir(self.start)
 
 # -----------------------------------------------------------------------------
-def conditional_rm(filepath):
+def conditional_rm(filepath, tree=False):
     """
     We want to delete filepath but we don't want to generate an error if it
     doesn't exist. Return the existence value of filepath at call time.
+
+    If tree is true, the caller is saying that he knows filepath is a directory
+    that may not be empty and he wants to delete it regardless. If the caller
+    does not specify tree and the target is a non-empty directory, this call
+    will fail.
     """
     rv = False
     if os.path.islink(filepath):
@@ -46,7 +52,10 @@ def conditional_rm(filepath):
         os.unlink(filepath)
     elif os.path.isdir(filepath):
         rv = True
-        os.rmdir(filepath)
+        if tree:
+            shutil.rmtree(filepath)
+        else:
+            os.rmdir(filepath)
     elif os.path.exists(filepath):
         rv = True
         os.unlink(filepath)
