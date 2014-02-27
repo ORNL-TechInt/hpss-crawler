@@ -424,22 +424,24 @@ def is_running():
 # ------------------------------------------------------------------------------
 def make_pidfile(pid, context, exitpath, just_check=False):
     """
-    Generate a pid file in /tmp/crawler, creating the directory if necessary
+    Generate a pid file in the pid directory (defined in CrawlDaemon), creating
+    the directory if necessary.
     """
     ok = False
-    if not os.path.exists("/tmp/crawler"):
-        os.mkdir("/tmp/crawler")
+    piddir = CrawlDaemon.piddir
+    if not os.path.exists(piddir):
+        os.mkdir(piddir)
         ok = True
 
     if not ok:
-        pf_l = glob.glob("/tmp/crawler/*")
+        pf_l = glob.glob("%s/*" % piddir)
         for pf_n in pf_l:
             (ctx, xp) = util.contents(pf_n).strip().split()
             if ctx == context:
                 raise StandardError("The pidfile for context %s exists" %
                                     context)
 
-    pfname = "/tmp/crawler/%d" % pid
+    pfname = "%s/%d" % (piddir, pid)
     if just_check:
         return pfname
     
@@ -459,12 +461,12 @@ def running_pid(proc_required=True):
         for line in result.split("\n"):
             if 'crawl start' in line:
                 pid = int(line.split()[1])
-                pfpath = "/tmp/crawler/%d" % pid
+                pfpath = "%s/%d" % (CrawlDaemon.piddir, pid)
                 if os.path.exists(pfpath):
                     (ctx, xpath) = util.contents(pfpath).strip().split()
                     rval.append((pid, ctx, xpath))
     else:
-        pid_l = glob.glob("/tmp/crawler/*")
+        pid_l = glob.glob("%s/*" % CrawlDaemon.piddir)
         for pid_n in pid_l:
             pid = int(os.path.basename(pid_n))
             (ctx, xpath) = util.contents(pid_n).strip().split()
@@ -479,6 +481,7 @@ class CrawlDaemon(daemon.Daemon):
     run() gets run in the background and then calls fire() when appropriate to
     invoke a plugin.
     """
+    piddir = "/tmp/crawler"
     # --------------------------------------------------------------------------
     def fire(self, plugin, cfg):
         """
@@ -504,7 +507,7 @@ class CrawlDaemon(daemon.Daemon):
         """
         cfgname = ''
         cfg = CrawlConfig.get_config(cfgname)
-        self.pidfile = "/tmp/crawler/%d" % os.getpid()
+        self.pidfile = "%s/%d" % (self.piddir, os.getpid())
         exit_file = cfg.get('crawler', 'exitpath')
         make_pidfile(os.getpid(),
                      cfg.get('crawler', 'context'),

@@ -485,7 +485,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected crawler to still be running but it is not")
         up_l = glob.glob(self.pidglob)
         self.assertEqual(len(pre_l) + 1, len(up_l),
-                         "Expected a new pid file in /tmp/crawler")
+                         "Expected a new pid file in %s" % self.piddir)
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual(self.cstr['ldaemon'] in util.contents(logpath), True)
 
