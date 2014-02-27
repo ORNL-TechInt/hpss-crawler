@@ -76,7 +76,7 @@ def tf_main(args, prefix=None, noarg='help'):
             method(args[2:])
 
         except IndexError, e:
-            if len(a) < 2:
+            if len(args) < 2:
                 print(str(e))
                 tf_help([], prefix=prefix)
             else:

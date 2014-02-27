@@ -2,6 +2,7 @@
 """
 Run a bunch of plug-ins which will probe the integrity of HPSS
 """
+import atexit
 import CrawlConfig
 import CrawlDBI
 import CrawlPlugin
@@ -281,22 +282,31 @@ def crl_start(argv):
     
     if o.debug: pdb.set_trace()
 
-    if os.path.exists('crawler_pid'):
-        print('crawler_pid exists. If you are sure it is not running,\n' +
-              'please remove crawler_pid and try again.')
-    else:
-        #
-        # Initialize the configuration
-        #
-        cfg = CrawlConfig.get_config(o.config)
-        log = util.get_logger(o.logfile, cfg)
-        crawler = CrawlDaemon('crawler_pid',
-                              stdout="crawler.stdout",
-                              stderr="crawler.stderr",
-                              logger=log,
-                              workdir='.')
-        log.info('crl_start: calling crawler.start()')
-        crawler.start()
+    cfg = CrawlConfig.get_config(o.config)
+
+    #
+    # Initialize the configuration
+    #
+    if o.context != '':
+        cfg.set('crawler', 'context', o.context)
+    try:
+        exitpath = cfg.get('crawler', 'exitpath')
+    except CrawlConfig.NoOptionError, e:
+        print("No exit path is specified in the configuration")
+        sys.exit(1)
+        
+    log = util.get_logger(o.logfile, cfg)
+    pfpath = make_pidfile(os.getpid(),
+                          cfg.get('crawler', 'context'),
+                          exitpath,
+                          just_check=True)
+    crawler = CrawlDaemon(pfpath,
+                          stdout="crawler.stdout",
+                          stderr="crawler.stderr",
+                          logger=log,
+                          workdir='.')
+    log.info('crl_start: calling crawler.start()')
+    crawler.start()
     pass
 
 # ------------------------------------------------------------------------------
@@ -305,14 +315,26 @@ def crl_status(argv):
 
     usage: crawl status
     """
-    if is_running():
-        cpid = util.contents('crawler_pid').strip()
-        print("The crawler is running as process %s." % cpid)
-    else:
-        print("The crawler is not running.")
-    if os.path.exists(exit_file):
-        print("Termination has been requested (%s exists)" % exit_file) 
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+    
+    if o.debug: pdb.set_trace()
 
+    rpi_l = running_pid()
+    if rpi_l == []:
+        print("The crawler is not running.")
+    else:
+        for rpi in rpi_l:
+            (pid, context, exitpath) = rpi
+            print("The crawler is running as process %d (context=%s)" %
+                  (pid, context))
+            if os.path.exists(exitpath):
+                print("Termination has been requested (%s exists)" %
+                      (exitpath))
+            
 # ------------------------------------------------------------------------------
 def crl_stop(argv):
     """stop - shut down the crawler daemon if it is running
@@ -328,13 +350,48 @@ def crl_stop(argv):
                  help='specify the log file')
     p.add_option('-C', '--context',
                  action='store', default='', dest='context',
-                 help="context of crawler ('TEST' or 'PROD')")
+                 help="context of crawler (PROD/DEV/TEST)")
     (o, a) = p.parse_args(argv)
     
     if o.debug: pdb.set_trace()
 
-    testhelp.touch(exit_file)
+    rpid_l = running_pid()
+    if rpid_l == []:
+        print("No crawlers are running -- nothing to stop.")
+        return
+
+    ctx_l = [rpid[1] for rpid in rpid_l]
+    if o.context != '' and o.context not in ctx_l:
+        print("No %s crawler is running -- nothing to stop." % o.context)
+        return
+
+    if o.context == '':
+        if 1 == len(rpid_l):
+            answer = raw_input("Preparing to stop %s crawler. Proceed? > " %
+                               ctx_l[0])
+            if answer.strip().lower().startswith('y'):
+                print("Stopping the crawler...")
+                testhelp.touch(rpid_l[0][2])
+            else:
+                print("No action taken")
+        else:  # more than one entry in rpid_l
+            print("More than one crawler is running.")
+            print("Please specify a context (e.g., 'crawl stop -C PROD')")
+    else:
+        idx = ctx_l.index(o.context)
+        print("Stopping the %s crawler..." % ctx_l[idx])
+        testhelp.touch(rpid_l[idx][2])
     
+# ---------------------------------------------------------------------------
+def crawler_context(pid):
+    pidfile = "/proc/%d/cwd/crawler_pid" % pid
+    cval = util.contents(pidfile).strip()
+    if len(cval.split()) < 2:
+        (cpid, context) = (cval, 'PROD')
+    else:
+        (cpid, context) = cval.split()[0:2]
+    return context
+
 # ---------------------------------------------------------------------------
 def cfg_changed(cfg):
     """
@@ -365,12 +422,66 @@ def is_running():
     return running
     
 # ------------------------------------------------------------------------------
+def make_pidfile(pid, context, exitpath, just_check=False):
+    """
+    Generate a pid file in the pid directory (defined in CrawlDaemon), creating
+    the directory if necessary.
+    """
+    ok = False
+    piddir = CrawlDaemon.piddir
+    if not os.path.exists(piddir):
+        os.mkdir(piddir)
+        ok = True
+
+    if not ok:
+        pf_l = glob.glob("%s/*" % piddir)
+        for pf_n in pf_l:
+            (ctx, xp) = util.contents(pf_n).strip().split()
+            if ctx == context:
+                raise StandardError("The pidfile for context %s exists" %
+                                    context)
+
+    pfname = "%s/%d" % (piddir, pid)
+    if just_check:
+        return pfname
+    
+    with open(pfname, 'w') as f:
+        f.write("%s %s\n" % (context, exitpath))
+
+    return pfname
+
+# ------------------------------------------------------------------------------
+def running_pid(proc_required=True):
+    """
+    Return a list of pids if the crawler is running (per ps(1)) or [] otherwise.
+    """
+    rval = []
+    if proc_required:
+        result = pexpect.run("ps -ef")
+        for line in result.split("\n"):
+            if 'crawl start' in line:
+                pid = int(line.split()[1])
+                pfpath = "%s/%d" % (CrawlDaemon.piddir, pid)
+                if os.path.exists(pfpath):
+                    (ctx, xpath) = util.contents(pfpath).strip().split()
+                    rval.append((pid, ctx, xpath))
+    else:
+        pid_l = glob.glob("%s/*" % CrawlDaemon.piddir)
+        for pid_n in pid_l:
+            pid = int(os.path.basename(pid_n))
+            (ctx, xpath) = util.contents(pid_n).strip().split()
+            rval.append((pid, ctx, xpath))
+
+    return rval
+    
+# ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
     """
     This class extends this daemon.Daemon to serve this application. Method
     run() gets run in the background and then calls fire() when appropriate to
     invoke a plugin.
     """
+    piddir = "/tmp/crawler"
     # --------------------------------------------------------------------------
     def fire(self, plugin, cfg):
         """
@@ -394,12 +505,19 @@ class CrawlDaemon(daemon.Daemon):
         This routine runs in the background as a daemon. Here's where
         we fire off plug-ins as appropriate.
         """
-        keep_going = True
         cfgname = ''
+        cfg = CrawlConfig.get_config(cfgname)
+        self.pidfile = "%s/%d" % (self.piddir, os.getpid())
+        exit_file = cfg.get('crawler', 'exitpath')
+        make_pidfile(os.getpid(),
+                     cfg.get('crawler', 'context'),
+                     exit_file)
+        atexit.register(self.delpid)
+
+        keep_going = True
         plugin_d = {}
         while keep_going:
             try:
-                cfg = CrawlConfig.get_config(cfgname)
                 pluglstr = cfg.get('crawler', 'plugins')
                 pluglist = [x.strip() for x in pluglstr.split(',')]
                 for s in pluglist:
