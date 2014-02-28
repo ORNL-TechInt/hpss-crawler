@@ -397,15 +397,20 @@ def get_timeval(cfg, section, option, default):
     return cfg.gettime(section, option, default, log)
 
 # ------------------------------------------------------------------------------
-def is_running():
+def is_running(context=None):
     """
     Return True if the crawler is running (per ps(1)) or False otherwise.
     """
-    result = pexpect.run("ps -ef")
     running = False
-    for line in result.split("\n"):
-        if 'crawl start' in line:
+    if context is None:
+        cfg = CrawlConfig.get_config()
+        context = cfg.get('crawler', 'context')
+        
+    rpi_l = running_pid()
+    for rpi in rpi_l:
+        if rpi[1] == context:
             running = True
+
     return running
     
 # ------------------------------------------------------------------------------

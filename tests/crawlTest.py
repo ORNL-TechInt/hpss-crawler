@@ -481,7 +481,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'] + ctx, result)
         
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to still be running but it is not")
         up_l = glob.glob(self.pidglob)
         self.assertEqual(len(pre_l) + 1, len(up_l),
@@ -492,7 +492,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         down_l = glob.glob(self.pidglob)
         self.assertEqual(len(pre_l), len(down_l),
                          "Expected pid file to be removed")
@@ -520,7 +520,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'] + ctx, result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to still be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -537,7 +537,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
                 
     # --------------------------------------------------------------------------
@@ -562,7 +562,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'] + ctx, result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to still be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -576,7 +576,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
                 
     # --------------------------------------------------------------------------
@@ -602,7 +602,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to still be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -616,7 +616,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
                 
     # --------------------------------------------------------------------------
@@ -638,7 +638,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to be running but it is not")
 
         result = pexpect.run(cmd)
@@ -648,7 +648,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         
     # --------------------------------------------------------------------------
     def test_crawl_start_cfg(self):
@@ -676,7 +676,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -698,7 +698,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
                 
     # --------------------------------------------------------------------------
@@ -727,7 +727,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to still be running but it isn't")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -746,7 +746,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         testhelp.touch(exitpath)
 
         time.sleep(2)
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
                 
     # --------------------------------------------------------------------------
@@ -838,7 +838,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected crawler to be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -854,7 +854,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
         
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
 
         cmd = 'crawl status'
@@ -909,8 +909,12 @@ class CrawlTest(testhelp.HelpedTestCase):
         pidfile_a = (set(a_up_l) - set(pre_l)).pop()
         pidfile_b = (set(b_up_l) - set(a_up_l)).pop()
         
-        self.assertEqual(crawl.is_running(), True,
-                         "Expected crawler to be running but it is not")
+        self.assertEqual(crawl.is_running(context=ctx_a), True,
+                         "Expected crawler %s to be running but it is not" %
+                         ctx_a)
+        self.assertEqual(crawl.is_running(context=ctx_b), True,
+                         "Expected crawler %s to be running but it is not" %
+                         ctx_b)
         self.assertEqual(os.path.exists(pidfile_a), True)
         self.assertEqual(os.path.exists(pidfile_b), True)
 
@@ -931,7 +935,10 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
         
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx_a), False,
+                         "Crawler %s should not be running but it is" % ctx_a)
+        self.assertEqual(crawl.is_running(context=ctx_b), False,
+                         "Crawler %s should not be running but it is" % ctx_b)
         self.assertEqual(os.path.exists(pidfile_a), False)
         self.assertEqual(os.path.exists(pidfile_b), False)
 
@@ -962,7 +969,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected the crawler to be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -975,7 +982,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_in("No action taken", S.before)
         S.close()
 
-        self.assertEqual(crawl.is_running(), True)
+        self.assertEqual(crawl.is_running(context=ctx), True)
         self.assertEqual(os.path.exists(pidfile), True)
         
         cmd = 'crawl stop --log %s' % (logpath)
@@ -988,7 +995,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         time.sleep(2)
         
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -1015,7 +1022,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected the crawler to be running but it is not")
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
@@ -1026,7 +1033,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_in("Stopping the TEST crawler", result)
         time.sleep(2)
         
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -1052,7 +1059,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
+        self.assertEqual(crawl.is_running(context=ctx), True,
                          "Expected the crawler to be running but it is not")
 
         up_l = glob.glob(self.pidglob)
@@ -1063,7 +1070,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_in("No DEV crawler is running", result)
 
-        self.assertEqual(crawl.is_running(), True)
+        self.assertEqual(crawl.is_running(context=ctx), True)
 
         cmd = 'crawl stop --log %s --context TEST' % (logpath)
         result = pexpect.run(cmd)
@@ -1072,7 +1079,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         time.sleep(2)
         
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -1112,8 +1119,9 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
-        self.assertEqual(crawl.is_running(), True,
-                         "Expected crawler to be running but it is not")
+        self.assertEqual(crawl.is_running(context=ctx_a), True,
+                         "Expected crawler %s to be running but it is not" %
+                         ctx_a)
         a_up_l = glob.glob(self.pidglob)
         pidfile_a = (set(a_up_l) - set(pre_l)).pop()
         
@@ -1127,8 +1135,9 @@ class CrawlTest(testhelp.HelpedTestCase):
         b_up_l = glob.glob(self.pidglob)
         pidfile_b = (set(b_up_l) - set(a_up_l)).pop()
         
-        self.assertEqual(crawl.is_running(), True,
-                         "Expected crawler to be running but it is not")
+        self.assertEqual(crawl.is_running(context=ctx_b), True,
+                         "Expected crawler %s to be running but it is not" %
+                         ctx_b)
         self.assertEqual(os.path.exists(pidfile_a), True)
         self.assertEqual(os.path.exists(pidfile_b), True)
 
@@ -1144,17 +1153,22 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin("Traceback", result)
         self.vassert_in("Please specify a context", result)
         
-        cmd = 'crawl stop --log %s --context TEST' % (logpath)
+        cmd = 'crawl stop --log %s --context %s' % (logpath, ctx_a)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
         
-        cmd = 'crawl stop --log %s --context DEV' % (logpath)
+        cmd = 'crawl stop --log %s --context %s' % (logpath, ctx_b)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
         
-        self.assertEqual(crawl.is_running(), False)
+        self.assertEqual(crawl.is_running(context=ctx_a), False,
+                         "Expected crawler %s to be down but it is running" %
+                         ctx_a)
+        self.assertEqual(crawl.is_running(context=ctx_b), False,
+                         "Expected crawler %s to be down but it is running" %
+                         ctx_b)
 
         cmd = 'crawl status'
         result = pexpect.run(cmd)
