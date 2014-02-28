@@ -279,8 +279,9 @@ def tccp_zreport(args):
     try:
         nsobj_id = a[0]
     except:
-        print("usage: tcc zreport BITFILE_ID")
-        
+        print("usage: tcc zreport OBJECT_ID")
+        return
+    
     cfg = CrawlConfig.get_config()
     outfile = cfg.get(tcc_common.sectname(), 'report_file')
 
