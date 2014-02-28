@@ -68,9 +68,7 @@ def get_config(cfname='', reset=False, soft=False):
                             'heartbeat': '10'})
         rval.read(cfname)
         rval.set('crawler', 'filename', cfname)
-        rval.set('crawler', 'loadtime', str(time.time()))
         get_config._config = rval
-        
     return rval
 
 class CrawlConfig(ConfigParser.ConfigParser):

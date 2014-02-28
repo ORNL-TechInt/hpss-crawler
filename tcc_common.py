@@ -101,10 +101,10 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
                  ? <= A.object_id
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
           fetch first %d rows only
-          """
+          """ % limit
     rval = []
     stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, last_nsobj_id))
+    r = db2.execute(stmt, (first_nsobj_id, ))
     x = db2.fetch_assoc(stmt)
     while (x):
         rval.append(x)

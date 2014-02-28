@@ -248,8 +248,13 @@ def crl_log(argv):
     (o, a) = p.parse_args(argv)
     
     if o.debug: pdb.set_trace()
-    
-    log = util.get_logger(o.logfile)
+
+    if o.logfile is not None:
+        log = util.get_logger(o.logfile)
+    else:
+        cfg = CrawlConfig.get_config()
+        log = util.get_logger(cfg=cfg)
+        
     log.info(" ".join(a))
 
 # ------------------------------------------------------------------------------
@@ -382,24 +387,6 @@ def crl_stop(argv):
         print("Stopping the %s crawler..." % ctx_l[idx])
         testhelp.touch(rpid_l[idx][2])
     
-# ---------------------------------------------------------------------------
-def crawler_context(pid):
-    pidfile = "/proc/%d/cwd/crawler_pid" % pid
-    cval = util.contents(pidfile).strip()
-    if len(cval.split()) < 2:
-        (cpid, context) = (cval, 'PROD')
-    else:
-        (cpid, context) = cval.split()[0:2]
-    return context
-
-# ---------------------------------------------------------------------------
-def cfg_changed(cfg):
-    """
-    Return True if the mtime on the configuration file is more recent than the
-    'loadtime' option stored in the configuration itself.
-    """
-    return cfg.changed()
-
 # ------------------------------------------------------------------------------
 def get_timeval(cfg, section, option, default):
     """
@@ -527,20 +514,24 @@ class CrawlDaemon(daemon.Daemon):
                     if s == 'crawler':
                         continue
                     elif s in plugin_d.keys():
+                        util.log("reloading plugin %s" % s)
                         plugin_d[s].reload(cfg)
                     else:
+                        util.log("initial load of plugin %s" % s)
                         plugin_d[s] = CrawlPlugin.CrawlPlugin(name=s,
                                                               cfg=cfg)
 
                 # remove any plugins that are not in the new configuration
                 for p in plugin_d.keys():
                     if p not in cfg.sections():
+                        util.log("unloading obsolete plugin %s" % p)
                         del plugin_d[p]
                 
                 heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
                 ecount = ewhen = 0
                 tlimit = 7.0
                 while keep_going:
+                    # util.log("fire plugins")
                     #
                     # Fire any plugins that are due
                     #
@@ -563,23 +554,24 @@ class CrawlDaemon(daemon.Daemon):
                             ewhen = time.time()
                             ecount = 1
 
+                    # util.log("issue the heartbeat")
                     #
                     # Issue the heartbeat if it's time
                     #
                     if 0 == (int(time.time()) % heartbeat):
                         self.dlog('crawl: heartbeat...')
                             
+                    # util.log("check for config changes")
                     #
-                    # If config file has changed, reload it by reseting the
+                    # If config file has changed, reload it.
                     # cached config object and breaking out of the inner loop.
-                    # The first thing the outer loop does is to load the
-                    # configuration
                     #
                     if cfg.changed():
                         cfgname = cfg.get('crawler', 'filename')
-                        CrawlConfig.get_config(reset=True)
+                        cfg = CrawlConfig.get_config(reset=True)
                         break
 
+                    # util.log("check for exit signal")
                     #
                     # Check for the exit signal
                     #
@@ -587,6 +579,7 @@ class CrawlDaemon(daemon.Daemon):
                         self.dlog('crawl: shutting down')
                         keep_going = False
 
+                    # util.log("sleep")
                     #
                     # We cycle once per second so we can detect if the user
                     # asks us to stop or if the config file changes and needs
