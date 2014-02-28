@@ -88,6 +88,27 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
     Get a collection of bitfiles from DB2 returning a dict. The bitfiles in the
     set begin with object_id first_nsobj_id and end with the one before
     last_nsobj_id.
+
+    get items between object_id LOW and HIGH:
+          select A.object_id,
+                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
+                 count(C.storage_class) as sc_count
+          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
+          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
+                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
+                 ? <= A.object_id and A.object_id < ?
+          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
+
+    get N items beginning at object_id LOW:
+          "select A.object_id,
+                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
+                 count(C.storage_class) as sc_count
+          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
+          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
+                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
+                 ? <= A.object_id
+          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
+          fetch first %d rows only" % limit
     """
     rval = {}
     db = db2cxn('subsys')
@@ -98,13 +119,12 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
           where A.bitfile_id = B.bfid and B.bfid = C.bfid and
                  B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id
+                 ? <= A.object_id and A.object_id < ?
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
-          fetch first %d rows only
-          """ % limit
+          """
     rval = []
     stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, ))
+    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+50))
     x = db2.fetch_assoc(stmt)
     while (x):
         rval.append(x)
