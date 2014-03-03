@@ -22,9 +22,9 @@ needed.
 
 ## Documentation
 
-* [User Guide](http://users.nccs.gov/~tpb/hpss/hpssic/UserGuide.html)
+* [User Guide](http://users.nccs.gov/~tpb/hpssic/UserGuide.html)
 
-* [Reference Manual](http://users.nccs.gov/~tpb/hpss/hpssic/ReferenceManual.html)
+* [Reference Manual](http://users.nccs.gov/~tpb/hpssic/ReferenceManual.html)
 
 ## Running Tests
 
