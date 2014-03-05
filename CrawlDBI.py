@@ -3,10 +3,12 @@
 Database interface classes
 """
 import base64
-import pdb
 import CrawlConfig
+import ibm_db as db2
+import ibm_db_dbi
 import MySQLdb as mysql
 import _mysql_exceptions as mysql_exc
+import pdb
 import sqlite3
 import warnings
 
@@ -21,7 +23,15 @@ class DBI_abstract(object):
     
     # -------------------------------------------------------------------------
     def prefix(self, tabname):
-        return self.tbl_prefix + tabname
+        if self.tbl_prefix == '':
+            return tabname
+
+        if tabname.startswith(self.tbl_prefix):
+            return tabname
+        elif tabname.startswith('@'):
+            return tabname[1:]
+        else:
+            return self.tbl_prefix + tabname
 
 # -----------------------------------------------------------------------------
 class DBI(object):
@@ -873,5 +883,238 @@ class DBImysql(DBI_abstract):
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
+# -----------------------------------------------------------------------------
+class DBIdb2(DBI_abstract):
+    # -------------------------------------------------------------------------
+    def __init__(self, *args, **kwargs):
+        """
+        See DBI.__init__()
+        """
+        for attr in kwargs:
+            if attr in self.settable_attrl:
+                setattr(self, attr, kwargs[attr])
+            else:
+                raise DBIerror("Attribute '%s'" % attr +
+                               " is not valid for %s" % self.__class__)
+        if not hasattr(self, 'dbname'):
+            raise DBIerror("A database name is required")
+        if not hasattr(self, 'tbl_prefix'):
+            self.tbl_prefix = 'hpss'
 
+        if self.tbl_prefix != '':
+            self.tbl_prefix = self.tbl_prefix.rstrip('.') + '.'
+        cfg = kwargs['cfg']
+        host = cfg.get('db2', 'hostname')
+        port = cfg.get('db2', 'port')
+        username = cfg.get('db2', 'username')
+        password = base64.b64decode(cfg.get('db2', 'password'))
+        try:
+            self.dbh = db2.connect("database=%s;" % self.dbname +
+                                   "hostname=%s;" % host +
+                                   "port=%s;" % port +
+                                   "uid=%s;" % username +
+                                   "pwd=%s;" % password,
+                                   "",
+                                   "")
+            self.closed = False
+        except ibm_db_dbi.Error, e:
+            raise DBIerror("%s" % str(e))
+    
+    # -------------------------------------------------------------------------
+    def __repr__(self):
+        """
+        See DBI.__repr__()
+        """
+        rv = "DBIdb2(dbname='%s')" % self.dbname
+        return rv
+
+    # -------------------------------------------------------------------------
+    def __recognized_exception__(self, exc):
+        """
+        Return True if exc is recognized as a DB2 error. Otherwise False.
+        """
+        try:
+            q = self.db2_exc_list
+        except AttributeError:
+            self.db2_exc_list = ["params bound not matching",
+                                 "SQLSTATE=",
+                                 "[IBM][CLI Driver][DB2"]
+        rval = False
+        for x in self.db2_exc_list:
+            if x in str(exc):
+                rval = True
+                break
+        return rval
+
+    # -------------------------------------------------------------------------
+    def close(self):
+        """
+        See DBI.close() 
+        """
+        # Close the database connection
+        if self.closed:
+            raise DBIerror("Cannot operate on a closed database.")
+        try:
+            db2.close(self.dbh)
+            # self.dbh.close()
+            self.closed = True
+        # Convert any mysql error into a DBIerror
+        except ibm_db_dbi.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+    
+    # -------------------------------------------------------------------------
+    def create(self, table='', fields=[]):
+        """
+        See DBI.create()
+        """
+        raise DBIerror("CREATE not supported for DB2")
+
+    # -------------------------------------------------------------------------
+    def cursor(self):
+        """
+        See DBI.cursor()
+        """
+        try:
+            rval = self.dbh.cursor()
+            return rval
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def delete(self, **kwarsg):
+        """
+        See DBI.delete()
+        """
+        raise DBIerror("DELETE not supported for DB2")
+
+    # -------------------------------------------------------------------------
+    def drop(self, table=''):
+        raise DBIerror("DROP not supported for DB2")
+        
+    # -------------------------------------------------------------------------
+    def insert(self, table='', fields=[], data=[]):
+        """
+        Insert not supported for DB2
+        """
+        raise DBIerror("INSERT not supported for DB2")
+        
+    # -------------------------------------------------------------------------
+    def select(self,
+               table='',
+               fields=[],
+               where='',
+               data=(),
+               groupby='',
+               orderby=''):
+        """
+        Select from a DB2 database.
+        """
+        # Handle invalid arguments
+        if type(table) != str:
+            raise DBIerror("On select(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On select(), table name must not be empty",
+                           dbname=self.dbname)
+        elif type(fields) != list:
+            raise DBIerror("On select(), fields must be a list",
+                           dbname=self.dbname)
+        elif type(where) != str:
+            raise DBIerror("On select(), where clause must be a string",
+                           dbname=self.dbname)
+        elif type(data) != tuple:
+            raise DBIerror("On select(), data must be a tuple",
+                           dbname=self.dbname)
+        elif type(groupby) != str:
+            raise DBIerror("On select(), groupby clause must be a string",
+                           dbname=self.dbname)
+        elif type(orderby) != str:
+            raise DBIerror("On select(), orderby clause must be a string",
+                           dbname=self.dbname)
+        elif '?' not in where and data != ():
+            raise DBIerror("Data would be ignored",
+                           dbname=self.dbname)
+
+        # Build and run the select statement 
+        try:
+            cmd = "select "
+            if 0 < len(fields):
+                cmd += ",".join(fields)
+            else:
+                cmd += "*"
+            cmd += " from %s" % self.prefix(table)
+            if where != '':
+                cmd += " where %s" % where
+            if groupby != '':
+                cmd += " group by %s" % groupby
+            if orderby != '':
+                cmd += " order by %s" % orderby
+
+            rval = []
+            if '?' in cmd:
+                stmt = db2.prepare(self.dbh, cmd)
+                r = db2.execute(stmt, data)
+                x = db2.fetch_assoc(stmt)
+                while (x):
+                    rval.append(x)
+                    x = db2.fetch_assoc(stmt)
+            else:
+                r = db2.exec_immediate(self.dbh, cmd)
+                x = db2.fetch_assoc(r)
+                while (x):
+                    rval.append(x)
+                    x = db2.fetch_assoc(r)
+                
+            return rval
+
+        # Translate any db2 errors to DBIerror
+        except ibm_db_dbi.Error, e:
+            raise DBIerror(str(e), dbname=self.dbname)
+        except Exception, e:
+            if self.__recognized_exception__(e):
+                raise DBIerror(str(e), dbname=self.dbname)
+            else:
+                raise
+
+    # -------------------------------------------------------------------------
+    def table_exists(self, table=''):
+        """
+        Check whether a table exists in a mysql database
+        """
+        if self.closed:
+            raise DBIerror("Cannot operate on a closed database.")
+        try:
+            rows = self.select(table="@syscat.tables",
+                               fields=['tabname'],
+                               where="tabschema = 'HPSS' and tabname = '%s'" %
+                               table.upper())
+            return 0 < len(rows)
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def update(self, table='', where='', fields=[], data=[]):
+        """
+        See DBI.update()
+        """
+        raise DBIerror("UPDATE not supported for DB2")
+
+    # -----------------------------------------------------------------------------
+    @classmethod
+    def hexstr(cls, bfid):
+        """
+        Convert a raw bitfile id into a hexadecimal string as presented by DB2.
+        """
+        rval = "x'" + DBIdb2.hexstr_uq(bfid) + "'"
+        return rval
+
+    @classmethod
+    # -----------------------------------------------------------------------------
+    def hexstr_uq(cls, bfid):
+        """
+        Convert a raw bitfile id into an unquoted hexadecimal string as presented
+        by DB2.
+        """
+        rval = "".join(["%02x" % ord(c) for c in list(bfid)])
+        return rval.upper()
 
