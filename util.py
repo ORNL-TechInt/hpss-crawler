@@ -181,6 +181,14 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
     return rval
 
 # -----------------------------------------------------------------------------
+def hostname(long=False):
+    if long:
+        rval = socket.gethostname()
+    else:
+        rval = socket.gethostname().split('.')[0]
+    return rval
+
+# -----------------------------------------------------------------------------
 def line_quote(value):
     """
     Wrap a set of lines with line-oriented quotes (three double quotes in a
@@ -251,7 +259,8 @@ def setup_logging(logfile='',
     
     rval = logging.getLogger(logname)
     rval.setLevel(logging.INFO)
-    host = socket.gethostname().split('.')[0]
+    # host = socket.gethostname().split('.')[0]
+    host = hostname()
     if rval.handlers != [] and logfile != rval.handlers[0].baseFilename:
         rval.handlers[0].close()
         del rval.handlers[0]
