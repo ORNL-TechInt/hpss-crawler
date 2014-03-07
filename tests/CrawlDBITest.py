@@ -76,7 +76,43 @@ def tearDownModule():
             db.drop(table=tname)
 
 # -----------------------------------------------------------------------------
-class DBITest(testhelp.HelpedTestCase):
+class DBITestRoot(testhelp.HelpedTestCase):
+    # -------------------------------------------------------------------------
+    def setup_select_test(self, table_name):
+        self.reset_db(table_name)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=table_name, fields=self.fdef)
+        db.insert(table=table_name, fields=self.fnames, data=self.testdata)
+        
+    # -------------------------------------------------------------------------
+    def exception_test(self, funcname, kwargs, exp):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        try:
+            if funcname == 'create':
+                db.create(**kwargs)
+            elif funcname == 'delete':
+                db.delete(**kwargs)
+            elif funcname == 'drop':
+                db.drop(**kwargs)
+            elif funcname == 'insert':
+                db.insert(**kwargs)
+            elif funcname == 'select':
+                rows = db.select(**kwargs)
+            elif funcname == 'update':
+                db.update(**kwargs)
+            else:
+                raise StandardError("unsupported function name '%s'" %
+                                    funcname)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    
+# -----------------------------------------------------------------------------
+class DBITest(DBITestRoot):
     """
     Tests for the DBI class
     """
@@ -123,7 +159,7 @@ class DBITest(testhelp.HelpedTestCase):
         self.expected(str(b), str(a))
 
 # -----------------------------------------------------------------------------
-class DBI_in_Base(testhelp.HelpedTestCase):
+class DBI_in_Base(DBITestRoot):
     """
     Basic tests for the DBI<dbname> classes that do not change the database.
 
@@ -390,6 +426,66 @@ class DBI_in_Base(testhelp.HelpedTestCase):
                          where='name = ?', data=('zippo',))
         self.expected(1, len(rows))
         self.expected([self.testdata[1],], list(rows))
+
+    # -------------------------------------------------------------------------
+    # Adding tests for limit in select. Conditions to be tested:
+
+    # -------------------------------------------------------------------------
+    #   - no limit argument (this is already tested)
+    #     > should retrieve all the data
+    # -------------------------------------------------------------------------
+    #   - limit not an int
+    #     > should throw exception
+    def test_select_l_nint(self):
+        tname = util.my_name().replace("test_", "")
+        self.setup_select_test(tname)
+        self.exception_test('select',
+                            {'table': tname,
+                             'fields': [],
+                             'limit': 'this is a string'},
+                            "On select(), limit must be an int")
+        
+    # -------------------------------------------------------------------------
+    #   - limit is an int
+    #     > should retrieve the specified number of records
+    def test_select_l_int(self):
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rlim = 3
+        rows = db.select(table=tname, fields=[], limit=rlim)
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.expected(rlim, len(rows))
+        for tup in self.testdata[0:3]:
+            self.assertTrue(tup in rows,
+                            "Expected %s in %s but it's not there" %
+                            (str(tup), util.line_quote(rows)))
+        
+    # -------------------------------------------------------------------------
+    #   - limit is a float
+    #     > should convert to an int and use it
+    def test_select_l_float(self):
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rlim = 2.7
+        rows = db.select(table=tname, fields=[], limit=rlim)
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.expected(int(rlim), len(rows))
+        for tup in self.testdata[0:3]:
+            self.assertTrue(tup in rows,
+                            "Expected %s in %s but it's not there" %
+                            (str(tup), util.line_quote(rows)))
 
     # -------------------------------------------------------------------------
     def test_select_mtf(self):
@@ -665,7 +761,7 @@ class DBI_in_Base(testhelp.HelpedTestCase):
         self.expected(False, db.table_exists(table=tname))
         
 # -----------------------------------------------------------------------------
-class DBI_out_Base(testhelp.HelpedTestCase):
+class DBI_out_Base(DBITestRoot):
     """
     Basic tests for the DBI<dbname> classes -- methods that change the
     database.
@@ -1792,6 +1888,38 @@ class DBIdb2Test(DBI_in_Base):
         #     self.assertTrue(exp in str(e),
         #                     "Got the wrong DBIerror: %s" %
         #                     util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    #   - limit not an int
+    #     > should throw exception
+    def test_select_l_nint(self):
+        self.exception_test('select',
+                            {'table': 'authzacl',
+                             'limit': 'not an int'},
+                            "On select(), limit must be an int")
+        self.fail('under construction')
+        
+    # -------------------------------------------------------------------------
+    #   - limit is an int
+    #     > should retrieve the specified number of records
+    def test_select_l_int(self):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rlim = 3
+        rows = db.select(table='hpss.server',
+                         limit=rlim)
+        self.expected(rlim, len(rows))
+        # self.fail('under construction')
+        
+    # -------------------------------------------------------------------------
+    #   - limit is a float
+    #     > should convert to an int and use it
+    def test_select_l_float(self):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rlim = 4.5
+        rows = db.select(table='hpss.server',
+                         limit=rlim)
+        self.expected(int(rlim), len(rows))
+        # self.fail('under construction')
 
     # -------------------------------------------------------------------------
     def test_select_mtf(self):
