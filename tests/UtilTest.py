@@ -490,6 +490,41 @@ class UtilTest(testhelp.HelpedTestCase):
                          '%s should exist but does not' % logpath)
         
     # -------------------------------------------------------------------------
+    def test_hostname_default(self):
+        """
+        Calling util.hostname() with no argument should get the short hostname
+        """
+        hn = util.hostname()
+        self.assertFalse('.' in hn,
+                         "Short hostname expected but got '%s'" % hn)
+
+    # -------------------------------------------------------------------------
+    def test_hostname_long(self):
+        """
+        Calling util.hostname(long=True) or util.hostname(True) should get the
+        long hostanme
+        """
+        hn = util.hostname(long=True)
+        self.assertTrue('.' in hn,
+                        "Expected long hostname but got '%s'" % hn)
+        hn = util.hostname(True)
+        self.assertTrue('.' in hn,
+                        "Expected long hostname but got '%s'" % hn)
+        
+    # -------------------------------------------------------------------------
+    def test_hostname_short(self):
+        """
+        Calling util.hostname(long=False) or util.hostname(False) should get
+        the short hostname
+        """
+        hn = util.hostname(long=False)
+        self.assertFalse('.' in hn,
+                         "Expected short hostname but got '%s'" % hn)
+        hn = util.hostname(False)
+        self.assertFalse('.' in hn,
+                         "Expected short hostname but got '%s'" % hn)
+        
+    # -------------------------------------------------------------------------
     def test_line_quote(self):
         """
         line_quote is supposed to wrap a string in line-based quote marks
