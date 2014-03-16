@@ -255,6 +255,7 @@ def module_test_setup(dir):
     The argument may be a string (a single directory) or a list (one or more
     directories).
     """
+    module_test_setup.crawl_conf_orig = os.getenv('CRAWL_CONF')
     if type(dir) == str:
         reset_directory(dir)
     elif type(dir) == list:
@@ -275,7 +276,11 @@ def module_test_teardown(dir):
         elif type(dir) == list:
             for dirname in dir:
                 reset_directory(dirname, make=False)
-    
+    if module_test_setup.crawl_conf_orig is None and os.getenv('CRAWL_CONF') is not None:
+        del os.environ['CRAWL_CONF']
+    elif module_test_setup.crawl_conf_orig != os.getenv('CRAWL_CONF'):
+        os.environ['CRAWL_CONF'] = module_test_setup.crawl_conf_orig
+        
 # -----------------------------------------------------------------------------
 def reset_directory(dirpath, make=True):
     """
