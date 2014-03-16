@@ -10,6 +10,7 @@ import MySQLdb as mysql
 import _mysql_exceptions as mysql_exc
 import pdb
 import sqlite3
+import util
 import warnings
 
 # -----------------------------------------------------------------------------
@@ -429,7 +430,8 @@ class DBIsqlite(DBI_abstract):
                where='',
                data=(),
                groupby='',
-               orderby=''):
+               orderby='',
+               limit=None):
         """
         See DBI.select()
         """
@@ -458,7 +460,9 @@ class DBIsqlite(DBI_abstract):
         elif '?' not in where and data != ():
             raise DBIerror("Data would be ignored",
                            dbname=self.dbname)
-
+        elif limit is not None and type(limit) not in [int, float]:
+            raise DBIerror("On select(), limit must be an int")
+        
         # Build and run the select statement 
         try:
             cmd = "select "
@@ -473,6 +477,8 @@ class DBIsqlite(DBI_abstract):
                 cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
+            if limit is not None:
+                cmd += " limit %d" % int(limit)
 
             c = self.dbh.cursor()
             if '?' in cmd:
@@ -760,7 +766,8 @@ class DBImysql(DBI_abstract):
                where='',
                data=(),
                groupby='',
-               orderby=''):
+               orderby='',
+               limit=None):
         """
         Select from a mysql database.
         """
@@ -789,6 +796,8 @@ class DBImysql(DBI_abstract):
         elif '?' not in where and data != ():
             raise DBIerror("Data would be ignored",
                            dbname=self.dbname)
+        elif limit is not None and type(limit) not in [int, float]:
+            raise DBIerror("On select(), limit must be an int")
 
         # Build and run the select statement 
         try:
@@ -804,6 +813,8 @@ class DBImysql(DBI_abstract):
                 cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
+            if limit is not None:
+                cmd += " limit 0, %d" % int(limit)
 
             c = self.dbh.cursor()
             if '%s' in cmd:
@@ -904,18 +915,18 @@ class DBIdb2(DBI_abstract):
         if self.tbl_prefix != '':
             self.tbl_prefix = self.tbl_prefix.rstrip('.') + '.'
         cfg = kwargs['cfg']
+        util.env_update(cfg)
         host = cfg.get('db2', 'hostname')
         port = cfg.get('db2', 'port')
         username = cfg.get('db2', 'username')
         password = base64.b64decode(cfg.get('db2', 'password'))
         try:
-            self.dbh = db2.connect("database=%s;" % self.dbname +
-                                   "hostname=%s;" % host +
-                                   "port=%s;" % port +
-                                   "uid=%s;" % username +
-                                   "pwd=%s;" % password,
-                                   "",
-                                   "")
+            cxnstr = ("database=%s;" % self.dbname +
+                      "hostname=%s;" % host +
+                      "port=%s;" % port +
+                      "uid=%s;" % username +
+                      "pwd=%s;" % password)
+            self.dbh = db2.connect(cxnstr, "", "")
             self.closed = False
         except ibm_db_dbi.Error, e:
             raise DBIerror("%s" % str(e))
@@ -1005,7 +1016,8 @@ class DBIdb2(DBI_abstract):
                where='',
                data=(),
                groupby='',
-               orderby=''):
+               orderby='',
+               limit=None):
         """
         Select from a DB2 database.
         """
@@ -1034,6 +1046,8 @@ class DBIdb2(DBI_abstract):
         elif '?' not in where and data != ():
             raise DBIerror("Data would be ignored",
                            dbname=self.dbname)
+        elif limit is not None and type(limit) not in [int, float]:
+            raise DBIerror("On select(), limit must be an int")
 
         # Build and run the select statement 
         try:
@@ -1049,7 +1063,9 @@ class DBIdb2(DBI_abstract):
                 cmd += " group by %s" % groupby
             if orderby != '':
                 cmd += " order by %s" % orderby
-
+            if limit is not None:
+                cmd += " fetch first %d rows only" % int(limit)
+                
             rval = []
             if '?' in cmd:
                 stmt = db2.prepare(self.dbh, cmd)
