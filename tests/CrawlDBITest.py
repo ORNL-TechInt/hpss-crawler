@@ -461,7 +461,7 @@ class DBI_in_Base(DBITestRoot):
                          "Expected three fields in each row, got %d" %
                          len(rows[0]))
         self.expected(rlim, len(rows))
-        for tup in self.testdata[0:3]:
+        for tup in self.testdata[0:int(rlim)]:
             self.assertTrue(tup in rows,
                             "Expected %s in %s but it's not there" %
                             (str(tup), util.line_quote(rows)))
@@ -482,7 +482,7 @@ class DBI_in_Base(DBITestRoot):
                          "Expected three fields in each row, got %d" %
                          len(rows[0]))
         self.expected(int(rlim), len(rows))
-        for tup in self.testdata[0:3]:
+        for tup in self.testdata[0:int(rlim)]:
             self.assertTrue(tup in rows,
                             "Expected %s in %s but it's not there" %
                             (str(tup), util.line_quote(rows)))
@@ -1897,7 +1897,6 @@ class DBIdb2Test(DBI_in_Base):
                             {'table': 'authzacl',
                              'limit': 'not an int'},
                             "On select(), limit must be an int")
-        self.fail('under construction')
         
     # -------------------------------------------------------------------------
     #   - limit is an int
