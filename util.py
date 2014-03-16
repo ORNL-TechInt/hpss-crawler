@@ -292,3 +292,25 @@ def setup_logging(logfile='',
         rval.info('-' * (55 - len(host)))
     return rval
 
+# -----------------------------------------------------------------------------
+def ymdhms(epoch):
+    return time.strftime("%Y.%m%d %H:%M:%S",
+                         time.localtime(epoch))
+
+# -----------------------------------------------------------------------------
+def epoch(ymdhms):
+    fmts = ["%Y.%m%d %H:%M:%S",
+            "%Y.%m%d",
+            ]
+    fp = fmts
+    rval = None
+    while rval is None:
+        try:
+            rval = time.mktime(time.strptime(ymdhms, fp.pop(0)))
+        except ValueError:
+            rval = None
+        except IndexError:
+            print("The date '%s' does not match any of the formats: %s" %
+                  (ymdhms, fmts))
+
+    return rval
