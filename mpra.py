@@ -3,9 +3,82 @@ import CrawlConfig
 import CrawlDBI
 import optparse
 import pdb
+import re
 import time
 import toolframe
 import util
+
+# -----------------------------------------------------------------------------
+def mpra_age(args):
+    """age - list the records in table BFMIGRREC or BFPURGEREC older than age
+
+    usage: mpra age -t [migr|purge] -a/--age N[S|M|H|d|m|Y] [-c/--count]
+
+    Report migration records (or a count of them) older than the age indicated.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-a', '--age',
+                 action='store', default='', dest='age',
+                 help='report records older than this')
+    p.add_option('-c', '--count',
+                 action='store_true', default=False, dest='count',
+                 help='report record counts rather than records')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-t', '--table',
+                 action='store', default='', dest='table',
+                 help='which table to age')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    cfg = CrawlConfig.get_config()
+    cfg.set('dbi', 'dbtype', 'db2')
+    cfg.set('dbi', 'tbl_prefix', 'hpss')
+    if util.hostname() == 'hpss-dev01':
+        cfg.set('dbi', 'dbname', 'subsys')
+    elif util.hostname() == 'hpss-crawler01':
+        cfg.set('dbi', 'dbname', 'hsubsys1')
+
+    db = CrawlDBI.DBI(cfg=cfg)
+
+    if o.age != '':
+        age_epoch = int(time.time()) - age_seconds(o.age)
+    else:
+        age = cfg.get('mpra', 'age')
+        age_epoch = int(time.time()) - age_seconds(age)
+
+    dbargs = {'where': 'record_create_time < ?',
+              'data': (age_epoch,)}
+    if o.count:
+        dbargs['fields'] = ['count(*)']
+
+    if o.table == '':
+        dbargs['table'] = 'bfmigrrec'
+    elif o.table.lower() == 'purge':
+        dbargs['table'] = 'bfpurgerec'
+    elif o.table.lower() == 'migr':
+        dbargs['table'] = 'bfmigrrec'
+
+    rows = db.select(**dbargs)
+    for row in rows:
+        if o.count:
+            print("Records found: %d" % row['1'])
+        else:
+            print("%s %s %d" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
+                                util.ymdhms(row['RECORD_CREATE_TIME']),
+                                row['MIGRATION_FAILURE_COUNT']))
+
+# -----------------------------------------------------------------------------
+def age_seconds(agespec):
+    """
+    Convert a specification like 10S, 5 M, 7d, etc., to a number of seconds
+    """
+    mult = {'S': 1, 'M': 60, 'H': 3600,
+            'd': 3600*24, 'm': 30*3600*24, 'Y': 365*3600*24}
+    [(mag, unit)] = re.findall("\s*(\d+)\s*(S|M|H|d|m|Y)", agespec)
+    return int(mag) * mult[unit]
 
 # -----------------------------------------------------------------------------
 def mpra_migr_recs(args):
@@ -24,6 +97,9 @@ def mpra_migr_recs(args):
     DATE-TIME.
     """
     p = optparse.OptionParser()
+    p.add_option('-c', '--count',
+                 action='store_true', default=False, dest='count',
+                 help='report record counts rather than records')
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
@@ -85,11 +161,17 @@ def mpra_migr_recs(args):
         dbargs['where'] = '? < record_create_time and record_create_time < ?'
         dbarsg['data'] = (util.epoch(o.after), util.epoch(o.before))
 
+    if o.count:
+        dbargs['fields'] = ['count(*)']
+        
     rows = db.select(**dbargs)
     for row in rows:
-        print("%s %s %d" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
-                            util.ymdhms(row['RECORD_CREATE_TIME']),
-                            row['MIGRATION_FAILURE_COUNT']))
+        if o.count:
+            print("Records found: %d" % row['1'])
+        else:
+            print("%s %s %d" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
+                                util.ymdhms(row['RECORD_CREATE_TIME']),
+                                row['MIGRATION_FAILURE_COUNT']))
 
 # -----------------------------------------------------------------------------
 def mpra_unique_times(args):
