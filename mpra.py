@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import CrawlConfig
 import CrawlDBI
+import mpra_lib
 import optparse
 import pdb
 import re
@@ -32,53 +33,21 @@ def mpra_age(args):
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
-
-    cfg = CrawlConfig.get_config()
-    cfg.set('dbi', 'dbtype', 'db2')
-    cfg.set('dbi', 'tbl_prefix', 'hpss')
-    if util.hostname() == 'hpss-dev01':
-        cfg.set('dbi', 'dbname', 'subsys')
-    elif util.hostname() == 'hpss-crawler01':
-        cfg.set('dbi', 'dbname', 'hsubsys1')
-
-    db = CrawlDBI.DBI(cfg=cfg)
-
-    if o.age != '':
-        age_epoch = int(time.time()) - age_seconds(o.age)
-    else:
-        age = cfg.get('mpra', 'age')
-        age_epoch = int(time.time()) - age_seconds(age)
-
-    dbargs = {'where': 'record_create_time < ?',
-              'data': (age_epoch,)}
-    if o.count:
-        dbargs['fields'] = ['count(*)']
-
     if o.table == '':
-        dbargs['table'] = 'bfmigrrec'
-    elif o.table.lower() == 'purge':
-        dbargs['table'] = 'bfpurgerec'
-    elif o.table.lower() == 'migr':
-        dbargs['table'] = 'bfmigrrec'
-
-    rows = db.select(**dbargs)
-    for row in rows:
-        if o.count:
-            print("Records found: %d" % row['1'])
-        else:
+        o.table = 'migr'
+        
+    result = mpra_lib.age(o.table, o.age, o.count)
+    if o.count:
+        print("Records found: %d" % result)
+    elif o.table.lower() != 'purge':
+        for row in result:
             print("%s %s %d" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
                                 util.ymdhms(row['RECORD_CREATE_TIME']),
                                 row['MIGRATION_FAILURE_COUNT']))
-
-# -----------------------------------------------------------------------------
-def age_seconds(agespec):
-    """
-    Convert a specification like 10S, 5 M, 7d, etc., to a number of seconds
-    """
-    mult = {'S': 1, 'M': 60, 'H': 3600,
-            'd': 3600*24, 'm': 30*3600*24, 'Y': 365*3600*24}
-    [(mag, unit)] = re.findall("\s*(\d+)\s*(S|M|H|d|m|Y)", agespec)
-    return int(mag) * mult[unit]
+    else:
+        for row in result:
+            print("%s %s" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
+                             util.ymdhms(row['RECORD_CREATE_TIME'])))
 
 # -----------------------------------------------------------------------------
 def mpra_migr_recs(args):
