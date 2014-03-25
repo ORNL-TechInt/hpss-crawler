@@ -1,15 +1,27 @@
 import CrawlConfig
 import CrawlDBI
 import re
+import sys
 import time
 import util
 
 # -----------------------------------------------------------------------------
-def age(table, age=None, count=False):
+def age(table, age=None, count=False, output=None):
     """
     Retrieve and return (count of) records past a certain age.
     """
     cfg = CrawlConfig.get_config()
+    opened = True
+    if output is None:
+        f = open(cfg.get('mpra', 'report_file'), 'a')
+    elif type(output) == str:
+        f = open(output, 'a')
+    elif type(output) == file:
+        f = output
+        opened = False
+    else:
+        raise StandardError("output type must be 'str' or 'file' ")
+
     cfg.set('dbi', 'dbtype', 'db2')
     cfg.set('dbi', 'tbl_prefix', 'hpss')
     if util.hostname() == 'hpss-dev01':
@@ -34,10 +46,30 @@ def age(table, age=None, count=False):
         dbargs['table'] = 'bfmigrrec'
 
     rows = db.select(**dbargs)
+    age_report(table, age, count, rows, f)
+
+    if opened:
+        f.close()
+
+# -----------------------------------------------------------------------------
+def age_report(table, age, count, result, f):
+
     if count:
-        return rows[0]['1']
-    else:
-        return rows
+        f.write("%s records older than %s: %d\n"
+                % (table, age, result[0]['1']))
+    elif table == 'migr':
+        f.write("Migration Records Older Than %s\n" % age)
+        f.write("%-67s %-18s %s\n" % ("BFID", "Created", "MigrFails"))
+        for row in result:
+            f.write("%s %s %d\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
+                                    util.ymdhms(row['RECORD_CREATE_TIME']),
+                                    row['MIGRATION_FAILURE_COUNT']))
+    elif table == 'purge':
+        f.write("Purge Records Older Than %s" % age)
+        f.write("%-67s %-18s\n" % ("BFID", "Created"))
+        for row in result:
+            f.write("%s %s\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
+                                    util.ymdhms(row['RECORD_CREATE_TIME'])))
 
 # -----------------------------------------------------------------------------
 def age_seconds(agespec):
