@@ -5,6 +5,7 @@ import mpra_lib
 import optparse
 import pdb
 import re
+import sys
 import time
 import toolframe
 import util
@@ -36,18 +37,7 @@ def mpra_age(args):
     if o.table == '':
         o.table = 'migr'
         
-    result = mpra_lib.age(o.table, o.age, o.count)
-    if o.count:
-        print("Records found: %d" % result)
-    elif o.table.lower() != 'purge':
-        for row in result:
-            print("%s %s %d" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
-                                util.ymdhms(row['RECORD_CREATE_TIME']),
-                                row['MIGRATION_FAILURE_COUNT']))
-    else:
-        for row in result:
-            print("%s %s" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
-                             util.ymdhms(row['RECORD_CREATE_TIME'])))
+    result = mpra_lib.age(o.table, o.age, o.count, sys.stdout)
 
 # -----------------------------------------------------------------------------
 def mpra_migr_recs(args):

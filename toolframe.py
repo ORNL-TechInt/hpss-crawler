@@ -117,12 +117,12 @@ def tf_help(A, prefix=None):
     d.append('tf_help')
     for o in d:
         if o.startswith(prefix + '_'):
-            f = o.replace(prefix + '_', '')
-            x = eval("sys.modules['__main__'].%s.__doc__" % o)
-            docsum = x.split('\n')[0]
-            print "   %s" % (docsum)
+            func = getattr(sys.modules['__main__'], o)
+            doc = func.__doc__
+            if doc is not None:
+                docsum = doc.split('\n')[0]
+                print "   %s" % (docsum)
         elif o == 'tf_help':
-            f = 'help'
             docsum = tf_help.__doc__.split('\n')[0]
             print "   %s" % (docsum)
             
