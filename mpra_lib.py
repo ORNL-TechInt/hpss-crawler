@@ -2,11 +2,12 @@ import CrawlConfig
 import CrawlDBI
 import re
 import sys
+import tcc_common
 import time
 import util
 
 # -----------------------------------------------------------------------------
-def age(table, age=None, count=False, output=None):
+def age(table, age=None, count=False, output=None, path=False):
     """
     Retrieve and return (count of) records past a certain age.
     """
@@ -46,13 +47,13 @@ def age(table, age=None, count=False, output=None):
         dbargs['table'] = 'bfmigrrec'
 
     rows = db.select(**dbargs)
-    age_report(table, age, count, rows, f)
+    age_report(table, age, count, rows, f, path)
 
     if opened:
         f.close()
 
 # -----------------------------------------------------------------------------
-def age_report(table, age, count, result, f):
+def age_report(table, age, count, result, f, path=False):
 
     if count:
         f.write("%s records older than %s: %d\n"
@@ -64,12 +65,18 @@ def age_report(table, age, count, result, f):
             f.write("%s %s %d\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
                                     util.ymdhms(row['RECORD_CREATE_TIME']),
                                     row['MIGRATION_FAILURE_COUNT']))
+            if path:
+                path = tcc_common.get_bitfile_path(row['BFID'])
+                f.write("   %s\n" % path)
     elif table == 'purge':
         f.write("Purge Records Older Than %s" % age)
         f.write("%-67s %-18s\n" % ("BFID", "Created"))
         for row in result:
             f.write("%s %s\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
                                     util.ymdhms(row['RECORD_CREATE_TIME'])))
+            if path:
+                path = tcc_common.get_bitfile_path(row['BFID'])
+                f.write("   %s\n" % path)
 
 # -----------------------------------------------------------------------------
 def age_seconds(agespec):
