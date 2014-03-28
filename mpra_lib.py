@@ -32,18 +32,12 @@ def age(table,
     else:
         raise StandardError("output type must be 'str' or 'file' ")
 
-    cfg.set('dbi', 'dbtype', 'db2')
-    cfg.set('dbi', 'tbl_prefix', 'hpss')
     if util.hostname() == 'hpss-dev01':
-        cfg.set('dbi', 'dbname', 'subsys')
+        dbname = 'subsys'
     elif util.hostname() == 'hpss-crawler01':
-        cfg.set('dbi', 'dbname', 'hsubsys1')
+        dbname = 'hsubsys1'
 
-    # if age is None or age == '':
-    #     age = cfg.get('mpra', 'age')
-    # age_epoch = int(time.time()) - age_seconds(age)
-
-    db = CrawlDBI.DBI(cfg=cfg)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
     if start is not None and end is not None:
         dbargs = {'where': '? < record_create_time and record_create_time < ?',
                   'data': (start, end)}
