@@ -7,9 +7,18 @@ import time
 import util
 
 # -----------------------------------------------------------------------------
-def age(table, age=None, count=False, output=None, path=False):
+def age(table,
+        start=None,
+        end=None,
+        count=False,
+        output=None,
+        path=False,
+        mark=False):
     """
-    Retrieve and return (count of) records past a certain age.
+    Retrieve and return (count of) records older than end and younger than
+    start. The result is written to output. If path is True, age_report will
+    compute the bitfile pathname and report it as well. If mark is True, we
+    update the mpra table with the date/time of the newest record reported.
     """
     cfg = CrawlConfig.get_config()
     opened = True
@@ -30,13 +39,22 @@ def age(table, age=None, count=False, output=None, path=False):
     elif util.hostname() == 'hpss-crawler01':
         cfg.set('dbi', 'dbname', 'hsubsys1')
 
-    if age is None or age == '':
-        age = cfg.get('mpra', 'age')
-    age_epoch = int(time.time()) - age_seconds(age)
+    # if age is None or age == '':
+    #     age = cfg.get('mpra', 'age')
+    # age_epoch = int(time.time()) - age_seconds(age)
 
     db = CrawlDBI.DBI(cfg=cfg)
-    dbargs = {'where': 'record_create_time < ?',
-              'data': (age_epoch,)}
+    if start is not None and end is not None:
+        dbargs = {'where': '? < record_create_time and record_create_time < ?',
+                  'data': (start, end)}
+    elif start is None and end is not None:
+        dbargs = {'where': 'record_create_time < ?',
+                  'data': (end, )}
+    elif start is not None and end is None:
+        dbargs = {'where': '? < record_create_time',
+                  'data': (start, )}
+    # if both start and end are None, we leave the select unconstrained
+    
     if count:
         dbargs['fields'] = ['count(*)']
 
@@ -49,12 +67,22 @@ def age(table, age=None, count=False, output=None, path=False):
     rows = db.select(**dbargs)
     age_report(table, age, count, rows, f, path)
 
+    if mark:
+        recent = 0
+        for row in rows:
+            if recent < row['RECORD_CREATE_TIME']:
+                recent = row['RECORD_CREATE_TIME']
+        mpra_record_recent(table, recent)
+
     if opened:
         f.close()
 
 # -----------------------------------------------------------------------------
 def age_report(table, age, count, result, f, path=False):
-
+    """
+    mark: If True, record the most recent record reported in our scribble
+    database
+    """
     if count:
         f.write("%s records older than %s: %d\n"
                 % (table, age, result[0]['1']))
@@ -88,3 +116,47 @@ def age_seconds(agespec):
     [(mag, unit)] = re.findall("\s*(\d+)\s*(S|M|H|d|m|Y)", agespec)
     return int(mag) * mult[unit]
 
+# -----------------------------------------------------------------------------
+def mpra_record_recent(type, recent):
+    """
+    Record the most recent record reported so we don't report records
+    repeatedly
+    """
+    db = CrawlDBI.DBI()
+    if not db.table_exists(table='mpra'):
+        util.log("Creating mpra table")
+        db.create(table='mpra',
+                  fields=['recent_time   integer',
+                          'type          text'])
+    rows = db.select(table='mpra',
+                     fields=['recent_time'])
+    if len(rows) < 1:
+        util.log("Insert into mpra table")
+        db.insert(table='mpra',
+                  fields=['type', 'recent_time'],
+                  data=[(type, recent)])
+    else:
+        util.log("Update mpra table")
+        db.update(table='mpra',
+                  fields=['recent_time'],
+                  where='type = ?',
+                  data=[(recent, type)])
+
+# -----------------------------------------------------------------------------
+def mpra_fetch_recent(type):
+    """
+    Retrieve and return the most recent record reported so we don't report the
+    same record repeatedly
+    """
+    db = CrawlDBI.DBI()
+    if not db.table_exists(table='mpra'):
+        util.log("Fetch from not existent mpra table -- return 0")
+        return 0
+
+    rows = db.select(table='mpra',
+                     fields=['max(recent_time)'],
+                     where='type = ?',
+                     data=(type,))
+
+    util.log("Fetch from mpra table -- return %d" % rows[0][0])
+    return rows[0][0]

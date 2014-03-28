@@ -204,4 +204,27 @@ def mpra_purge_recs(args):
     if o.debug: pdb.set_trace()
 
 # -----------------------------------------------------------------------------
+def mpra_simplug(args):
+    """simplug - simulate the plugin
+
+    usage: mpra simplug
+
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-D', '--db',
+                 action='store', default='', dest='dbsect',
+                 help='which database to access')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    cfg = CrawlConfig.get_config()
+    sys.path.append(cfg.get('crawler', 'plugin-dir'))
+    import mpra_plugin
+    mpra_plugin.main(cfg)
+
+# -----------------------------------------------------------------------------
 toolframe.tf_launch('mpra', __name__)
