@@ -22,22 +22,36 @@ def mpra_age(args):
     p.add_option('-a', '--age',
                  action='store', default='', dest='age',
                  help='report records older than this')
+    p.add_option('-b', '--before',
+                 action='store', default='', dest='before',
+                 help='report records from before this epoch')
     p.add_option('-c', '--count',
                  action='store_true', default=False, dest='count',
                  help='report record counts rather than records')
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-p', '--path',
+                 action='store_true', default=False, dest='path',
+                 help='report paths as well as bitfile IDs')
     p.add_option('-t', '--table',
                  action='store', default='', dest='table',
                  help='which table to age')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
+
+    if o.age and o.before:
+        raise StandardError("--age and --before are mutually exclusive")
+    elif o.before:
+        age = str(int(time.time()) - int(o.before)) + "S"
+    else:
+        age = o.age
+        
     if o.table == '':
         o.table = 'migr'
         
-    result = mpra_lib.age(o.table, o.age, o.count, sys.stdout)
+    result = mpra_lib.age(o.table, age, o.count, sys.stdout, path=o.path)
 
 # -----------------------------------------------------------------------------
 def mpra_migr_recs(args):

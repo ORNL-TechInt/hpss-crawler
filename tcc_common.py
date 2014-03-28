@@ -53,7 +53,7 @@ def get_bitfile_path(bitfile):
               select parent_id, name from hpss.nsobject where bitfile_id = %s
               """ % hexstr(bitfile)
 
-    util.log("Query: %s" % sql)
+    # util.log("Query: %s" % sql)
     r = db2.exec_immediate(db, sql)
     x = db2.fetch_assoc(r)
     bfl = []
@@ -64,7 +64,9 @@ def get_bitfile_path(bitfile):
     if 1 < len(bfl):
         raise StandardError("Multiple objects found for bf %s" %
                             hexstr(bitfile))
-
+    elif len(bfl) < 1:
+        return("<unnamed bitfile>")
+    
     x = bfl[0]
     rval = ''
     while x:
