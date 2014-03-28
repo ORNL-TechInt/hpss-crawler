@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import CrawlConfig
 import mpra_lib
+import time
+import util
 
 # -----------------------------------------------------------------------------
 def main(cfg):
@@ -9,12 +11,21 @@ def main(cfg):
     BFPURGEREC and reports migration and purge records that are older than the
     age specified in the configuration.
     """
-    cfg = CrawlConfig.get_config()
+    if cfg is None:
+        cfg = CrawlConfig.get_config()
     age = cfg.get('mpra', 'age')
 
-    result = mpra_lib.age("migr", age)
+    end = time.time() - mpra_lib.age_seconds(age)
+
+    start = mpra_lib.mpra_fetch_recent("migr")
+    util.log("searching for migration records betweeen %d and %d" %
+             (start, end))
+    result = mpra_lib.age("migr", start=start, end=end, mark=True)
                 
-    result = mpra_lib.age("purge", age)
+    start = mpra_lib.mpra_fetch_recent("purge")
+    util.log("searching for purge records betweeen %d and %d" %
+             (start, end))
+    result = mpra_lib.age("purge", start=start, end=end, mark=True)
                 
             
         
