@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import CrawlConfig
 import mpra_lib
 
 # -----------------------------------------------------------------------------
