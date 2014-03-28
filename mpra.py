@@ -90,14 +90,12 @@ def mpra_migr_recs(args):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
-    cfg.set('dbi', 'dbtype', 'db2')
-    cfg.set('dbi', 'tbl_prefix', 'hpss')
     if util.hostname() == 'hpss-dev01':
-        cfg.set('dbi', 'dbname', 'subsys')
+        dbname = 'subsys'
     elif util.hostname() == 'hpss-crawler01':
-        cfg.set('dbi', 'dbname', 'hsubsys1')
+        dbname = 'hsubsys1'
 
-    db = CrawlDBI.DBI(cfg=cfg)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
 
     dbargs = {'table': 'bfmigrrec'}
     
@@ -222,6 +220,7 @@ def mpra_simplug(args):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
+    util.log("starting simplug, just got config")
     sys.path.append(cfg.get('crawler', 'plugin-dir'))
     import mpra_plugin
     mpra_plugin.main(cfg)

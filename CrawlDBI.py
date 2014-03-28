@@ -68,26 +68,44 @@ class DBI(object):
         for now.
         """
 
-        # Check for invalid arguments in kwargs. Only 'cfg' is accepted. Other
-        # classes should not care about database name, database type, etc. That
-        # should all come from the configuration.
+        # Check for invalid arguments in kwargs. Only 'cfg', 'dbtype', and
+        # 'dbname' are accepted. Other classes may need to select 'db2' for the
+        # database type and if so will need to specify the database name, but
+        # everything else should come from the configuration.
+
         for key in kwargs:
-            if key != 'cfg':
+            if key not in ['cfg', 'dbtype', 'dbname']:
                 raise DBIerror("Attribute '%s' is not valid for %s" %
                                (key, self.__class__))
         if 0 < len(args):
             if not isinstance(args[0], CrawlConfig.CrawlConfig):
                 raise DBIerror("Unrecognized argument to %s. " % self.__class__ +
                                "Only 'cfg=<config>' is accepted")
-
+        if 'dbtype' in kwargs and kwargs['dbtype'] != 'db2':
+            raise DBIerror("Only dbtype='db2' may be specified explicitly")
+        
+        if 'dbname' in kwargs and 'dbtype' not in kwargs:
+            raise DBIerror("dbname may only be specified if dbtype = 'db2'")
 
         # Figure out the dbtype
         try:
-            if 'cfg' in kwargs:
+            if 'dbtype' in kwargs and 'cfg' in kwargs:
+                cfg = kwargs['cfg']
+                dbtype = kwargs['dbtype']
+                del kwargs['dbtype']
+                tbl_pfx = 'hpss'
+                # dbname = cfg.get(dbtype, 'dbname')
+            elif 'dbtype' not in kwargs and 'cfg' in kwargs:
                 cfg = kwargs['cfg']
                 dbtype = cfg.get('dbi', 'dbtype')
                 tbl_pfx = cfg.get('dbi', 'tbl_prefix')
                 dbname = cfg.get('dbi', 'dbname')
+            elif 'dbtype' in kwargs and 'cfg' not in kwargs:
+                cfg = CrawlConfig.get_config()
+                dbtype = kwargs['dbtype']
+                del kwargs['dbtype']
+                tbl_pfx = 'hpss'
+                # dbname = cfg.get(dbtype, 'dbname')
             else:
                 cfg = CrawlConfig.get_config()
                 dbtype = cfg.get('dbi', 'dbtype')
@@ -914,7 +932,10 @@ class DBIdb2(DBI_abstract):
 
         if self.tbl_prefix != '':
             self.tbl_prefix = self.tbl_prefix.rstrip('.') + '.'
-        cfg = kwargs['cfg']
+        try:
+            cfg = kwargs['cfg']
+        except:
+            cfg = CrawlConfig.get_config()
         util.env_update(cfg)
         host = cfg.get('db2', 'hostname')
         port = cfg.get('db2', 'port')
