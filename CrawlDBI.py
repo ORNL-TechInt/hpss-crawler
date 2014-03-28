@@ -918,8 +918,14 @@ class DBIdb2(DBI_abstract):
         util.env_update(cfg)
         host = cfg.get('db2', 'hostname')
         port = cfg.get('db2', 'port')
-        username = cfg.get('db2', 'username')
-        password = base64.b64decode(cfg.get('db2', 'password'))
+        try:
+            username = cfg.get('db2', 'username')
+        except:
+            username = ''
+        try:
+            password = base64.b64decode(cfg.get('db2', 'password'))
+        except:
+            password = ''
         try:
             cxnstr = ("database=%s;" % self.dbname +
                       "hostname=%s;" % host +

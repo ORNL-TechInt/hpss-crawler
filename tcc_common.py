@@ -21,20 +21,18 @@ def db2cxn(dbsel):
         dbport = cfg.get('db2', 'port')
         dbuser = cfg.get('db2', 'username')
         dbpwd = base64.b64decode(cfg.get('db2', 'password'))
-        db2cxn._db['cfg'] = db2.connect("database=%s;" % cfgname +
-                                        "hostname=%s;" % dbhost +
-                                        "port=%s;" % dbport +
-                                        "uid=%s;" % dbuser +
-                                        "pwd=%s;" % dbpwd,
-                                        "",
-                                        "")
-        db2cxn._db['subsys'] = db2.connect("database=%s;" % subname +
-                                        "hostname=%s;" % dbhost +
-                                        "port=%s;" % dbport +
-                                        "uid=%s;" % dbuser +
-                                        "pwd=%s;" % dbpwd,
-                                        "",
-                                        "")
+        cxnstr = ("database=%s;" % cfgname +
+                  "hostname=%s;" % dbhost +
+                  "port=%s;" % dbport +
+                  "uid=%s;" % dbuser +
+                  "pwd=%s;" % dbpwd)
+        db2cxn._db['cfg'] = db2.connect(cxnstr, "", "")
+        cxnstr = ("database=%s;" % subname +
+                  "hostname=%s;" % dbhost +
+                  "port=%s;" % dbport +
+                  "uid=%s;" % dbuser +
+                  "pwd=%s;" % dbpwd)
+        db2cxn._db['subsys'] = db2.connect(cxnstr, "", "")
         rval = db2cxn._db[dbsel]
     return rval
         
