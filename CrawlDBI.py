@@ -94,7 +94,7 @@ class DBI(object):
                 dbtype = kwargs['dbtype']
                 del kwargs['dbtype']
                 tbl_pfx = 'hpss'
-                # dbname = cfg.get(dbtype, 'dbname')
+                dbname = kwargs['dbname']
             elif 'dbtype' not in kwargs and 'cfg' in kwargs:
                 cfg = kwargs['cfg']
                 dbtype = cfg.get('dbi', 'dbtype')
@@ -105,29 +105,22 @@ class DBI(object):
                 dbtype = kwargs['dbtype']
                 del kwargs['dbtype']
                 tbl_pfx = 'hpss'
-                # dbname = cfg.get(dbtype, 'dbname')
-            else:
+                dbname = kwargs['dbname']
+            elif 'dbtype' not in kwargs and 'cfg' not in kwargs:
                 cfg = CrawlConfig.get_config()
                 dbtype = cfg.get('dbi', 'dbtype')
                 tbl_pfx = cfg.get('dbi', 'tbl_prefix')
                 dbname = cfg.get('dbi', 'dbname')
                 kwargs['cfg'] = cfg
+            else:
+                raise StandardError("'%s not in kwargs(%s)" %
+                                    ("'dbtype' and 'cfg' both in and",
+                                    str(kwargs)))
         except CrawlConfig.NoSectionError:
             dbtype = 'sqlite'
         except CrawlConfig.NoOptionError:
             dbtype = 'sqlite'
 
-        # Next, get the dbname and table prefix from the config
-        try:
-            dbname = cfg.get('dbi', 'dbname')
-        except:
-            raise DBIerror("A database name is required in configuration")
-
-        try:
-            tbl_pfx = cfg.get('dbi', 'tbl_prefix')
-        except:
-            raise DBIerror("A table prefix is required in configuration")
-        
         kwargs['dbname'] = dbname
         kwargs['tbl_prefix'] = tbl_pfx
         if dbtype == 'sqlite':
@@ -725,7 +718,7 @@ class DBImysql(DBI_abstract):
             raise DBIerror("On drop(), table name must not be empty",
                            dbname=self.dbname)
 
-        # Construct and run the create statement
+        # Construct and run the drop statement
         try:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore",
