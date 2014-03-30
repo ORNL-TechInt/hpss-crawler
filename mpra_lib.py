@@ -59,7 +59,7 @@ def age(table,
         dbargs['table'] = 'bfmigrrec'
 
     rows = db.select(**dbargs)
-    age_report(table, age, count, rows, f, path)
+    age_report(table, int(time.time()) - end, count, rows, f, path)
 
     if mark:
         recent = 0
@@ -81,7 +81,7 @@ def age_report(table, age, count, result, f, path=False):
         f.write("%s records older than %s: %d\n"
                 % (table, age, result[0]['1']))
     elif table == 'migr':
-        f.write("Migration Records Older Than %s\n" % age)
+        f.write("Migration Records Older Than %s Seconds\n" % age)
         f.write("%-67s %-18s %s\n" % ("BFID", "Created", "MigrFails"))
         for row in result:
             f.write("%s %s %d\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
@@ -91,7 +91,7 @@ def age_report(table, age, count, result, f, path=False):
                 path = tcc_common.get_bitfile_path(row['BFID'])
                 f.write("   %s\n" % path)
     elif table == 'purge':
-        f.write("Purge Records Older Than %s" % age)
+        f.write("Purge Records Older Than %s Seconds" % age)
         f.write("%-67s %-18s\n" % ("BFID", "Created"))
         for row in result:
             f.write("%s %s\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
@@ -123,14 +123,16 @@ def mpra_record_recent(type, recent):
                   fields=['recent_time   integer',
                           'type          text'])
     rows = db.select(table='mpra',
-                     fields=['recent_time'])
+                     fields=['recent_time'],
+                     where='type = ?',
+                     data=(type,))
     if len(rows) < 1:
-        util.log("Insert into mpra table")
+        util.log("Insert into mpra table: (%s, %d)" % (type, recent))
         db.insert(table='mpra',
                   fields=['type', 'recent_time'],
                   data=[(type, recent)])
     else:
-        util.log("Update mpra table")
+        util.log("Update mpra table with (%s, %d)" % (type, recent))
         db.update(table='mpra',
                   fields=['recent_time'],
                   where='type = ?',
@@ -152,5 +154,10 @@ def mpra_fetch_recent(type):
                      where='type = ?',
                      data=(type,))
 
-    util.log("Fetch from mpra table -- return %d" % rows[0][0])
-    return rows[0][0]
+    if rows[0][0] is None:
+        util.log("No '%s' value in mpra -- returning 0" % type)
+        return 0
+    else:
+        util.log("Fetch '%s' from mpra table -- return %d" %
+                 (type, rows[0][0]))
+        return rows[0][0]

@@ -202,6 +202,28 @@ def mpra_purge_recs(args):
     if o.debug: pdb.set_trace()
 
 # -----------------------------------------------------------------------------
+def mpra_reset(args):
+    """reset - drop the mpra table and remove mpra_report.txt
+
+    usage: mpra reset
+
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    cfg = CrawlConfig.get_config()
+    db = CrawlDBI.DBI()
+    db.drop(table='mpra')
+
+    filename = cfg.get('mpra', 'report_file')
+    util.conditional_rm(filename)
+
+# -----------------------------------------------------------------------------
 def mpra_simplug(args):
     """simplug - simulate the plugin
 
@@ -212,9 +234,6 @@ def mpra_simplug(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
