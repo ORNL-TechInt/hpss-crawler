@@ -84,7 +84,7 @@ class CrawlPlugin(object):
 
         if self.modname in sys.modules.keys():
             filename = re.sub("\.pyc?", ".pyc",
-                              sys.modules[self.name].__file__)
+                              sys.modules[self.modname].__file__)
             util.conditional_rm(filename)
 
             del sys.modules[self.modname]

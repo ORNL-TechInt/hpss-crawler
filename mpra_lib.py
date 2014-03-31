@@ -19,6 +19,12 @@ def age(table,
     start. The result is written to output. If path is True, age_report will
     compute the bitfile pathname and report it as well. If mark is True, we
     update the mpra table with the date/time of the newest record reported.
+
+    Strict less than compares is the right thing to do. We record the last time
+    reported in the mpra recent table. We've reported all the records with that
+    time. We're looking into the past, so any new records added cannot have
+    that time -- they're being added in the present when timestamps have larger
+    values. So we want to start with the next one after the last one reported.
     """
     cfg = CrawlConfig.get_config()
     opened = True
@@ -59,17 +65,24 @@ def age(table,
         dbargs['table'] = 'bfmigrrec'
 
     rows = db.select(**dbargs)
-    age_report(table, int(time.time()) - end, count, rows, f, path)
-
-    if mark:
+    rval = len(rows)
+    if count:
+        age_report(table, int(time.time()) - end, count, rows, f, path)
+    elif 0 < len(rows):
         recent = 0
         for row in rows:
             if recent < row['RECORD_CREATE_TIME']:
                 recent = row['RECORD_CREATE_TIME']
-        mpra_record_recent(table, recent)
+
+        age_report(table, int(time.time()) - recent, count, rows, f, path)
+        
+        if mark and 0 < recent:
+            mpra_record_recent(table, recent)
 
     if opened:
         f.close()
+
+    return rval
 
 # -----------------------------------------------------------------------------
 def age_report(table, age, count, result, f, path=False):
@@ -79,19 +92,19 @@ def age_report(table, age, count, result, f, path=False):
     """
     if count:
         f.write("%s records older than %s: %d\n"
-                % (table, age, result[0]['1']))
+                % (table, dhms(age), result[0]['1']))
     elif table == 'migr':
-        f.write("Migration Records Older Than %s Seconds\n" % age)
+        f.write("Migration Records Older Than %s\n" % dhms(age))
         f.write("%-67s %-18s %s\n" % ("BFID", "Created", "MigrFails"))
         for row in result:
-            f.write("%s %s %d\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
+            f.write("%s %s %9d\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
                                     util.ymdhms(row['RECORD_CREATE_TIME']),
                                     row['MIGRATION_FAILURE_COUNT']))
             if path:
                 path = tcc_common.get_bitfile_path(row['BFID'])
                 f.write("   %s\n" % path)
     elif table == 'purge':
-        f.write("Purge Records Older Than %s Seconds" % age)
+        f.write("Purge Records Older Than %s\n" % dhms(age))
         f.write("%-67s %-18s\n" % ("BFID", "Created"))
         for row in result:
             f.write("%s %s\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
@@ -101,20 +114,22 @@ def age_report(table, age, count, result, f, path=False):
                 f.write("   %s\n" % path)
 
 # -----------------------------------------------------------------------------
-def age_seconds(agespec):
-    """
-    Convert a specification like 10S, 5 M, 7d, etc., to a number of seconds
-    """
-    mult = {'S': 1, 'M': 60, 'H': 3600,
-            'd': 3600*24, 'm': 30*3600*24, 'Y': 365*3600*24}
-    [(mag, unit)] = re.findall("\s*(\d+)\s*(S|M|H|d|m|Y)", agespec)
-    return int(mag) * mult[unit]
+def idivrem(secs, div):
+    return(int(secs)/div, int(secs) % div)
+
+# -----------------------------------------------------------------------------
+def dhms(age_s):
+    (days, rem) = idivrem(age_s, 24*3600)
+    (hours, rem) = idivrem(rem, 3600)
+    (minutes, seconds) = idivrem(rem, 60)
+    return("%dd-%02d:%02d:%02d" % (days, hours, minutes, seconds))
 
 # -----------------------------------------------------------------------------
 def mpra_record_recent(type, recent):
     """
     Record the most recent record reported so we don't report records
-    repeatedly
+    repeatedly. However, if recent is not later than the time already stored,
+    we don't want to update it.
     """
     db = CrawlDBI.DBI()
     if not db.table_exists(table='mpra'):
@@ -131,7 +146,7 @@ def mpra_record_recent(type, recent):
         db.insert(table='mpra',
                   fields=['type', 'recent_time'],
                   data=[(type, recent)])
-    else:
+    elif rows[0][0] < recent:
         util.log("Update mpra table with (%s, %d)" % (type, recent))
         db.update(table='mpra',
                   fields=['recent_time'],

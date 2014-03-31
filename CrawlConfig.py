@@ -171,9 +171,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         """
         try:
             spec = self.get(section, option)
-            [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
-            mult = self.map_time_unit(unit)
-            rval = int(mag) * mult
+            rval = self.to_seconds(spec)
         except ConfigParser.NoOptionError as e:
             if default != None:
                 rval = default
@@ -189,6 +187,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
         return rval
     
+    # -------------------------------------------------------------------------
+    def to_seconds(self, spec):
+        [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
+        mult = self.map_time_unit(unit)
+        rval = int(mag) * mult
+        return rval
+
     # -------------------------------------------------------------------------
     def getboolean(self, name, option):
         """
