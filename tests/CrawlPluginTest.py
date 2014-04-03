@@ -47,11 +47,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'true')
+        c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
             
         p.fire()
@@ -68,12 +64,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
             
         self.assertEqual(p.firable, False,
@@ -91,12 +82,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'true')
+        c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
             
         self.assertEqual(p.firable, True,
@@ -114,13 +100,18 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', self.plugdir)
+        c = self.make_cfg(pname, fire=None)
         p = CrawlPlugin.CrawlPlugin(pname, c)
-            
+
+        # make sure 'fire' was not set in the config
+        try:
+            x = c.get(pname, 'fire')
+            self.fail("Expected NoOptionError but didn't get it")
+        except CrawlConfig.NoOptionError:
+            pass
+
+        # if 'fire' is not set in the config, it should default to True in the
+        # plugin
         self.assertEqual(p.firable, True,
                          "p.firable should be True but is not")
         
@@ -131,14 +122,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
 
+        self.expected(False, p.firable)
         self.expected(19, p.frequency)
         
     # -------------------------------------------------------------------------
@@ -148,13 +135,18 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, freq=None)
         p = CrawlPlugin.CrawlPlugin(pname, c)
             
+        # make sure 'frequency' was not set in the config
+        try:
+            x = c.get(pname, 'frequency')
+            self.fail("Expected NoOptionError but didn't get it")
+        except CrawlConfig.NoOptionError:
+            pass
+
+        # if 'freq' is not set in the config, it should default to 3600 in the
+        # plugin
         self.expected(3600, p.frequency)
 
     # -------------------------------------------------------------------------
@@ -164,14 +156,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
-        pre = sys.path
+        pre = copy.copy(sys.path)
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, fire=False)
+
         p = CrawlPlugin.CrawlPlugin(pname, c)
         self.expected(pre, sys.path)
 
@@ -185,11 +174,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         pre = copy.copy(sys.path)
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
         self.assertNotEqual(pre, sys.path,
                             "pre and sys.path should not be equal, but are")
@@ -208,17 +193,12 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         pre = copy.copy(sys.path)
         pname = util.my_name()
         self.make_plugin(pname)
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, plugdir=None, fire=False, freq=None)
         try:
             p = CrawlPlugin.CrawlPlugin(pname, c)
-            self.fail("Expected exception but didn't get one")
+            self.fail("Expected NoOptionError but didn't get it")
         except CrawlConfig.NoOptionError:
             pass
-        except Exception, e:
-            self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_init_plugin_inmod(self):
@@ -245,11 +225,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         f.close()
 
         # set up the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', self.plugdir)
+        c = self.make_cfg(pname, fire=None)
 
         # initializing a plugin object should reload the plugin
         try:
@@ -272,19 +248,13 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
 
         # set up the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', 'plugins')
+        c = self.make_cfg(pname)
 
         # initializing a plugin object should import the plugin
         try:
             p = CrawlPlugin.CrawlPlugin(pname, c)
         except ImportError:
             self.fail("Expected import to succeed but it did not.")
-        # except Exception, e:
-        #     self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_init_plugin_nosuch(self):
@@ -295,14 +265,12 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
         pname = util.my_name()
+
+        # don't call make_plugin -- leave the following line commented
         # self.make_plugin(pname)
 
         # set up the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set(pname, 'frequency', '19')
-        c.set('crawler', 'plugin-dir', 'plugins')
+        c = self.make_cfg(pname)
 
         # initializing a plugin object should import the plugin
         try:
@@ -310,8 +278,6 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
             self.fail("Expected import to fail but it did not.")
         except ImportError:
             pass
-        # except Exception, e:
-        #     self.fail("Got unexpected exception: %s" % tb.format_exc())
 
     # -------------------------------------------------------------------------
     def test_reload_fire(self):
@@ -327,11 +293,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
 
         # create the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'fire', 'false')
+        c = self.make_cfg(pname, fire=False)
 
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -360,11 +322,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
 
         # create the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'frequency', '72')
+        c = self.make_cfg(pname, freq='72')
 
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -394,11 +352,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
 
         # create the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'frequency', '72')
+        c = self.make_cfg(pname)
 
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -439,11 +393,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
 
         # create the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'frequency', '72')
+        c = self.make_cfg(pname)
         
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -467,21 +417,47 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
 
         # create the config
-        c = CrawlConfig.CrawlConfig()
-        c.add_section(pname)
-        c.add_section('crawler')
-        c.set('crawler', 'plugin-dir', self.plugdir)
-        c.set(pname, 'frequency', '72')
+        c = self.make_cfg(pname)
 
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
 
         # time_to_fire() should return True
-        p.last_fired = time.time() - 73
+        p.last_fired = time.time() - int(p.frequency) - 1
         self.assertTrue(p.time_to_fire(),
                         "p.time_to_fire() returned False when it" +
                         " should have been True")
 
+    # -------------------------------------------------------------------------
+    def make_cfg(self, pname, plugdir='', fire=True, freq='19'):
+        """
+        pname: name of the plugin for this test
+        plugdir: <value> => plugin directory to go in config
+                 None => leave unset in the config
+        fire: True => set to 'true' in the config
+              False => set to 'false' in the config
+              None => leave unset in the config
+        freq: <value> => set 'frequency' to <value>
+              None => leave unset in the config
+        """
+        rval = CrawlConfig.CrawlConfig()
+        rval.add_section(pname)
+        rval.add_section('crawler')
+        if plugdir is not None:
+            if plugdir == '':
+                rval.set('crawler', 'plugin-dir', self.plugdir)
+            else:
+                rval.set('crawler', 'plugin-dir', plugdir)
+        if freq is not None:
+            rval.set(pname, 'frequency', freq)
+        if fire is not None:
+            if fire:
+                rval.set(pname, 'fire', 'true')
+            else:
+                rval.set(pname, 'fire', 'false')
+        rval.set(pname, 'module', pname)
+        return rval
+        
     # -------------------------------------------------------------------------
     def make_plugin(self, pname, pdir=None):
         """
