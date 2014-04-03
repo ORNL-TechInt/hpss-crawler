@@ -130,7 +130,7 @@ class DBITest(DBITestRoot):
             a = CrawlDBI.DBI(dbname='foobar')
             self.fail("Expected exception not thrown")
         except CrawlDBI.DBIerror, e:
-            exp = "Attribute 'dbname' is not valid"
+            exp = "dbname may only be specified if dbtype = 'db2'"
             self.assertTrue(exp in str(e),
                             "Got the wrong DBIerror: %s" +  # <-- !@!looks wrong
                             util.line_quote(str(e)))
@@ -253,8 +253,8 @@ class DBI_in_Base(DBITestRoot):
             a = CrawlDBI.DBI(cfg=tcfg)
             self.fail("Expected an exception but didn't get one")
         except CrawlDBI.DBIerror, e:
-            gotx = True
-            self.assertTrue("A database name is required" in str(e),
+            exp = "No option 'dbname' in section: 'dbi'"
+            self.assertTrue(exp in str(e),
                             "Got the wrong DBIerror: " +
                             '"""\n%s\n"""' % str(e))
 
