@@ -116,10 +116,10 @@ class DBI(object):
                 raise StandardError("'%s not in kwargs(%s)" %
                                     ("'dbtype' and 'cfg' both in and",
                                     str(kwargs)))
-        except CrawlConfig.NoSectionError:
-            dbtype = 'sqlite'
-        except CrawlConfig.NoOptionError:
-            dbtype = 'sqlite'
+        except CrawlConfig.NoSectionError, e:
+            raise DBIerror("A 'dbi' section is required in the configuration")
+        except CrawlConfig.NoOptionError, e:
+            raise DBIerror(str(e))
 
         kwargs['dbname'] = dbname
         kwargs['tbl_prefix'] = tbl_pfx
