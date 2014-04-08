@@ -124,7 +124,7 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           """
     rval = []
     stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+50))
+    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+limit))
     x = db2.fetch_assoc(stmt)
     while (x):
         rval.append(x)

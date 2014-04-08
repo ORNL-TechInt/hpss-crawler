@@ -14,6 +14,7 @@ import sys
 import tcc_common
 import time
 import toolframe
+import util
 
 # -----------------------------------------------------------------------------
 def tccp_bfid(args):
@@ -206,6 +207,34 @@ def tccp_selbf(args):
                                      time.localtime(int(row[k])))))
             else:
                 print("%s: %s" % (k, row[k]))
+
+# -----------------------------------------------------------------------------
+def tccp_simplug(args):
+    """simplug - run one iteration of the plugin
+
+    usage: tcc simplug
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-i', '--iterations',
+                 action='store', default=1, dest='iterations', type='int',
+                 help='how many iterations to run')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+    
+    cfg = CrawlConfig.get_config()
+    util.log("starting simplug, just got config")
+    sys.path.append(cfg.get('crawler', 'plugin-dir'))
+    P = __import__(cfg.get('tape-copy-checker', 'module'))
+    P.main(cfg)
+    if 1 < o.iterations:
+        for count in range(o.iterations-1):
+            stime = cfg.get_time('tape-copy-checker', 'frequency')
+            time.sleep(stime)
+            P.main(cfg)
 
 # -----------------------------------------------------------------------------
 def tccp_sql(args):
