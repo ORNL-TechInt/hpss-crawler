@@ -255,11 +255,10 @@ def setup_logging(logfile='',
     Create a new logger and return the object
     """
     if logfile == '':
-        raise StandardError("setup_logging: No log file name provided")
+        logfile = default_logfile_name
     
     rval = logging.getLogger(logname)
     rval.setLevel(logging.INFO)
-    # host = socket.gethostname().split('.')[0]
     host = hostname()
     if rval.handlers != [] and logfile != rval.handlers[0].baseFilename:
         rval.handlers[0].close()
