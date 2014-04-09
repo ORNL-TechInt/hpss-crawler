@@ -23,25 +23,25 @@ def main(cfg):
     """
     # retrieve configuration items as needed
     how_many = int(cfg.get_d(sectname, 'operations', 10))
-    util.log("tape-copy-checker: firing up for %d items" % how_many)
+    CrawlConfig.log("tape-copy-checker: firing up for %d items" % how_many)
     
     # retrieve COS info
     cosinfo = tcc_common.get_cos_info()
     # for cos_id in cosinfo:
-    #     util.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
+    #     CrawlConfig.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
 
     # get the nsobject_id of the next bitfile to process from mysql
     next_nsobj_id = get_next_nsobj_id(cfg)
-    util.log("next nsobject id = %d" % next_nsobj_id)
+    CrawlConfig.log("next nsobject id = %d" % next_nsobj_id)
     
     # fetch the next N bitfiles from DB2
-    util.log("looking for nsobject ids between %d and %d"
+    CrawlConfig.log("looking for nsobject ids between %d and %d"
              % (next_nsobj_id, next_nsobj_id+how_many-1))
     bfl = tcc_common.get_bitfile_set(cfg,
                                      int(next_nsobj_id),
                                      how_many)
     
-    util.log("got %d bitfiles" % len(bfl))
+    CrawlConfig.log("got %d bitfiles" % len(bfl))
 
     if len(bfl) == 0:
         next_nsobj_id += how_many
@@ -52,13 +52,13 @@ def main(cfg):
         for bf in bfl:
             if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
                 tcc_common.tcc_report(bf, cosinfo)
-                util.log("%s %s %d != %d" %
+                CrawlConfig.log("%s %s %d != %d" %
                          (bf['OBJECT_ID'],
                           tcc_common.hexstr(bf['BFID']),
                           bf['SC_COUNT'],
                           cosinfo[bf['BFATTR_COS_ID']]))
             elif cfg.getboolean(sectname, 'verbose'):
-                util.log("%s %s %d == %d" %
+                CrawlConfig.log("%s %s %d == %d" %
                          (bf['OBJECT_ID'],
                           tcc_common.hexstr(bf['BFID']),
                           bf['SC_COUNT'],
@@ -68,7 +68,7 @@ def main(cfg):
             next_nsobj_id = last_obj_id + 1
             update_next_nsobj_id(cfg, next_nsobj_id)
 
-        util.log("last nsobject in range: %d" % last_obj_id)
+        CrawlConfig.log("last nsobject in range: %d" % last_obj_id)
         
 # -----------------------------------------------------------------------------
 def get_next_nsobj_id(cfg):
@@ -112,7 +112,7 @@ def update_next_nsobj_id(cfg, value):
         H.close()
         update_next_nsobj_id._max_obj_id = int(result[0]['MAX_OBJ_ID'])
         update_next_nsobj_id._when = time.time()
-        util.log("max object id = %d at %s" %
+        CrawlConfig.log("max object id = %d at %s" %
                  (update_next_nsobj_id._max_obj_id,
                   time.strftime("%Y.%m%d %H:%M:%S",
                                 time.localtime(update_next_nsobj_id._when))))
@@ -120,7 +120,7 @@ def update_next_nsobj_id(cfg, value):
     max_obj_id = update_next_nsobj_id._max_obj_id
     if max_obj_id < value:
         value = 1
-    util.log("storing next object id: %d" % value)
+    CrawlConfig.log("storing next object id: %d" % value)
 
     tabname = cfg.get(sectname, 'table_name')
     db = CrawlDBI.DBI()

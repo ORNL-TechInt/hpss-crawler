@@ -487,11 +487,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         CrawlConfig.get_logger(reset=True, soft=True)
 
         # get_logger(..., reset=False, soft=False) should create a new one
-        actual = CrawlConfig.get_logger(cmdline='%s/util.log' % self.testdir,
+        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir,
                                  reset=False, soft=False)
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/util.log" % self.testdir),
+        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
     
         # now ask for a logger with a different name, with reset=False,
@@ -501,7 +501,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         reset=False, soft=False)
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/util.log" % self.testdir),
+        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
 
         
@@ -516,17 +516,17 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         CrawlConfig.get_logger(reset=True, soft=True)
         
         # then see what happens with reset=False, soft=True
-        actual = CrawlConfig.get_logger(cmdline='%s/util.log' % self.testdir,
+        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir,
                                  reset=False, soft=True)
         self.expected(None, actual)
 
         # now create a logger
-        CrawlConfig.get_logger(cmdline='%s/util.log' % self.testdir)
+        CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir)
         # now reset=False, soft=True should return the one just created
         actual = CrawlConfig.get_logger(reset=False, soft=True)
         self.assertTrue(isinstance(actual, logging.Logger),
                       "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/util.log" % self.testdir),
+        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
 
 
@@ -549,13 +549,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                       tmp.handlers[0].baseFilename)
 
         # now override it
-        actual = CrawlConfig.get_logger(cmdline='%s/util.log' % self.testdir,
+        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir,
                                  reset=True, soft=False)
         # and verify that it got replaced
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(1, len(actual.handlers))
-        self.expected(os.path.abspath("%s/util.log" % self.testdir),
+        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
         
     # -------------------------------------------------------------------------
@@ -791,7 +791,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_log_simple(self):
         """
-        Tests for routine util.log():
+        Tests for routine CrawlConfig.log():
          - simple string in first argument
          - 1 % formatter in first arg
          - multiple % formatters in first arg
@@ -799,8 +799,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
          - too many args for % formatters
         """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        util.get_logger(reset=True, soft=True)
-        log = util.get_logger(cmdline=fpath)
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
 
         # simple string in first arg
         exp = util.my_name() + ": " + "This is a simple string"
@@ -813,7 +813,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_log_onefmt(self):
         # """
-        # Tests for routine util.log():
+        # Tests for routine CrawlConfig.log():
         #  - simple string in first argument
         #  - 1 % formatter in first arg
         #  - multiple % formatters in first arg
@@ -821,8 +821,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        util.get_logger(reset=True, soft=True)
-        log = util.get_logger(cmdline=fpath)
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
 
         # 1 % formatter in first arg
         a1 = "This has a formatter and one argument: %s"
@@ -839,7 +839,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_log_multfmt(self):
         # """
-        # Tests for routine util.log():
+        # Tests for routine CrawlConfig.log():
         #  - simple string in first argument
         #  - 1 % formatter in first arg
         #  - multiple % formatters in first arg
@@ -847,8 +847,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        util.get_logger(reset=True, soft=True)
-        log = util.get_logger(cmdline=fpath)
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
 
         # multiple % formatters in first arg
         a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
@@ -867,7 +867,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_log_toomany_fmt(self):
         # """
-        # Tests for routine util.log():
+        # Tests for routine CrawlConfig.log():
         #  - simple string in first argument
         #  - 1 % formatter in first arg
         #  - multiple % formatters in first arg
@@ -875,8 +875,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        util.get_logger(reset=True, soft=True)
-        log = util.get_logger(cmdline=fpath)
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
 
         # this allows exceptions thrown from inside the logging handler to
         # propagate up so we can catch it.
@@ -905,7 +905,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_log_toomany_args(self):
         # """
-        # Tests for routine util.log():
+        # Tests for routine CrawlConfig.log():
         #  - simple string in first argument
         #  - 1 % formatter in first arg
         #  - multiple % formatters in first arg
@@ -913,8 +913,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        util.get_logger(reset=True, soft=True)
-        log = util.get_logger(cmdline=fpath)
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
 
         # this allows exceptions thrown from inside the logging handler to
         # propagate up so we can catch it.

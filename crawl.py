@@ -54,7 +54,7 @@ def crl_cfgdump(argv):
     if o.target == 'stdout':
         print dumpstr
     elif o.target == 'log':
-        log = util.get_logger(o.logpath, cfg)
+        log = CrawlConfig.get_logger(o.logpath, cfg)
         for line in dumpstr.split("\n"):
             log.info(line)
 
@@ -221,7 +221,7 @@ def crl_fire(argv):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config(o.config)
-    log = util.get_logger(o.logpath, cfg)
+    log = CrawlConfig.get_logger(o.logpath, cfg)
 
     if not cfg.has_section(o.plugname):
         print("No plugin named '%s' is defined")
@@ -250,10 +250,10 @@ def crl_log(argv):
     if o.debug: pdb.set_trace()
 
     if o.logfile is not None:
-        log = util.get_logger(o.logfile)
+        log = CrawlConfig.get_logger(o.logfile)
     else:
         cfg = CrawlConfig.get_config()
-        log = util.get_logger(cfg=cfg)
+        log = CrawlConfig.get_logger(cfg=cfg)
         
     log.info(" ".join(a))
 
@@ -300,7 +300,7 @@ def crl_start(argv):
         print("No exit path is specified in the configuration")
         sys.exit(1)
         
-    log = util.get_logger(o.logfile, cfg)
+    log = CrawlConfig.get_logger(o.logfile, cfg)
     pfpath = make_pidfile(os.getpid(),
                           cfg.get('crawler', 'context'),
                           exitpath,
@@ -393,7 +393,7 @@ def get_timeval(cfg, section, option, default):
     Return the number of seconds indicated by the time spec, using default if
     any errors or failures occur
     """
-    log = util.get_logger()
+    log = CrawlConfig.get_logger()
     return cfg.gettime(section, option, default, log)
 
 # ------------------------------------------------------------------------------
@@ -502,24 +502,24 @@ class CrawlDaemon(daemon.Daemon):
                     if s == 'crawler':
                         continue
                     elif s in plugin_d.keys():
-                        util.log("reloading plugin %s" % s)
+                        CrawlConfig.log("reloading plugin %s" % s)
                         plugin_d[s].reload(cfg)
                     else:
-                        util.log("initial load of plugin %s" % s)
+                        CrawlConfig.log("initial load of plugin %s" % s)
                         plugin_d[s] = CrawlPlugin.CrawlPlugin(name=s,
                                                               cfg=cfg)
 
                 # remove any plugins that are not in the new configuration
                 for p in plugin_d.keys():
                     if p not in cfg.sections():
-                        util.log("unloading obsolete plugin %s" % p)
+                        CrawlConfig.log("unloading obsolete plugin %s" % p)
                         del plugin_d[p]
                 
                 heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
                 ecount = ewhen = 0
                 tlimit = 7.0
                 while keep_going:
-                    # util.log("fire plugins")
+                    # CrawlConfig.log("fire plugins")
                     #
                     # Fire any plugins that are due
                     #
@@ -542,14 +542,14 @@ class CrawlDaemon(daemon.Daemon):
                             ewhen = time.time()
                             ecount = 1
 
-                    # util.log("issue the heartbeat")
+                    # CrawlConfig.log("issue the heartbeat")
                     #
                     # Issue the heartbeat if it's time
                     #
                     if 0 == (int(time.time()) % heartbeat):
                         self.dlog('crawl: heartbeat...')
                             
-                    # util.log("check for config changes")
+                    # CrawlConfig.log("check for config changes")
                     #
                     # If config file has changed, reload it.
                     # cached config object and breaking out of the inner loop.
@@ -559,7 +559,7 @@ class CrawlDaemon(daemon.Daemon):
                         cfg = CrawlConfig.get_config(reset=True)
                         break
 
-                    # util.log("check for exit signal")
+                    # CrawlConfig.log("check for exit signal")
                     #
                     # Check for the exit signal
                     #
@@ -567,7 +567,7 @@ class CrawlDaemon(daemon.Daemon):
                         self.dlog('crawl: shutting down')
                         keep_going = False
 
-                    # util.log("sleep")
+                    # CrawlConfig.log("sleep")
                     #
                     # We cycle once per second so we can detect if the user
                     # asks us to stop or if the config file changes and needs

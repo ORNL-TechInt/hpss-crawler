@@ -53,7 +53,7 @@ def get_bitfile_path(bitfile):
               select parent_id, name from hpss.nsobject where bitfile_id = %s
               """ % hexstr(bitfile)
 
-    # util.log("Query: %s" % sql)
+    # CrawlConfig.log("Query: %s" % sql)
     r = db2.exec_immediate(db, sql)
     x = db2.fetch_assoc(r)
     bfl = []
@@ -182,7 +182,7 @@ def tcc_report(bitfile, cosinfo):
                  str(cosinfo[bitfile['BFATTR_COS_ID']]),
                  str(bitfile['SC_COUNT']),
                  bfp)
-    util.log(rpt)
+    CrawlConfig.log(rpt)
     try:
         tcc_report._f.write(rpt)
         tcc_report._f.flush()

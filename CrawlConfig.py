@@ -284,13 +284,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
         except ConfigParser.NoOptionError as e:
             if default != None:
                 rval = default
-                util.log(str(e) + '; using default value %d' % default)
+                log(str(e) + '; using default value %d' % default)
             else:
                 raise
         except ConfigParser.NoSectionError as e:
             if default != None:
                 rval = default
-                util.log(str(e) + '; using default value %d' % default)
+                log(str(e) + '; using default value %d' % default)
             else:
                 raise
 

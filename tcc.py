@@ -226,7 +226,7 @@ def tccp_simplug(args):
     if o.debug: pdb.set_trace()
     
     cfg = CrawlConfig.get_config()
-    util.log("starting simplug, just got config")
+    CrawlConfig.log("starting simplug, just got config")
     sys.path.append(cfg.get('crawler', 'plugin-dir'))
     P = __import__(cfg.get('tape-copy-checker', 'module'))
     P.main(cfg)

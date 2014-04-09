@@ -686,9 +686,12 @@ class CrawlTest(testhelp.HelpedTestCase):
         pidfile = (set(up_l) - set(pre_l)).pop()
 
         self.assertEqual(os.path.exists(logpath), True)
-        self.assertEqual('crawl: CONFIG: [other_plugin]' in util.contents(logpath),
+        exp = 'crawl: CONFIG: [other_plugin]'
+        self.assertEqual(exp in util.contents(logpath),
                          True,
-                         "Expected 'other_plugin' in log file not found")
+                         "Expected '%s' in %s: %s" %
+                         (exp, logpath,
+                          util.line_quote(util.contents(logpath))))
         self.assertEqual('crawl: CONFIG: unplanned: silver' in
                          util.contents(logpath),
                          True,

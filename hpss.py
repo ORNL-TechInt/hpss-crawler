@@ -91,7 +91,7 @@ class HSI(object):
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
             while which == 1 and 1 < len(self.xobj.before):
-                util.log("got a timeout, continuing because before is not" +
+                CrawlConfig.log("got a timeout, continuing because before is not" +
                          " empty and does not contain an error")
                 rval += self.xobj.before
                 which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
@@ -168,7 +168,7 @@ class HSI(object):
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
             while which == 1 and 1 < len(self.xobj.before):
-                util.log("got a timeout, continuing because before is not" +
+                CrawlConfig.log("got a timeout, continuing because before is not" +
                          " empty and does not contain an error")
                 rval += self.xobj.before
                 which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
@@ -219,6 +219,6 @@ class HSI(object):
             self.xobj.close()
         except OSError, e:
             tbstr = tb.format_exc()
-            util.log("Ignoring OSError '%s'" % str(e))
+            CrawlConfig.log("Ignoring OSError '%s'" % str(e))
             for line in tbstr.split("\n"):
-                util.log(line)
+                CrawlConfig.log(line)

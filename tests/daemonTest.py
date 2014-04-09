@@ -2,6 +2,7 @@
 """
 Tests for daemon.py
 """
+import CrawlConfig
 import daemon
 import os
 import sys
@@ -62,7 +63,7 @@ class daemonTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_dlog(self):
         lfname = '%s/daemon.dlog.log' % self.testdir
-        lf = util.get_logger(cmdline=lfname)
+        lf = CrawlConfig.get_logger(cmdline=lfname)
         a = daemon.Daemon("%s/daemon_pid" % self.testdir,
                           logger=lf)
         logmsg = "testing the dlog method of %s" % a
