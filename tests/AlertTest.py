@@ -64,7 +64,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'log', "%s")
-        util.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
         self.assertEqual('this is a test message' in util.contents(logfile),
@@ -95,7 +95,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'shell', '%s/runme' % self.testdir + " %s")
-        util.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
         expected = "ran: '%s this is a test message'" % runfile
@@ -130,7 +130,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'shell', '%s/runme' % self.testdir)
-        util.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
         expected = "ran: '%s'" % runfile
@@ -160,7 +160,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'email', targets)
-        util.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
 
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)

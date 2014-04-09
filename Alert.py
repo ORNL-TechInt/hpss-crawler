@@ -35,7 +35,7 @@ import email.mime.text
 import os
 import smtplib
 import socket
-import util
+# import util
 
 # -----------------------------------------------------------------------------
 class Alert(object):
@@ -68,7 +68,7 @@ class Alert(object):
                 if opt == 'log':
                     # write to log
                     fmt = cfg.get(section, 'log')
-                    util.log(fmt, self.msg)
+                    CrawlConfig.log(fmt, self.msg)
                     done = True
 
                 elif opt == 'shell':
@@ -79,7 +79,7 @@ class Alert(object):
                     else:
                         cmdline = cmd
                     os.system(cmdline)
-                    util.log("ran: '%s'" % (cmdline))
+                    CrawlConfig.log("ran: '%s'" % (cmdline))
                     done = True
                     
                 elif opt == 'email':
@@ -95,7 +95,7 @@ class Alert(object):
                     s = smtplib.SMTP('localhost')
                     s.sendmail(sender, addrlist, payload.as_string())
                     s.quit()
-                    util.log("sent mail to %s", addrlist)
+                    CrawlConfig.log("sent mail to %s", addrlist)
                     done = True
                     
                 elif opt == 'use':

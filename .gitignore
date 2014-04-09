@@ -7,11 +7,16 @@ crawler_pid
 crawler.exit
 cvtool
 DODO
+hsitool*
 ls.PR*
+md.checker.bart
+mpra
 NOTES*
 TAGS
 tcc
+*_report.txt
 test.d
+ztool*
 *.cfg
 *.db
 *.log

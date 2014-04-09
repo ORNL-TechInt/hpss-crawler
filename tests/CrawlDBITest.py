@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 """
 Database interface classes
+
+We have interface classes for mysql, sqlite, and db2.
+
+The db2 interface only supports read operations, nothing that will change the
+database. Also the db2 interface doesn't use table prefixes.
 """
 import base64
 import CrawlConfig
@@ -31,6 +36,16 @@ def make_tcfg(dbtype):
         # multiple copies in sync
         xcfg = CrawlConfig.get_config('crawl.cfg', reset=True)
         tcfg.set('dbi', 'password', xcfg.get('dbi', 'password'))
+    elif dbtype == 'db2':
+        xcfg = CrawlConfig.get_config(reset=True)
+        tcfg.add_section('db2')
+        tcfg.set('dbi', 'dbname', 'hcfg')
+        tcfg.set('dbi', 'tbl_prefix', 'hpss')
+        for optname in ['db_cfg_name', 'db_sub_name',
+                        'hostname', 'port',
+                        'username', 'password']:
+            tcfg.set('db2', optname, xcfg.get('db2', optname))
+
     return tcfg
 
 # -----------------------------------------------------------------------------
@@ -61,7 +76,43 @@ def tearDownModule():
             db.drop(table=tname)
 
 # -----------------------------------------------------------------------------
-class DBITest(testhelp.HelpedTestCase):
+class DBITestRoot(testhelp.HelpedTestCase):
+    # -------------------------------------------------------------------------
+    def setup_select_test(self, table_name):
+        self.reset_db(table_name)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=table_name, fields=self.fdef)
+        db.insert(table=table_name, fields=self.fnames, data=self.testdata)
+        
+    # -------------------------------------------------------------------------
+    def exception_test(self, funcname, kwargs, exp):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        try:
+            if funcname == 'create':
+                db.create(**kwargs)
+            elif funcname == 'delete':
+                db.delete(**kwargs)
+            elif funcname == 'drop':
+                db.drop(**kwargs)
+            elif funcname == 'insert':
+                db.insert(**kwargs)
+            elif funcname == 'select':
+                rows = db.select(**kwargs)
+            elif funcname == 'update':
+                db.update(**kwargs)
+            else:
+                raise StandardError("unsupported function name '%s'" %
+                                    funcname)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    
+# -----------------------------------------------------------------------------
+class DBITest(DBITestRoot):
     """
     Tests for the DBI class
     """
@@ -79,9 +130,9 @@ class DBITest(testhelp.HelpedTestCase):
             a = CrawlDBI.DBI(dbname='foobar')
             self.fail("Expected exception not thrown")
         except CrawlDBI.DBIerror, e:
-            exp = "Attribute 'dbname' is not valid"
+            exp = "dbname may only be specified if dbtype = 'db2'"
             self.assertTrue(exp in str(e),
-                            "Got the wrong DBIerror: %s" +
+                            "Got the wrong DBIerror: %s" +  # <-- !@!looks wrong
                             util.line_quote(str(e)))
 
     # -------------------------------------------------------------------------
@@ -108,20 +159,21 @@ class DBITest(testhelp.HelpedTestCase):
         self.expected(str(b), str(a))
 
 # -----------------------------------------------------------------------------
-class DBItstBase(testhelp.HelpedTestCase):
+class DBI_in_Base(DBITestRoot):
     """
-    Basic tests for the DBI<dbname> classes.
+    Basic tests for the DBI<dbname> classes that do not change the database.
 
     Arranging the tests this way allows us to avoid having to write a complete,
     independent set of tests for each database type.
 
-    Class DBIsqliteTest, which inherits the test methods from this one, will
-    set the necessary parameters to select the sqlite database type so that
-    when it is processed by the test running code, the tests will be run on an
-    sqlite database. Similarly, DBImysqlTest will set the necessary parameters
-    to select that database type, then run the inherited tests on a mysql
-    database.
+    Class DBIsqliteTest, for example, which inherits the test methods from this
+    one, will set the necessary parameters to select the sqlite database type
+    so that when it is processed by the test running code, the tests will be
+    run on an sqlite database. Similarly, DBImysqlTest will set the necessary
+    parameters to select that database type, then run the inherited tests on a
+    mysql database.
     """
+
     testdir = DBITest.testdir
     testdb = '%s/test.db' % testdir
     fdef = ['name text', 'size int', 'weight double']
@@ -150,6 +202,588 @@ class DBItstBase(testhelp.HelpedTestCase):
             exp = "Cannot operate on a closed database."
             self.assertTrue(exp in str(e),
                             "Expected '%s', got '%s'" % (exp, str(e)))
+    
+    # -------------------------------------------------------------------------
+    def test_ctor_attrs(self):
+        """
+        Verify that a new object has the right attributes with the right
+        default values
+        """
+        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        dirl = [q for q in dir(a) if not q.startswith('_')]
+        xattr = ['close', 'create', 'dbname', 'delete', 'drop', 'insert',
+                 'select', 'table_exists', 'update',
+                 'cursor']
+
+        for attr in dirl:
+            if attr not in xattr:
+                self.fail("Unexpected attribute %s on object %s" % (attr, a))
+        for attr in xattr:
+            if attr not in dirl:
+                self.fail("Expected attribute %s not found on object %s" %
+                          (attr, a))
+
+    # -------------------------------------------------------------------------
+    def test_ctor_bad_attrs(self):
+        """
+        Attempt to create an object is invalid attribute should get an
+        exception
+        """
+        try:
+            a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), badattr="frooble")
+            self.fail("Expected exception on bad attribute not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("Attribute 'badattr' is not valid" in str(e),
+                            "Got the wrong DBIerror: %s" +
+                            util.line_quote(str(e)))
+        except AssertionError:
+            raise
+        except:
+            self.fail("Got an unexpected exception: %s" +
+                      util.line_quote(tb.format_exc()))
+            
+    # -------------------------------------------------------------------------
+    def test_ctor_dbn_none(self):
+        """
+        Attempt to create an object with no dbname should get an exception
+        """
+        try:
+            tcfg = make_tcfg(self.dbtype)
+            tcfg.remove_option('dbi', 'dbname')
+            a = CrawlDBI.DBI(cfg=tcfg)
+            self.fail("Expected an exception but didn't get one")
+        except CrawlDBI.DBIerror, e:
+            exp = "No option 'dbname' in section: 'dbi'"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: " +
+                            '"""\n%s\n"""' % str(e))
+
+    # -------------------------------------------------------------------------
+    def test_select_f(self):
+        """
+        Calling select() specifying fields should get only the fields requested
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=['size', 'weight'])
+        self.assertEqual(len(rows[0]), 2,
+                         "Expected two fields in each row, got %d" % len(rows[0]))
+        for tup in self.testdata:
+            self.assertTrue((tup[1], tup[2]) in rows,
+                            "Expected %s in %s but it's not there" %
+                            (str((tup[1], tup[2], )),
+                             util.line_quote(str(rows))))
+    
+
+    # -------------------------------------------------------------------------
+    def test_select_gb_f(self):
+        """
+        Select with a group by clause on a field that is present in the table.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=['sum(size)'], groupby='name')
+        self.expected(3, len(rows))
+        self.expected(True, ((40,)) in rows)
+        self.expected(True, ((92,)) in rows)
+        self.expected(True, ((100,)) in rows)
+        
+    # -------------------------------------------------------------------------
+    def test_select_gb_ns(self):
+        """
+        Select with a group by clause that is not a string -- should get an
+        exception.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=['sum(size)'],
+                             groupby=['fiddle'])
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), groupby clause must be a string"
+                            in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+        
+    # -------------------------------------------------------------------------
+    def test_select_gb_u(self):
+        """
+        Select with a group by clause on a field that is unknown should get an
+        exception.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        util.conditional_rm(self.testdb)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+        ns_field = 'fiddle'
+
+        try:
+            rows = db.select(table=tname, fields=['sum(size)'],
+                             groupby=ns_field)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            sqlite_msg = 'no such column: %s' % ns_field
+            mysql_msg = "Unknown column '%s' in 'group statement'" % ns_field
+            self.assertTrue(sqlite_msg in str(e) or mysql_msg in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+        
+    # -------------------------------------------------------------------------
+    def test_select_nq_mtd(self):
+        """
+        Calling select() with where with no '?' and an empty data list is fine.
+        The data returned should match the where clause.
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=[],
+                         where='size = 92', data=())
+        self.expected(1, len(rows))
+        self.expected([self.testdata[1]], list(rows))
+
+    # -------------------------------------------------------------------------
+    def test_select_q_mtd(self):
+        """
+        Calling select() with a where clause with a '?' and an empty data list
+        should get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=[],
+                             where='name = ?', data=())
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("Incorrect number of bindings supplied" in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+        except TypeError, e:
+            self.assertTrue("not enough arguments for format string" in str(e),
+                            "Got the wrong TypeError: %s" %
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    def test_select_nq_ld(self):
+        """
+        Calling select() with where clause with no '?' and data in the list
+        should get an exception -- the data would be ignored
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=[],
+                             where="name = 'zippo'", data=('frodo',))
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("Data would be ignored" in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    def test_select_q_ld(self):
+        """
+        Calling select() with a where clause containing '?' and data in the
+        data list should return the data matching the where clause
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        # pdb.set_trace()
+        rows = db.select(table=tname, fields=[],
+                         where='name = ?', data=('zippo',))
+        self.expected(1, len(rows))
+        self.expected([self.testdata[1],], list(rows))
+
+    # -------------------------------------------------------------------------
+    # Adding tests for limit in select. Conditions to be tested:
+
+    # -------------------------------------------------------------------------
+    #   - no limit argument (this is already tested)
+    #     > should retrieve all the data
+    # -------------------------------------------------------------------------
+    #   - limit not an int
+    #     > should throw exception
+    def test_select_l_nint(self):
+        tname = util.my_name().replace("test_", "")
+        self.setup_select_test(tname)
+        self.exception_test('select',
+                            {'table': tname,
+                             'fields': [],
+                             'limit': 'this is a string'},
+                            "On select(), limit must be an int")
+        
+    # -------------------------------------------------------------------------
+    #   - limit is an int
+    #     > should retrieve the specified number of records
+    def test_select_l_int(self):
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rlim = 3
+        rows = db.select(table=tname, fields=[], limit=rlim)
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.expected(rlim, len(rows))
+        for tup in self.testdata[0:int(rlim)]:
+            self.assertTrue(tup in rows,
+                            "Expected %s in %s but it's not there" %
+                            (str(tup), util.line_quote(rows)))
+        
+    # -------------------------------------------------------------------------
+    #   - limit is a float
+    #     > should convert to an int and use it
+    def test_select_l_float(self):
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rlim = 2.7
+        rows = db.select(table=tname, fields=[], limit=rlim)
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.expected(int(rlim), len(rows))
+        for tup in self.testdata[0:int(rlim)]:
+            self.assertTrue(tup in rows,
+                            "Expected %s in %s but it's not there" %
+                            (str(tup), util.line_quote(rows)))
+
+    # -------------------------------------------------------------------------
+    def test_select_mtf(self):
+        """
+        Calling select() with an empty field list should get all the data -- an
+        empty field list indicates the wildcard option
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=[])
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        for tup in self.testdata:
+            self.assertTrue(tup in rows,
+                            "Expected %s in %s but it's not there" %
+                            (str(tup), util.line_quote(rows)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_mto(self):
+        """
+        Calling select() with an empty orderby should get the data in the order
+        inserted
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=[], orderby='')
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.assertEqual(list(self.testdata), list(rows),
+                         "Expected %s and %s to match" %
+                         (list(self.testdata), list(rows)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_mtt(self):
+        """
+        Calling select() with an empty table name should get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table='', fields=[])
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), table name must not be empty" in
+                            str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    def test_select_mtw(self):
+        """
+        Calling select() with an empty where arg should get all the data
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=[], where='')
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.assertEqual(list(self.testdata), list(rows),
+                         "Expected %s and %s to match" %
+                         (list(self.testdata), list(rows)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_nld(self):
+        """
+        Calling select() with a non-tuple as the data argument should
+        get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=[],
+                             where='name = ?', data='zippo')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), data must be a tuple" in
+                            str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_nlf(self):
+        """
+        Calling select() with a non-list as the fields argument should
+        get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        # fdef = ['name text', 'size int', 'weight float']
+        # fnames = [x.split()[0] for x in fdef]
+        # testdata = [('frodo', 17, 108.5),
+        #             ('zippo', 92, 12341.23),
+        #             ('zumpy', 45, 9.3242)]
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=17)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), fields must be a list" in
+                            str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_nso(self):
+        """
+        Calling select() with a non-string orderby argument should
+        get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        # fdef = ['name text', 'size int', 'weight float']
+        # fnames = [x.split()[0] for x in fdef]
+        # testdata = [('frodo', 17, 108.5),
+        #             ('zippo', 92, 12341.23),
+        #             ('zumpy', 45, 9.3242)]
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=self.fnames, orderby=22)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), orderby clause must be a string" in
+                            str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_nst(self):
+        """
+        Calling select() with a non-string table argument should
+        get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        # fdef = ['name text', 'size int', 'weight float']
+        # fnames = [x.split()[0] for x in fdef]
+        # testdata = [('frodo', 17, 108.5),
+        #             ('zippo', 92, 12341.23),
+        #             ('zumpy', 45, 9.3242)]
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table={}, fields=self.fnames)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), table name must be a string" in
+                            str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_nsw(self):
+        """
+        Calling select() with a non-string where argument should
+        get an exception
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        # fdef = ['name text', 'size int', 'weight float']
+        # fnames = [x.split()[0] for x in fdef]
+        # testdata = [('frodo', 17, 108.5),
+        #             ('zippo', 92, 12341.23),
+        #             ('zumpy', 45, 9.3242)]
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        try:
+            rows = db.select(table=tname, fields=self.fnames, where=22)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue("On select(), where clause must be a string" in
+                            str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_o(self):
+        """
+        Calling select() specifying orderby should get the rows in the
+        order requested
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        exp = [self.testdata[2], self.testdata[4], self.testdata[0],
+               self.testdata[3], self.testdata[1]]
+        db.create(table=tname, fields=self.fdef)
+        db.insert(table=tname, fields=self.fnames, data=self.testdata)
+
+        rows = db.select(table=tname, fields=[], orderby='weight')
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.assertEqual(list(exp), list(rows),
+                         "Expected %s to match %s" % (str(exp), str(rows)))
+    
+    # -------------------------------------------------------------------------
+    def test_select_w(self):
+        """
+        Calling select() specifying where should get only the rows requested
+        """
+        tname=util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        fdef = ['name text', 'size int', 'weight float']
+        fnames = [x.split()[0] for x in fdef]
+        testdata = [('frodo', 17, 108.5),
+                    ('zippo', 92, 12341.23),
+                    ('zumpy', 45, 9.3242)]
+        exp = [testdata[0], testdata[2]]
+        db.create(table=tname, fields=fdef)
+        db.insert(table=tname, fields=fnames, data=testdata)
+
+        rows = db.select(table=tname, fields=[], where="size < 50")
+        self.assertEqual(len(rows[0]), 3,
+                         "Expected three fields in each row, got %d" %
+                         len(rows[0]))
+        self.assertEqual(list(exp), list(rows),
+                         "Expected %s to match %s" % (str(exp), str(rows)))
+    
+    # -------------------------------------------------------------------------
+    def test_table_exists_yes(self):
+        """
+        If table foo exists, db.table_exists(table='foo') should return True
+        """
+        tname = util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.create(table=tname, fields=self.fdef)
+        self.expected(True, db.table_exists(table=tname))
+
+    # -------------------------------------------------------------------------
+    def test_table_exists_no(self):
+        """
+        If table foo does not exist, db.table_exists(table='foo') should return
+        False
+        """
+        tname = util.my_name().replace('test_', '')
+        self.reset_db(tname)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.expected(False, db.table_exists(table=tname))
+        
+# -----------------------------------------------------------------------------
+class DBI_out_Base(DBITestRoot):
+    """
+    Basic tests for the DBI<dbname> classes -- methods that change the
+    database.
+
+    Arranging the tests this way allows us to avoid having to write a complete,
+    independent set of tests for each database type.
+
+    The mySql and sqlite test classes will inherit this one in addition to
+    DBI_in_Base.
+    """
+    testdir = DBITest.testdir
+    testdb = '%s/test.db' % testdir
+    fdef = ['name text', 'size int', 'weight double']
+    fnames = [x.split()[0] for x in fdef]
+    # tests below depend on testdata fulfilling the following conditions:
+    #  * only one record with size = 92
+    #  * only one record with name = 'zippo'
+    testdata = [('frodo', 17, 108.5),
+                ('zippo', 92, 12341.23),
+                ('zumpy', 45, 9.3242),
+                ('frodo', 23, 212.5),
+                ('zumpy', 55, 90.6758)]
     
     # -------------------------------------------------------------------------
     def test_create_mtf(self):
@@ -231,61 +865,6 @@ class DBItstBase(testhelp.HelpedTestCase):
         # self.assertEqual(rows[0], ('test_create_yes',), 
         #                  "Table 'test_create_yes' should have been created," +
         #                  " was not.")
-
-    # -------------------------------------------------------------------------
-    def test_ctor_attrs(self):
-        """
-        Verify that a new object has the right attributes with the right
-        default values
-        """
-        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        dirl = [q for q in dir(a) if not q.startswith('_')]
-        xattr = ['close', 'create', 'dbname', 'delete', 'drop', 'insert',
-                 'select', 'table_exists', 'update',
-                 'cursor']
-
-        for attr in dirl:
-            if attr not in xattr:
-                self.fail("Unexpected attribute %s on object %s" % (attr, a))
-        for attr in xattr:
-            if attr not in dirl:
-                self.fail("Expected attribute %s not found on object %s" %
-                          (attr, a))
-
-    # -------------------------------------------------------------------------
-    def test_ctor_bad_attrs(self):
-        """
-        Attempt to create an object is invalid attribute should get an
-        exception
-        """
-        try:
-            a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), badattr="frooble")
-            self.fail("Expected exception on bad attribute not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("Attribute 'badattr' is not valid" in str(e),
-                            "Got the wrong DBIerror: %s" +
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except:
-            self.fail("Got an unexpected exception: %s" +
-                      util.line_quote(tb.format_exc()))
-            
-    # -------------------------------------------------------------------------
-    def test_ctor_dbn_none(self):
-        """
-        Attempt to create an object with no dbname should get an exception
-        """
-        try:
-            tcfg = make_tcfg(self.dbtype)
-            tcfg.remove_option('dbi', 'dbname')
-            a = CrawlDBI.DBI(cfg=tcfg)
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            gotx = True
-            self.assertTrue("A database name is required" in str(e),
-                            "Got the wrong DBIerror: " +
-                            '"""\n%s\n"""' % str(e))
 
     # -------------------------------------------------------------------------
     def test_delete_nq_nd(self):
@@ -688,448 +1267,6 @@ class DBItstBase(testhelp.HelpedTestCase):
                             "Expected data %s not found in table" % str(tup))
 
     # -------------------------------------------------------------------------
-    def test_select_f(self):
-        """
-        Calling select() specifying fields should get only the fields requested
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=['size', 'weight'])
-        self.assertEqual(len(rows[0]), 2,
-                         "Expected two fields in each row, got %d" % len(rows[0]))
-        for tup in self.testdata:
-            self.assertTrue((tup[1], tup[2]) in rows,
-                            "Expected %s in %s but it's not there" %
-                            (str((tup[1], tup[2], )),
-                             util.line_quote(str(rows))))
-    
-
-    # -------------------------------------------------------------------------
-    def test_select_gb_f(self):
-        """
-        Select with a group by clause on a field that is present in the table.
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=['sum(size)'], groupby='name')
-        self.expected(3, len(rows))
-        self.expected(True, ((40,)) in rows)
-        self.expected(True, ((92,)) in rows)
-        self.expected(True, ((100,)) in rows)
-        
-    # -------------------------------------------------------------------------
-    def test_select_gb_ns(self):
-        """
-        Select with a group by clause that is not a string -- should get an
-        exception.
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=['sum(size)'],
-                             groupby=['fiddle'])
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), groupby clause must be a string"
-                            in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        
-    # -------------------------------------------------------------------------
-    def test_select_gb_u(self):
-        """
-        Select with a group by clause on a field that is unknown should get an
-        exception.
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-        ns_field = 'fiddle'
-
-        try:
-            rows = db.select(table=tname, fields=['sum(size)'],
-                             groupby=ns_field)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            sqlite_msg = 'no such column: %s' % ns_field
-            mysql_msg = "Unknown column '%s' in 'group statement'" % ns_field
-            self.assertTrue(sqlite_msg in str(e) or mysql_msg in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        
-    # -------------------------------------------------------------------------
-    def test_select_nq_mtd(self):
-        """
-        Calling select() with where with no '?' and an empty data list is fine.
-        The data returned should match the where clause.
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=[],
-                         where='size = 92', data=())
-        self.expected(1, len(rows))
-        self.expected([self.testdata[1]], list(rows))
-
-    # -------------------------------------------------------------------------
-    def test_select_q_mtd(self):
-        """
-        Calling select() with a where clause with a '?' and an empty data list
-        should get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=[],
-                             where='name = ?', data=())
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("Incorrect number of bindings supplied" in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except TypeError, e:
-            self.assertTrue("not enough arguments for format string" in str(e),
-                            "Got the wrong TypeError: %s" %
-                            util.line_quote(str(e)))
-
-    # -------------------------------------------------------------------------
-    def test_select_nq_ld(self):
-        """
-        Calling select() with where clause with no '?' and data in the list
-        should get an exception -- the data would be ignored
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=[],
-                             where="name = 'zippo'", data=('frodo',))
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("Data would be ignored" in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-
-    # -------------------------------------------------------------------------
-    def test_select_q_ld(self):
-        """
-        Calling select() with a where clause containing '?' and data in the
-        data list should return the data matching the where clause
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        # pdb.set_trace()
-        rows = db.select(table=tname, fields=[],
-                         where='name = ?', data=('zippo',))
-        self.expected(1, len(rows))
-        self.expected([self.testdata[1],], list(rows))
-
-    # -------------------------------------------------------------------------
-    def test_select_mtf(self):
-        """
-        Calling select() with an empty field list should get all the data -- an
-        empty field list indicates the wildcard option
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=[])
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        for tup in self.testdata:
-            self.assertTrue(tup in rows,
-                            "Expected %s in %s but it's not there" %
-                            (str(tup), util.line_quote(rows)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_mto(self):
-        """
-        Calling select() with an empty orderby should get the data in the order
-        inserted
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=[], orderby='')
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(self.testdata), list(rows),
-                         "Expected %s and %s to match" %
-                         (list(self.testdata), list(rows)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_mtt(self):
-        """
-        Calling select() with an empty table name should get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table='', fields=[])
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), table name must not be empty" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-
-    # -------------------------------------------------------------------------
-    def test_select_mtw(self):
-        """
-        Calling select() with an empty where arg should get all the data
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=[], where='')
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(self.testdata), list(rows),
-                         "Expected %s and %s to match" %
-                         (list(self.testdata), list(rows)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_nld(self):
-        """
-        Calling select() with a non-tuple as the data argument should
-        get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=[],
-                             where='name = ?', data='zippo')
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), data must be a tuple" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_nlf(self):
-        """
-        Calling select() with a non-list as the fields argument should
-        get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=17)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), fields must be a list" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_nso(self):
-        """
-        Calling select() with a non-string orderby argument should
-        get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=self.fnames, orderby=22)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), orderby clause must be a string" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_nst(self):
-        """
-        Calling select() with a non-string table argument should
-        get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table={}, fields=self.fnames)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), table name must be a string" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_nsw(self):
-        """
-        Calling select() with a non-string where argument should
-        get an exception
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # fdef = ['name text', 'size int', 'weight float']
-        # fnames = [x.split()[0] for x in fdef]
-        # testdata = [('frodo', 17, 108.5),
-        #             ('zippo', 92, 12341.23),
-        #             ('zumpy', 45, 9.3242)]
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        try:
-            rows = db.select(table=tname, fields=self.fnames, where=22)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On select(), where clause must be a string" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_o(self):
-        """
-        Calling select() specifying orderby should get the rows in the
-        order requested
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        exp = [self.testdata[2], self.testdata[4], self.testdata[0],
-               self.testdata[3], self.testdata[1]]
-        db.create(table=tname, fields=self.fdef)
-        db.insert(table=tname, fields=self.fnames, data=self.testdata)
-
-        rows = db.select(table=tname, fields=[], orderby='weight')
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(exp), list(rows),
-                         "Expected %s to match %s" % (str(exp), str(rows)))
-    
-    # -------------------------------------------------------------------------
-    def test_select_w(self):
-        """
-        Calling select() specifying where should get only the rows requested
-        """
-        tname=util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        fdef = ['name text', 'size int', 'weight float']
-        fnames = [x.split()[0] for x in fdef]
-        testdata = [('frodo', 17, 108.5),
-                    ('zippo', 92, 12341.23),
-                    ('zumpy', 45, 9.3242)]
-        exp = [testdata[0], testdata[2]]
-        db.create(table=tname, fields=fdef)
-        db.insert(table=tname, fields=fnames, data=testdata)
-
-        rows = db.select(table=tname, fields=[], where="size < 50")
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(exp), list(rows),
-                         "Expected %s to match %s" % (str(exp), str(rows)))
-    
-    # -------------------------------------------------------------------------
-    def test_table_exists_yes(self):
-        """
-        If table foo exists, db.table_exists(table='foo') should return True
-        """
-        tname = util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.create(table=tname, fields=self.fdef)
-        self.expected(True, db.table_exists(table=tname))
-
-    # -------------------------------------------------------------------------
-    def test_table_exists_no(self):
-        """
-        If table foo does not exist, db.table_exists(table='foo') should return
-        False
-        """
-        tname = util.my_name().replace('test_', '')
-        self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        self.expected(False, db.table_exists(table=tname))
-        
-    # -------------------------------------------------------------------------
     def test_update_f(self):
         """
         Calling update() specifying fields should update the fields requested
@@ -1404,7 +1541,7 @@ class DBItstBase(testhelp.HelpedTestCase):
         return (db, testdata)
     
 # -----------------------------------------------------------------------------
-class DBImysqlTest(DBItstBase):
+class DBImysqlTest(DBI_in_Base, DBI_out_Base):
     dbtype = 'mysql'
     pass
 
@@ -1429,7 +1566,7 @@ class DBImysqlTest(DBItstBase):
         db.drop(table=name)
 
 # -----------------------------------------------------------------------------
-class DBIsqliteTest(DBItstBase):
+class DBIsqliteTest(DBI_in_Base, DBI_out_Base):
     dbtype = 'sqlite'
 
     # -------------------------------------------------------------------------
@@ -1670,8 +1807,491 @@ class DBIsqliteTest(DBItstBase):
         util.conditional_rm(self.testdb)
         
 # -----------------------------------------------------------------------------
+class DBIdb2Test(DBI_in_Base):
+    dbtype = 'db2'
+
+    # -------------------------------------------------------------------------
+    def test_select_f(self):
+        """
+        Calling select() specifying fields should get only the fields requested
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rows = db.select(table='hpss.server',
+                         fields=['desc_name', 'flags'])
+        self.assertEqual(len(rows[0].keys()), 2,
+                         "Expected two fields in each row, got %d" %
+                         len(rows[0].keys()))
+        for exp in ['FLAGS', 'DESC_NAME']:
+            self.assertTrue(exp in rows[0].keys(),
+                            "Expected key '%s' in each row, not found" %
+                            exp)
+
+    # -------------------------------------------------------------------------
+    def test_select_gb_f(self):
+        """
+        Select with a group by clause on a field that is present in the table.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rows = db.select(table='hpss.logpolicy',
+                         fields=['max(desc_name) as mdn', 'log_record_type_mask'],
+                         groupby='log_record_type_mask')
+        self.assertEqual(len(rows[0].keys()), 2,
+                         "Expected two fields in each row, got %d" %
+                         len(rows[0].keys()))
+        for exp in ['MDN', 'LOG_RECORD_TYPE_MASK']:
+            self.assertTrue(exp in rows[0].keys(),
+                            "Expected key '%s' in each row, not found" %
+                            exp)
+
+    # -------------------------------------------------------------------------
+    def test_select_gb_ns(self):
+        """
+        Select with a group by clause that is not a string -- should get an
+        exception.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        try:
+            rows = db.select(table='hpss.logpolicy',
+                             fields=['max(desc_name) as mdn',
+                                     'log_record_type_mask'],
+                             groupby=17)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "On select(), groupby clause must be a string"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    def test_select_gb_u(self):
+        """
+        Select with a group by clause on a field that is unknown should get an
+        exception.
+        """
+        self.exception_test('select',
+                            {'table': 'hpss.logpolicy',
+                             'fields': ['max(desc_name) as mdn',
+                                        'log_record_type_mask'],
+                             'groupby': 'unknown_field'},
+                            "\"UNKNOWN_FIELD\" is not valid in the " +
+                            "context where it")
+                             
+        # db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        # try:
+        #     rows = db.select(table='hpss.logpolicy',
+        #                      fields=['max(desc_name) as mdn',
+        #                              'log_record_type_mask'],
+        #                      groupby='unknown_field')
+        #     self.fail("Expected exception not thrown")
+        # except CrawlDBI.DBIerror, e:
+        #     exp = "\"UNKNOWN_FIELD\" is not valid in the context where it"
+        #     self.assertTrue(exp in str(e),
+        #                     "Got the wrong DBIerror: %s" %
+        #                     util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    #   - limit not an int
+    #     > should throw exception
+    def test_select_l_nint(self):
+        self.exception_test('select',
+                            {'table': 'authzacl',
+                             'limit': 'not an int'},
+                            "On select(), limit must be an int")
+        
+    # -------------------------------------------------------------------------
+    #   - limit is an int
+    #     > should retrieve the specified number of records
+    def test_select_l_int(self):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rlim = 3
+        rows = db.select(table='hpss.server',
+                         limit=rlim)
+        self.expected(rlim, len(rows))
+        # self.fail('under construction')
+        
+    # -------------------------------------------------------------------------
+    #   - limit is a float
+    #     > should convert to an int and use it
+    def test_select_l_float(self):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rlim = 4.5
+        rows = db.select(table='hpss.server',
+                         limit=rlim)
+        self.expected(int(rlim), len(rows))
+        # self.fail('under construction')
+
+    # -------------------------------------------------------------------------
+    def test_select_mtf(self):
+        """
+        Calling select() with an empty field list should get all the data -- an
+        empty field list indicates the wildcard option
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rows = db.select(table='hpss.gatekeeper',
+                         fields=[])
+        self.expected(3, len(rows[0].keys()))
+        for exp in ['GKID',
+                    'DEFAULT_WAIT_TIME',
+                    'SITE_POLICY_PATHNAME']:
+            self.assertTrue(exp in rows[0].keys(),
+                            "Expected key '%s' in each row, not found" %
+                            exp)
+
+    # -------------------------------------------------------------------------
+    def test_select_nf(self):
+        """
+        Calling select() with no field list should get all the data -- fields
+        should default to the empty list, indicating the wildcard option
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        mtf_rows = db.select(table='hpss.logclient', fields=[])
+        nf_rows = db.select(table='hpss.logclient')
+        
+        self.expected(len(mtf_rows[0].keys()), len(nf_rows[0].keys()))
+        self.expected(mtf_rows[0].keys(), nf_rows[0].keys())
+        
+
+    # -------------------------------------------------------------------------
+    def test_select_mto(self):
+        """
+        Calling select() with an empty orderby should get the data in the
+        same order as using no orderby at all.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        ordered_rows = db.select(table='hpss.logclient', orderby='')
+        unordered_rows = db.select(table='hpss.logclient')
+        okl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID']) for x in ordered_rows]
+        ukl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID']) for x in unordered_rows]
+        self.expected(ukl, okl)
+
+    # -------------------------------------------------------------------------
+    def test_select_mtt(self):
+        """
+        Calling select() with an empty table name should get an exception
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        try:
+            rows = db.select(table='',
+                             fields=['max(desc_name) as mdn',
+                                     'log_record_type_mask'],
+                             groupby='unknown_field')
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "On select(), table name must not be empty"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    def test_select_mtw(self):
+        """
+        Calling select() with an empty where arg should get the same data as no
+        where arg at all
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        w_rows = db.select(table='hpss.logpolicy', where='')
+        x_rows = db.select(table='hpss.logpolicy')
+        self.expected(len(x_rows), len(w_rows))
+        for exp, actual in zip(x_rows, w_rows):
+            self.expected(actual, exp)
+
+    # -------------------------------------------------------------------------
+    def test_select_nld(self):
+        """
+        Calling select() with a non-tuple as the data argument should
+        get an exception
+        """
+        self.exception_test('select',
+                            {'table': 'hpss.logpolicy',
+                             'fields': [],
+                             'where': 'desc_name = ?',
+                             'data': 'prudhoe'},
+                            "On select(), data must be a tuple")
+
+    # -------------------------------------------------------------------------
+    def test_select_nlf(self):
+        """
+        Calling select() with a non-list as the fields argument should
+        get an exception
+        """
+        self.exception_test('select',
+                            {'table': 'hpss.logpolicy',
+                             'fields': 92,
+                             'where': 'desc_name = ?',
+                             'data': ('prudhoe',)},
+                            "On select(), fields must be a list")
+
+    # -------------------------------------------------------------------------
+    def test_select_nq_ld(self):
+        """
+        Calling select() with where clause with no '?' and data in the list
+        should get an exception -- the data would be ignored
+        """
+        self.exception_test('select',
+                            {'table': 'hpss.logpolicy',
+                             'fields': [],
+                             'where': 'desc_name = ""',
+                             'data': ('prudhoe',)},
+                            "Data would be ignored")
+
+    # -------------------------------------------------------------------------
+    def test_select_nq_mtd(self):
+        """
+        Calling select() with where with no '?' and an empty data list is fine.
+        The data returned should match the where clause.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        crit = 'Server'
+        rows = db.select(table='hpss.server',
+                         fields=['desc_name', 'rpc_prog_num', 'server_type'],
+                         where="desc_name like '%%%s%%'" % crit,
+                         data=())
+        for x in rows:
+            self.assertTrue(crit in x['DESC_NAME'],
+                            "Expected '%s' in '%s' but it's missing" %
+                            (crit, x['DESC_NAME']))
+
+    # # -------------------------------------------------------------------------
+    # def test_select_nq_mtd(self):
+    #     """
+    #     Calling select() with where with no '?' and an empty data list is fine.
+    #     The data returned should match the where clause.
+    #     """
+    #     self.fail('under construction')
+
+    # -------------------------------------------------------------------------
+    def test_select_nso(self):
+        """
+        Calling select() with a non-string orderby argument should
+        get an exception
+        """
+        self.exception_test('select',
+                            {'table': "hpss.logpolicy",
+                             'orderby': 22},
+                            "On select(), orderby clause must be a string")
+                            
+    # -------------------------------------------------------------------------
+    def test_select_nst(self):
+        """
+        Calling select() with a non-string table argument should
+        get an exception
+        """
+        self.exception_test('select',
+                            {'table': [],
+                             'orderby': 22},
+                            "On select(), table name must be a string")
+
+    # -------------------------------------------------------------------------
+    def test_select_nsw(self):
+        """
+        Calling select() with a non-string where argument should
+        get an exception
+        """
+        self.exception_test('select',
+                            {'table': 'hpss.server',
+                             'where': []},
+                            "On select(), where clause must be a string")
+
+    # -------------------------------------------------------------------------
+    def test_select_o(self):
+        """
+        Calling select() specifying orderby should get the rows in the
+        order requested
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        ordered_rows = db.select(table='hpss.logclient',
+                                 orderby='logc_server_id')
+
+        ford = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+                for x in ordered_rows]
+
+        sord = sorted([CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+                                              for x in ordered_rows])
+        
+        self.expected(sord, ford)
+
+    # -------------------------------------------------------------------------
+    def test_select_q_ld(self):
+        """
+        Calling select() with a where clause containing '?' and data in the
+        data list should return the data matching the where clause
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        crit = 'Server'
+        rows = db.select(table='hpss.server',
+                         fields=['desc_name', 'rpc_prog_num', 'server_type'],
+                         where="desc_name like '%?%'",
+                         data=(crit,))
+        for x in rows:
+            self.assertTrue(crit in x['DESC_NAME'],
+                            "Expected '%s' in '%s' but it's missing" %
+                            (crit, x['DESC_NAME']))
+
+    # -------------------------------------------------------------------------
+    def test_select_q_mtd(self):
+        """
+        Calling select() with a where clause with a '?' and an empty data list
+        should get an exception
+        """
+        self.exception_test('select',
+                            {'table': "hpss.logpolicy",
+                             'data': (),
+                             'where': "DESC_NAME = ?"},
+                            "0 params bound not matching 1 required")
+
+    # -------------------------------------------------------------------------
+    def test_select_w(self):
+        """
+        Calling select() specifying where should get only the rows requested
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        crit = 'Server'
+        rows = db.select(table='hpss.server',
+                         fields=['desc_name', 'rpc_prog_num', 'server_type'],
+                         where="desc_name like '%%%s%%'" % crit)
+        for x in rows:
+            self.assertTrue(crit in x['DESC_NAME'],
+                            "Expected '%s' in '%s' but it's missing" %
+                            (crit, x['DESC_NAME']))
+
+    # -------------------------------------------------------------------------
+    def test_table_exists_yes(self):
+        """
+        For a table that exists, table_exists() should return True.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.expected(True, db.table_exists(table='authzacl'))
+
+    # -------------------------------------------------------------------------
+    def test_table_exists_no(self):
+        """
+        For a table that does not exist, table_exists() should return False.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.expected(False, db.table_exists(table='nonesuch'))
+
+    # -------------------------------------------------------------------------
+    def test_close_open(self):
+        """
+        Closing an open database should work.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.close()
+        self.expected(True, db._dbobj.closed)
+        # self.fail('under construction')
+
+    # -------------------------------------------------------------------------
+    def test_close_closed(self):
+        """
+        Closing a closed database should generate an exception.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db.close()
+        try:
+            db.close()
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            exp = "Cannot operate on a closed database"
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+    # -------------------------------------------------------------------------
+    def test_repr(self):
+        """
+        What the human readable object format looks like
+        """
+        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        b = CrawlDBI.DBIdb2(dbname='hcfg', tbl_prefix='hpss',
+                            cfg=CrawlConfig.get_config())
+        self.expected(str(b), str(a))
+        # self.fail('under construction')
+
+    # -------------------------------------------------------------------------
+    def test_insert_exception(self):
+        """
+        On a db2 database, insert should throw an exception.
+        """
+        self.exception_test("insert",
+                            {'table': "hpss.bogus",
+                             'data': [('a', 'b', 'c')]},
+                            "INSERT not supported for DB2")
+        # self.fail('under construction')
+        
+    # -------------------------------------------------------------------------
+    def test_create_exception(self):
+        """
+        On a db2 database, create should throw an exception.
+        """
+        self.exception_test("create",
+                            {'table': "hpss.nonesuch",
+                             'fields': self.fdef},
+                            "CREATE not supported for DB2")
+        # self.fail('under construction')
+        
+    # -------------------------------------------------------------------------
+    def test_delete_exception(self):
+        """
+        On a db2 database, delete should throw an exception.
+        """
+        self.exception_test("delete",
+                            {'table': "hpss.bogus",
+                             'data': [('a',)],
+                             'where': "field = ?"},
+                            "DELETE not supported for DB2")
+        
+    # -------------------------------------------------------------------------
+    def test_drop_exception(self):
+        """
+        On a db2 database, drop should throw an exception.
+        """
+        self.exception_test("drop",
+                            {'table': "hpss.bogus"},
+                            "DROP not supported for DB2")
+        
+    # -------------------------------------------------------------------------
+    def test_update_exception(self):
+        """
+        On a db2 database, update should throw an exception.
+        """
+        self.exception_test("update",
+                            {'table': "hpss.bogus",
+                             'fields': ['one', 'two'],
+                             'data': [('a', 'b', 'c')],
+                             'where': "one = ?"},
+                            "UPDATE not supported for DB2")
+
+    # -------------------------------------------------------------------------
+    def exception_test(self, funcname, kwargs, exp):
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        try:
+            if funcname == 'create':
+                db.create(**kwargs)
+            elif funcname == 'delete':
+                db.delete(**kwargs)
+            elif funcname == 'drop':
+                db.drop(**kwargs)
+            elif funcname == 'insert':
+                db.insert(**kwargs)
+            elif funcname == 'select':
+                rows = db.select(**kwargs)
+            elif funcname == 'update':
+                db.update(**kwargs)
+            else:
+                raise StandardError("unsupported function name '%s'" %
+                                    funcname)
+            self.fail("Expected exception not thrown")
+        except CrawlDBI.DBIerror, e:
+            self.assertTrue(exp in str(e),
+                            "Got the wrong DBIerror: %s" %
+                            util.line_quote(str(e)))
+
+# -----------------------------------------------------------------------------
 if __name__ == '__main__':
-    toolframe.ez_launch(test=['DBITest', 'DBIsqliteTest', 'DBImysqlTest'],
+    toolframe.ez_launch(test=['DBITest',
+                              'DBIsqliteTest',
+                              'DBImysqlTest',
+                              'DBIdb2Test'],
                         logfile=testhelp.testlog(__name__))
 
                 

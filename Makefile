@@ -1,4 +1,4 @@
-WWW = $(HOME)/www/hpss/hpssic
+WWW = $(HOME)/www/hpssic
 
 doc: readme refman uguide
 

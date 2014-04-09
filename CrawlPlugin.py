@@ -35,7 +35,7 @@ class CrawlPlugin(object):
         assert(name != None)
         assert(cfg != None)
         self.cfg = cfg
-        util.log("%s: Initializing plugin data" % name)
+        CrawlConfig.log("%s: Initializing plugin data" % name)
         self.init_cfg_data(name, cfg)
         self.last_fired = time.time() - self.frequency - 1
         super(CrawlPlugin, self).__init__()
@@ -46,11 +46,11 @@ class CrawlPlugin(object):
         Run the plugin.
         """
         if self.firable:
-            util.log("%s: firing" % self.name)
-            sys.modules[self.name].main(self.cfg)
+            CrawlConfig.log("%s: firing" % self.name)
+            sys.modules[self.modname].main(self.cfg)
             self.last_fired = time.time()
         elif self.cfg.getboolean('crawler', 'verbose'):
-            util.log("%s: not firable" % self.name)
+            CrawlConfig.log("%s: not firable" % self.name)
             self.last_fired = time.time()
 
     # -------------------------------------------------------------------------
@@ -80,14 +80,16 @@ class CrawlPlugin(object):
         if pdir not in sys.path:
             sys.path.insert(0, pdir)
 
-        if self.name in sys.modules.keys():
+        self.modname = self.cfg.get(self.name, 'module')
+
+        if self.modname in sys.modules.keys():
             filename = re.sub("\.pyc?", ".pyc",
-                              sys.modules[self.name].__file__)
+                              sys.modules[self.modname].__file__)
             util.conditional_rm(filename)
 
-            del sys.modules[self.name]
+            del sys.modules[self.modname]
             
-        __import__(self.name)
+        __import__(self.modname)
 
         self.plugin_dir = cfg.get('crawler', 'plugin-dir')
 

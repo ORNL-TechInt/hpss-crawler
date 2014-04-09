@@ -21,20 +21,18 @@ def db2cxn(dbsel):
         dbport = cfg.get('db2', 'port')
         dbuser = cfg.get('db2', 'username')
         dbpwd = base64.b64decode(cfg.get('db2', 'password'))
-        db2cxn._db['cfg'] = db2.connect("database=%s;" % cfgname +
-                                        "hostname=%s;" % dbhost +
-                                        "port=%s;" % dbport +
-                                        "uid=%s;" % dbuser +
-                                        "pwd=%s;" % dbpwd,
-                                        "",
-                                        "")
-        db2cxn._db['subsys'] = db2.connect("database=%s;" % subname +
-                                        "hostname=%s;" % dbhost +
-                                        "port=%s;" % dbport +
-                                        "uid=%s;" % dbuser +
-                                        "pwd=%s;" % dbpwd,
-                                        "",
-                                        "")
+        cxnstr = ("database=%s;" % cfgname +
+                  "hostname=%s;" % dbhost +
+                  "port=%s;" % dbport +
+                  "uid=%s;" % dbuser +
+                  "pwd=%s;" % dbpwd)
+        db2cxn._db['cfg'] = db2.connect(cxnstr, "", "")
+        cxnstr = ("database=%s;" % subname +
+                  "hostname=%s;" % dbhost +
+                  "port=%s;" % dbport +
+                  "uid=%s;" % dbuser +
+                  "pwd=%s;" % dbpwd)
+        db2cxn._db['subsys'] = db2.connect(cxnstr, "", "")
         rval = db2cxn._db[dbsel]
     return rval
         
@@ -55,7 +53,7 @@ def get_bitfile_path(bitfile):
               select parent_id, name from hpss.nsobject where bitfile_id = %s
               """ % hexstr(bitfile)
 
-    util.log("Query: %s" % sql)
+    # CrawlConfig.log("Query: %s" % sql)
     r = db2.exec_immediate(db, sql)
     x = db2.fetch_assoc(r)
     bfl = []
@@ -66,7 +64,9 @@ def get_bitfile_path(bitfile):
     if 1 < len(bfl):
         raise StandardError("Multiple objects found for bf %s" %
                             hexstr(bitfile))
-
+    elif len(bfl) < 1:
+        return("<unnamed bitfile>")
+    
     x = bfl[0]
     rval = ''
     while x:
@@ -124,7 +124,7 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           """
     rval = []
     stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+50))
+    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+limit))
     x = db2.fetch_assoc(stmt)
     while (x):
         rval.append(x)
@@ -182,7 +182,7 @@ def tcc_report(bitfile, cosinfo):
                  str(cosinfo[bitfile['BFATTR_COS_ID']]),
                  str(bitfile['SC_COUNT']),
                  bfp)
-    util.log(rpt)
+    CrawlConfig.log(rpt)
     try:
         tcc_report._f.write(rpt)
         tcc_report._f.flush()

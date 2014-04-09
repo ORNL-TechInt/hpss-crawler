@@ -71,6 +71,115 @@ def get_config(cfname='', reset=False, soft=False):
         get_config._config = rval
     return rval
 
+# ------------------------------------------------------------------------------
+def get_logger(cmdline='', cfg=None, reset=False, soft=False):
+    """
+    Return the logging object for this process. Instantiate it if it
+    does not exist already.
+
+    cmdline contains the log file name from the command line if one was
+    specified.
+
+    cfg contains a configuration object or None.
+
+    reset == True means that the caller wants to close any currently open log
+    file and open a new one rather than returning the one that's already open.
+
+    soft == True means that if a logger does not exist, we don't want to open
+    one but return None instead. Normally, if a logger does not exist, we
+    create it.
+    """
+    if reset:
+        try:
+            l = get_logger._logger
+            for h in l.handlers:
+                h.close()
+            del get_logger._logger
+        except AttributeError:
+            pass
+        if soft:
+            return None
+
+    kwargs = {}
+    envval = os.getenv('CRAWL_LOG')
+    try:
+        dcfg = get_config()
+    except:
+        dcfg = None
+    
+    # setting filename -- first, assume the default, then work down the
+    # precedence stack from cmdline to cfg to environment
+    filename = ''
+    if cmdline != '':
+        filename = cmdline
+    elif cfg != None:
+        try:
+            filename = cfg.get('crawler', 'logpath')
+        except:
+            pass
+    
+        try:
+            maxbytes = cfg.get_size('crawler', 'logsize')
+            kwargs['maxBytes'] = maxbytes
+        except:
+            pass
+
+        try:
+            kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
+        except:
+            pass
+        
+    elif envval != None:
+        filename = envval
+    elif dcfg != None:
+        try:
+            filename = dcfg.get('crawler', 'logpath')
+        except:
+            pass
+
+        try:
+            maxbytes = dcfg.get_size('crawler', 'logsize')
+            kwargs['maxBytes'] = maxbytes
+        except:
+            pass
+
+        try:
+            kwargs['backupCount'] = dcfg.getint('crawler', 'logmax')
+        except:
+            pass
+        
+    try:
+        rval = get_logger._logger
+    except AttributeError:
+        if soft:
+            return None
+        get_logger._logger = util.setup_logging(filename, 'crawl',
+                                                bumper=False, **kwargs)
+        rval = get_logger._logger
+
+    return rval
+
+# -----------------------------------------------------------------------------
+def log(*args):
+    """
+    Here we use the same logger as the one cached in get_logger() so that if it
+    is reset, all handles to it get reset.
+    """
+    cframe = sys._getframe(1)
+    caller_name = cframe.f_code.co_name
+    caller_file = cframe.f_code.co_filename
+    caller_lineno = cframe.f_lineno
+    fmt = (caller_name +
+           "(%s:%d): " % (caller_file, caller_lineno) +
+           args[0])
+    nargs = (fmt,) + args[1:]
+    try:
+        get_logger._logger.info(*nargs)
+    except AttributeError:
+        get_logger._logger = get_logger()
+        get_logger._logger.info(*nargs)
+
+# ------------------------------------------------------------------------------
 class CrawlConfig(ConfigParser.ConfigParser):
     """
     See the module description for information on this class.
@@ -171,24 +280,29 @@ class CrawlConfig(ConfigParser.ConfigParser):
         """
         try:
             spec = self.get(section, option)
-            [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
-            mult = self.map_time_unit(unit)
-            rval = int(mag) * mult
+            rval = self.to_seconds(spec)
         except ConfigParser.NoOptionError as e:
             if default != None:
                 rval = default
-                util.log(str(e) + '; using default value %d' % default)
+                log(str(e) + '; using default value %d' % default)
             else:
                 raise
         except ConfigParser.NoSectionError as e:
             if default != None:
                 rval = default
-                util.log(str(e) + '; using default value %d' % default)
+                log(str(e) + '; using default value %d' % default)
             else:
                 raise
 
         return rval
     
+    # -------------------------------------------------------------------------
+    def to_seconds(self, spec):
+        [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
+        mult = self.map_time_unit(unit)
+        rval = int(mag) * mult
+        return rval
+
     # -------------------------------------------------------------------------
     def getboolean(self, name, option):
         """

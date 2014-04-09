@@ -107,77 +107,85 @@ def env_update(cfg):
 
 default_logfile_name = "/var/log/crawl.log"
 # ------------------------------------------------------------------------------
-def get_logger(cmdline='', cfg=None, reset=False, soft=False):
-    """
-    Return the logging object for this process. Instantiate it if it
-    does not exist already.
+# def get_logger(cmdline='', cfg=None, reset=False, soft=False):
+#     """
+#     Return the logging object for this process. Instantiate it if it
+#     does not exist already.
+# 
+#     cmdline contains the log file name from the command line if one was
+#     specified.
+# 
+#     cfg contains a configuration object or None.
+# 
+#     reset == True means that the caller wants to close any currently open log
+#     file and open a new one rather than returning the one that's already open.
+# 
+#     soft == True means that if a logger does not exist, we don't want to open
+#     one but return None instead. Normally, if a logger does not exist, we
+#     create it.
+#     """
+#     if reset:
+#         try:
+#             l = get_logger._logger
+#             for h in l.handlers:
+#                 h.close()
+#             del get_logger._logger
+#         except AttributeError:
+#             pass
+# 
+#     kwargs = {}
+#     envval = os.getenv('CRAWL_LOG')
+# 
+#     # setting filename -- first, assume the default, then work down the
+#     # precedence stack from cmdline to cfg to environment
+#     filename = default_logfile_name
+#     if cmdline != '':
+#         filename = cmdline
+#     elif cfg != None:
+#         try:
+#             filename = cfg.get('crawler', 'logpath')
+#         except:
+#             pass
+#     
+#         try:
+#             maxbytes = cfg.get_size('crawler', 'logsize')
+#             kwargs['maxBytes'] = maxbytes
+#         except:
+#             pass
+#     
+#         if cfg.has_section('crawler'):
+#             if cfg.has_option('crawler', 'logmax'):
+#                 kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
+#         
+#     elif envval != None:
+#         filename = envval
+# 
+#     # if a cfg is provided, let's see if it gives us a log file size and backup
+#     # count
+#     if cfg != None:
+#         if cfg.has_section('crawler'):
+#             if cfg.has_option('crawler', 'logsize'):
+#                 kwargs['maxBytes'] = cfg.get_size('crawler', 'logsize')
+#             if cfg.has_option('crawler', 'logmax'):
+#                 kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
+#             
+#     try:
+#         rval = get_logger._logger
+#     except AttributeError:
+#         if soft:
+#             return None
+#         get_logger._logger = setup_logging(filename, 'crawl',
+#                                            bumper=False, **kwargs)
+#         rval = get_logger._logger
+# 
+#     return rval
 
-    cmdline contains the log file name from the command line if one was
-    specified.
-
-    cfg contains a configuration object or None.
-
-    reset == True means that the caller wants to close any currently open log
-    file and open a new one rather than returning the one that's already open.
-
-    soft == True means that if a logger does not exist, we don't want to open
-    one but return None instead. Normally, if a logger does not exist, we
-    create it.
-    """
-    if reset:
-        try:
-            l = get_logger._logger
-            for h in l.handlers:
-                h.close()
-            del get_logger._logger
-        except AttributeError:
-            pass
-
-    kwargs = {}
-    envval = os.getenv('CRAWL_LOG')
-
-    # setting filename -- first, assume the default, then work down the
-    # precedence stack from cmdline to cfg to environment
-    filename = default_logfile_name
-    if cmdline != '':
-        filename = cmdline
-    elif cfg != None:
-        try:
-            filename = cfg.get('crawler', 'logpath')
-        except:
-            pass
-    
-        try:
-            maxbytes = cfg.get_size('crawler', 'logsize')
-            kwargs['maxBytes'] = maxbytes
-        except:
-            pass
-    
-        if cfg.has_section('crawler'):
-            if cfg.has_option('crawler', 'logmax'):
-                kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
-        
-    elif envval != None:
-        filename = envval
-
-    # if a cfg is provided, let's see if it gives us a log file size and backup
-    # count
-    if cfg != None:
-        if cfg.has_section('crawler'):
-            if cfg.has_option('crawler', 'logsize'):
-                kwargs['maxBytes'] = cfg.get_size('crawler', 'logsize')
-            if cfg.has_option('crawler', 'logmax'):
-                kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
-            
-    try:
-        rval = get_logger._logger
-    except AttributeError:
-        if soft:
-            return None
-        get_logger._logger = setup_logging(filename, 'crawl',
-                                           bumper=False, **kwargs)
-        rval = get_logger._logger
-
+# -----------------------------------------------------------------------------
+def hostname(long=False):
+    if long:
+        rval = socket.gethostname()
+    else:
+        rval = socket.gethostname().split('.')[0]
     return rval
 
 # -----------------------------------------------------------------------------
@@ -195,24 +203,24 @@ def line_quote(value):
     return '\n"""\n%s\n"""' % str(rv)
 
 # -----------------------------------------------------------------------------
-def log(*args):
-    """
-    Here we use the same logger as the one cached in get_logger() so that if it
-    is reset, all handles to it get reset.
-    """
-    cframe = sys._getframe(1)
-    caller_name = cframe.f_code.co_name
-    caller_file = cframe.f_code.co_filename
-    caller_lineno = cframe.f_lineno
-    fmt = (caller_name +
-           "(%s:%d): " % (caller_file, caller_lineno) +
-           args[0])
-    nargs = (fmt,) + args[1:]
-    try:
-        get_logger._logger.info(*nargs)
-    except AttributeError:
-        get_logger._logger = get_logger()
-        get_logger._logger.info(*nargs)
+# def log(*args):
+#     """
+#     Here we use the same logger as the one cached in get_logger() so that if it
+#     is reset, all handles to it get reset.
+#     """
+#     cframe = sys._getframe(1)
+#     caller_name = cframe.f_code.co_name
+#     caller_file = cframe.f_code.co_filename
+#     caller_lineno = cframe.f_lineno
+#     fmt = (caller_name +
+#            "(%s:%d): " % (caller_file, caller_lineno) +
+#            args[0])
+#     nargs = (fmt,) + args[1:]
+#     try:
+#         get_logger._logger.info(*nargs)
+#     except AttributeError:
+#         get_logger._logger = get_logger()
+#         get_logger._logger.info(*nargs)
 
 # -----------------------------------------------------------------------------
 def filename():
@@ -247,11 +255,11 @@ def setup_logging(logfile='',
     Create a new logger and return the object
     """
     if logfile == '':
-        raise StandardError("setup_logging: No log file name provided")
+        logfile = default_logfile_name
     
     rval = logging.getLogger(logname)
     rval.setLevel(logging.INFO)
-    host = socket.gethostname().split('.')[0]
+    host = hostname()
     if rval.handlers != [] and logfile != rval.handlers[0].baseFilename:
         rval.handlers[0].close()
         del rval.handlers[0]
@@ -283,3 +291,25 @@ def setup_logging(logfile='',
         rval.info('-' * (55 - len(host)))
     return rval
 
+# -----------------------------------------------------------------------------
+def ymdhms(epoch):
+    return time.strftime("%Y.%m%d %H:%M:%S",
+                         time.localtime(epoch))
+
+# -----------------------------------------------------------------------------
+def epoch(ymdhms):
+    fmts = ["%Y.%m%d %H:%M:%S",
+            "%Y.%m%d",
+            ]
+    fp = fmts
+    rval = None
+    while rval is None:
+        try:
+            rval = time.mktime(time.strptime(ymdhms, fp.pop(0)))
+        except ValueError:
+            rval = None
+        except IndexError:
+            print("The date '%s' does not match any of the formats: %s" %
+                  (ymdhms, fmts))
+
+    return rval

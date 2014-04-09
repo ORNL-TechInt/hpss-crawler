@@ -140,20 +140,20 @@ class Checkable(object):
          3) update the sample count in the Dimension object
         """
         if not already_hashed:
-            util.log("starting hashcreate on %s", self.path)
+            CrawlConfig.log("starting hashcreate on %s", self.path)
             rsp = hsi.hashcreate(self.path)
             if "TIMEOUT" in rsp or "ERROR" in rsp:
-                util.log("hashcreate transfer failed on %s", self.path)
+                CrawlConfig.log("hashcreate transfer failed on %s", self.path)
                 hsi.quit()
                 self.set('fails', self.fails + 1)
                 return "skipped"
             elif "Access denied" in rsp:
-                util.log("hashcreate failed with 'access denied' on %s",
+                CrawlConfig.log("hashcreate failed with 'access denied' on %s",
                          self.path)
                 hsi.quit()
                 return "access denied"
             else:
-                util.log("completed hashcreate on %s", self.path)
+                CrawlConfig.log("completed hashcreate on %s", self.path)
             
         if self.checksum == 0:
             self.set('checksum', 1)
@@ -224,7 +224,7 @@ class Checkable(object):
         try:
             # h = hpss.HSI(timeout=hsi_timeout, verbose=True)
             h = hpss.HSI(verbose=True)
-            util.log("started hsi with pid %d" % h.pid())
+            CrawlConfig.log("started hsi with pid %d" % h.pid())
         except hpss.HSIerror, e:
             return "unavailable"
 
@@ -264,7 +264,7 @@ class Checkable(object):
         h.quit()
 
         self.set('last_check', time.time())
-        util.log("Persisting checkable '%s' with last_check = %f, fails = %d" %
+        CrawlConfig.log("Persisting checkable '%s' with last_check = %f, fails = %d" %
                  (self.path, self.last_check, self.fails))
         self.persist()
         return rval
@@ -657,26 +657,26 @@ class Checkable(object):
         """
         Attempt to verify the current file.
         """
-        util.log("hsi(%d) attempting to verify %s" % (h.pid(), self.path))
+        CrawlConfig.log("hsi(%d) attempting to verify %s" % (h.pid(), self.path))
         rsp = h.hashverify(self.path)
             
         if "TIMEOUT" in rsp or "ERROR" in rsp:
             rval = "skipped"
             self.set('fails', self.fails + 1)
-            util.log("hashverify transfer incomplete on %s" % self.path)
+            CrawlConfig.log("hashverify transfer incomplete on %s" % self.path)
             h.quit()
         elif "%s: (md5) OK" % self.path in rsp:
             rval = "matched"
-            util.log("hashverify matched on %s" % self.path)
+            CrawlConfig.log("hashverify matched on %s" % self.path)
         elif "no valid checksum found" in rsp:
             if self.addable(self.cos):
                 rval = self.add_to_sample(h)
             else:
                 self.set('checksum', 0)
                 rval = "skipped"
-                util.log("hashverify skipped %s" % self.path)
+                CrawlConfig.log("hashverify skipped %s" % self.path)
         else:
             rval = Alert.Alert("Checksum mismatch: %s" % rsp)
-            util.log("hashverify generated 'Checksum mismatch' " +
+            CrawlConfig.log("hashverify generated 'Checksum mismatch' " +
                      "alert on %s" % self.path)
         return rval

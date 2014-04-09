@@ -56,7 +56,8 @@ class CrawlTest(testhelp.HelpedTestCase):
                          'trigger': '<command-line>',
                          'plugins': 'plugin_A',
                          },
-             'plugin_A': {'frequency': '1h',
+             'plugin_A': {'module': 'plugin_A',
+                          'frequency': '1h',
                           'operations': '15'
                           }
              }
@@ -639,7 +640,9 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_nin(self.cstr['pfctx'], result)
 
         self.assertEqual(crawl.is_running(context=ctx), True,
-                         "Expected crawler to be running but it is not")
+                         "%s result=%s" %
+                         ("Expected crawler to be running but it is not.",
+                          util.line_quote(result)))
 
         result = pexpect.run(cmd)
         self.assertTrue(self.cstr['pfctx'] in result,
@@ -665,7 +668,8 @@ class CrawlTest(testhelp.HelpedTestCase):
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['plugins'] = 'plugin_A, other_plugin'
         xdict['other_plugin'] = {'unplanned': 'silver',
-                                 'simple': 'check for this'}
+                                 'simple': 'check for this',
+                                 'module': 'other_plugin'}
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         self.write_plugmod(self.plugdir, 'other_plugin')
@@ -682,9 +686,12 @@ class CrawlTest(testhelp.HelpedTestCase):
         pidfile = (set(up_l) - set(pre_l)).pop()
 
         self.assertEqual(os.path.exists(logpath), True)
-        self.assertEqual('crawl: CONFIG: [other_plugin]' in util.contents(logpath),
+        exp = 'crawl: CONFIG: [other_plugin]'
+        self.assertEqual(exp in util.contents(logpath),
                          True,
-                         "Expected 'other_plugin' in log file not found")
+                         "Expected '%s' in %s: %s" %
+                         (exp, logpath,
+                          util.line_quote(util.contents(logpath))))
         self.assertEqual('crawl: CONFIG: unplanned: silver' in
                          util.contents(logpath),
                          True,
@@ -714,7 +721,9 @@ class CrawlTest(testhelp.HelpedTestCase):
         ctx = 'TEST'
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
-        xdict['other'] = {'frequency': '1s', 'fire': 'true'}
+        xdict['other'] = {'frequency': '1s',
+                          'fire': 'true',
+                          'module': 'other'}
         xdict['crawler']['verbose'] = 'true'
         xdict['crawler']['plugins'] = 'other'
         del xdict['plugin_A']
