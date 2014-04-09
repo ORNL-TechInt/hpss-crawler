@@ -133,7 +133,7 @@ def mpra_record_recent(type, recent):
     """
     db = CrawlDBI.DBI()
     if not db.table_exists(table='mpra'):
-        util.log("Creating mpra table")
+        CrawlConfig.log("Creating mpra table")
         db.create(table='mpra',
                   fields=['recent_time   integer',
                           'type          text'])
@@ -142,12 +142,12 @@ def mpra_record_recent(type, recent):
                      where='type = ?',
                      data=(type,))
     if len(rows) < 1:
-        util.log("Insert into mpra table: (%s, %d)" % (type, recent))
+        CrawlConfig.log("Insert into mpra table: (%s, %d)" % (type, recent))
         db.insert(table='mpra',
                   fields=['type', 'recent_time'],
                   data=[(type, recent)])
     elif rows[0][0] < recent:
-        util.log("Update mpra table with (%s, %d)" % (type, recent))
+        CrawlConfig.log("Update mpra table with (%s, %d)" % (type, recent))
         db.update(table='mpra',
                   fields=['recent_time'],
                   where='type = ?',
@@ -161,7 +161,7 @@ def mpra_fetch_recent(type):
     """
     db = CrawlDBI.DBI()
     if not db.table_exists(table='mpra'):
-        util.log("Fetch from not existent mpra table -- return 0")
+        CrawlConfig.log("Fetch from not existent mpra table -- return 0")
         return 0
 
     rows = db.select(table='mpra',
@@ -170,9 +170,9 @@ def mpra_fetch_recent(type):
                      data=(type,))
 
     if rows[0][0] is None:
-        util.log("No '%s' value in mpra -- returning 0" % type)
+        CrawlConfig.log("No '%s' value in mpra -- returning 0" % type)
         return 0
     else:
-        util.log("Fetch '%s' from mpra table -- return %d" %
+        CrawlConfig.log("Fetch '%s' from mpra table -- return %d" %
                  (type, rows[0][0]))
         return rows[0][0]

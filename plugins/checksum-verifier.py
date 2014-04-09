@@ -15,7 +15,7 @@ import util
 # -----------------------------------------------------------------------------
 def main(cfg):
     # Get stuff we need -- the logger object, dataroot, etc.
-    util.log("firing up")
+    CrawlConfig.log("firing up")
     plugdir = cfg.get('crawler', 'plugin-dir')
     dataroot = util.csv_list(cfg.get('checksum-verifier', 'dataroot'))
     odds = cfg.getfloat('checksum-verifier', 'odds')
@@ -33,14 +33,14 @@ def main(cfg):
         sqlite_msg = "no such table: checkables"
         mysql_msg = "Table '.*' doesn't exist"
         if util.rgxin(sqlite_msg, str(e)) or util.rgxin(mysql_msg, str(e)):
-            util.log("calling ex_nihilo")
+            CrawlConfig.log("calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
             clist = Checkable.Checkable.get_list(odds)
         else:
             raise
     except StandardError, e:
         if 'Please call .ex_nihilo()' in str(e):
-            util.log("calling ex_nihilo")
+            CrawlConfig.log("calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
             clist = Checkable.Checkable.get_list(odds)
         else:
@@ -52,7 +52,7 @@ def main(cfg):
         if 0 < len(clist):
             # but it's not, so grab the first item and check it
             item = clist.pop(0)
-            util.log("[%d] checking %s" % (item.rowid, item))
+            CrawlConfig.log("[%d] checking %s" % (item.rowid, item))
             ilist = item.check()
 
             # Expected outcomes that check can return:
@@ -67,39 +67,39 @@ def main(cfg):
             #
             if type(ilist) == str:
                 if ilist == "access denied":
-                    util.log("dir %s not accessible" % item.path)
+                    CrawlConfig.log("dir %s not accessible" % item.path)
                     # clist.remove(item)
                 elif ilist == "matched":
                     matches += 1
-                    util.log("%s checksums matched" % item.path)
+                    CrawlConfig.log("%s checksums matched" % item.path)
                 elif ilist == "checksummed":
                     # checksums += 1
-                    util.log("%s checksummed" % item.path)
+                    CrawlConfig.log("%s checksummed" % item.path)
                 elif ilist == "skipped":
-                    util.log("%s skipped" % item.path)
+                    CrawlConfig.log("%s skipped" % item.path)
                 elif ilist == "unavailable":
-                    util.log("HPSS is not available")
+                    CrawlConfig.log("HPSS is not available")
                     break
                 else:
-                    util.log("unexpected string returned " +
+                    CrawlConfig.log("unexpected string returned " +
                               "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
-                util.log("in %s, found:" % item)
+                CrawlConfig.log("in %s, found:" % item)
                 for n in ilist:
-                    util.log(">>> %s" % str(n))
+                    CrawlConfig.log(">>> %s" % str(n))
                     if 'f' == n.type and n.checksum != 0:
-                        util.log(".. previously checksummed")
+                        CrawlConfig.log(".. previously checksummed")
                         # checksums += 1
             elif isinstance(ilist, Checkable.Checkable):
-                util.log("Checkable returned - file checksummed - %s, %s" %
+                CrawlConfig.log("Checkable returned - file checksummed - %s, %s" %
                           (ilist.path, ilist.checksum))
                 # checksums += 1
             elif isinstance(ilist, Alert.Alert):
-                util.log("Alert generated: '%s'" %
+                CrawlConfig.log("Alert generated: '%s'" %
                           ilist.msg())
                 failures += 1
             else:
-                util.log("unexpected return val from " +
+                CrawlConfig.log("unexpected return val from " +
                           "Checkable.check: %s: %r" % (type(ilist), ilist))
 
     # Report the statistics in the log
@@ -113,16 +113,16 @@ def main(cfg):
     update_stats((t_matches, t_failures))
 
     (t_checksums, t_matches, t_failures) = get_stats()
-    util.log("files checksummed: %d; " % (t_checksums - p_checksums) +
+    CrawlConfig.log("files checksummed: %d; " % (t_checksums - p_checksums) +
               "checksums matched: %d; " % matches +
               "failures: %d" % failures)
-    util.log("totals checksummed: %d; " % t_checksums +
+    CrawlConfig.log("totals checksummed: %d; " % t_checksums +
               "matches: %d; " % t_matches +
               "failures: %d" % t_failures)
 
     # Report the dimension data in the log
     d = Dimension.Dimension(name='cos')
-    util.log(d.report())
+    CrawlConfig.log(d.report())
 
 stats_table = 'cvstats'
 # -----------------------------------------------------------------------------

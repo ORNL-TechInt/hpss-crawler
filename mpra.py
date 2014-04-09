@@ -333,7 +333,7 @@ def mpra_simplug(args):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
-    util.log("starting simplug, just got config")
+    CrawlConfig.log("starting simplug, just got config")
     sys.path.append(cfg.get('crawler', 'plugin-dir'))
     import mpra_plugin
     mpra_plugin.main(cfg)

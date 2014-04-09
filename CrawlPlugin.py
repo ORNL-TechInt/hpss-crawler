@@ -35,7 +35,7 @@ class CrawlPlugin(object):
         assert(name != None)
         assert(cfg != None)
         self.cfg = cfg
-        util.log("%s: Initializing plugin data" % name)
+        CrawlConfig.log("%s: Initializing plugin data" % name)
         self.init_cfg_data(name, cfg)
         self.last_fired = time.time() - self.frequency - 1
         super(CrawlPlugin, self).__init__()
@@ -46,11 +46,11 @@ class CrawlPlugin(object):
         Run the plugin.
         """
         if self.firable:
-            util.log("%s: firing" % self.name)
+            CrawlConfig.log("%s: firing" % self.name)
             sys.modules[self.modname].main(self.cfg)
             self.last_fired = time.time()
         elif self.cfg.getboolean('crawler', 'verbose'):
-            util.log("%s: not firable" % self.name)
+            CrawlConfig.log("%s: not firable" % self.name)
             self.last_fired = time.time()
 
     # -------------------------------------------------------------------------
