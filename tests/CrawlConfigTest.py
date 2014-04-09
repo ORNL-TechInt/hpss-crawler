@@ -15,6 +15,10 @@ import util
 import warnings
 
 # -----------------------------------------------------------------------------
+def logErr(record):
+    raise
+
+# -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for the tests.
@@ -753,6 +757,189 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual('dog' in obj.options('sounds'), True)
         self.assertEqual('hen' in obj.options('sounds'), True)
 
+    # -------------------------------------------------------------------------
+    def test_log_default(self):
+        """
+        If CrawlConfig.log() is called with no logger already instantiated, and
+        no default config file available, it should resort to the default log
+        file names in either /var/log/crawl.log or /tmp/crawl.log, depending on
+        the privilege of the running user.
+        """
+        with util.Chdir(self.testdir):
+            # reset any config and logger already initialized
+            CrawlConfig.get_config(reset=True, soft=True)
+            CrawlConfig.get_logger(reset=True, soft=True)
+
+            # now attempt to log a message to the default file
+            msg = "This is a test log message %s"
+            arg = "with a format specifier"
+            if 0 == os.getuid():
+                exp_logfile = "/var/log/crawl.log"
+            else:
+                exp_logfile = "/tmp/crawl.log"
+            exp = (util.my_name() +
+                   "(%s:%d): " % (sys._getframe().f_code.co_filename,
+                                  sys._getframe().f_lineno + 2) +
+                   msg % arg)
+            CrawlConfig.log(msg, arg)
+            result = util.contents(exp_logfile)
+            self.assertTrue(exp in result,
+                            "Expected '%s' in %s" %
+                            (exp, util.line_quote(result)))
+
+        
+    # -------------------------------------------------------------------------
+    def test_log_simple(self):
+        """
+        Tests for routine util.log():
+         - simple string in first argument
+         - 1 % formatter in first arg
+         - multiple % formatters in first arg
+         - too many % formatters for args
+         - too many args for % formatters
+        """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # simple string in first arg
+        exp = util.my_name() + ": " + "This is a simple string"
+        CrawlConfig.log(exp)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+                        
+    # -------------------------------------------------------------------------
+    def test_log_onefmt(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # 1 % formatter in first arg
+        a1 = "This has a formatter and one argument: %s"
+        a2 = "did that work?"
+        exp = (util.my_name() +
+               "(%s:%d): " % (util.filename(), util.lineno()+2) +
+               a1 % a2)
+        CrawlConfig.log(a1, a2)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+    # -------------------------------------------------------------------------
+    def test_log_multfmt(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # multiple % formatters in first arg
+        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
+        a2 = "zebedee"
+        a3 = 94
+        a4 = 23.12348293402
+        exp = (util.my_name() +
+               "(%s:%d): " % (util.filename(), util.lineno()+2) +
+               a1 % (a2, a3, a4))
+        CrawlConfig.log(a1, a2, a3, a4)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+    # -------------------------------------------------------------------------
+    def test_log_toomany_fmt(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # this allows exceptions thrown from inside the logging handler to
+        # propagate up so we can catch it.
+        log.handlers[0].handleError = logErr
+        
+        # multiple % formatters in first arg
+        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f; %g"
+        a2 = "zebedee"
+        a3 = 94
+        a4 = 23.12348293402
+        exp = util.my_name() + ": " + a1 % (a2, a3, a4, 17.9)
+        try:
+            CrawlConfig.log(a1, a2, a3, a4)
+            self.fail("Expected exception not thrown")
+        except TypeError,e:
+            self.assertEqual("not enough arguments for format string", str(e),
+                             "Wrong TypeError thrown")
+    
+        result = util.contents(fpath)
+        self.assertFalse(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+
+        
+    # -------------------------------------------------------------------------
+    def test_log_toomany_args(self):
+        # """
+        # Tests for routine util.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        util.get_logger(reset=True, soft=True)
+        log = util.get_logger(cmdline=fpath)
+
+        # this allows exceptions thrown from inside the logging handler to
+        # propagate up so we can catch it.
+        log.handlers[0].handleError = logErr
+        
+        # multiple % formatters in first arg
+        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
+        a2 = "zebedee"
+        a3 = 94
+        a4 = 23.12348293402
+        a5 = "friddle"
+        exp = (util.my_name() + ": " + a1 % (a2, a3, a4))
+        try:
+            CrawlConfig.log(a1, a2, a3, a4, a5)
+            self.fail("Expected exception not thrown")
+        except TypeError, e:
+            exc = "not all arguments converted during string formatting"
+            self.assertEqual(exc, str(e),
+                             "Expected '%s', got '%s'" % (exc, str(e)))
+        
+        result = util.contents(fpath)
+        self.assertFalse(exp in result,
+                         "Expected '%s' in %s" %
+                         (exp, util.line_quote(result)))
+        
     # -------------------------------------------------------------------------
     def test_map_time_unit(self):
         """

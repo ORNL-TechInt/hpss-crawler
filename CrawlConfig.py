@@ -159,6 +159,26 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
 
     return rval
 
+# -----------------------------------------------------------------------------
+def log(*args):
+    """
+    Here we use the same logger as the one cached in get_logger() so that if it
+    is reset, all handles to it get reset.
+    """
+    cframe = sys._getframe(1)
+    caller_name = cframe.f_code.co_name
+    caller_file = cframe.f_code.co_filename
+    caller_lineno = cframe.f_lineno
+    fmt = (caller_name +
+           "(%s:%d): " % (caller_file, caller_lineno) +
+           args[0])
+    nargs = (fmt,) + args[1:]
+    try:
+        get_logger._logger.info(*nargs)
+    except AttributeError:
+        get_logger._logger = get_logger()
+        get_logger._logger.info(*nargs)
+
 # ------------------------------------------------------------------------------
 class CrawlConfig(ConfigParser.ConfigParser):
     """
