@@ -428,7 +428,10 @@ def make_pidfile(pid, context, exitpath, just_check=False):
     if not ok:
         pf_l = glob.glob("%s/*" % piddir)
         for pf_n in pf_l:
-            (ctx, xp) = util.contents(pf_n).strip().split()
+            data = util.contents(pf_n)
+            if 0 == len(data):
+                continue
+            (ctx, xp) = data.strip().split()
             if ctx == context:
                 raise StandardError("The pidfile for context %s exists" %
                                     context)
