@@ -12,7 +12,7 @@ import pexpect
 import pprint
 import re
 import sys
-import tcc_common
+import tcc_lib
 import time
 import toolframe
 import util
@@ -40,7 +40,7 @@ def tccp_bfid(args):
                      dbsect="subsys"):
         ct = time.strftime("%Y.%m%d %H:%M:%S",
                            time.localtime(row['BFATTR_CREATE_TIME']))
-        print "%s %d %s" % (tcc_common.hexstr(row['BFID']),
+        print "%s %d %s" % (tcc_lib.hexstr(row['BFID']),
                             row['BFATTR_COS_ID'],
                             ct)
 
@@ -69,7 +69,7 @@ def tccp_bfpath(args):
     except:
         print("usage: tcc bfpath BITFILE_ID")
 
-    bfpath = tcc_common.get_bitfile_path(bitfile)
+    bfpath = tcc_lib.get_bitfile_path(bitfile)
     print(bfpath)
     
 # -----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ def tccp_bfts(args):
     for row in query("""select bfid, storage_class from hpss.bftapeseg
                         fetch first 20 rows only""",
                      dbsect="subsys"):
-        print("%s %s" % (tcc_common.hexstr(row['BFID']),
+        print("%s %s" % (tcc_lib.hexstr(row['BFID']),
                          row['STORAGE_CLASS']))
         
 # -----------------------------------------------------------------------------
@@ -198,7 +198,7 @@ def tccp_selbf(args):
         record += 1
         for k in sorted(row):
             if k == 'BFID':
-                print("%s: %s" % (k, tcc_common.hexstr(row[k])))
+                print("%s: %s" % (k, tcc_lib.hexstr(row[k])))
             elif k == 'ALLOC_METHOD':
                 print("%s: %s" % (k, ord(row[k])))
             elif '_TIME' in k and int(row[k]) != 0:
@@ -257,7 +257,7 @@ def tccp_tables(args):
     if o.debug: pdb.set_trace()
     
     # db = db2.connect('subsys', 'hpss', hpss_password())
-    db = tcc_common.db2cxn(o.dbsect)
+    db = tcc_lib.db2cxn(o.dbsect)
     cxn = db2dbi.Connection(db)
     rows = cxn.tables('HPSS', '%')
     for tab in rows:
@@ -293,13 +293,13 @@ def tccp_zreport(args):
         return
     
     cfg = CrawlConfig.get_config()
-    outfile = cfg.get(tcc_common.sectname(), 'report_file')
+    outfile = cfg.get(tcc_lib.sectname(), 'report_file')
 
-    cosinfo = tcc_common.get_cos_info()
-    bfl = tcc_common.get_bitfile_set(cfg, int(nsobj_id), 1)
+    cosinfo = tcc_lib.get_cos_info()
+    bfl = tcc_lib.get_bitfile_set(cfg, int(nsobj_id), 1)
     print("Writing output to %s" % outfile)
     for bf in bfl:
-        tcc_common.tcc_report(bf, cosinfo)
+        tcc_lib.tcc_report(bf, cosinfo)
     
 # -----------------------------------------------------------------------------
 def copies_by_cos():
@@ -377,7 +377,7 @@ def query(sql, dbsect='cfg'):
     return the result.
     """
 
-    db = tcc_common.db2cxn(dbsect)
+    db = tcc_lib.db2cxn(dbsect)
     r = db2.exec_immediate(db, sql)
     rval = []
     x = db2.fetch_assoc(r)
