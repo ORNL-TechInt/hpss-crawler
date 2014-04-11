@@ -9,7 +9,7 @@ import pdb
 import pprint
 import re
 import sys
-import tcc_common
+import tcc_lib
 import time
 import util
 
@@ -26,7 +26,7 @@ def main(cfg):
     CrawlConfig.log("tape-copy-checker: firing up for %d items" % how_many)
     
     # retrieve COS info
-    cosinfo = tcc_common.get_cos_info()
+    cosinfo = tcc_lib.get_cos_info()
     # for cos_id in cosinfo:
     #     CrawlConfig.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
 
@@ -37,7 +37,7 @@ def main(cfg):
     # fetch the next N bitfiles from DB2
     CrawlConfig.log("looking for nsobject ids between %d and %d"
              % (next_nsobj_id, next_nsobj_id+how_many-1))
-    bfl = tcc_common.get_bitfile_set(cfg,
+    bfl = tcc_lib.get_bitfile_set(cfg,
                                      int(next_nsobj_id),
                                      how_many)
     
@@ -51,16 +51,16 @@ def main(cfg):
         # report it
         for bf in bfl:
             if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
-                tcc_common.tcc_report(bf, cosinfo)
+                tcc_lib.tcc_report(bf, cosinfo)
                 CrawlConfig.log("%s %s %d != %d" %
                          (bf['OBJECT_ID'],
-                          tcc_common.hexstr(bf['BFID']),
+                          tcc_lib.hexstr(bf['BFID']),
                           bf['SC_COUNT'],
                           cosinfo[bf['BFATTR_COS_ID']]))
             elif cfg.getboolean(sectname, 'verbose'):
                 CrawlConfig.log("%s %s %d == %d" %
                          (bf['OBJECT_ID'],
-                          tcc_common.hexstr(bf['BFID']),
+                          tcc_lib.hexstr(bf['BFID']),
                           bf['SC_COUNT'],
                           cosinfo[bf['BFATTR_COS_ID']]))
             
