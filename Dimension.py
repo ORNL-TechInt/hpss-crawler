@@ -122,6 +122,10 @@ class Dimension(object):
                               groupby='cos')
         self.s_sum = self._compute_dict(rows)
         
+        for cval in self.p_sum:
+            if cval not in self.s_sum:
+                self.s_sum[cval] = {'count': 0, 'pct': 0}
+
         if not already_open:
             self.db.close()
             
