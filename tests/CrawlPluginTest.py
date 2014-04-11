@@ -22,23 +22,22 @@ def setUpModule():
     """
     Set up for testing
     """
-    testhelp.module_test_setup([CrawlPluginTest.plugdir,
-                                CrawlPluginTest.plugdir + '_alt'])
+    testhelp.module_test_setup(CrawlPluginTest.testdir)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
     Clean up after testing
     """
-    testhelp.module_test_teardown([CrawlPluginTest.plugdir,
-                                   CrawlPluginTest.plugdir + '_alt'])
+    testhelp.module_test_teardown(CrawlPluginTest.testdir)
 
 # -----------------------------------------------------------------------------
 class CrawlPluginTest(testhelp.HelpedTestCase):
     """
     This class contains the tests for the CrawlPlugin class.
     """
-    plugdir = '%s/test_plugins' % testhelp.testroot(__name__)
+    testdir = testhelp.testdata(__name__)
+    plugdir = '%s/test_plugins' % testdir
     
     # -------------------------------------------------------------------------
     def test_fire(self):
@@ -443,6 +442,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         rval = CrawlConfig.CrawlConfig()
         rval.add_section(pname)
         rval.add_section('crawler')
+        rval.set('crawler', 'logpath', "%s/test.log" % self.testdir)
         if plugdir is not None:
             if plugdir == '':
                 rval.set('crawler', 'plugin-dir', self.plugdir)
