@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import crawl_lib
 import CrawlConfig
 import CrawlDBI
 import mpra_lib
@@ -324,19 +325,7 @@ def mpra_simplug(args):
     usage: mpra simplug
 
     """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(args)
-
-    if o.debug: pdb.set_trace()
-
-    cfg = CrawlConfig.get_config()
-    CrawlConfig.log("starting simplug, just got config")
-    sys.path.append(cfg.get('crawler', 'plugin-dir'))
-    import mpra_plugin
-    mpra_plugin.main(cfg)
+    crawl_lib.simplug('mpra', args)
 
 # -----------------------------------------------------------------------------
 toolframe.tf_launch('mpra', __name__)

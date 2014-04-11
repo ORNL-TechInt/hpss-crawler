@@ -28,16 +28,13 @@ def make_tcfg(dbtype):
     tcfg.set('dbi', 'dbtype', dbtype)
     tcfg.set('dbi', 'dbname', DBITest.testdb)
     tcfg.set('dbi', 'tbl_prefix', 'test')
+    xcfg = CrawlConfig.get_config(reset=True)
     if dbtype == 'mysql':
         tcfg.set('dbi', 'dbname', 'hpssic')
         tcfg.set('dbi', 'host', 'db-hpssic.ccs.ornl.gov')
         tcfg.set('dbi', 'username', 'hpssic_user')
-        # this pulls the mysql password from crawl.cfg so we don't have to keep
-        # multiple copies in sync
-        xcfg = CrawlConfig.get_config('crawl.cfg', reset=True)
         tcfg.set('dbi', 'password', xcfg.get('dbi', 'password'))
     elif dbtype == 'db2':
-        xcfg = CrawlConfig.get_config(reset=True)
         tcfg.add_section('db2')
         tcfg.set('dbi', 'dbname', 'hcfg')
         tcfg.set('dbi', 'tbl_prefix', 'hpss')

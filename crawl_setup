@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+./crawl.py -L
+./cv.py -L
+./mpra.py -L
+./tcc.py -L
+./tests/all.py -L

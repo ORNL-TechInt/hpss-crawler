@@ -12,14 +12,15 @@ import sys
 import time
 import util
 
+plugin_name = 'cv'
 # -----------------------------------------------------------------------------
 def main(cfg):
     # Get stuff we need -- the logger object, dataroot, etc.
     CrawlConfig.log("firing up")
     plugdir = cfg.get('crawler', 'plugin-dir')
-    dataroot = util.csv_list(cfg.get('checksum-verifier', 'dataroot'))
-    odds = cfg.getfloat('checksum-verifier', 'odds')
-    n_ops = int(cfg.get('checksum-verifier', 'operations'))
+    dataroot = util.csv_list(cfg.get(plugin_name, 'dataroot'))
+    odds = cfg.getfloat(plugin_name, 'odds')
+    n_ops = int(cfg.get(plugin_name, 'operations'))
 
     # Initialize our statistics
     (t_checksums, t_matches, t_failures) = get_stats()
@@ -105,7 +106,7 @@ def main(cfg):
     # Report the statistics in the log
     # ** For checksums, we report the current total minus the previous
     # ** For matches and failures, we counted them up during the iteration
-    # ** See the description of update_stats for why we don't store total
+    # ** See the description of get_stats for why we don't store total
     #    checksums
     p_checksums = t_checksums
     t_matches += matches

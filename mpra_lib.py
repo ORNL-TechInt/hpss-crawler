@@ -2,7 +2,7 @@ import CrawlConfig
 import CrawlDBI
 import re
 import sys
-import tcc_common
+import tcc_lib
 import time
 import util
 
@@ -101,7 +101,7 @@ def age_report(table, age, count, result, f, path=False):
                                     util.ymdhms(row['RECORD_CREATE_TIME']),
                                     row['MIGRATION_FAILURE_COUNT']))
             if path:
-                path = tcc_common.get_bitfile_path(row['BFID'])
+                path = tcc_lib.get_bitfile_path(row['BFID'])
                 f.write("   %s\n" % path)
     elif table == 'purge':
         f.write("Purge Records Older Than %s\n" % dhms(age))
@@ -110,7 +110,7 @@ def age_report(table, age, count, result, f, path=False):
             f.write("%s %s\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
                                     util.ymdhms(row['RECORD_CREATE_TIME'])))
             if path:
-                path = tcc_common.get_bitfile_path(row['BFID'])
+                path = tcc_lib.get_bitfile_path(row['BFID'])
                 f.write("   %s\n" % path)
 
 # -----------------------------------------------------------------------------

@@ -18,14 +18,14 @@ def main(cfg):
     end = time.time() - age
 
     start = mpra_lib.mpra_fetch_recent("migr")
-    CrawlConfig.log("searching for migration records betweeen %d and %d" %
-             (start, end))
+    CrawlConfig.log("migr recs after %d (%s) before %d (%s)" %
+                    (start, util.ymdhms(start), end, util.ymdhms(end)))
     result = mpra_lib.age("migr", start=start, end=end, mark=True)
     CrawlConfig.log("found %d migration records in the range" % result)
     
     start = mpra_lib.mpra_fetch_recent("purge")
-    CrawlConfig.log("searching for purge records betweeen %d and %d" %
-             (start, end))
+    CrawlConfig.log("purge recs after %d (%s) before %d (%s)" %
+                    (start, util.ymdhms(start), end, util.ymdhms(end)))
     result = mpra_lib.age("purge", start=start, end=end, mark=True)
     CrawlConfig.log("found %d purge records in the range" % result)
                 
