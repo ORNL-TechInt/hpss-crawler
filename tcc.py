@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import base64
+import crawl_lib
 import CrawlConfig
 import hpss
 import ibm_db as db2
@@ -214,27 +215,7 @@ def tccp_simplug(args):
 
     usage: tcc simplug
     """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    p.add_option('-i', '--iterations',
-                 action='store', default=1, dest='iterations', type='int',
-                 help='how many iterations to run')
-    (o, a) = p.parse_args(args)
-
-    if o.debug: pdb.set_trace()
-    
-    cfg = CrawlConfig.get_config()
-    CrawlConfig.log("starting simplug, just got config")
-    sys.path.append(cfg.get('crawler', 'plugin-dir'))
-    P = __import__(cfg.get('tape-copy-checker', 'module'))
-    P.main(cfg)
-    if 1 < o.iterations:
-        for count in range(o.iterations-1):
-            stime = cfg.get_time('tape-copy-checker', 'frequency')
-            time.sleep(stime)
-            P.main(cfg)
+    crawl_lib.simplug('tcc', args)
 
 # -----------------------------------------------------------------------------
 def tccp_sql(args):

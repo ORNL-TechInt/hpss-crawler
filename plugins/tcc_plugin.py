@@ -13,7 +13,7 @@ import tcc_common
 import time
 import util
 
-sectname = 'tape-copy-checker'
+sectname = 'tcc'
 # -----------------------------------------------------------------------------
 def main(cfg):
     """

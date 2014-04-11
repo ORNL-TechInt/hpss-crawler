@@ -35,6 +35,7 @@ class CrawlPlugin(object):
         assert(name != None)
         assert(cfg != None)
         self.cfg = cfg
+        l = CrawlConfig.get_logger(cfg=cfg)
         CrawlConfig.log("%s: Initializing plugin data" % name)
         self.init_cfg_data(name, cfg)
         self.last_fired = time.time() - self.frequency - 1
