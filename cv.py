@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import Checkable
+import crawl_lib
 import CrawlConfig
 import CrawlDBI
 import hpss
@@ -194,6 +195,16 @@ def cv_show_next(argv):
             print("%s %s %s" % (ymdhms(c.last_check),
                                 c.type,
                                 c.path))
+    
+# -----------------------------------------------------------------------------
+def cv_simplug(argv):
+    """simplug - Simulate running a plugin
+
+    usage: cv simplug [-d] [-i <iterations>]
+
+    Simulate running the checksum-verifier plugin
+    """
+    crawl_lib.simplug('cv', argv)
     
 # -----------------------------------------------------------------------------
 def cv_test_check(argv):
