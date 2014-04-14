@@ -2,6 +2,7 @@
 """
 Tests for hpss.py
 """
+import CrawlConfig
 import hpss
 import testhelp
 import toolframe
@@ -14,12 +15,14 @@ def setUpModule():
     Set up for testing
     """
     testhelp.module_test_setup(hpssTest.testdir)
+    CrawlConfig.get_logger("%s/hpssTest.log" % hpssTest.testdir, reset=True)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
     Clean up after testing
     """
+    CrawlConfig.get_logger(reset=True, soft=True)
     testhelp.module_test_teardown(hpssTest.testdir)
 
 # -----------------------------------------------------------------------------
@@ -60,8 +63,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("chdir() takes exactly 2 arguments" in str(e),
                             "Got the wrong TypeError: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         
     # -------------------------------------------------------------------------
     def test_chdir_notdir(self):
@@ -128,8 +129,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("hashcreate: Invalid argument" in str(e),
                             "Got the wrong HSIerror: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -146,8 +145,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("hashcreate() takes exactly 2 arguments" in str(e),
                             "Got the wrong TypeError: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -204,8 +201,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.fail("Expected an exception, got nothing")
         except hpss.HSIerror, e:
             self.expected_in("hashdelete: Invalid argument", str(e))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -221,8 +216,6 @@ class hpssTest(testhelp.HelpedTestCase):
         except TypeError, e:
             self.expected_in("hashdelete\(\) takes exactly 2 arguments",
                              str(e))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -319,8 +312,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("hashlist: Invalid argument" in str(e),
                             "Got the wrong HSIerror: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -337,8 +328,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("hashlist() takes exactly 2 arguments" in str(e),
                             "Got the wrong TypeError: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -425,8 +414,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("hashverify: Invalid argument" in str(e),
                             "Got the wrong HSIerror: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -443,8 +430,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("hashverify() takes exactly 2 arguments" in str(e),
                             "Got the wrong TypeError: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -559,8 +544,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("lsP: Invalid argument" in str(e),
                             "Got the wrong HSIerror: %s" %
                             util.line_quote(tb.format_exc()))
-        except AssertionError:
-            raise
         finally:
             h.quit()
 
@@ -609,7 +592,9 @@ class hpssTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_unavailable(self):
         """
-        If HPSS is down, the HSI constructor should throw an exception
+        If HPSS is down, the HSI constructor should throw an exception. And in
+        this case, we don't need to call h.quit() since the connection never
+        got completed.
         """
         h = hpss.HSI(connect=False, unavailable=True)
         try:
@@ -619,8 +604,6 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("HPSS Unavailable" in str(e),
                             "Got unexpected HSIerror: %s" %
                             util.line_quote(str(e)))
-        except AssertionError:
-            raise
     
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

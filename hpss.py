@@ -1,3 +1,4 @@
+import CrawlConfig
 import os
 import pexpect
 import pwd
@@ -214,9 +215,11 @@ class HSI(object):
     # -------------------------------------------------------------------------
     def quit(self):
         try:
+            pid = self.xobj.pid
             self.xobj.sendline("quit")
             self.xobj.expect([pexpect.EOF, pexpect.TIMEOUT])
             self.xobj.close()
+            CrawlConfig.log("Closing hsi process %d" % pid)
         except OSError, e:
             tbstr = tb.format_exc()
             CrawlConfig.log("Ignoring OSError '%s'" % str(e))
