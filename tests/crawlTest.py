@@ -20,6 +20,12 @@ def setUpModule():
     """
     Setup for running the tests.
     """
+    cfgl = glob.glob("*.cfg")
+    if 0 == len(cfgl):
+        print("You need to create a configuration before you can run tests.")
+        print("Do 'cp crawl.cfg.sample crawl.cfg' and then edit crawl.cfg.")
+        sys.exit(1)
+        
     testhelp.module_test_setup(CrawlTest.testdir)
 
     if not os.path.islink('crawl'):
