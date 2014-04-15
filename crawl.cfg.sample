@@ -23,6 +23,21 @@ notify-program = command line
 # write something to the log file to prove it's still running
 heartbeat = 10s
 
+# Exception limits
+# xlim_time and xlim_count work together. If the crawler sees more
+# than xlim_count exceptions within xlim_time seconds, it will shut
+# down.
+xlim_time = 8.0
+xlim_count = 3
+
+# If the crawler sees this many identical exceptions, no matter how
+# long it takes, it will shut down
+xlim_ident = 5
+
+# If the crawler sees this many total exceptions, regardless of
+# content or timing, it will shut down
+xlim_total = 10
+
 # ------------------------------------------------------------
 # the section name matches the name of a plugin module
 [plugin-A]
