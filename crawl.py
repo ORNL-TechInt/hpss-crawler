@@ -478,17 +478,97 @@ class CrawlDaemon(daemon.Daemon):
     """
     piddir = "/tmp/crawler"
     # --------------------------------------------------------------------------
+    def give_up_yet(self, tbstr):
+        """
+        Monitor exceptions we've seen. If we get more than N exceptions in T
+        seconds (where N and T come from the configuration with default values
+        of 3 and 7, respectively), shutdown. If we get more than M occurences
+        of exactly the same traceback string regardless of timing, shutdown. If
+        we more than Z tracebacks of any sort, shutdown.
+        """
+        if not hasattr(self, 'xseen'):
+            self.xseen = {}
+            self.ewhen = 0
+            self.whenq = []
+            self.ecount = 0
+            self.xtotal = 0
+            self.tlimit = float(self.cfg.get_d('crawler', 'xlim_time', "7.0"))
+            self.climit = int(self.cfg.get_d('crawler', 'xlim_count', "3"))
+            self.ilimit = int(self.cfg.get_d('crawler', 'xlim_ident', "5"))
+            self.zlimit = int(self.cfg.get_d('crawler', 'xlim_total', '10'))
+
+        rval = False
+
+        # tbstr = tb.format_exc()
+        now = time.time()
+        self.ecount += 1
+        self.whenq.append(now)
+        if tbstr in self.xseen:
+            self.xseen[tbstr] += 1
+        else:
+            self.xseen[tbstr] = 1
+        self.xtotal += 1
+            
+        # log the traceback
+        for line in tbstr.split('\n'):
+            self.dlog("crawl: '%s'" % line)
+
+        # give up because we got enough identical errors
+        if self.ilimit <= self.xseen[tbstr]:
+            self.dlog("crawl: shutting down because we got " +
+                      "%d identical errors" % self.ilimit)
+            rval = True
+
+        # give up because we got enough total errors
+        if self.zlimit <= self.xtotal:
+            self.dlog("crawl: shutting down because we got " +
+                      "%d total errors" % self.zlimit)
+            rval = True
+            
+        # give up if we got enough errors in the time window
+        dt = now - self.ewhen
+        if self.climit <= self.ecount and dt < self.tlimit:
+            self.dlog("crawl: shutting down because we got " +
+                      "%d exceptions in %f seconds" %
+                      (self.ecount, dt))
+            rval = True
+        elif self.tlimit <= dt:
+            self.ecount = len(self.whenq)
+            if 0 < self.ecount:
+                self.ewhen = self.whenq.pop()
+
+        # CrawlConfig.log("rval = %s; ecount = %d; dt = %f; whenq = %s" %
+        #                 (rval, self.ecount, dt, self.whenq))
+        return rval
+            
+    # --------------------------------------------------------------------------
+    def fire_plugins(self, plugin_d):
+        """
+        Fire the plugins in plugin_d. Call self.give_up_yet() to track
+        exceptions and decide whether or not to bail.
+        """
+        bail_out = False
+        try:
+            for p in plugin_d.keys():
+                if plugin_d[p].time_to_fire():
+                    plugin_d[p].fire()
+        except:
+            bail_out = self.give_up_yet(tb.format_exc())
+
+        return bail_out
+            
+    # --------------------------------------------------------------------------
     def run(self):
         """
         This routine runs in the background as a daemon. Here's where
         we fire off plug-ins as appropriate.
         """
         cfgname = ''
-        cfg = CrawlConfig.get_config(cfgname)
+        self.cfg = CrawlConfig.get_config(cfgname)
         self.pidfile = "%s/%d" % (self.piddir, os.getpid())
-        exit_file = cfg.get('crawler', 'exitpath')
+        exit_file = self.cfg.get('crawler', 'exitpath')
         make_pidfile(os.getpid(),
-                     cfg.get('crawler', 'context'),
+                     self.cfg.get('crawler', 'context'),
                      exit_file)
         atexit.register(self.delpid)
 
@@ -496,54 +576,35 @@ class CrawlDaemon(daemon.Daemon):
         plugin_d = {}
         while keep_going:
             try:
-                pluglstr = cfg.get('crawler', 'plugins')
+                pluglstr = self.cfg.get('crawler', 'plugins')
                 pluglist = [x.strip() for x in pluglstr.split(',')]
                 for s in pluglist:
                     self.dlog('crawl: CONFIG: [%s]' % s)
-                    for o in cfg.options(s):
-                        self.dlog('crawl: CONFIG: %s: %s' % (o, cfg.get(s, o)))
+                    for o in self.cfg.options(s):
+                        self.dlog('crawl: CONFIG: %s: %s' % (o, self.cfg.get(s, o)))
                     if s == 'crawler':
                         continue
                     elif s in plugin_d.keys():
                         CrawlConfig.log("reloading plugin %s" % s)
-                        plugin_d[s].reload(cfg)
+                        plugin_d[s].reload(self.cfg)
                     else:
                         CrawlConfig.log("initial load of plugin %s" % s)
                         plugin_d[s] = CrawlPlugin.CrawlPlugin(name=s,
-                                                              cfg=cfg)
+                                                              cfg=self.cfg)
 
                 # remove any plugins that are not in the new configuration
                 for p in plugin_d.keys():
-                    if p not in cfg.sections():
+                    if p not in self.cfg.sections():
                         CrawlConfig.log("unloading obsolete plugin %s" % p)
                         del plugin_d[p]
                 
-                heartbeat = cfg.get_time('crawler', 'heartbeat', 10)
-                ecount = ewhen = 0
-                tlimit = 7.0
+                heartbeat = self.cfg.get_time('crawler', 'heartbeat', 10)
                 while keep_going:
-                    # CrawlConfig.log("fire plugins")
                     #
                     # Fire any plugins that are due
                     #
-                    try:
-                        for p in plugin_d.keys():
-                            if plugin_d[p].time_to_fire():
-                                plugin_d[p].fire()
-                    except:
-                        tbstr = tb.format_exc()
-                        for line in tbstr.split('\n'):
-                            self.dlog("crawl: '%s'" % line)
-                        ecount += 1
-                        dt = time.time() - ewhen
-                        if 3 < ecount and dt < tlimit:
-                            self.dlog("crawl: %d exceptions in %f " %
-                                      (ecount, dt) +
-                                      "seconds -- shutting down")
-                            keep_going = False
-                        elif tlimit <= dt:
-                            ewhen = time.time()
-                            ecount = 1
+                    if self.fire_plugins(plugin_d):
+                        keep_going = False
 
                     # CrawlConfig.log("issue the heartbeat")
                     #
@@ -557,9 +618,9 @@ class CrawlDaemon(daemon.Daemon):
                     # If config file has changed, reload it.
                     # cached config object and breaking out of the inner loop.
                     #
-                    if cfg.changed():
-                        cfgname = cfg.get('crawler', 'filename')
-                        cfg = CrawlConfig.get_config(reset=True)
+                    if self.cfg.changed():
+                        cfgname = self.cfg.get('crawler', 'filename')
+                        self.cfg = CrawlConfig.get_config(reset=True)
                         break
 
                     # CrawlConfig.log("check for exit signal")
