@@ -35,7 +35,7 @@ import email.mime.text
 import os
 import smtplib
 import socket
-# import util
+import util
 
 # -----------------------------------------------------------------------------
 class Alert(object):
@@ -84,7 +84,7 @@ class Alert(object):
                     
                 elif opt == 'email':
                     # send mail
-                    hostname = socket.gethostname()
+                    hostname = util.hostname(long=True)
                     addrs = cfg.get(section, 'email')
                     addrlist = [x.strip() for x in addrs.split(',')]
                     sender = 'HIC@%s' % hostname
