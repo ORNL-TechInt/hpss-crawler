@@ -599,19 +599,25 @@ class CrawlDaemon(daemon.Daemon):
                         del plugin_d[p]
                 
                 heartbeat = self.cfg.get_time('crawler', 'heartbeat', 10)
+                # hb_msg = "crawl: heartbeat... "
                 while keep_going:
                     #
                     # Fire any plugins that are due
                     #
-                    if self.fire_plugins(plugin_d):
-                        keep_going = False
+                    if not self.cfg.quiet_time(time.time()):
+                        hb_msg = "crawl: heartbeat..."
+                        if self.fire_plugins(plugin_d):
+                            keep_going = False
+                    else:
+                        hb_msg = "crawl: heartbeat... [quiet]"
 
                     # CrawlConfig.log("issue the heartbeat")
                     #
                     # Issue the heartbeat if it's time
                     #
                     if 0 == (int(time.time()) % heartbeat):
-                        self.dlog('crawl: heartbeat...')
+                        # self.dlog('crawl: heartbeat...')
+                        self.dlog(hb_msg)
                             
                     # CrawlConfig.log("check for config changes")
                     #

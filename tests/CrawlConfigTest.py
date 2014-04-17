@@ -23,6 +23,7 @@ def setUpModule():
     """
     Set up for the tests.
     """
+    CrawlConfig.get_logger(CrawlConfigTest.default_logpath, reset=True)
     testhelp.module_test_setup(CrawlConfigTest.testdir)
     
 # -----------------------------------------------------------------------------
@@ -971,6 +972,488 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(obj.map_time_unit('years'), 365*24*3600)
         
     # --------------------------------------------------------------------------
+    def test_quiet_time_bound_mt(self):
+        """
+        Test a quiet time spec. Empty boundary -- hi == lo
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "19:17-19:17"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # front of day
+        self.qt_test(cfg, False, "2014.0331 23:59:59")
+        self.qt_test(cfg, False, "2014.0401 00:00:00")
+        self.qt_test(cfg, False, "2014.0401 00:00:01")
+
+        # interval trailing edge
+        self.qt_test(cfg, False, "2014.0101 19:16:59")
+        self.qt_test(cfg, True, "2014.0101 19:17:00")
+        self.qt_test(cfg, False, "2014.0101 19:17:01")
+
+        # end of day
+        self.qt_test(cfg, False, "2014.0401 23:59:59")
+        self.qt_test(cfg, False, "2014.0402 00:00:00")
+        self.qt_test(cfg, False, "2014.0402 00:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_bound_rsu(self):
+        """
+        Test a quiet time spec. Right side up (rsu) boundary -- lo < hi
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "14:00-19:00"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # non-interval time
+        self.qt_test(cfg, False, "2014.0101 11:19:58")
+        
+        # interval leading edge
+        self.qt_test(cfg, False, "2014.0101 13:59:59")
+        self.qt_test(cfg, True, "2014.0101 14:00:00")
+        self.qt_test(cfg, True, "2014.0101 14:00:01")
+
+        # interval time
+        self.qt_test(cfg, True, "2014.0101 15:28:19")
+                                              
+        # interval trailing edge
+        self.qt_test(cfg, True, "2014.0101 18:59:59")
+        self.qt_test(cfg, True, "2014.0101 19:00:00")
+        self.qt_test(cfg, False, "2014.0101 19:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_bound_usd(self):
+        """
+        Test a quiet time spec. Upside-down (usd) boundary -- hi < lo
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "19:00-03:00"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # front of day
+        self.qt_test(cfg, True, "2014.0331 23:59:59")
+        self.qt_test(cfg, True, "2014.0401 00:00:00")
+        self.qt_test(cfg, True, "2014.0401 00:00:01")
+
+        # mid quiet interval
+        self.qt_test(cfg, True, "2014.0101 02:19:32")
+        
+        # interval trailing edge
+        self.qt_test(cfg, True, "2014.0101 02:59:59")
+        self.qt_test(cfg, True, "2014.0101 03:00:00")
+        self.qt_test(cfg, False, "2014.0101 03:00:01")
+
+        # mid non-interval
+        self.qt_test(cfg, False, "2014.0101 12:17:09")
+
+        # interval leading edge
+        self.qt_test(cfg, False, "2014.0101 18:59:59")
+        self.qt_test(cfg, True, "2014.0101 19:00:00")
+        self.qt_test(cfg, True, "2014.0101 19:00:01")
+
+        # mid quiet interval
+        self.qt_test(cfg, True, "2014.0101 21:32:19")
+        
+        # end of day
+        self.qt_test(cfg, True, "2014.0401 23:59:59")
+        self.qt_test(cfg, True, "2014.0402 00:00:00")
+        self.qt_test(cfg, True, "2014.0402 00:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_d_w(self):
+        """
+        Test a multiple quiet time spec. Date plus weekday.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "2013.0428,fri"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # leading edge of date
+        self.qt_test(cfg, False, "2013.0427 23:59:59")
+        self.qt_test(cfg, True, "2013.0428 00:00:00")
+        self.qt_test(cfg, True, "2013.0428 00:00:01")
+        
+        # inside date
+        self.qt_test(cfg, True, "2013.0428 08:00:01")
+
+        # trailing edge of date
+        self.qt_test(cfg, True, "2013.0428 23:59:59")
+        self.qt_test(cfg, False, "2013.0429 00:00:00")
+        self.qt_test(cfg, False, "2013.0429 00:00:01")
+
+        # outside date, outside weekday
+        self.qt_test(cfg, False, "2013.0501 04:17:49")
+
+        # leading edge of weekday
+        self.qt_test(cfg, False, "2013.0502 23:59:59")
+        self.qt_test(cfg, True, "2013.0503 00:00:00")
+        self.qt_test(cfg, True, "2013.0503 00:00:01")
+
+        # inside weekday
+        self.qt_test(cfg, True, "2013.0503 11:23:01")
+
+        # trailing edge of weekday
+        self.qt_test(cfg, True, "2013.0503 23:59:59")
+        self.qt_test(cfg, False, "2013.0504 00:00:00")
+        self.qt_test(cfg, False, "2013.0504 00:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_date(self):
+        """
+        Test a date quiet time spec. The edges are inclusive.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "2014.0401"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # before date
+        self.qt_test(cfg, False, "2014.0331 23:00:00")
+
+        # leading edge of date
+        self.qt_test(cfg, False, "2014.0331 23:59:59")
+        self.qt_test(cfg, True, "2014.0401 00:00:00")
+        self.qt_test(cfg, True, "2014.0401 00:00:01")
+
+        # inside date
+        self.qt_test(cfg, True, "2014.0401 13:59:59")
+        self.qt_test(cfg, True, "2014.0401 14:00:00")
+        self.qt_test(cfg, True, "2014.0401 14:00:01")
+
+        # trailing edge of date
+        self.qt_test(cfg, True, "2014.0401 23:59:59")
+        self.qt_test(cfg, False, "2014.0402 00:00:00")
+        self.qt_test(cfg, False, "2014.0402 00:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_rb_d(self):
+        """
+        Test a multiple quiet time spec. RSU boundary plus date.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "2014.0401, 17:00 - 23:00"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # day before, before interval
+        self.qt_test(cfg, False, "2014.0331 03:07:18")
+
+        # day before, leading edge of interval
+        self.qt_test(cfg, False, "2014.0331 16:59:59")
+        self.qt_test(cfg, True, "2014.0331 17:00:00")
+        self.qt_test(cfg, True, "2014.0331 17:00:01")
+
+        # day before, trailing edge of interval
+        self.qt_test(cfg, True, "2014.0331 22:59:59")
+        self.qt_test(cfg, True, "2014.0331 23:00:00")
+        self.qt_test(cfg, False, "2014.0331 23:00:01")
+        
+        # leading edge of date
+        self.qt_test(cfg, False, "2014.0331 23:59:59")
+        self.qt_test(cfg, True, "2014.0401 00:00:00")
+        self.qt_test(cfg, True, "2014.0401 00:00:01")
+
+        # inside date, before interval
+        self.qt_test(cfg, True, "2014.0401 16:19:11")
+
+        # inside date, inside interval
+        self.qt_test(cfg, True, "2014.0401 18:19:11")
+
+        # inside date, after interval
+        self.qt_test(cfg, True, "2014.0401 23:17:11")
+
+        # trailing edge of date
+        self.qt_test(cfg, True, "2014.0401 23:59:59")
+        self.qt_test(cfg, False, "2014.0402 00:00:00")
+        self.qt_test(cfg, False, "2014.0402 00:00:01")
+
+        # day after, before interval
+        self.qt_test(cfg, False, "2014.0402 16:19:11")
+        
+        # day after, leading edge of interval
+        self.qt_test(cfg, False, "2014.0402 16:59:59")
+        self.qt_test(cfg, True, "2014.0402 17:00:00")
+        self.qt_test(cfg, True, "2014.0402 17:00:01")
+
+        # day after, inside interval
+        self.qt_test(cfg, True, "2014.0402 22:58:01")
+        
+        # day after, trailing edge of interval
+        self.qt_test(cfg, True, "2014.0402 22:59:59")
+        self.qt_test(cfg, True, "2014.0402 23:00:00")
+        self.qt_test(cfg, False, "2014.0402 23:00:01")
+
+        # day after, after interval
+        self.qt_test(cfg, False, "2014.0402 23:19:20")
+        
+    # --------------------------------------------------------------------------
+    def test_quiet_time_rb_d_w(self):
+        """
+        Test a multiple quiet time spec. rsu boundary plus date plus weekday.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "14:00-19:00,2012.0117,Wednes"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # before any of them, on Monday
+        self.qt_test(cfg, False, "2012.0116 11:38:02")
+
+        # leading edge of the interval on Monday
+        self.qt_test(cfg, False, "2012.0116 13:59:59")
+        self.qt_test(cfg, True, "2012.0116 14:00:00")
+        self.qt_test(cfg, True, "2012.0116 14:00:01")
+
+        # trailing edge of the interval on Monday
+        self.qt_test(cfg, True, "2012.0116 18:59:59")
+        self.qt_test(cfg, True, "2012.0116 19:00:00")
+        self.qt_test(cfg, False, "2012.0116 19:00:01")
+
+        # leading edge of Tuesday, the 17th
+        self.qt_test(cfg, False, "2012.0116 23:59:59")
+        self.qt_test(cfg, True, "2012.0117 00:00:00")
+        self.qt_test(cfg, True, "2012.0117 00:00:01")
+
+        # lunchtime on Tuesday
+        self.qt_test(cfg, True, "2012.0117 12:00:00")
+
+        # interval on Tuesday
+        self.qt_test(cfg, True, "2012.0117 15:00:00")
+
+        # trailing edge of Tuesday, leading edge of Wednesday
+        self.qt_test(cfg, True, "2012.0117 23:59:59")
+        self.qt_test(cfg, True, "2012.0118 00:00:00")
+        self.qt_test(cfg, True, "2012.0118 00:00:01")
+        
+        # lunchtime on Wednesday
+        self.qt_test(cfg, True, "2012.0118 12:00:00")
+
+        # interval on Wednesday
+        self.qt_test(cfg, True, "2012.0118 15:00:00")
+
+        # trailing edge of Wednesday
+        self.qt_test(cfg, True, "2012.0118 23:59:59")
+        self.qt_test(cfg, False, "2012.0119 00:00:00")
+        self.qt_test(cfg, False, "2012.0119 00:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_rb_w(self):
+        """
+        Test a multiple quiet time spec. RSU boundary plus weekday.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "14:00-19:00,sat,Wednes"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # 2014.0301 is a saturday -- all times quiet
+        self.qt_test(cfg, True, "2014.0301 13:59:59")
+        self.qt_test(cfg, True, "2014.0301 14:00:00")
+        self.qt_test(cfg, True, "2014.0301 14:00:01")
+
+        # 2014.0305 is a wednesday -- all times quiet
+        self.qt_test(cfg, True, "2014.0305 18:59:59")
+        self.qt_test(cfg, True, "2014.0305 19:00:00")
+        self.qt_test(cfg, True, "2014.0305 19:00:01")
+
+        # 2014.0330 is a sunday -- leading edge of interval
+        self.qt_test(cfg, False, "2014.0330 13:59:59")
+        self.qt_test(cfg, True, "2014.0330 14:00:00")
+        self.qt_test(cfg, True, "2014.0330 14:00:01")
+
+        # 2014.0330 is a sunday -- trailing edge of interval
+        self.qt_test(cfg, True, "2014.0330 18:59:59")
+        self.qt_test(cfg, True, "2014.0330 19:00:00")
+        self.qt_test(cfg, False, "2014.0330 19:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_ub_d(self):
+        """
+        Test a multiple quiet time spec. USD boundary plus date.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "19:00-8:15,2015.0217"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # in the early interval the day before
+        self.qt_test(cfg, True, "2015.0216 08:00:00")
+
+        # trailing edge of the early interval the day before
+        self.qt_test(cfg, True, "2015.0216 08:14:59")
+        self.qt_test(cfg, True, "2015.0216 08:15:00")
+        self.qt_test(cfg, False, "2015.0216 08:15:01")
+        
+        # outside the intervals the day before
+        self.qt_test(cfg, False, "2015.0216 18:30:00")
+
+        # leading edge of late interval the day before
+        self.qt_test(cfg, False, "2015.0216 18:59:59")
+        self.qt_test(cfg, True, "2015.0216 19:00:00")
+        self.qt_test(cfg, True, "2015.0216 19:00:01")
+
+        # leading edge of the date
+        self.qt_test(cfg, True, "2015.0216 23:59:59")
+        self.qt_test(cfg, True, "2015.0217 00:00:00")
+        self.qt_test(cfg, True, "2015.0217 00:00:01")
+
+        # trailing edge of the early interval in the date
+        self.qt_test(cfg, True, "2015.0217 08:14:59")
+        self.qt_test(cfg, True, "2015.0217 08:15:00")
+        self.qt_test(cfg, True, "2015.0217 08:15:01")
+
+        # outside interval, in date
+        self.qt_test(cfg, True, "2015.0217 12:13:58")
+        
+        # leading edge of late interval in the date
+        self.qt_test(cfg, True, "2015.0217 18:59:59")
+        self.qt_test(cfg, True, "2015.0217 19:00:00")
+        self.qt_test(cfg, True, "2015.0217 19:00:01")
+
+        # trailing edge of the date
+        self.qt_test(cfg, True, "2015.0217 23:59:59")
+        self.qt_test(cfg, True, "2015.0218 00:00:00")
+        self.qt_test(cfg, True, "2015.0218 00:00:01")
+
+        # trailing edge of early interval the day after
+        self.qt_test(cfg, True, "2015.0218 08:14:59")
+        self.qt_test(cfg, True, "2015.0218 08:15:00")
+        self.qt_test(cfg, False, "2015.0218 08:15:01")
+
+        # after early interval day after
+        self.qt_test(cfg, False, "2015.0218 11:12:13")
+        
+    # --------------------------------------------------------------------------
+    def test_quiet_time_ub_d_w(self):
+        """
+        Test a multiple quiet time spec. usd boundary plus date plus weekday.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "14:00-19:00,sat"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # 2014.0301 is a saturday
+        self.qt_test(cfg, True, "2014.0301 13:59:59")
+        self.qt_test(cfg, True, "2014.0301 14:00:00")
+        self.qt_test(cfg, True, "2014.0301 14:00:01")
+
+        # saturday trailing edge
+        self.qt_test(cfg, True, "2014.0301 23:59:59")
+        self.qt_test(cfg, False, "2014.0302 00:00:00")
+        self.qt_test(cfg, False, "2014.0302 00:00:01")
+
+        # 2014.0305 is a wednesday -- interval leading edge
+        self.qt_test(cfg, False, "2014.0305 13:59:59")
+        self.qt_test(cfg, True, "2014.0305 14:00:00")
+        self.qt_test(cfg, True, "2014.0305 14:00:01")
+
+        # 2014.0305 is a wednesday -- interval trailing edge
+        self.qt_test(cfg, True, "2014.0305 18:59:59")
+        self.qt_test(cfg, True, "2014.0305 19:00:00")
+        self.qt_test(cfg, False, "2014.0305 19:00:01")
+
+        # 2014.0330 is a sunday -- interval trailing edge
+        self.qt_test(cfg, True, "2014.0330 18:59:59")
+        self.qt_test(cfg, True, "2014.0330 19:00:00")
+        self.qt_test(cfg, False, "2014.0330 19:00:01")
+
+    # --------------------------------------------------------------------------
+    def test_quiet_time_ub_w(self):
+        """
+        Test a multiple quiet time spec. USD boundary plus weekday.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "sat, sunday, 20:17 -06:45"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # Friday before 20:17
+        self.qt_test(cfg, False, "2012.0224 20:00:05")
+        
+        # friday at 20:17
+        self.qt_test(cfg, False, "2012.0224 20:16:59")
+        self.qt_test(cfg, True, "2012.0224 20:17:00")
+        self.qt_test(cfg, True, "2012.0224 20:17:01")
+
+        # friday into saturday
+        self.qt_test(cfg, True, "2012.0224 23:59:59")
+        self.qt_test(cfg, True, "2012.0225 00:00:00")
+        self.qt_test(cfg, True, "2012.0225 00:00:01")
+
+        # end of early interval saturday
+        self.qt_test(cfg, True, "2012.0225 06:44:59")
+        self.qt_test(cfg, True, "2012.0225 06:45:00")
+        self.qt_test(cfg, True, "2012.0225 06:45:01")
+
+        # during day saturday
+        self.qt_test(cfg, True, "2012.0225 13:25:01")
+
+        # start of late interval saturday
+        self.qt_test(cfg, True, "2012.0225 20:16:59")
+        self.qt_test(cfg, True, "2012.0225 20:17:00")
+        self.qt_test(cfg, True, "2012.0225 20:17:01")
+
+        # saturday into sunday
+        self.qt_test(cfg, True, "2012.0225 23:59:59")
+        self.qt_test(cfg, True, "2012.0226 00:00:00")
+        self.qt_test(cfg, True, "2012.0226 00:00:01")
+
+        # end of early interval sunday
+        self.qt_test(cfg, True, "2012.0226 06:44:59")
+        self.qt_test(cfg, True, "2012.0226 06:45:00")
+        self.qt_test(cfg, True, "2012.0226 06:45:01")
+
+        # during day sunday
+        self.qt_test(cfg, True, "2012.0226 17:28:13")
+
+        # start of late interval sunday
+        self.qt_test(cfg, True, "2012.0226 20:16:59")
+        self.qt_test(cfg, True, "2012.0226 20:17:00")
+        self.qt_test(cfg, True, "2012.0226 20:17:01")
+
+        # sunday into monday
+        self.qt_test(cfg, True, "2012.0226 23:59:59")
+        self.qt_test(cfg, True, "2012.0227 00:00:00")
+        self.qt_test(cfg, True, "2012.0227 00:00:01")
+
+        # end of early interval monday
+        self.qt_test(cfg, True, "2012.0227 06:44:59")
+        self.qt_test(cfg, True, "2012.0227 06:45:00")
+        self.qt_test(cfg, False, "2012.0227 06:45:01")
+
+        # during day monday
+        self.qt_test(cfg, False, "2012.0227 20:00:19")
+        
+    # --------------------------------------------------------------------------
+    def test_quiet_time_wday(self):
+        """
+        Test a weekday. The edges are inclusive.
+        """
+        ldict = copy.deepcopy(self.cdict)
+        ldict['crawler']['quiet_time'] = "Wednes"
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(ldict)
+
+        # 2014.0305 is a wednesday -- beginning of day
+        self.qt_test(cfg, False, "2014.0304 23:59:59")
+        self.qt_test(cfg, True, "2014.0305 00:00:00")
+        self.qt_test(cfg, True, "2014.0305 00:00:01")
+
+        # 2014.0305 is a wednesday -- inside day
+        self.qt_test(cfg, True, "2014.0305 18:59:59")
+        self.qt_test(cfg, True, "2014.0305 19:00:00")
+        self.qt_test(cfg, True, "2014.0305 19:00:01")
+
+        # 2014.0305 is a wednesday -- end of day
+        self.qt_test(cfg, True, "2014.0305 23:59:59")
+        self.qt_test(cfg, False, "2014.0306 00:00:00")
+        self.qt_test(cfg, False, "2014.0306 00:00:01")
+
+    # --------------------------------------------------------------------------
     def test_read_include(self):
         """
         Read a config file which contains an include option
@@ -1065,6 +1548,17 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             del os.environ['CRAWL_CONF']
         except KeyError:
             pass
+        
+    # ------------------------------------------------------------------------
+    def qt_test(self, cfg, exp, tval):
+        """
+        Single quiet_time test.
+        """
+        self.assertEqual(exp, cfg.quiet_time(util.epoch(tval)),
+                         "With qt spec '%s', expected quiet_time(%s) to be %s" %
+                         (cfg.get('crawler', 'quiet_time'),
+                          tval,
+                          exp))
         
     # ------------------------------------------------------------------------
     def tearDown(self):

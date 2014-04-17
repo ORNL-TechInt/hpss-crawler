@@ -179,6 +179,7 @@ def log(*args):
         get_logger._logger = get_logger()
         get_logger._logger.info(*nargs)
 
+
 # ------------------------------------------------------------------------------
 class CrawlConfig(ConfigParser.ConfigParser):
     """
@@ -432,6 +433,139 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
         return rval
         
+    # -------------------------------------------------------------------------
+    def qt_parse(self, spec):
+        """
+        Build and return a dict representing a quiet time period. It may be
+
+         - a pair of offsets into the day, with the quiet time between the
+           offsets. There are two possibilities: low < high, high < low -
+           eg: low=50, hi=100 means that (day+lo) <= qt <= (day+hi).
+           otoh: hi < lo means that
+              (day+1o) <= qt <= (day+23:59:59) and/or
+              (day) <= qt <= (day+hi)
+
+         - a weekday. in this case, if time.localtime(now)[6] == wday, we're in
+           quiet time.
+
+         - a date. in this case, we'll set low = day and high = (day+23:59:59)
+
+        The returned dict will have the following keys:
+         - 'lo': times after this are quiet
+         - 'hi': times before this are quiet
+         - 'base': for a date, this is the epoch. for a weekday, 0 = mon, ...
+         - 'iter': for a date, this is 0. for a weekday, it's 604800
+        """
+        rval = {}
+        dow_s = ' monday tuesday wednesday thursday friday saturday sunday'
+        wday_d = dict(zip(dow_s.strip().split(), range(7)))
+
+        try:
+            ymd_tm = time.strptime(spec, "%Y.%m%d")
+        except ValueError:
+            ymd_tm = False
+
+        hm_l = re.findall("(\d+):(\d+)", spec)
+        if (2 != len(hm_l)) or (2 != len(hm_l[0])) or (2 != len(hm_l[1])):
+            hm_l = []
+            
+        if " " + spec.lower() in dow_s:
+            # we have a week day
+            [wd] = [x for x in wday_d.keys() if spec.lower() in x]
+
+            rval['spec'] = spec
+            rval['lo'] = 0.0
+            rval['hi'] = 24*3600.0 - 1
+            rval['base'] = wday_d[wd]
+            rval['iter'] = 24 * 3600.0 * 7
+
+        elif ymd_tm:
+            # we have a date
+            rval['spec'] = spec
+            rval['lo'] = 0
+            rval['hi'] = 24 * 3600.0 - 1
+            rval['base'] = time.mktime(ymd_tm)
+            rval['iter'] = 0
+
+        elif hm_l:
+            # we have a time range
+            rval['spec'] = spec
+            rval['lo'] = 60.0 * (60.0 * int(hm_l[0][0]) + int(hm_l[0][1]))
+            rval['hi'] = 60.0 * (60.0 * int(hm_l[1][0]) + int(hm_l[1][1]))
+            rval['base'] = -1
+            rval['iter'] = 24 * 3600.0
+
+        else:
+            raise StandardError("qt_parse fails on '%s'" % spec)
+        
+        return rval
+
+    # -------------------------------------------------------------------------
+    def quiet_time(self, when):
+        """
+        Config setting crawler/quiet_time may contain a comma separated list of
+        time interval specifications. For example:
+    
+           17:00-19:00      (5pm to 7pm)
+           20:00-03:00      (8pm to the folliwng 3am)
+           sat              (00:00:00 to 23:59:59 every Saturday)
+           2014.0723        (00:00:00 to 23:59:59 on 2014.0723)
+           14:00-17:00,fri  (2pm to 5pm and all day Friday)
+        """
+        rval = False
+        try:
+            x = self._qt_list
+        except AttributeError:
+            self._qt_list = []
+            spec = self.get('crawler', 'quiet_time')
+            for ispec in util.csv_list(spec):
+                self._qt_list.append(self.qt_parse(ispec))
+
+        for x in self._qt_list:
+            if x['iter'] == 0:
+                # it's a date
+                low = x['base'] + x['lo']
+                high = x['base'] + x['hi']
+                if low <= when and when <= high:
+                    rval = True
+                    
+            elif x['iter'] == 24 * 3600.0:
+                # it's a time range
+
+                db = util.daybase(when)
+                low = db + x['lo']
+                high = db + x['hi']
+                dz = db + 24 * 3600.0
+                if low < high:
+                    # right side up
+                    if low <= when and when <= high:
+                        rval = True
+                elif high < low:
+                    # up side down
+                    if db <= when and when <= high:
+                        rval = True
+                    elif low <= when and when <= dz:
+                        rval = True
+                else:
+                    # low and high are equal -- log a note
+                    log("In time spec '%s', the times are equal " % x['spec'] +
+                        "so the interval is almost empty. This may not be " +
+                        "what you intended")
+                    if when == low:
+                        rval = True
+
+            elif x['iter'] == 24 * 3600.0 * 7:
+                # it's a weekday
+                tm = time.localtime(when)
+                if tm.tm_wday == x['base']:
+                    rval = True
+        
+            else:
+                # something bad happened
+                raise StandardError("Hell has frozen over")
+
+        return rval
+    
     # -------------------------------------------------------------------------
     def read(self, filename):
         """
