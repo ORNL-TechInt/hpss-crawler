@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import copy
 import logging
 import logging.handlers
 import os
@@ -198,6 +199,16 @@ def setup_logging(logfile='',
     return rval
 
 # -----------------------------------------------------------------------------
+def daybase(epoch):
+    """
+    Given an epoch time, return the beginning of the day containing the input.
+    """
+    tm = time.localtime(epoch)
+    return time.mktime([tm.tm_year, tm.tm_mon, tm.tm_mday,
+                        0, 0, 0,
+                        tm.tm_wday, tm.tm_yday, tm.tm_isdst])
+
+# -----------------------------------------------------------------------------
 def ymdhms(epoch):
     return time.strftime("%Y.%m%d %H:%M:%S",
                          time.localtime(epoch))
@@ -207,7 +218,7 @@ def epoch(ymdhms):
     fmts = ["%Y.%m%d %H:%M:%S",
             "%Y.%m%d",
             ]
-    fp = fmts
+    fp = copy.copy(fmts)
     rval = None
     while rval is None:
         try:
@@ -215,7 +226,8 @@ def epoch(ymdhms):
         except ValueError:
             rval = None
         except IndexError:
-            print("The date '%s' does not match any of the formats: %s" %
-                  (ymdhms, fmts))
+            err = ("The date '%s' does not match any of the formats: %s" %
+                   (ymdhms, fmts))
+            raise StandardError(err)
 
     return rval
