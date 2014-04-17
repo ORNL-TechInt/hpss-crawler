@@ -23,8 +23,8 @@ def setUpModule():
     """
     Set up for the tests.
     """
-    CrawlConfig.get_logger(CrawlConfigTest.default_logpath, reset=True)
     testhelp.module_test_setup(CrawlConfigTest.testdir)
+    CrawlConfig.get_logger(CrawlConfigTest.default_logpath, reset=True)
     
 # -----------------------------------------------------------------------------
 def tearDownModule():
