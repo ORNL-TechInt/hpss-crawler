@@ -596,6 +596,7 @@ class DBImysql(DBI_abstract):
                                      user=username,
                                      passwd=password,
                                      db=self.dbname)
+            self.dbh.autocommit(True)
             self.closed = False
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
