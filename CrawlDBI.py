@@ -648,7 +648,7 @@ class DBImysql(DBI_abstract):
         try:
             cmd = ("create table if not exists %s(" % self.prefix(table) +
                    ", ".join(mysql_f) +
-                   ")")
+                   ") engine = innodb")
             c = self.dbh.cursor()
             c.execute(cmd)
 
