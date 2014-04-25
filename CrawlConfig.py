@@ -517,9 +517,10 @@ class CrawlConfig(ConfigParser.ConfigParser):
             x = self._qt_list
         except AttributeError:
             self._qt_list = []
-            spec = self.get('crawler', 'quiet_time')
-            for ispec in util.csv_list(spec):
-                self._qt_list.append(self.qt_parse(ispec))
+            if self.has_option('crawler', 'quiet_time'):
+                spec = self.get('crawler', 'quiet_time')
+                for ispec in util.csv_list(spec):
+                    self._qt_list.append(self.qt_parse(ispec))
 
         for x in self._qt_list:
             if x['iter'] == 0:

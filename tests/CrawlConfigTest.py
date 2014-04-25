@@ -1129,6 +1129,32 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.qt_test(cfg, False, "2014.0402 00:00:01")
 
     # --------------------------------------------------------------------------
+    def test_quiet_time_missing(self):
+        """
+        When the config item is missing, quiet_time() should always return False
+        """
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.load_dict(self.cdict)
+
+        # before date
+        self.qt_test(cfg, False, "2014.0331 23:00:00")
+
+        # leading edge of date
+        self.qt_test(cfg, False, "2014.0331 23:59:59")
+        self.qt_test(cfg, False, "2014.0401 00:00:00")
+        self.qt_test(cfg, False, "2014.0401 00:00:01")
+
+        # inside date
+        self.qt_test(cfg, False, "2014.0401 13:59:59")
+        self.qt_test(cfg, False, "2014.0401 14:00:00")
+        self.qt_test(cfg, False, "2014.0401 14:00:01")
+
+        # trailing edge of date
+        self.qt_test(cfg, False, "2014.0401 23:59:59")
+        self.qt_test(cfg, False, "2014.0402 00:00:00")
+        self.qt_test(cfg, False, "2014.0402 00:00:01")
+
+    # --------------------------------------------------------------------------
     def test_quiet_time_rb_d(self):
         """
         Test a multiple quiet time spec. RSU boundary plus date.
@@ -1554,9 +1580,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Single quiet_time test.
         """
+        try:
+            qtspec = cfg.get('crawler', 'quiet_time')
+        except CrawlConfig.NoOptionError:
+            qtspec = "<empty>"
+            
         self.assertEqual(exp, cfg.quiet_time(util.epoch(tval)),
                          "With qt spec '%s', expected quiet_time(%s) to be %s" %
-                         (cfg.get('crawler', 'quiet_time'),
+                         (qtspec,
                           tval,
                           exp))
         
