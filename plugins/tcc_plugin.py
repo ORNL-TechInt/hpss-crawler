@@ -44,14 +44,17 @@ def main(cfg):
     CrawlConfig.log("got %d bitfiles" % len(bfl))
 
     if len(bfl) == 0:
-        next_nsobj_id += how_many
-        update_next_nsobj_id(cfg, next_nsobj_id)
+        record_checked_ids(cfg, next_nsobj_id, next_nsobj_id+how_many-1, 0, 0)
     else:
         # for each bitfile, if it does not have the right number of copies,
         # report it
         for bf in bfl:
+            correct = 1
+            error = 0
             if bf['SC_COUNT'] != cosinfo[bf['BFATTR_COS_ID']]:
                 tcc_lib.tcc_report(bf, cosinfo)
+                correct = 0
+                error = 1
                 CrawlConfig.log("%s %s %d != %d" %
                          (bf['OBJECT_ID'],
                           tcc_lib.hexstr(bf['BFID']),
@@ -65,67 +68,100 @@ def main(cfg):
                           cosinfo[bf['BFATTR_COS_ID']]))
             
             last_obj_id = int(bf['OBJECT_ID'])
-            next_nsobj_id = last_obj_id + 1
-            update_next_nsobj_id(cfg, next_nsobj_id)
+            record_checked_ids(cfg, last_obj_id, last_obj_id, correct, error)
 
         CrawlConfig.log("last nsobject in range: %d" % last_obj_id)
-        
+
 # -----------------------------------------------------------------------------
 def get_next_nsobj_id(cfg):
     """
     Read the TCC table in the HPSSIC database to get the next nsobject id. If
-    the table does not exist, we create it and set the next object id to 0.
-    What is stored in the table is the last object id we've seen. We increment
-    it and return the next object id we expect to handle.
+    the table does not exist, we create it and return 1 for the next object id
+    to check. If the table exists but is empty, we return 1 for the next object
+    id to check.
     """
     tabname = cfg.get(sectname, 'table_name')
     db = CrawlDBI.DBI()
     if not db.table_exists(table=tabname):
-        db.create(table=tabname,
-                  fields=['next_nsobj_id integer'])
-        db.insert(table=tabname,
-                  fields=['next_nsobj_id'],
-                  data=[1])
         rval = 1
     else:
         rows = db.select(table=tabname,
-                         fields=['next_nsobj_id'])
-        rval = int(rows[0][0])
-        if rval < 1:
+                         fields=['max(check_time)'])
+        max_time = rows[0][0]
+        if max_time is None:
             rval = 1
-
+        else:
+            rows = db.select(table=tabname,
+                             fields=['high_nsobj_id'],
+                             where='check_time = ?',
+                             data=(max_time,))
+            rval = int(rows[0][0]) + 1
+            if highest_nsobject_id() < rval:
+                rval = 1
     db.close()
     return rval
         
 # -----------------------------------------------------------------------------
-def update_next_nsobj_id(cfg, value):
+def record_checked_ids(cfg, low, high, correct, error):
     """
-    Update the next nsobject id in the HPSSIC database.
+    Save checked NSOBJECT ids in the HPSSIC database.
+
+    If we check a range and get no hits (i.e., no NSOBJECT ids exist in the
+    range), we'll store
+
+       (<time>, <low-id>, <high-id>, 0, 0)
+
+    If we get a hit with the right copy count, we store it by itself as
+
+       (<time>, <hit-id>, <hit-id>, 1, 0)
+    
+    If we get a hit with the wrong copy count, we store it by itself as
+
+       (<time>, <hit-id>, <hit-id>, 0, 1)
     """
-    if (not hasattr(update_next_nsobj_id, '_max_obj_id') or
-        (60 < time.time() - update_next_nsobj_id._when)):
+    tabname = cfg.get(sectname, 'table_name')
+    db = CrawlDBI.DBI()
+
+    if not db.table_exists(table=tabname):
+        db.create(table=tabname,
+                  fields=['check_time    integer',
+                          'low_nsobj_id  integer',
+                          'high_nsobj_id integer',
+                          'correct       integer',
+                          'error         integer'])
+
+    ts = int(time.time())
+    CrawlConfig.log("recording checked ids %d to %d at %d" % (low, high, ts))
+    db.insert(table=tabname,
+              fields=['check_time',
+                      'low_nsobj_id',
+                      'high_nsobj_id',
+                      'correct',
+                      'error'],
+              data=[(ts, low, high, correct, error)])
+    db.close()
+
+# -----------------------------------------------------------------------------
+def highest_nsobject_id():
+    """
+    Cache and return the largest NSOBJECT id in the DB2 database.
+    """
+    if (not hasattr(highest_nsobject_id, '_max_obj_id') or
+        (60 < time.time() - highest_nsobject_id._when)):
         dbname = {'hpss-dev01': 'subsys',
                   'hpss-crawler01': 'hsubsys1'}[util.hostname()]
         H = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
         result = H.select(table='nsobject',
                           fields=['max(object_id) as max_obj_id'])
         H.close()
-        update_next_nsobj_id._max_obj_id = int(result[0]['MAX_OBJ_ID'])
-        update_next_nsobj_id._when = time.time()
+        highest_nsobject_id._max_obj_id = int(result[0]['MAX_OBJ_ID'])
+        highest_nsobject_id._when = time.time()
         CrawlConfig.log("max object id = %d at %s" %
-                 (update_next_nsobj_id._max_obj_id,
-                  time.strftime("%Y.%m%d %H:%M:%S",
-                                time.localtime(update_next_nsobj_id._when))))
+                        (highest_nsobject_id._max_obj_id,
+                         util.ymdhms(highest_nsobject_id._when)))
 
-    max_obj_id = update_next_nsobj_id._max_obj_id
-    if max_obj_id < value:
-        value = 1
-    CrawlConfig.log("storing next object id: %d" % value)
-
-    tabname = cfg.get(sectname, 'table_name')
-    db = CrawlDBI.DBI()
-    db.update(table=tabname, fields=['next_nsobj_id'], data=[(value,)])
-    db.close()
+    rval = highest_nsobject_id._max_obj_id
+    return rval
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
