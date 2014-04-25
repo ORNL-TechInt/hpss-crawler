@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# /etc/init.d/hpssic
+# "service [start|stop|reload]" script for hpssic
+#
+# chkconfig: 2345 95 05 (1)
+# description: HPSS Integrity Crawler
+#
+# processname: crawl
+# config: /opt/hpssic/prod/crawl.cfg
+# pidfile: /var/run/MySystem.pid
+# pidfile: /tmp/crawler/<pid>
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+# pull in sysconfig settings
+# [ -f /etc/sysconfig/mySystem ] && . /etc/sysconfig/mySystem (2)
+
+RETVAL=0
+prog="/opt/hpssic/prod/crawl"
+
+start() {   (4)
+        echo -n $"Starting $prog:"
+        /opt/hpssic/prod/crawl start
+        RETVAL=$?
+        # [ "$RETVAL" = 0 ] && touch /var/lock/subsys/$prog
+        echo
+}
+
+stop() {    (6)
+       echo -n $"Stopping $prog:"
+       .
+       .    (7)
+       .
+       /opt/hpssic/prod/crawl stop
+       RETVAL=$?
+       # [ "$RETVAL" = 0 ] && rm -f /var/lock/subsys/$prog
+       echo
+}
+
+reload() {
+         echo "To reload the crawler, just update the configuration file."
+         echo "It will detect the change and reread the file."
+         # echo -n $"Reloading $prog:"
+         # killproc $prog -HUP
+         # RETVAL=$?
+         # echo
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    reload)
+        reload
+        ;;
+    condrestart)
+        if [ -f /var/lock/subsys/$prog ] ; then
+            stop
+            # avoid race
+            sleep 3
+            start
+        fi
+        ;;
+    status)
+        status $prog
+        RETVAL=$?
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"
+        RETVAL=1
+esac
+exit $RETVAL

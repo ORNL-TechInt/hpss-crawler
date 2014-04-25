@@ -1,10 +1,24 @@
 #!/usr/bin/env python
 
+import crawl_lib
 import optparse
 import pdb
 import rpt_lib
 import toolframe
 import util
+
+# -----------------------------------------------------------------------------
+def rpt_report(args):
+    print rpt_lib.get_report()
+    
+# -----------------------------------------------------------------------------
+def rpt_simplug(args):
+    """simplug - simulate the plugin
+
+    usage: rpt simplug
+
+    """
+    crawl_lib.simplug('rpt', args)
 
 # -----------------------------------------------------------------------------
 def rpt_testmail(args):
