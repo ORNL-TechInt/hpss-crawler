@@ -10,6 +10,14 @@ clean:
 TAGS: *.py tests/*.py
 	etags *.py
 
+TESTLOG=tests/nosetests.log
+test:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	nosetests -c tests/nose.cfg 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+
 readme: $(WWW)/README.html
 
 refman: $(WWW)/ReferenceManual.html

@@ -50,27 +50,27 @@ class TesthelpTest(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_list_tests(self):
         """
-        Method redirected_list_test() tests the list_tests() routine. Depending
-        on its arguments, it should select different entries from the list of
-        tests in tlist. Since list_tests() writes directly to stdout, we have
-        to redirect stdout to a StringIO object momentarily.
+        Method redirected_list_test() tests the list_tests() routine.
+        Depending on its arguments, it should select different entries from
+        the list of tests in tlist. Since list_tests() writes directly to
+        stdout, we have to redirect stdout to a StringIO object momentarily.
         """
         tlist = ['one', 'two', 'three', 'four', 'five']
-        self.redirected_list_test([],
+        self.try_redirected_list([],
                                   '',
                                   tlist,
                                   "one\ntwo\nthree\nfour\nfive\n")
-        self.redirected_list_test(['', 'o'],
+        self.try_redirected_list(['', 'o'],
                                   '',
                                   tlist,
                                   "one\ntwo\nfour\n")
-        self.redirected_list_test(['', 'e'],
+        self.try_redirected_list(['', 'e'],
                                   '',
                                   tlist,
                                   "one\nthree\nfive\n")
 
     # -------------------------------------------------------------------------
-    def redirected_list_test(self, args, final, testlist, expected):
+    def try_redirected_list(self, args, final, testlist, expected):
         """
         Handle one of the list_tests() tests from the routine above.
         """
@@ -89,6 +89,7 @@ class TesthelpTest(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_expected_vs_got(self):
         """
+        testhelpTest.test_expected_vs_got
         Test expected_vs_got(). If expected and got match, the output should be
         empty. If they don't match, this should be reported. Again, we have to
         redirect stdout.
