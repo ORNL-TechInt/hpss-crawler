@@ -982,19 +982,19 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # front of day
-        self.qt_test(cfg, False, "2014.0331 23:59:59")
-        self.qt_test(cfg, False, "2014.0401 00:00:00")
-        self.qt_test(cfg, False, "2014.0401 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0331 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0401 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0401 00:00:01")
 
         # interval trailing edge
-        self.qt_test(cfg, False, "2014.0101 19:16:59")
-        self.qt_test(cfg, True, "2014.0101 19:17:00")
-        self.qt_test(cfg, False, "2014.0101 19:17:01")
+        self.try_qt_spec(cfg, False, "2014.0101 19:16:59")
+        self.try_qt_spec(cfg, True, "2014.0101 19:17:00")
+        self.try_qt_spec(cfg, False, "2014.0101 19:17:01")
 
         # end of day
-        self.qt_test(cfg, False, "2014.0401 23:59:59")
-        self.qt_test(cfg, False, "2014.0402 00:00:00")
-        self.qt_test(cfg, False, "2014.0402 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0401 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_bound_rsu(self):
@@ -1007,20 +1007,20 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # non-interval time
-        self.qt_test(cfg, False, "2014.0101 11:19:58")
+        self.try_qt_spec(cfg, False, "2014.0101 11:19:58")
         
         # interval leading edge
-        self.qt_test(cfg, False, "2014.0101 13:59:59")
-        self.qt_test(cfg, True, "2014.0101 14:00:00")
-        self.qt_test(cfg, True, "2014.0101 14:00:01")
+        self.try_qt_spec(cfg, False, "2014.0101 13:59:59")
+        self.try_qt_spec(cfg, True, "2014.0101 14:00:00")
+        self.try_qt_spec(cfg, True, "2014.0101 14:00:01")
 
         # interval time
-        self.qt_test(cfg, True, "2014.0101 15:28:19")
+        self.try_qt_spec(cfg, True, "2014.0101 15:28:19")
                                               
         # interval trailing edge
-        self.qt_test(cfg, True, "2014.0101 18:59:59")
-        self.qt_test(cfg, True, "2014.0101 19:00:00")
-        self.qt_test(cfg, False, "2014.0101 19:00:01")
+        self.try_qt_spec(cfg, True, "2014.0101 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0101 19:00:00")
+        self.try_qt_spec(cfg, False, "2014.0101 19:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_bound_usd(self):
@@ -1033,33 +1033,33 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # front of day
-        self.qt_test(cfg, True, "2014.0331 23:59:59")
-        self.qt_test(cfg, True, "2014.0401 00:00:00")
-        self.qt_test(cfg, True, "2014.0401 00:00:01")
+        self.try_qt_spec(cfg, True, "2014.0331 23:59:59")
+        self.try_qt_spec(cfg, True, "2014.0401 00:00:00")
+        self.try_qt_spec(cfg, True, "2014.0401 00:00:01")
 
         # mid quiet interval
-        self.qt_test(cfg, True, "2014.0101 02:19:32")
+        self.try_qt_spec(cfg, True, "2014.0101 02:19:32")
         
         # interval trailing edge
-        self.qt_test(cfg, True, "2014.0101 02:59:59")
-        self.qt_test(cfg, True, "2014.0101 03:00:00")
-        self.qt_test(cfg, False, "2014.0101 03:00:01")
+        self.try_qt_spec(cfg, True, "2014.0101 02:59:59")
+        self.try_qt_spec(cfg, True, "2014.0101 03:00:00")
+        self.try_qt_spec(cfg, False, "2014.0101 03:00:01")
 
         # mid non-interval
-        self.qt_test(cfg, False, "2014.0101 12:17:09")
+        self.try_qt_spec(cfg, False, "2014.0101 12:17:09")
 
         # interval leading edge
-        self.qt_test(cfg, False, "2014.0101 18:59:59")
-        self.qt_test(cfg, True, "2014.0101 19:00:00")
-        self.qt_test(cfg, True, "2014.0101 19:00:01")
+        self.try_qt_spec(cfg, False, "2014.0101 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0101 19:00:00")
+        self.try_qt_spec(cfg, True, "2014.0101 19:00:01")
 
         # mid quiet interval
-        self.qt_test(cfg, True, "2014.0101 21:32:19")
+        self.try_qt_spec(cfg, True, "2014.0101 21:32:19")
         
         # end of day
-        self.qt_test(cfg, True, "2014.0401 23:59:59")
-        self.qt_test(cfg, True, "2014.0402 00:00:00")
-        self.qt_test(cfg, True, "2014.0402 00:00:01")
+        self.try_qt_spec(cfg, True, "2014.0401 23:59:59")
+        self.try_qt_spec(cfg, True, "2014.0402 00:00:00")
+        self.try_qt_spec(cfg, True, "2014.0402 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_d_w(self):
@@ -1072,33 +1072,33 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # leading edge of date
-        self.qt_test(cfg, False, "2013.0427 23:59:59")
-        self.qt_test(cfg, True, "2013.0428 00:00:00")
-        self.qt_test(cfg, True, "2013.0428 00:00:01")
+        self.try_qt_spec(cfg, False, "2013.0427 23:59:59")
+        self.try_qt_spec(cfg, True, "2013.0428 00:00:00")
+        self.try_qt_spec(cfg, True, "2013.0428 00:00:01")
         
         # inside date
-        self.qt_test(cfg, True, "2013.0428 08:00:01")
+        self.try_qt_spec(cfg, True, "2013.0428 08:00:01")
 
         # trailing edge of date
-        self.qt_test(cfg, True, "2013.0428 23:59:59")
-        self.qt_test(cfg, False, "2013.0429 00:00:00")
-        self.qt_test(cfg, False, "2013.0429 00:00:01")
+        self.try_qt_spec(cfg, True, "2013.0428 23:59:59")
+        self.try_qt_spec(cfg, False, "2013.0429 00:00:00")
+        self.try_qt_spec(cfg, False, "2013.0429 00:00:01")
 
         # outside date, outside weekday
-        self.qt_test(cfg, False, "2013.0501 04:17:49")
+        self.try_qt_spec(cfg, False, "2013.0501 04:17:49")
 
         # leading edge of weekday
-        self.qt_test(cfg, False, "2013.0502 23:59:59")
-        self.qt_test(cfg, True, "2013.0503 00:00:00")
-        self.qt_test(cfg, True, "2013.0503 00:00:01")
+        self.try_qt_spec(cfg, False, "2013.0502 23:59:59")
+        self.try_qt_spec(cfg, True, "2013.0503 00:00:00")
+        self.try_qt_spec(cfg, True, "2013.0503 00:00:01")
 
         # inside weekday
-        self.qt_test(cfg, True, "2013.0503 11:23:01")
+        self.try_qt_spec(cfg, True, "2013.0503 11:23:01")
 
         # trailing edge of weekday
-        self.qt_test(cfg, True, "2013.0503 23:59:59")
-        self.qt_test(cfg, False, "2013.0504 00:00:00")
-        self.qt_test(cfg, False, "2013.0504 00:00:01")
+        self.try_qt_spec(cfg, True, "2013.0503 23:59:59")
+        self.try_qt_spec(cfg, False, "2013.0504 00:00:00")
+        self.try_qt_spec(cfg, False, "2013.0504 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_date(self):
@@ -1111,22 +1111,22 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # before date
-        self.qt_test(cfg, False, "2014.0331 23:00:00")
+        self.try_qt_spec(cfg, False, "2014.0331 23:00:00")
 
         # leading edge of date
-        self.qt_test(cfg, False, "2014.0331 23:59:59")
-        self.qt_test(cfg, True, "2014.0401 00:00:00")
-        self.qt_test(cfg, True, "2014.0401 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0331 23:59:59")
+        self.try_qt_spec(cfg, True, "2014.0401 00:00:00")
+        self.try_qt_spec(cfg, True, "2014.0401 00:00:01")
 
         # inside date
-        self.qt_test(cfg, True, "2014.0401 13:59:59")
-        self.qt_test(cfg, True, "2014.0401 14:00:00")
-        self.qt_test(cfg, True, "2014.0401 14:00:01")
+        self.try_qt_spec(cfg, True, "2014.0401 13:59:59")
+        self.try_qt_spec(cfg, True, "2014.0401 14:00:00")
+        self.try_qt_spec(cfg, True, "2014.0401 14:00:01")
 
         # trailing edge of date
-        self.qt_test(cfg, True, "2014.0401 23:59:59")
-        self.qt_test(cfg, False, "2014.0402 00:00:00")
-        self.qt_test(cfg, False, "2014.0402 00:00:01")
+        self.try_qt_spec(cfg, True, "2014.0401 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_missing(self):
@@ -1137,22 +1137,22 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(self.cdict)
 
         # before date
-        self.qt_test(cfg, False, "2014.0331 23:00:00")
+        self.try_qt_spec(cfg, False, "2014.0331 23:00:00")
 
         # leading edge of date
-        self.qt_test(cfg, False, "2014.0331 23:59:59")
-        self.qt_test(cfg, False, "2014.0401 00:00:00")
-        self.qt_test(cfg, False, "2014.0401 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0331 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0401 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0401 00:00:01")
 
         # inside date
-        self.qt_test(cfg, False, "2014.0401 13:59:59")
-        self.qt_test(cfg, False, "2014.0401 14:00:00")
-        self.qt_test(cfg, False, "2014.0401 14:00:01")
+        self.try_qt_spec(cfg, False, "2014.0401 13:59:59")
+        self.try_qt_spec(cfg, False, "2014.0401 14:00:00")
+        self.try_qt_spec(cfg, False, "2014.0401 14:00:01")
 
         # trailing edge of date
-        self.qt_test(cfg, False, "2014.0401 23:59:59")
-        self.qt_test(cfg, False, "2014.0402 00:00:00")
-        self.qt_test(cfg, False, "2014.0402 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0401 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_rb_d(self):
@@ -1165,55 +1165,55 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # day before, before interval
-        self.qt_test(cfg, False, "2014.0331 03:07:18")
+        self.try_qt_spec(cfg, False, "2014.0331 03:07:18")
 
         # day before, leading edge of interval
-        self.qt_test(cfg, False, "2014.0331 16:59:59")
-        self.qt_test(cfg, True, "2014.0331 17:00:00")
-        self.qt_test(cfg, True, "2014.0331 17:00:01")
+        self.try_qt_spec(cfg, False, "2014.0331 16:59:59")
+        self.try_qt_spec(cfg, True, "2014.0331 17:00:00")
+        self.try_qt_spec(cfg, True, "2014.0331 17:00:01")
 
         # day before, trailing edge of interval
-        self.qt_test(cfg, True, "2014.0331 22:59:59")
-        self.qt_test(cfg, True, "2014.0331 23:00:00")
-        self.qt_test(cfg, False, "2014.0331 23:00:01")
+        self.try_qt_spec(cfg, True, "2014.0331 22:59:59")
+        self.try_qt_spec(cfg, True, "2014.0331 23:00:00")
+        self.try_qt_spec(cfg, False, "2014.0331 23:00:01")
         
         # leading edge of date
-        self.qt_test(cfg, False, "2014.0331 23:59:59")
-        self.qt_test(cfg, True, "2014.0401 00:00:00")
-        self.qt_test(cfg, True, "2014.0401 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0331 23:59:59")
+        self.try_qt_spec(cfg, True, "2014.0401 00:00:00")
+        self.try_qt_spec(cfg, True, "2014.0401 00:00:01")
 
         # inside date, before interval
-        self.qt_test(cfg, True, "2014.0401 16:19:11")
+        self.try_qt_spec(cfg, True, "2014.0401 16:19:11")
 
         # inside date, inside interval
-        self.qt_test(cfg, True, "2014.0401 18:19:11")
+        self.try_qt_spec(cfg, True, "2014.0401 18:19:11")
 
         # inside date, after interval
-        self.qt_test(cfg, True, "2014.0401 23:17:11")
+        self.try_qt_spec(cfg, True, "2014.0401 23:17:11")
 
         # trailing edge of date
-        self.qt_test(cfg, True, "2014.0401 23:59:59")
-        self.qt_test(cfg, False, "2014.0402 00:00:00")
-        self.qt_test(cfg, False, "2014.0402 00:00:01")
+        self.try_qt_spec(cfg, True, "2014.0401 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0402 00:00:01")
 
         # day after, before interval
-        self.qt_test(cfg, False, "2014.0402 16:19:11")
+        self.try_qt_spec(cfg, False, "2014.0402 16:19:11")
         
         # day after, leading edge of interval
-        self.qt_test(cfg, False, "2014.0402 16:59:59")
-        self.qt_test(cfg, True, "2014.0402 17:00:00")
-        self.qt_test(cfg, True, "2014.0402 17:00:01")
+        self.try_qt_spec(cfg, False, "2014.0402 16:59:59")
+        self.try_qt_spec(cfg, True, "2014.0402 17:00:00")
+        self.try_qt_spec(cfg, True, "2014.0402 17:00:01")
 
         # day after, inside interval
-        self.qt_test(cfg, True, "2014.0402 22:58:01")
+        self.try_qt_spec(cfg, True, "2014.0402 22:58:01")
         
         # day after, trailing edge of interval
-        self.qt_test(cfg, True, "2014.0402 22:59:59")
-        self.qt_test(cfg, True, "2014.0402 23:00:00")
-        self.qt_test(cfg, False, "2014.0402 23:00:01")
+        self.try_qt_spec(cfg, True, "2014.0402 22:59:59")
+        self.try_qt_spec(cfg, True, "2014.0402 23:00:00")
+        self.try_qt_spec(cfg, False, "2014.0402 23:00:01")
 
         # day after, after interval
-        self.qt_test(cfg, False, "2014.0402 23:19:20")
+        self.try_qt_spec(cfg, False, "2014.0402 23:19:20")
         
     # --------------------------------------------------------------------------
     def test_quiet_time_rb_d_w(self):
@@ -1226,44 +1226,44 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # before any of them, on Monday
-        self.qt_test(cfg, False, "2012.0116 11:38:02")
+        self.try_qt_spec(cfg, False, "2012.0116 11:38:02")
 
         # leading edge of the interval on Monday
-        self.qt_test(cfg, False, "2012.0116 13:59:59")
-        self.qt_test(cfg, True, "2012.0116 14:00:00")
-        self.qt_test(cfg, True, "2012.0116 14:00:01")
+        self.try_qt_spec(cfg, False, "2012.0116 13:59:59")
+        self.try_qt_spec(cfg, True, "2012.0116 14:00:00")
+        self.try_qt_spec(cfg, True, "2012.0116 14:00:01")
 
         # trailing edge of the interval on Monday
-        self.qt_test(cfg, True, "2012.0116 18:59:59")
-        self.qt_test(cfg, True, "2012.0116 19:00:00")
-        self.qt_test(cfg, False, "2012.0116 19:00:01")
+        self.try_qt_spec(cfg, True, "2012.0116 18:59:59")
+        self.try_qt_spec(cfg, True, "2012.0116 19:00:00")
+        self.try_qt_spec(cfg, False, "2012.0116 19:00:01")
 
         # leading edge of Tuesday, the 17th
-        self.qt_test(cfg, False, "2012.0116 23:59:59")
-        self.qt_test(cfg, True, "2012.0117 00:00:00")
-        self.qt_test(cfg, True, "2012.0117 00:00:01")
+        self.try_qt_spec(cfg, False, "2012.0116 23:59:59")
+        self.try_qt_spec(cfg, True, "2012.0117 00:00:00")
+        self.try_qt_spec(cfg, True, "2012.0117 00:00:01")
 
         # lunchtime on Tuesday
-        self.qt_test(cfg, True, "2012.0117 12:00:00")
+        self.try_qt_spec(cfg, True, "2012.0117 12:00:00")
 
         # interval on Tuesday
-        self.qt_test(cfg, True, "2012.0117 15:00:00")
+        self.try_qt_spec(cfg, True, "2012.0117 15:00:00")
 
         # trailing edge of Tuesday, leading edge of Wednesday
-        self.qt_test(cfg, True, "2012.0117 23:59:59")
-        self.qt_test(cfg, True, "2012.0118 00:00:00")
-        self.qt_test(cfg, True, "2012.0118 00:00:01")
+        self.try_qt_spec(cfg, True, "2012.0117 23:59:59")
+        self.try_qt_spec(cfg, True, "2012.0118 00:00:00")
+        self.try_qt_spec(cfg, True, "2012.0118 00:00:01")
         
         # lunchtime on Wednesday
-        self.qt_test(cfg, True, "2012.0118 12:00:00")
+        self.try_qt_spec(cfg, True, "2012.0118 12:00:00")
 
         # interval on Wednesday
-        self.qt_test(cfg, True, "2012.0118 15:00:00")
+        self.try_qt_spec(cfg, True, "2012.0118 15:00:00")
 
         # trailing edge of Wednesday
-        self.qt_test(cfg, True, "2012.0118 23:59:59")
-        self.qt_test(cfg, False, "2012.0119 00:00:00")
-        self.qt_test(cfg, False, "2012.0119 00:00:01")
+        self.try_qt_spec(cfg, True, "2012.0118 23:59:59")
+        self.try_qt_spec(cfg, False, "2012.0119 00:00:00")
+        self.try_qt_spec(cfg, False, "2012.0119 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_rb_w(self):
@@ -1276,24 +1276,24 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # 2014.0301 is a saturday -- all times quiet
-        self.qt_test(cfg, True, "2014.0301 13:59:59")
-        self.qt_test(cfg, True, "2014.0301 14:00:00")
-        self.qt_test(cfg, True, "2014.0301 14:00:01")
+        self.try_qt_spec(cfg, True, "2014.0301 13:59:59")
+        self.try_qt_spec(cfg, True, "2014.0301 14:00:00")
+        self.try_qt_spec(cfg, True, "2014.0301 14:00:01")
 
         # 2014.0305 is a wednesday -- all times quiet
-        self.qt_test(cfg, True, "2014.0305 18:59:59")
-        self.qt_test(cfg, True, "2014.0305 19:00:00")
-        self.qt_test(cfg, True, "2014.0305 19:00:01")
+        self.try_qt_spec(cfg, True, "2014.0305 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0305 19:00:00")
+        self.try_qt_spec(cfg, True, "2014.0305 19:00:01")
 
         # 2014.0330 is a sunday -- leading edge of interval
-        self.qt_test(cfg, False, "2014.0330 13:59:59")
-        self.qt_test(cfg, True, "2014.0330 14:00:00")
-        self.qt_test(cfg, True, "2014.0330 14:00:01")
+        self.try_qt_spec(cfg, False, "2014.0330 13:59:59")
+        self.try_qt_spec(cfg, True, "2014.0330 14:00:00")
+        self.try_qt_spec(cfg, True, "2014.0330 14:00:01")
 
         # 2014.0330 is a sunday -- trailing edge of interval
-        self.qt_test(cfg, True, "2014.0330 18:59:59")
-        self.qt_test(cfg, True, "2014.0330 19:00:00")
-        self.qt_test(cfg, False, "2014.0330 19:00:01")
+        self.try_qt_spec(cfg, True, "2014.0330 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0330 19:00:00")
+        self.try_qt_spec(cfg, False, "2014.0330 19:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_ub_d(self):
@@ -1306,51 +1306,51 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # in the early interval the day before
-        self.qt_test(cfg, True, "2015.0216 08:00:00")
+        self.try_qt_spec(cfg, True, "2015.0216 08:00:00")
 
         # trailing edge of the early interval the day before
-        self.qt_test(cfg, True, "2015.0216 08:14:59")
-        self.qt_test(cfg, True, "2015.0216 08:15:00")
-        self.qt_test(cfg, False, "2015.0216 08:15:01")
+        self.try_qt_spec(cfg, True, "2015.0216 08:14:59")
+        self.try_qt_spec(cfg, True, "2015.0216 08:15:00")
+        self.try_qt_spec(cfg, False, "2015.0216 08:15:01")
         
         # outside the intervals the day before
-        self.qt_test(cfg, False, "2015.0216 18:30:00")
+        self.try_qt_spec(cfg, False, "2015.0216 18:30:00")
 
         # leading edge of late interval the day before
-        self.qt_test(cfg, False, "2015.0216 18:59:59")
-        self.qt_test(cfg, True, "2015.0216 19:00:00")
-        self.qt_test(cfg, True, "2015.0216 19:00:01")
+        self.try_qt_spec(cfg, False, "2015.0216 18:59:59")
+        self.try_qt_spec(cfg, True, "2015.0216 19:00:00")
+        self.try_qt_spec(cfg, True, "2015.0216 19:00:01")
 
         # leading edge of the date
-        self.qt_test(cfg, True, "2015.0216 23:59:59")
-        self.qt_test(cfg, True, "2015.0217 00:00:00")
-        self.qt_test(cfg, True, "2015.0217 00:00:01")
+        self.try_qt_spec(cfg, True, "2015.0216 23:59:59")
+        self.try_qt_spec(cfg, True, "2015.0217 00:00:00")
+        self.try_qt_spec(cfg, True, "2015.0217 00:00:01")
 
         # trailing edge of the early interval in the date
-        self.qt_test(cfg, True, "2015.0217 08:14:59")
-        self.qt_test(cfg, True, "2015.0217 08:15:00")
-        self.qt_test(cfg, True, "2015.0217 08:15:01")
+        self.try_qt_spec(cfg, True, "2015.0217 08:14:59")
+        self.try_qt_spec(cfg, True, "2015.0217 08:15:00")
+        self.try_qt_spec(cfg, True, "2015.0217 08:15:01")
 
         # outside interval, in date
-        self.qt_test(cfg, True, "2015.0217 12:13:58")
+        self.try_qt_spec(cfg, True, "2015.0217 12:13:58")
         
         # leading edge of late interval in the date
-        self.qt_test(cfg, True, "2015.0217 18:59:59")
-        self.qt_test(cfg, True, "2015.0217 19:00:00")
-        self.qt_test(cfg, True, "2015.0217 19:00:01")
+        self.try_qt_spec(cfg, True, "2015.0217 18:59:59")
+        self.try_qt_spec(cfg, True, "2015.0217 19:00:00")
+        self.try_qt_spec(cfg, True, "2015.0217 19:00:01")
 
         # trailing edge of the date
-        self.qt_test(cfg, True, "2015.0217 23:59:59")
-        self.qt_test(cfg, True, "2015.0218 00:00:00")
-        self.qt_test(cfg, True, "2015.0218 00:00:01")
+        self.try_qt_spec(cfg, True, "2015.0217 23:59:59")
+        self.try_qt_spec(cfg, True, "2015.0218 00:00:00")
+        self.try_qt_spec(cfg, True, "2015.0218 00:00:01")
 
         # trailing edge of early interval the day after
-        self.qt_test(cfg, True, "2015.0218 08:14:59")
-        self.qt_test(cfg, True, "2015.0218 08:15:00")
-        self.qt_test(cfg, False, "2015.0218 08:15:01")
+        self.try_qt_spec(cfg, True, "2015.0218 08:14:59")
+        self.try_qt_spec(cfg, True, "2015.0218 08:15:00")
+        self.try_qt_spec(cfg, False, "2015.0218 08:15:01")
 
         # after early interval day after
-        self.qt_test(cfg, False, "2015.0218 11:12:13")
+        self.try_qt_spec(cfg, False, "2015.0218 11:12:13")
         
     # --------------------------------------------------------------------------
     def test_quiet_time_ub_d_w(self):
@@ -1363,29 +1363,29 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # 2014.0301 is a saturday
-        self.qt_test(cfg, True, "2014.0301 13:59:59")
-        self.qt_test(cfg, True, "2014.0301 14:00:00")
-        self.qt_test(cfg, True, "2014.0301 14:00:01")
+        self.try_qt_spec(cfg, True, "2014.0301 13:59:59")
+        self.try_qt_spec(cfg, True, "2014.0301 14:00:00")
+        self.try_qt_spec(cfg, True, "2014.0301 14:00:01")
 
         # saturday trailing edge
-        self.qt_test(cfg, True, "2014.0301 23:59:59")
-        self.qt_test(cfg, False, "2014.0302 00:00:00")
-        self.qt_test(cfg, False, "2014.0302 00:00:01")
+        self.try_qt_spec(cfg, True, "2014.0301 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0302 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0302 00:00:01")
 
         # 2014.0305 is a wednesday -- interval leading edge
-        self.qt_test(cfg, False, "2014.0305 13:59:59")
-        self.qt_test(cfg, True, "2014.0305 14:00:00")
-        self.qt_test(cfg, True, "2014.0305 14:00:01")
+        self.try_qt_spec(cfg, False, "2014.0305 13:59:59")
+        self.try_qt_spec(cfg, True, "2014.0305 14:00:00")
+        self.try_qt_spec(cfg, True, "2014.0305 14:00:01")
 
         # 2014.0305 is a wednesday -- interval trailing edge
-        self.qt_test(cfg, True, "2014.0305 18:59:59")
-        self.qt_test(cfg, True, "2014.0305 19:00:00")
-        self.qt_test(cfg, False, "2014.0305 19:00:01")
+        self.try_qt_spec(cfg, True, "2014.0305 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0305 19:00:00")
+        self.try_qt_spec(cfg, False, "2014.0305 19:00:01")
 
         # 2014.0330 is a sunday -- interval trailing edge
-        self.qt_test(cfg, True, "2014.0330 18:59:59")
-        self.qt_test(cfg, True, "2014.0330 19:00:00")
-        self.qt_test(cfg, False, "2014.0330 19:00:01")
+        self.try_qt_spec(cfg, True, "2014.0330 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0330 19:00:00")
+        self.try_qt_spec(cfg, False, "2014.0330 19:00:01")
 
     # --------------------------------------------------------------------------
     def test_quiet_time_ub_w(self):
@@ -1398,61 +1398,61 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # Friday before 20:17
-        self.qt_test(cfg, False, "2012.0224 20:00:05")
+        self.try_qt_spec(cfg, False, "2012.0224 20:00:05")
         
         # friday at 20:17
-        self.qt_test(cfg, False, "2012.0224 20:16:59")
-        self.qt_test(cfg, True, "2012.0224 20:17:00")
-        self.qt_test(cfg, True, "2012.0224 20:17:01")
+        self.try_qt_spec(cfg, False, "2012.0224 20:16:59")
+        self.try_qt_spec(cfg, True, "2012.0224 20:17:00")
+        self.try_qt_spec(cfg, True, "2012.0224 20:17:01")
 
         # friday into saturday
-        self.qt_test(cfg, True, "2012.0224 23:59:59")
-        self.qt_test(cfg, True, "2012.0225 00:00:00")
-        self.qt_test(cfg, True, "2012.0225 00:00:01")
+        self.try_qt_spec(cfg, True, "2012.0224 23:59:59")
+        self.try_qt_spec(cfg, True, "2012.0225 00:00:00")
+        self.try_qt_spec(cfg, True, "2012.0225 00:00:01")
 
         # end of early interval saturday
-        self.qt_test(cfg, True, "2012.0225 06:44:59")
-        self.qt_test(cfg, True, "2012.0225 06:45:00")
-        self.qt_test(cfg, True, "2012.0225 06:45:01")
+        self.try_qt_spec(cfg, True, "2012.0225 06:44:59")
+        self.try_qt_spec(cfg, True, "2012.0225 06:45:00")
+        self.try_qt_spec(cfg, True, "2012.0225 06:45:01")
 
         # during day saturday
-        self.qt_test(cfg, True, "2012.0225 13:25:01")
+        self.try_qt_spec(cfg, True, "2012.0225 13:25:01")
 
         # start of late interval saturday
-        self.qt_test(cfg, True, "2012.0225 20:16:59")
-        self.qt_test(cfg, True, "2012.0225 20:17:00")
-        self.qt_test(cfg, True, "2012.0225 20:17:01")
+        self.try_qt_spec(cfg, True, "2012.0225 20:16:59")
+        self.try_qt_spec(cfg, True, "2012.0225 20:17:00")
+        self.try_qt_spec(cfg, True, "2012.0225 20:17:01")
 
         # saturday into sunday
-        self.qt_test(cfg, True, "2012.0225 23:59:59")
-        self.qt_test(cfg, True, "2012.0226 00:00:00")
-        self.qt_test(cfg, True, "2012.0226 00:00:01")
+        self.try_qt_spec(cfg, True, "2012.0225 23:59:59")
+        self.try_qt_spec(cfg, True, "2012.0226 00:00:00")
+        self.try_qt_spec(cfg, True, "2012.0226 00:00:01")
 
         # end of early interval sunday
-        self.qt_test(cfg, True, "2012.0226 06:44:59")
-        self.qt_test(cfg, True, "2012.0226 06:45:00")
-        self.qt_test(cfg, True, "2012.0226 06:45:01")
+        self.try_qt_spec(cfg, True, "2012.0226 06:44:59")
+        self.try_qt_spec(cfg, True, "2012.0226 06:45:00")
+        self.try_qt_spec(cfg, True, "2012.0226 06:45:01")
 
         # during day sunday
-        self.qt_test(cfg, True, "2012.0226 17:28:13")
+        self.try_qt_spec(cfg, True, "2012.0226 17:28:13")
 
         # start of late interval sunday
-        self.qt_test(cfg, True, "2012.0226 20:16:59")
-        self.qt_test(cfg, True, "2012.0226 20:17:00")
-        self.qt_test(cfg, True, "2012.0226 20:17:01")
+        self.try_qt_spec(cfg, True, "2012.0226 20:16:59")
+        self.try_qt_spec(cfg, True, "2012.0226 20:17:00")
+        self.try_qt_spec(cfg, True, "2012.0226 20:17:01")
 
         # sunday into monday
-        self.qt_test(cfg, True, "2012.0226 23:59:59")
-        self.qt_test(cfg, True, "2012.0227 00:00:00")
-        self.qt_test(cfg, True, "2012.0227 00:00:01")
+        self.try_qt_spec(cfg, True, "2012.0226 23:59:59")
+        self.try_qt_spec(cfg, True, "2012.0227 00:00:00")
+        self.try_qt_spec(cfg, True, "2012.0227 00:00:01")
 
         # end of early interval monday
-        self.qt_test(cfg, True, "2012.0227 06:44:59")
-        self.qt_test(cfg, True, "2012.0227 06:45:00")
-        self.qt_test(cfg, False, "2012.0227 06:45:01")
+        self.try_qt_spec(cfg, True, "2012.0227 06:44:59")
+        self.try_qt_spec(cfg, True, "2012.0227 06:45:00")
+        self.try_qt_spec(cfg, False, "2012.0227 06:45:01")
 
         # during day monday
-        self.qt_test(cfg, False, "2012.0227 20:00:19")
+        self.try_qt_spec(cfg, False, "2012.0227 20:00:19")
         
     # --------------------------------------------------------------------------
     def test_quiet_time_wday(self):
@@ -1465,19 +1465,19 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg.load_dict(ldict)
 
         # 2014.0305 is a wednesday -- beginning of day
-        self.qt_test(cfg, False, "2014.0304 23:59:59")
-        self.qt_test(cfg, True, "2014.0305 00:00:00")
-        self.qt_test(cfg, True, "2014.0305 00:00:01")
+        self.try_qt_spec(cfg, False, "2014.0304 23:59:59")
+        self.try_qt_spec(cfg, True, "2014.0305 00:00:00")
+        self.try_qt_spec(cfg, True, "2014.0305 00:00:01")
 
         # 2014.0305 is a wednesday -- inside day
-        self.qt_test(cfg, True, "2014.0305 18:59:59")
-        self.qt_test(cfg, True, "2014.0305 19:00:00")
-        self.qt_test(cfg, True, "2014.0305 19:00:01")
+        self.try_qt_spec(cfg, True, "2014.0305 18:59:59")
+        self.try_qt_spec(cfg, True, "2014.0305 19:00:00")
+        self.try_qt_spec(cfg, True, "2014.0305 19:00:01")
 
         # 2014.0305 is a wednesday -- end of day
-        self.qt_test(cfg, True, "2014.0305 23:59:59")
-        self.qt_test(cfg, False, "2014.0306 00:00:00")
-        self.qt_test(cfg, False, "2014.0306 00:00:01")
+        self.try_qt_spec(cfg, True, "2014.0305 23:59:59")
+        self.try_qt_spec(cfg, False, "2014.0306 00:00:00")
+        self.try_qt_spec(cfg, False, "2014.0306 00:00:01")
 
     # --------------------------------------------------------------------------
     def test_read_include(self):
@@ -1576,7 +1576,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             pass
         
     # ------------------------------------------------------------------------
-    def qt_test(self, cfg, exp, tval):
+    def try_qt_spec(self, cfg, exp, tval):
         """
         Single quiet_time test.
         """
