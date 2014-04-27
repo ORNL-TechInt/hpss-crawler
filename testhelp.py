@@ -194,7 +194,10 @@ def keepfiles(value=None):
     try:
         rval = kf_flag
     except:
-        kf_flag = False
+        if os.getenv("KEEPFILES"):
+            kf_flag = True
+        else:
+            kf_flag = False
         rval = kf_flag
 
     if value != None:
@@ -287,10 +290,11 @@ def reset_directory(dirpath, make=True):
     If dirpath names a directory, remove it and optionally recreate it. This is
     used by module_test_teardown().
     """
-    if os.path.isdir(dirpath):
-        shutil.rmtree(dirpath)
-    if make and not os.path.exists(dirpath):
-        os.makedirs(dirpath)
+    if not keepfiles():
+        if os.path.isdir(dirpath):
+            shutil.rmtree(dirpath)
+        if make and not os.path.exists(dirpath):
+            os.makedirs(dirpath)
         
 # -----------------------------------------------------------------------------
 def test_name(obj=None):
