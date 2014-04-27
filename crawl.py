@@ -404,7 +404,12 @@ def is_running(context=None):
     running = False
     if context is None:
         cfg = CrawlConfig.get_config()
-        context = cfg.get('crawler', 'context')
+        try:
+            context = cfg.get('crawler', 'context')
+        except CrawlConfig.NoOptionError, e:
+            emsg = ("No option 'context' in section 'crawler', file '%s'" %
+                    cfg.filename)
+            raise StandardError(emsg)
         
     rpi_l = running_pid()
     for rpi in rpi_l:
