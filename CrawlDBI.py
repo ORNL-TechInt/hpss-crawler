@@ -596,6 +596,7 @@ class DBImysql(DBI_abstract):
                                      user=username,
                                      passwd=password,
                                      db=self.dbname)
+            self.dbh.autocommit(True)
             self.closed = False
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
@@ -648,7 +649,7 @@ class DBImysql(DBI_abstract):
         try:
             cmd = ("create table if not exists %s(" % self.prefix(table) +
                    ", ".join(mysql_f) +
-                   ")")
+                   ") engine = innodb")
             c = self.dbh.cursor()
             c.execute(cmd)
 

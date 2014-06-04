@@ -25,7 +25,7 @@ def simplug(plugin, args):
     if o.debug: pdb.set_trace()
     
     cfg = CrawlConfig.get_config()
-    CrawlConfig.log("starting simplug, just got config")
+    CrawlConfig.log("starting %s simplug, just got config" % plugin)
     sys.path.append(cfg.get('crawler', 'plugin-dir'))
     P = __import__(cfg.get(plugin, 'module'))
     P.main(cfg)
