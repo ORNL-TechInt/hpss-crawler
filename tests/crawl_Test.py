@@ -633,7 +633,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cmd = 'crawl stop --log %s --context %s' % (logpath, self.ctx)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        time.sleep(1.5)
+        time.sleep(2)
         
         self.assertEqual(crawl.is_running(context=self.ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
