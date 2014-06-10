@@ -5,6 +5,7 @@ Tests for util.py
 import CrawlConfig
 import logging
 import os
+import pdb
 import re
 import sys
 import testhelp
@@ -66,6 +67,50 @@ class UtilTest(testhelp.HelpedTestCase):
                       "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
                       (expected, x))
 
+    # --------------------------------------------------------------------------
+    def test_date_end(self):
+        """
+        Given a file containing several log records, return the timestamp on
+        the last one.
+        """
+        tdata = ["This line should be ignored\n",
+                 "2014.0412 12:25:50 This is not the timestamp to return\n",
+                 "2014.0430 19:30:00 This should not be returned\n",
+                 "2014.0501 19:30:00 Return this one\n",
+                 "We want plenty of data here at the end of the file\n",
+                 "with no timestamp so we'll be forced to read\n",
+                 "backward a time or two, not just find the timestamp\n",
+                 "on the first read so we exercise revread.\n"]
+        tfilename = "%s/%s.data" % (self.testdir, util.my_name())
+        f = open(tfilename, 'w')
+        f.writelines(tdata)
+        f.close()
+
+        self.expected("2014.0501", util.date_end(tfilename))
+        
+    # --------------------------------------------------------------------------
+    def test_date_start(self):
+        """
+        Given a file containing several log records (with some irrelevant
+        introductory material), return the timestamp on the first one.
+        """
+        tdata = ["This line should be ignored\n",
+                 "2014.0412 12:25:50 This is the timestamp to return\n",
+                 "2014.0430 19:30:00 This should not be returned\n"]
+        tfilename = "%s/%s.data" % (self.testdir, util.my_name())
+        f = open(tfilename, 'w')
+        f.writelines(tdata)
+        f.close()
+
+        self.expected("2014.0412", util.date_start(tfilename))
+
+
+    # --------------------------------------------------------------------------
+    # def test_date_parse(self):
+    #     """
+    #     
+    #     """
+        
     # --------------------------------------------------------------------------
     def test_env_add_folded_none(self):
         """

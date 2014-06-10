@@ -72,6 +72,36 @@ def get_config(cfname='', reset=False, soft=False):
     return rval
 
 # ------------------------------------------------------------------------------
+def get_logcfg(cfg):
+    """
+    Return a dict containing values for filename, maxbytes, backupCount, and
+    archdir if they are provided in the cfg.
+    """
+    kwargs = {}
+    try:
+        kwargs['filename'] = cfg.get('crawler', 'logpath')
+    except:
+        pass
+    
+    try:
+        maxbytes = cfg.get_size('crawler', 'logsize')
+        kwargs['maxBytes'] = maxbytes
+    except:
+        pass
+
+    try:
+        kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
+    except:
+        pass
+    
+    try:
+        kwargs['archdir'] = cfg.get_d('crawler', 'archive_dir', 'history')
+    except:
+        pass
+        
+    return kwargs
+
+# ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False, soft=False):
     """
     Return the logging object for this process. Instantiate it if it
@@ -113,41 +143,16 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
     if cmdline != '':
         filename = cmdline
     elif cfg != None:
-        try:
-            filename = cfg.get('crawler', 'logpath')
-        except:
-            pass
-    
-        try:
-            maxbytes = cfg.get_size('crawler', 'logsize')
-            kwargs['maxBytes'] = maxbytes
-        except:
-            pass
-
-        try:
-            kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
-        except:
-            pass
-        
+        kwargs = get_logcfg(cfg)
+        filename = kwargs['filename']
+        del kwargs['filename']
     elif envval != None:
         filename = envval
     elif dcfg != None:
-        try:
-            filename = dcfg.get('crawler', 'logpath')
-        except:
-            pass
+        kwargs = get_logcfg(dcfg)
+        filename = kwargs['filename']
+        del kwargs['filename']
 
-        try:
-            maxbytes = dcfg.get_size('crawler', 'logsize')
-            kwargs['maxBytes'] = maxbytes
-        except:
-            pass
-
-        try:
-            kwargs['backupCount'] = dcfg.getint('crawler', 'logmax')
-        except:
-            pass
-        
     try:
         rval = get_logger._logger
     except AttributeError:
