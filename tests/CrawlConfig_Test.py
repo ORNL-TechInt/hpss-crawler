@@ -819,7 +819,33 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         "Expected file %s to exist" % logpath)
         self.assertTrue(os.path.isfile(archlogpath),
                         "Expected file %s to exist" % archlogpath)
-        pdb.set_trace()
+
+    # -------------------------------------------------------------------------
+    def test_log_rollover_cwd(self):
+        """
+        Create a logger with a low rollover threshold and no archive dir. Write
+        to it until it rolls over. Verify that the archive file was handled
+        correctly.
+        """
+        logbase = '%s.log' % util.my_name()
+        logpath = "%s/%s" % (self.testdir, logbase)
+        logpath_1 = logpath + ".1"
+        ym = time.strftime("%Y.%m%d")
+        archlogpath = '%s/%s.%s-%s' % (self.testdir, logbase, ym, ym)
+        lcfg_d = {'crawler': {'logpath': logpath,
+                              'logsize': '500',
+                              'logmax': '10'}}
+        lcfg = CrawlConfig.CrawlConfig()
+        lcfg.load_dict(lcfg_d)
+        CrawlConfig.get_logger(cfg=lcfg, reset=True)
+        lmsg = "This is a test " + "-" * 35
+        for x in range(0,5):
+            CrawlConfig.log(lmsg)
+
+        self.assertTrue(os.path.isfile(logpath),
+                        "Expected file %s to exist" % logpath)
+        self.assertFalse(os.path.isfile(archlogpath),
+                        "Expected file %s to not exist" % archlogpath)
 
     # -------------------------------------------------------------------------
     def test_log_multfmt(self):
