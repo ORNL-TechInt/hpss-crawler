@@ -123,6 +123,7 @@ def get_last_rpt_time(db):
         if rval is None:
             rval = 0
             
+    CrawlConfig.log("time of last report: %d" % rval)
     return rval
 
 # -----------------------------------------------------------------------------
