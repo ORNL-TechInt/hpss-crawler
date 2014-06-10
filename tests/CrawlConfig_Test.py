@@ -790,52 +790,36 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         
     # -------------------------------------------------------------------------
-    def test_log_simple(self):
+    def test_log_rollover_archive(self):
         """
-        Tests for routine CrawlConfig.log():
-         - simple string in first argument
-         - 1 % formatter in first arg
-         - multiple % formatters in first arg
-         - too many % formatters for args
-         - too many args for % formatters
+        Create a logger with a low rollover threshold and an archive dir. Write
+        to it until it rolls over. Verify that the archive file was handled
+        correctly.
         """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        logbase = '%s.log' % util.my_name()
+        logpath = "%s/%s" % (self.testdir, logbase)
+        logpath_1 = logpath + ".1"
+        archdir = "%s/history" % (self.testdir)
+        ym = time.strftime("%Y.%m%d")
+        archlogpath = '%s/%s.%s-%s' % (archdir, logbase, ym, ym)
+        lcfg_d = {'crawler': {'logpath': logpath,
+                              'logsize': '500',
+                              'archive_dir': archdir,
+                              'logmax': '10'}}
+        lcfg = CrawlConfig.CrawlConfig()
+        lcfg.load_dict(lcfg_d)
+        CrawlConfig.get_logger(cfg=lcfg, reset=True)
+        lmsg = "This is a test " + "-" * 35
+        for x in range(0,5):
+            CrawlConfig.log(lmsg)
 
-        # simple string in first arg
-        exp = util.my_name() + ": " + "This is a simple string"
-        CrawlConfig.log(exp)
-        result = util.contents(fpath)
-        self.assertTrue(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
-                        
-    # -------------------------------------------------------------------------
-    def test_log_onefmt(self):
-        # """
-        # Tests for routine CrawlConfig.log():
-        #  - simple string in first argument
-        #  - 1 % formatter in first arg
-        #  - multiple % formatters in first arg
-        #  - too many % formatters for args
-        #  - too many args for % formatters
-        # """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
-
-        # 1 % formatter in first arg
-        a1 = "This has a formatter and one argument: %s"
-        a2 = "did that work?"
-        exp = (util.my_name() +
-               "(%s:%d): " % (util.filename(), util.lineno()+2) +
-               a1 % a2)
-        CrawlConfig.log(a1, a2)
-        result = util.contents(fpath)
-        self.assertTrue(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
+        self.assertTrue(os.path.isdir(archdir),
+                        "Expected directory %s to be created" % archdir)
+        self.assertTrue(os.path.isfile(logpath),
+                        "Expected file %s to exist" % logpath)
+        self.assertTrue(os.path.isfile(archlogpath),
+                        "Expected file %s to exist" % archlogpath)
+        pdb.set_trace()
 
     # -------------------------------------------------------------------------
     def test_log_multfmt(self):
@@ -865,6 +849,54 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         "Expected '%s' in %s" %
                         (exp, util.line_quote(result)))
 
+    # -------------------------------------------------------------------------
+    def test_log_onefmt(self):
+        # """
+        # Tests for routine CrawlConfig.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
+
+        # 1 % formatter in first arg
+        a1 = "This has a formatter and one argument: %s"
+        a2 = "did that work?"
+        exp = (util.my_name() +
+               "(%s:%d): " % (util.filename(), util.lineno()+2) +
+               a1 % a2)
+        CrawlConfig.log(a1, a2)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+    # -------------------------------------------------------------------------
+    def test_log_simple(self):
+        """
+        Tests for routine CrawlConfig.log():
+         - simple string in first argument
+         - 1 % formatter in first arg
+         - multiple % formatters in first arg
+         - too many % formatters for args
+         - too many args for % formatters
+        """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
+
+        # simple string in first arg
+        exp = util.my_name() + ": " + "This is a simple string"
+        CrawlConfig.log(exp)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+                        
     # -------------------------------------------------------------------------
     def test_log_toomany_fmt(self):
         # """
