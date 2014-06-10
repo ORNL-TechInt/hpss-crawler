@@ -16,23 +16,27 @@ def get_cv_report(db, last_rpt_time):
     rval += d.report()
     rval += "\n"
 
-    # get the population and sample entries added since the last report
-    rows = db.select(table="checkables",
-                     fields=["count(path)"],
-                     where='type = "f" and ? < last_check',
-                     data=(last_rpt_time,))
-    (c_pop_size) = rows[0]
-    
-    rows = db.select(table="checkables",
-                     fields=["count(path)"],
-                     where='type = "f" and checksum = 1 and ? < last_check',
-                     data=(last_rpt_time,))
-    (c_sample_size) = rows[0]
+    if db.table_exists(table="checkables"):
+        # get the population and sample entries added since the last report
+        rows = db.select(table="checkables",
+                         fields=["count(path)"],
+                         where='type = "f" and ? < last_check',
+                         data=(last_rpt_time,))
+        (c_pop_size) = rows[0]
 
-    # report the deltas
-    rval += ("Since last report, " +
-             "%d items added to population, " % (c_pop_size) +
-             "%d items added to sample" % (c_sample_size))
+        rows = db.select(table="checkables",
+                         fields=["count(path)"],
+                         where='type = "f" and checksum = 1 and ? < last_check',
+                         data=(last_rpt_time,))
+        (c_sample_size) = rows[0]
+
+        # report the deltas
+        rval += ("Since last report, " +
+                 "%d items added to population, " % (c_pop_size) +
+                 "%d items added to sample" % (c_sample_size))
+    else:
+        rval = "No checksum verifier data to report."
+
     rval += "\n"
 
     return rval
@@ -40,22 +44,27 @@ def get_cv_report(db, last_rpt_time):
 # -----------------------------------------------------------------------------
 def get_mpra_report(db, last_rpt_time):
     # db = CrawlDBI.DBI()
-    rows = db.select(table="mpra")
     rval = ("\n----------------------------------------------------------\n" +
             "Migration/Purge Record Checks\n" +
             "\n")
-    body = ""
-    for r in rows:
-        body += "  %-10s %s\n" % (r[1],
-                                time.strftime("%Y.%m%d %H:%M:%S",
-                                              time.localtime(r[0])))
-        
-    if 0 < len(body):
-        body = "  %-10s %s\n" % ("Type", "Most Recent Record Found") + body
+    if db.table_exists(table='mpra'):
+        rows = db.select(table="mpra")
+        body = ""
+        for r in rows:
+            body += "  %-10s %s\n" % (r[1],
+                                    time.strftime("%Y.%m%d %H:%M:%S",
+                                                  time.localtime(r[0])))
+
+        if 0 < len(body):
+            body = "  %-10s %s\n" % ("Type", "Most Recent Record Found") + body
+        else:
+            body = "  No records found to report"
+
     else:
-        body = "  No records found to report"
-        
+        body = "  No MPRA result to report at this time."
+
     rval += body + "\n"
+    
     return rval
 
 # -----------------------------------------------------------------------------
