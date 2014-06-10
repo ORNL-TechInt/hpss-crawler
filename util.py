@@ -62,7 +62,8 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
         Handle archdir and remove it. Let super() deal with the rest of them.
         """
         if ('archdir' in kwargs):
-            self.archdir = kwargs['archdir']
+            if kwargs['archdir'] != '':
+                self.archdir = kwargs['archdir']
             del kwargs['archdir']
         super(ArchiveLogfileHandler, self).__init__(filename, **kwargs)
         
@@ -71,8 +72,8 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
         """
         After the normal rollover when a log file fills, we want to copy the
         newly rolled over file (my_log.1) to the archive directory. If an
-        archive directory has not been set, we'll just make a copy in the same
-        directory where the log file resides.
+        archive directory has not been set, we behave just like our parent and
+        don't archive the log file at all.
 
         The copied file will be named my_log.<start-date>-<end-date>
         """
@@ -81,7 +82,7 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
         try:
             archdir = self.archdir
         except AttributeError:
-            archdir = os.path.dirname(self.baseFilename)
+            return
             
         path1 = self.baseFilename + ".1"
         target = "%s/%s.%s-%s" % (archdir,
@@ -328,7 +329,7 @@ def setup_logging(logfile='',
                   maxBytes=10*1024*1024,
                   backupCount=5,
                   bumper=True,
-                  archdir='history'):
+                  archdir=''):
     """
     Create a new logger and return the object
     """

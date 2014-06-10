@@ -95,7 +95,7 @@ def get_logcfg(cfg):
         pass
     
     try:
-        kwargs['archdir'] = cfg.get_d('crawler', 'archive_dir', 'history')
+        kwargs['archdir'] = cfg.get_d('crawler', 'archive_dir')
     except:
         pass
         
