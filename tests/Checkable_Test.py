@@ -650,17 +650,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(3, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
-        try:
-            foo.load()
-            foo.persist()
-            self.fail("Expected an exception but didn't get one.")
-        except AssertionError:
-            raise
-        except StandardError, e:
-            self.assertEqual('There appears to be more than one' in str(e),
-                             True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(StandardError,
+                             "There appears to be more than one",
+                             foo.load)
 
         x = Checkable.get_list()
         self.expected(3, len(x))
@@ -840,17 +832,9 @@ class CheckableTest(testhelp.HelpedTestCase):
                          "There should be a duplicate entry in the database.")
         
         foo = Checkable(path=self.testpath, type='f')
-        try:
-            foo.load()
-            foo.persist()
-            self.fail("Expected an exception but didn't get one.")
-        except AssertionError:
-            raise
-        except StandardError, e:
-            self.assertEqual('There appears to be more than one' in str(e),
-                             True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(StandardError,
+                             "There appears to be more than one",
+                             foo.load)
 
         x = Checkable.get_list()
         self.expected(3, len(x))
