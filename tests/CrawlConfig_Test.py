@@ -150,29 +150,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.default_cfname, self.cdict)
             os.chmod(self.default_cfname, 0000)
 
+            expmsg = "%s is not readable" % self.default_cfname
             # test get_config with no argument
-            try:
-                cfg = CrawlConfig.get_config()
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.default_cfname, str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg, CrawlConfig.get_config)
 
             # test get_config with empty string argument
-            try:
-                cfg = CrawlConfig.get_config('')
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.default_cfname, str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config, '')
     
     # --------------------------------------------------------------------------
     def test_get_config_def_nosuch(self):
@@ -188,31 +172,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.clear_env()
             util.conditional_rm(self.default_cfname)
 
+            expmsg = "%s does not exist" % self.default_cfname
             # test with no argument
-            try:
-                cfg = CrawlConfig.get_config()
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s does not exist' % self.default_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg, CrawlConfig.get_config)
 
             # test with empty string argument
-            try:
-                cfg = CrawlConfig.get_config('')
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s does not exist' % self.default_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config, '')
         
     # --------------------------------------------------------------------------
     def test_get_config_def_ok(self):
@@ -264,29 +230,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.env_cfname, d)
             os.chmod(self.env_cfname, 0000)
 
-            try:
-                cfg = CrawlConfig.get_config()
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.env_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            expmsg = "%s is not readable" % self.env_cfname
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config)
 
-            try:
-                cfg = CrawlConfig.get_config('')
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.env_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config, '')
         
     # --------------------------------------------------------------------------
     def test_get_config_env_nosuch(self):
@@ -371,13 +320,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.exp_cfname, d)
             os.chmod(self.exp_cfname, 0000)
 
-            try:
-                cfg = CrawlConfig.get_config(self.exp_cfname)
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.exp_cfname, str(e))
+            self.assertRaisesMsg(StandardError,
+                                 "%s is not readable" % self.exp_cfname,
+                                 CrawlConfig.get_config,
+                                 self.exp_cfname)
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_nosuch(self):
@@ -398,13 +344,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             util.conditional_rm(self.exp_cfname)
 
-            try:
-                cfg = CrawlConfig.get_config(self.exp_cfname)
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s does not exist' % self.exp_cfname, str(e))
+            self.assertRaisesMsg(StandardError,
+                                 "%s does not exist" % self.exp_cfname,
+                                 CrawlConfig.get_config,
+                                 self.exp_cfname)
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_ok(self):

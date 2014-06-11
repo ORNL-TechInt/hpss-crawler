@@ -393,6 +393,28 @@ class HelpedTestCase(unittest.TestCase):
     This class adds some goodies to the standard unittest.TestCase
     """
     # -------------------------------------------------------------------------
+    def assertRaisesMsg(self, exception, message, func, *args, **kwargs):
+        """
+        A more precise version of assertRaises so we can validate the content
+        of the exception thrown.
+        """
+        try:
+            func(*args, **kwargs)
+        except exception, e:
+            if type(message) == str:
+                self.assertTrue(message in str(e),
+                                "Expected '%s', got '%s'" % (message, str(e)))
+            elif type(message) == list:
+                self.assertTrue(any(t in str(e) for t in message),
+                                "Expected one of '%s', got '%s'" % (message, str(e)))
+            else:
+                self.fail("message must be a string or list")
+        except Exception, e:
+            self.fail('Unexpected exception thrown: %s %s' % (type(e), str(e)))
+        else:
+            self.fail('Expected exception %s not thrown' % exception)
+            
+    # -------------------------------------------------------------------------
     def expected(self, expval, actual):
         """
         Compare the expected value (expval) and the actual value (actual). If
