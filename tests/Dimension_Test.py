@@ -206,55 +206,57 @@ class DimensionTest(testhelp.HelpedTestCase):
     #     db.close()
         
     # -------------------------------------------------------------------------
-    # def test_load_already(self):
-    #     """
-    #     With the database and dimension table in place and a named Dimension in
-    #     place in the table, calling load() on a Dimension with the same name as
-    #     the one in the table should load the information from the table into
-    #     the object.
-    #     """
-    #     util.conditional_rm(self.testdb)
-    #     testhelp.db_config(self.testdir, util.my_name())
-    #     Checkable.Checkable.ex_nihilo()
-    #     testdata = [('cos', '6002', 24053, 17.2563, 190, 15.2343),
-    #                 ('cos', '5081', 14834, 98.753,  105, 28.4385)]
-    #     # create the dimension table without putting anything in it
-    #     z = Dimension(name='foobar')
-    #     z.persist()
-    # 
-    #     # insert some test data into the table
-    #     db = CrawlDBI.DBI()
-    #     # db.insert(table='dimension',
-    #     #           fields=['name', 'category',
-    #     #                   'p_count', 'p_pct', 's_count', 's_pct'],
-    #     #           data=testdata)
-    #     db.close()
-    # 
-    #     # get a default Dimension with the same name as the data in the table
-    #     q = Dimension(name='cos')
-    #     # this should load the data from the table into the object
-    #     q.load()
-    # 
-    #     # verify the loaded data in the object
-    #     self.expected('cos', q.name)
-    #     self.assertTrue(testdata[0][1] in q.p_sum.keys(),
-    #                     "Expected '%s' in p_sum.keys()" % testdata[0][1])
-    #     self.assertTrue(testdata[0][1] in q.s_sum.keys(),
-    #                     "Expected '%s' in s_sum.keys()" % testdata[0][1])
-    #     self.assertTrue(testdata[1][1] in q.p_sum.keys(),
-    #                     "Expected '%s' in p_sum.keys()" % testdata[1][1])
-    #     self.assertTrue(testdata[1][1] in q.s_sum.keys(),
-    #                     "Expected '%s' in s_sum.keys()" % testdata[1][1])
-    # 
-    #     self.expected(testdata[0][2], q.p_sum[testdata[0][1]]['count'])
-    #     self.expected(testdata[0][3], q.p_sum[testdata[0][1]]['pct'])
-    #     self.expected(testdata[0][4], q.s_sum[testdata[0][1]]['count'])
-    #     self.expected(testdata[0][5], q.s_sum[testdata[0][1]]['pct'])
-    # 
-    #     self.expected(testdata[1][2], q.p_sum[testdata[1][1]]['count'])
-    #     self.expected(testdata[1][3], q.p_sum[testdata[1][1]]['pct'])
-    #     self.expected(testdata[1][4], q.s_sum[testdata[1][1]]['count'])
-    #     self.expected(testdata[1][5], q.s_sum[testdata[1][1]]['pct'])
+    def test_load_already(self):
+        """
+        With the database and a checkables table in place and records in the
+        table, calling load() on a Dimension should load the information from
+        the table into the object. However, it should only count records where
+        last_check <> 0.
+        """
+        util.conditional_rm(self.testdb)
+        testhelp.db_config(self.testdir, util.my_name())
+        Checkable.Checkable.ex_nihilo()
+        chk = Checkable.Checkable
+        testdata = [
+            chk(rowid=1, path="/abc/001", type='f', cos='6001', checksum=0, last_check=0),
+            chk(rowid=2, path="/abc/002", type='f', cos='6002', checksum=0, last_check=5),
+            chk(rowid=3, path="/abc/003", type='f', cos='6003', checksum=1, last_check=0),
+            chk(rowid=4, path="/abc/004", type='f', cos='6001', checksum=1, last_check=17),
+            chk(rowid=5, path="/abc/005", type='f', cos='6002', checksum=0, last_check=0),
+            chk(rowid=6, path="/abc/006", type='f', cos='6003', checksum=0, last_check=8),
+            chk(rowid=7, path="/abc/007", type='f', cos='6001', checksum=0, last_check=0),
+            chk(rowid=8, path="/abc/008", type='f', cos='6002', checksum=0, last_check=19),
+            chk(rowid=9, path="/abc/009", type='f', cos='6003', checksum=0, last_check=0),
+            ]
+
+        # create the dimension table without putting anything in it
+        # z = Dimension(name='foobar')
+        # z.persist()
+    
+        # insert some test data into the table
+        for t in testdata:
+            t.persist()
+    
+        # get a default Dimension with the same name as the data in the table
+        q = Dimension(name='cos')
+        # this should load the data from the table into the object
+        q.load()
+    
+        # verify the loaded data in the object
+        # pdb.set_trace()
+        self.expected('cos', q.name)
+        self.assertTrue('6001' in q.p_sum.keys(),
+                        "Expected '6001' in p_sum.keys()")
+        self.assertTrue('6002' in q.p_sum.keys(),
+                        "Expected '6001' in p_sum.keys()")
+        self.assertTrue('6003' in q.p_sum.keys(),
+                        "Expected '6003' in p_sum.keys()")
+        self.assertTrue('6001' in q.s_sum.keys(),
+                        "Expected '6001' in s_sum.keys()")
+        self.assertTrue('6002' in q.s_sum.keys(),
+                        "Expected '6002' in s_sum.keys()")
+        self.assertTrue('6003' in q.s_sum.keys(),
+                        "Expected '6003' in s_sum.keys()")
 
     # -------------------------------------------------------------------------
     def test_load_new(self):
