@@ -6,6 +6,7 @@ import mpra_lib
 import optparse
 import pdb
 import re
+import rpt_lib
 import sys
 import time
 import toolframe
@@ -133,6 +134,30 @@ def mpra_epoch(args):
     for ymd in a:
         print(int(util.epoch(ymd)))
     
+# -----------------------------------------------------------------------------
+def mpra_history(args):
+    """history - report contents of the mpra table
+
+    usage: mpra history [-s/--since] <date/time>
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-s', '--since',
+                 action='store', default='', dest='since',
+                 help='only report records since ...')
+    
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    n_since = util.epoch(o.since) if o.since else 0
+        
+    db = CrawlDBI.DBI()
+    report = rpt_lib.get_mpra_report(db, n_since)
+    print(report)
+        
 # -----------------------------------------------------------------------------
 def mpra_ymd(args):
     """ymd - convert an epoch time to YYYY.mmdd HH:MM:SS
