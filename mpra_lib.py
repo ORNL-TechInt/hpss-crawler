@@ -1,5 +1,6 @@
 import CrawlConfig
 import CrawlDBI
+import pdb
 import re
 import sys
 import tcc_lib
@@ -57,6 +58,8 @@ def age(table,
     
     if count:
         dbargs['fields'] = ['count(*)']
+    else:
+        dbargs['orderby'] = 'record_create_time'
 
     try:
         dbargs['table'] = {'migr': 'bfmigrrec',
@@ -77,7 +80,9 @@ def age(table,
         age_report(table, int(time.time()) - recent, count, rows, f, path)
         
         if mark and 0 < recent:
-            mpra_record_recent(table, recent)
+            mpra_record_recent(table, start, recent, hits)
+    elif mark:
+        mpra_record_recent(table, start, end, hits)
 
     if opened:
         f.close()
@@ -87,8 +92,7 @@ def age(table,
 # -----------------------------------------------------------------------------
 def age_report(table, age, count, result, f, path=False):
     """
-    mark: If True, record the most recent record reported in our scribble
-    database
+    Generate the report based on the data passed in
     """
     if count:
         f.write("%s records older than %s: %d\n"
@@ -125,7 +129,7 @@ def dhms(age_s):
     return("%dd-%02d:%02d:%02d" % (days, hours, minutes, seconds))
 
 # -----------------------------------------------------------------------------
-def mpra_record_recent(type, recent):
+def mpra_record_recent(type, start, end, hits):
     """
     Record the most recent record reported so we don't report records
     repeatedly. However, if recent is not later than the time already stored,
@@ -135,23 +139,15 @@ def mpra_record_recent(type, recent):
     if not db.table_exists(table='mpra'):
         CrawlConfig.log("Creating mpra table")
         db.create(table='mpra',
-                  fields=['recent_time   integer',
-                          'type          text'])
-    rows = db.select(table='mpra',
-                     fields=['recent_time'],
-                     where='type = ?',
-                     data=(type,))
-    if len(rows) < 1:
-        CrawlConfig.log("Insert into mpra table: (%s, %d)" % (type, recent))
-        db.insert(table='mpra',
-                  fields=['type', 'recent_time'],
-                  data=[(type, recent)])
-    elif rows[0][0] < recent:
-        CrawlConfig.log("Update mpra table with (%s, %d)" % (type, recent))
-        db.update(table='mpra',
-                  fields=['recent_time'],
-                  where='type = ?',
-                  data=[(recent, type)])
+                  fields=['type          text',
+                          'scan_time     integer',
+                          'start_time    integer',
+                          'end_time      integer',
+                          'hits          integer'])
+
+    db.insert(table='mpra',
+              fields=['type', 'scan_time', 'start_time', 'end_time', 'hits'],
+              data=(type, int(time.time()), int(start), int(end), hits))
 
 # -----------------------------------------------------------------------------
 def mpra_fetch_recent(type):
@@ -165,7 +161,7 @@ def mpra_fetch_recent(type):
         return 0
 
     rows = db.select(table='mpra',
-                     fields=['max(recent_time)'],
+                     fields=['max(end_time)'],
                      where='type = ?',
                      data=(type,))
 
