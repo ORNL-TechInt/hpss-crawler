@@ -44,7 +44,7 @@ def mpra_age(args):
                  action='store_true', default=False, dest='path',
                  help='report paths as well as bitfile IDs')
     p.add_option('-s', '--start',
-                 action='store', default='0', dest='start',
+                 action='store', default='', dest='start',
                  help='starting epoch time')
     p.add_option('-t', '--table',
                  action='store', default='', dest='table',
@@ -65,9 +65,10 @@ def mpra_age(args):
     elif o.age:
         end = time.time() - cfg.to_seconds(o.age)
     elif o.end:
-        end = int(o.end)
+        end = util.epoch(o.end)
 
-    start = int(o.start)
+    if o.start:
+        start = util.epoch(o.start)
     if o.table == '':
         o.table = 'migr'
 

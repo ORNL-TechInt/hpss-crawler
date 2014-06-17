@@ -80,9 +80,9 @@ def age(table,
         age_report(table, int(time.time()) - recent, count, rows, f, path)
         
         if mark and 0 < recent:
-            mpra_record_recent(table, start, recent, hits)
+            mpra_record_recent(table, start, recent, len(rows))
     elif mark:
-        mpra_record_recent(table, start, end, hits)
+        mpra_record_recent(table, start, end, len(rows))
 
     if opened:
         f.close()
@@ -147,7 +147,7 @@ def mpra_record_recent(type, start, end, hits):
 
     db.insert(table='mpra',
               fields=['type', 'scan_time', 'start_time', 'end_time', 'hits'],
-              data=(type, int(time.time()), int(start), int(end), hits))
+              data=[(type, int(time.time()), int(start), int(end), hits)])
 
 # -----------------------------------------------------------------------------
 def mpra_fetch_recent(type):

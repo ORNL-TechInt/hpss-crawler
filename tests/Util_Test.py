@@ -535,6 +535,14 @@ class UtilTest(testhelp.HelpedTestCase):
     #                      '%s should exist but does not' % logpath)
         
     # -------------------------------------------------------------------------
+    def test_epoch(self):
+        self.expected(1388638799, util.epoch("2014.0101 23:59:59"))
+        self.expected(1388638740, util.epoch("2014.0101 23:59"))
+        self.expected(1388635200, util.epoch("2014.0101 23"))
+        self.expected(1388552400, util.epoch("2014.0101"))
+        self.expected(1388552399, util.epoch("1388552399"))
+        
+    # -------------------------------------------------------------------------
     def test_hostname_default(self):
         """
         Calling util.hostname() with no argument should get the short hostname
