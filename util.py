@@ -244,10 +244,12 @@ def epoch(ymdhms):
     epoch time.
     """
     fmts = ["%Y.%m%d %H:%M:%S",
+            "%Y.%m%d.%H.%M.%S",
             "%Y.%m%d %H:%M",
+            "%Y.%m%d.%H.%M",
             "%Y.%m%d %H",
+            "%Y.%m%d.%H",
             "%Y.%m%d",
-            "%s",
             ]
     fp = copy.copy(fmts)
     rval = None
