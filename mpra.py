@@ -117,9 +117,26 @@ def mpra_date_age(args):
 
 # -----------------------------------------------------------------------------
 def mpra_epoch(args):
-    """epoch - convert an epoch time to YYYY.mmdd HH:MM:SS
+    """epoch - convert a YYYY.mmdd HH:MM:SS to an epoch time
 
-    usage: mpra epoch 1327513752 ...
+    usage: mpra epoch 2014.0201.10.27.53
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    for ymd in a:
+        print(int(time.mktime(time.strptime(ymd, "%Y.%m%d.%H.%M.%S"))))
+    
+# -----------------------------------------------------------------------------
+def mpra_ymd(args):
+    """ymd - convert an epoch time to YYYY.mmdd HH:MM:SS
+
+    usage: mpra ymd 1327513752 ...
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
@@ -213,7 +230,9 @@ def mpra_migr_recs(args):
 
     if o.count:
         dbargs['fields'] = ['count(*)']
-        
+
+    dbargs['orderby'] = 'record_create_time'
+    
     rows = db.select(**dbargs)
     for row in rows:
         if o.count:
@@ -324,6 +343,7 @@ def mpra_simplug(args):
 
     usage: mpra simplug
 
+    Debugging (-d) is provided by crawl_lib.simplug()
     """
     crawl_lib.simplug('mpra', args)
 
