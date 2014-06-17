@@ -47,21 +47,23 @@ def get_mpra_report(db, last_rpt_time):
     rval = ("\n----------------------------------------------------------\n" +
             "Migration/Purge Record Checks\n" +
             "\n")
-    fmt = "  %-4s  %-10s  %-10s  %-10s  %5d\n"
+    hfmt = "  %-4s  %-20s  %-20s  %-20s  %8s\n"
+    bfmt = "  %-4s  %-20s  %-20s  %-20s  %8d\n"
+    body = ''
     if db.table_exists(table='mpra'):
-        rows = db.select(table="mpra", groupby='type')
+        # rows = db.select(table="mpra", groupby='type', orderby='scan_time')
+        rows = db.select(table="mpra",
+                         where="? < scan_time",
+                         data=(last_rpt_time,))
         for r in rows:
-            body = fmt % (r[0],
-                          util.ymdhms(r[1]),
-                          util.ymdhms(r[2]),
-                          util.ymdhms(r[3]),
-                          r[4])
-            # body += "  %-10s %s\n" % (r[1],
-            #                         time.strftime("%Y.%m%d %H:%M:%S",
-            #                                       time.localtime(r[0])))
+            body += bfmt % (r[0],
+                            util.ymdhms(r[1]),
+                            util.ymdhms(r[2]),
+                            util.ymdhms(r[3]),
+                            r[4])
 
         if 0 < len(body):
-            body = fmt % ('Type', 'Scan Time', 'Start', 'End', 'Records') + body
+            body = hfmt % ('Type', 'Scan Time', 'Start', 'End', 'Records') + body
         else:
             body = "  No records found to report"
 
