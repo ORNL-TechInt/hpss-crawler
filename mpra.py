@@ -131,7 +131,7 @@ def mpra_epoch(args):
     if o.debug: pdb.set_trace()
 
     for ymd in a:
-        print(int(time.mktime(time.strptime(ymd, "%Y.%m%d.%H.%M.%S"))))
+        print(int(util.epoch(ymd)))
     
 # -----------------------------------------------------------------------------
 def mpra_ymd(args):
