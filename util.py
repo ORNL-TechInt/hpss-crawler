@@ -244,7 +244,10 @@ def epoch(ymdhms):
     epoch time.
     """
     fmts = ["%Y.%m%d %H:%M:%S",
+            "%Y.%m%d %H:%M",
+            "%Y.%m%d %H",
             "%Y.%m%d",
+            "%s",
             ]
     fp = copy.copy(fmts)
     rval = None
@@ -254,9 +257,12 @@ def epoch(ymdhms):
         except ValueError:
             rval = None
         except IndexError:
-            err = ("The date '%s' does not match any of the formats: %s" %
-                   (ymdhms, fmts))
-            raise StandardError(err)
+            if ymdhms.isdigit():
+                rval = int(ymdhms)
+            else:
+                err = ("The date '%s' does not match any of the formats: %s" %
+                       (ymdhms, fmts))
+                raise StandardError(err)
 
     return rval
 
