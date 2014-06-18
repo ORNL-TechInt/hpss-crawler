@@ -27,6 +27,7 @@ import CrawlConfig
 import CrawlDBI
 import Dimension
 import hpss
+import pdb
 import pexpect
 import random
 import re
@@ -319,7 +320,7 @@ class Checkable(object):
             q = cls.rgxP
         except AttributeError:
             cls.rgxP = re.compile("(FILE|DIRECTORY)\s+(\S+)(\s+\d+\s+\d+" +
-                                  "\s+\S+\s+\S+\s+(\d+))?")
+                                  "\s+\S+(\s+\S+)?\s+(\d+))?")
             cls.rgxl = re.compile("(.)([r-][w-][x-]){3}(\s+\S+){3}" +
                                   "(\s+\d+)(\s+\w{3}\s+\d+\s+[\d:]+)" +
                                   "\s+(\S+)")
@@ -330,8 +331,12 @@ class Checkable(object):
             
         ltup = re.findall(cls.rgxP, value)
         if ltup:
-            (type, fname, ign1, cos) = ltup[0]
-            return Checkable(path=fname, type=cls.map[type], cos=cos)
+            (type, fname, ign1, c1, c2) = ltup[0]
+            # cos may land in either of the last two elements, depending on
+            # whether the file is empty. If the file is empty, c2 will be '0'
+            # and c1 will contain the cos. Otherwise, c2 will contain the cos.
+            return Checkable(path=fname, type=cls.map[type],
+                             cos=c1.strip() if c2 == '0' else c2.strip())
 
         ltup = re.findall(cls.rgxl, value)
         if ltup:

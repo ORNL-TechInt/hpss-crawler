@@ -227,18 +227,11 @@ class DBI_in_Base(object):
         Attempt to create an object is invalid attribute should get an
         exception
         """
-        try:
-            a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), badattr="frooble")
-            self.fail("Expected exception on bad attribute not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("Attribute 'badattr' is not valid" in str(e),
-                            "Got the wrong DBIerror: %s" +
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except:
-            self.fail("Got an unexpected exception: %s" +
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Attribute 'badattr' is not valid",
+                             CrawlDBI.DBI,
+                             cfg=make_tcfg(self.dbtype),
+                             badattr='frooble')
             
     # -------------------------------------------------------------------------
     def test_ctor_dbn_none(self):
@@ -696,18 +689,12 @@ class DBI_out_Base(object):
         Calling create() with an empty field list should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.create(table='nogood', fields=[])
-            self.fail("Expected exception on empty field list, not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On create(), fields must not be empty" in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        # except AssertionError:
-        #     raise
-        # except Exception, e:
-        #     self.fail('Expected DBIerror but got %s' %
-        #               util.line_quote(tb.format_exc()))
+
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On create(), fields must not be empty",
+                             db.create,
+                             table='nogood',
+                             fields=[])
 
     # -------------------------------------------------------------------------
     def test_create_mtt(self):
@@ -715,19 +702,11 @@ class DBI_out_Base(object):
         Calling create() with an empty table name should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.create(table='', fields=['abc text'])
-            self.fail("Expected exception on empty table name, not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On create(), table name must not be empty" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        # except AssertionError:
-        #     raise
-        # except Exception, e:
-        #     self.fail('Expected DBIerror but got %s' %
-        #               util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On create(), table name must not be empty",
+                             db.create,
+                             table='',
+                             fields=['abc text'])
 
     # -------------------------------------------------------------------------
     def test_create_nlf(self):
@@ -736,19 +715,11 @@ class DBI_out_Base(object):
         get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.create(table='create_nlf', fields='notdict')
-            self.fail("Expected exception on non-list fields, not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On create(), fields must be a list" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        # except AssertionError:
-        #     raise
-        # except Exception, e:
-        #     self.fail('Expected DBIerror but got %s' %
-        #               util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On create(), fields must be a list",
+                             db.create,
+                             table='create_nlf',
+                             fields='notdict')
 
     # -------------------------------------------------------------------------
     def test_create_yes(self):
@@ -762,14 +733,6 @@ class DBI_out_Base(object):
         db.create(table='create_yes', fields=['one text',
                                               'two int'])
         self.assertTrue(db.table_exists(table='create_yes'))
-        # dbc = db.cursor()
-        # dbc.execute("""
-        # select name from sqlite_master where type='table' and name='test_create_yes'
-        # """)
-        # rows = dbc.fetchall()
-        # self.assertEqual(rows[0], ('test_create_yes',), 
-        #                  "Table 'test_create_yes' should have been created," +
-        #                  " was not.")
 
     # -------------------------------------------------------------------------
     def test_delete_nq_nd(self):
@@ -795,15 +758,11 @@ class DBI_out_Base(object):
         get an exception.
         """
         (db, td) = self.delete_setup()
-        try:
-            db.delete(table=td['tabname'], where='name=?')
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            exp = "Criteria are not fully specified"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Criteria are not fully specified",
+                             db.delete,
+                             table=td['tabname'],
+                             where='name=?')
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -820,15 +779,13 @@ class DBI_out_Base(object):
         should get an exception -- the data would be ignored.
         """
         (db, td) = self.delete_setup()
-        try:
-            db.delete(table=td['tabname'], where='name=foo', data=('meg',))
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            exp = "Data would be ignored"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Data would be ignored",
+                             db.delete,
+                             table=td['tabname'],
+                             where='name=foo',
+                             data=('meg',))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -863,15 +820,12 @@ class DBI_out_Base(object):
         A delete with an empty table name should throw an exception.
         """
         (db, td) = self.delete_setup()
-        try:
-            db.delete(table='', where='name=?', data=('meg',))
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            exp = "On delete(), table name must not be empty"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On delete(), table name must not be empty",
+                             db.delete,
+                             table='',
+                             where='name=?',
+                             data=('meg',))
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -899,15 +853,12 @@ class DBI_out_Base(object):
         A delete with a non-tuple data value should throw an exception
         """
         (db, td) = self.delete_setup()
-        try:
-            db.delete(table=td['tabname'], where='name=?', data='meg')
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            exp = "On delete(), data must be a tuple"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On delete(), data must be a tuple",
+                             db.delete,
+                             table=td['tabname'],
+                             where='name=?',
+                             data='meg')
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -923,15 +874,12 @@ class DBI_out_Base(object):
         A delete with a non-string table name should throw an exception
         """
         (db, td) = self.delete_setup()
-        try:
-            db.delete(table=32, where='name=?', data='meg')
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            exp = "On delete(), table name must be a string"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On delete(), table name must be a string",
+                             db.delete,
+                             table=32,
+                             where='name=?',
+                             data='meg')
         
         rows = db.select(table=td['tabname'])
         db.close()
@@ -947,17 +895,12 @@ class DBI_out_Base(object):
         A delete with a non-string where argument should throw an exception
         """
         (db, td) = self.delete_setup()
-        try:
-            db.delete(table=td['tabname'], where=[])
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            exp = "On delete(), where clause must be a string"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On delete(), where clause must be a string",
+                             db.delete,
+                             table=td['tabname'],
+                             where=[])
                           
-        
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -1011,19 +954,12 @@ class DBI_out_Base(object):
         Calling insert with an empty data list should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.insert(table='mtd', fields=['one', 'two'], data=[])
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On insert(), data list must not be empty" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail('Expected DBIerror but got %s' %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On insert(), data list must not be empty",
+                             db.insert,
+                             table='mtd',
+                             fields=['one', 'two'],
+                             data=[])
     
     # -------------------------------------------------------------------------
     def test_insert_mtf(self):
@@ -1031,19 +967,12 @@ class DBI_out_Base(object):
         Calling insert with an empty field list should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.insert(table='mtd', fields=[], data=[(1, 2)])
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On insert(), fields list must not be empty" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail('Expected DBIerror but got %s' %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On insert(), fields list must not be empty",
+                             db.insert,
+                             table='mtd',
+                             fields=[],
+                             data=[(1, 2)])
     
     # -------------------------------------------------------------------------
     def test_insert_mtt(self):
@@ -1051,19 +980,12 @@ class DBI_out_Base(object):
         Calling insert with an empty table name should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.insert(table='', fields=['one', 'two'], data=[(1, 2)])
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On insert(), table name must not be empty" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail('Expected DBIerror but got %s' %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On insert(), table name must not be empty",
+                             db.insert,
+                             table='',
+                             fields=['one', 'two'],
+                             data=[(1, 2)])
     
     # -------------------------------------------------------------------------
     def test_insert_nst(self):
@@ -1071,19 +993,12 @@ class DBI_out_Base(object):
         Calling insert with a non-string table name should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.insert(table=32, fields=['one', 'two'], data=[(1, 2)])
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On insert(), table name must be a string" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail('Expected DBIerror but got %s' %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On insert(), table name must be a string",
+                             db.insert,
+                             table=32,
+                             fields=['one', 'two'],
+                             data=[(1, 2)])
 
     # -------------------------------------------------------------------------
     def test_insert_nlf(self):
@@ -1091,19 +1006,12 @@ class DBI_out_Base(object):
         Calling insert with a non-list fields arg should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.insert(table='nlf', fields='froo', data=[(1, 2)])
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On insert(), fields must be a list" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail('Expected DBIerror but got %s' %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On insert(), fields must be a list",
+                             db.insert,
+                             table='nlf',
+                             fields='froo',
+                             data=[(1, 2)])
 
     # -------------------------------------------------------------------------
     def test_insert_nld(self):
@@ -1111,19 +1019,12 @@ class DBI_out_Base(object):
         Calling insert with a non-list data arg should get an exception
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.insert(table='nlf', fields=['froo', 'pizzazz'], data={})
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On insert(), data must be a list" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail('Expected DBIerror but got %s' %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On insert(), data must be a list",
+                             db.insert,
+                             table='nlf',
+                             fields=['froo', 'pizzazz'],
+                             data={})
     
     # -------------------------------------------------------------------------
     def test_insert_tnox(self):
@@ -1132,19 +1033,14 @@ class DBI_out_Base(object):
         """
         util.conditional_rm(self.testdb)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # db.create(table='tnox', fields=['one text', 'two text'])
-        try:
-            db.insert(table='tnox',
-                      fields=['one', 'two'],
-                      data=[('abc', 'def'),
-                            ('aardvark', 'buffalo')])
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            sqlite_msg = "no such table: test_tnox"
-            mysql_msg = "Table 'hpssic.test_tnox' doesn't exist"
-            self.assertTrue(sqlite_msg in str(e) or mysql_msg in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             ["no such table: test_tnox",
+                              "Table 'hpssic.test_tnox' doesn't exist"],
+                             db.insert,
+                             table='tnox',
+                             fields=['one', 'two'],
+                             data=[('abc', 'def'),
+                                   ('aardvark', 'buffalo')])
     
     # -------------------------------------------------------------------------
     def test_insert_yes(self):
@@ -1230,18 +1126,12 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table=tname, fields=self.fnames, data =[])
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), data must not be empty" in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), data must not be empty",
+                             db.update,
+                             table=tname,
+                             fields=self.fnames,
+                             data=[])
 
     # -------------------------------------------------------------------------
     def test_update_mtf(self):
@@ -1250,18 +1140,12 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table=tname, fields=[], data=self.testdata)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), fields must not be empty" in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), fields must not be empty",
+                             db.update,
+                             table=tname,
+                             fields=[],
+                             data=self.testdata)
     
     # -------------------------------------------------------------------------
     def test_update_mtt(self):
@@ -1270,19 +1154,12 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table='', fields=self.fnames, data=self.testdata)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), table name must not be empty" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), table name must not be empty",
+                             db.update,
+                             table='',
+                             fields=self.fnames,
+                             data=self.testdata)
     
     # -------------------------------------------------------------------------
     def test_update_mtw(self):
@@ -1318,19 +1195,12 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table=tname, fields=17, data=self.testdata)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), fields must be a list" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), fields must be a list",
+                             db.update,
+                             table=tname,
+                             fields=17,
+                             data=self.testdata)
     
     # -------------------------------------------------------------------------
     def test_update_nld(self):
@@ -1340,19 +1210,12 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table=tname, fields=self.fnames, data='notalist')
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), data must be a list of tuples" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), data must be a list of tuples",
+                             db.update,
+                             table=tname,
+                             fields=self.fnames,
+                             data='notalist')
     
     # -------------------------------------------------------------------------
     def test_update_nst(self):
@@ -1362,19 +1225,12 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table=38, fields=self.fnames, data=self.testdata)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), table name must be a string" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), table name must be a string",
+                             db.update,
+                             table=38,
+                             fields=self.fnames,
+                             data=self.testdata)
     
     # -------------------------------------------------------------------------
     def test_update_nsw(self):
@@ -1384,20 +1240,13 @@ class DBI_out_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            db.update(table=tname, fields=self.fnames, data=self.testdata,
-                      where=[])
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("On update(), where clause must be a string" in
-                            str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-        except AssertionError:
-            raise
-        except Exception, e:
-            self.fail("Expected DBIerror, got %s" %
-                      util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On update(), where clause must be a string",
+                             db.update,
+                             table=tname,
+                             fields=self.fnames,
+                             data=self.testdata,
+                             where=[])
     
     # -------------------------------------------------------------------------
     def test_update_w(self):
@@ -1508,15 +1357,10 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         util.conditional_rm(self.testdb)
         os.mkdir(self.testdb, 0777)
-        try:
-            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("unable to open database file" in str(e),
-                            "Unexpected DBIerror thrown: %s" %
-                            util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "unable to open database file",
+                             CrawlDBI.DBI,
+                             cfg=make_tcfg(self.dbtype))
     
     # -------------------------------------------------------------------------
     def test_ctor_dbn_empty(self):
@@ -1541,15 +1385,10 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         util.conditional_rm(self.testdb)
         os.mkfifo(self.testdb)
-        try:
-            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-            self.fail("Expected exception was not thrown")
-        except AssertionError:
-            raise
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("disk I/O error" in str(e),
-                            "Unexpected DBIerror thrown: %s" %
-                            util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "disk I/O error",
+                             CrawlDBI.DBI,
+                             cfg=make_tcfg(self.dbtype))
     
     # -------------------------------------------------------------------------
     def test_ctor_dbn_nosuch(self):

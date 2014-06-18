@@ -111,7 +111,7 @@ class Dimension(object):
         # populate the p_sum structure
         rows = self.db.select(table='checkables',
                               fields=["count(path)", "cos"],
-                              where='type="f"',
+                              where='type="f" and last_check <> 0',
                               groupby='cos')
         self.p_sum = self._compute_dict(rows)
 

@@ -150,29 +150,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.default_cfname, self.cdict)
             os.chmod(self.default_cfname, 0000)
 
+            expmsg = "%s is not readable" % self.default_cfname
             # test get_config with no argument
-            try:
-                cfg = CrawlConfig.get_config()
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.default_cfname, str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg, CrawlConfig.get_config)
 
             # test get_config with empty string argument
-            try:
-                cfg = CrawlConfig.get_config('')
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.default_cfname, str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config, '')
     
     # --------------------------------------------------------------------------
     def test_get_config_def_nosuch(self):
@@ -188,31 +172,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.clear_env()
             util.conditional_rm(self.default_cfname)
 
+            expmsg = "%s does not exist" % self.default_cfname
             # test with no argument
-            try:
-                cfg = CrawlConfig.get_config()
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s does not exist' % self.default_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg, CrawlConfig.get_config)
 
             # test with empty string argument
-            try:
-                cfg = CrawlConfig.get_config('')
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s does not exist' % self.default_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config, '')
         
     # --------------------------------------------------------------------------
     def test_get_config_def_ok(self):
@@ -264,29 +230,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.env_cfname, d)
             os.chmod(self.env_cfname, 0000)
 
-            try:
-                cfg = CrawlConfig.get_config()
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.env_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            expmsg = "%s is not readable" % self.env_cfname
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config)
 
-            try:
-                cfg = CrawlConfig.get_config('')
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.env_cfname,
-                              str(e))
-            except:
-                self.fail("Expected a StandardError, got %s" %
-                          util.line_quote(tb.format_exc()))
+            self.assertRaisesMsg(StandardError, expmsg,
+                                 CrawlConfig.get_config, '')
         
     # --------------------------------------------------------------------------
     def test_get_config_env_nosuch(self):
@@ -371,13 +320,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.exp_cfname, d)
             os.chmod(self.exp_cfname, 0000)
 
-            try:
-                cfg = CrawlConfig.get_config(self.exp_cfname)
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s is not readable' % self.exp_cfname, str(e))
+            self.assertRaisesMsg(StandardError,
+                                 "%s is not readable" % self.exp_cfname,
+                                 CrawlConfig.get_config,
+                                 self.exp_cfname)
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_nosuch(self):
@@ -398,13 +344,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             util.conditional_rm(self.exp_cfname)
 
-            try:
-                cfg = CrawlConfig.get_config(self.exp_cfname)
-                self.fail("Expected exception was not thrown")
-            except AssertionError:
-                raise
-            except StandardError as e:
-                self.expected('%s does not exist' % self.exp_cfname, str(e))
+            self.assertRaisesMsg(StandardError,
+                                 "%s does not exist" % self.exp_cfname,
+                                 CrawlConfig.get_config,
+                                 self.exp_cfname)
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_ok(self):
@@ -790,52 +733,62 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         
     # -------------------------------------------------------------------------
-    def test_log_simple(self):
+    def test_log_rollover_archive(self):
         """
-        Tests for routine CrawlConfig.log():
-         - simple string in first argument
-         - 1 % formatter in first arg
-         - multiple % formatters in first arg
-         - too many % formatters for args
-         - too many args for % formatters
+        Create a logger with a low rollover threshold and an archive dir. Write
+        to it until it rolls over. Verify that the archive file was handled
+        correctly.
         """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        logbase = '%s.log' % util.my_name()
+        logpath = "%s/%s" % (self.testdir, logbase)
+        logpath_1 = logpath + ".1"
+        archdir = "%s/history" % (self.testdir)
+        ym = time.strftime("%Y.%m%d")
+        archlogpath = '%s/%s.%s-%s' % (archdir, logbase, ym, ym)
+        lcfg_d = {'crawler': {'logpath': logpath,
+                              'logsize': '500',
+                              'archive_dir': archdir,
+                              'logmax': '10'}}
+        lcfg = CrawlConfig.CrawlConfig()
+        lcfg.load_dict(lcfg_d)
+        CrawlConfig.get_logger(cfg=lcfg, reset=True)
+        lmsg = "This is a test " + "-" * 35
+        for x in range(0,5):
+            CrawlConfig.log(lmsg)
 
-        # simple string in first arg
-        exp = util.my_name() + ": " + "This is a simple string"
-        CrawlConfig.log(exp)
-        result = util.contents(fpath)
-        self.assertTrue(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
-                        
+        self.assertTrue(os.path.isdir(archdir),
+                        "Expected directory %s to be created" % archdir)
+        self.assertTrue(os.path.isfile(logpath),
+                        "Expected file %s to exist" % logpath)
+        self.assertTrue(os.path.isfile(archlogpath),
+                        "Expected file %s to exist" % archlogpath)
+
     # -------------------------------------------------------------------------
-    def test_log_onefmt(self):
-        # """
-        # Tests for routine CrawlConfig.log():
-        #  - simple string in first argument
-        #  - 1 % formatter in first arg
-        #  - multiple % formatters in first arg
-        #  - too many % formatters for args
-        #  - too many args for % formatters
-        # """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+    def test_log_rollover_cwd(self):
+        """
+        Create a logger with a low rollover threshold and no archive dir. Write
+        to it until it rolls over. Verify that the archive file was handled
+        correctly.
+        """
+        logbase = '%s.log' % util.my_name()
+        logpath = "%s/%s" % (self.testdir, logbase)
+        logpath_1 = logpath + ".1"
+        ym = time.strftime("%Y.%m%d")
+        archlogpath = '%s/%s.%s-%s' % (self.testdir, logbase, ym, ym)
+        lcfg_d = {'crawler': {'logpath': logpath,
+                              'logsize': '500',
+                              'logmax': '10'}}
+        lcfg = CrawlConfig.CrawlConfig()
+        lcfg.load_dict(lcfg_d)
+        CrawlConfig.get_logger(cfg=lcfg, reset=True)
+        lmsg = "This is a test " + "-" * 35
+        for x in range(0,5):
+            CrawlConfig.log(lmsg)
 
-        # 1 % formatter in first arg
-        a1 = "This has a formatter and one argument: %s"
-        a2 = "did that work?"
-        exp = (util.my_name() +
-               "(%s:%d): " % (util.filename(), util.lineno()+2) +
-               a1 % a2)
-        CrawlConfig.log(a1, a2)
-        result = util.contents(fpath)
-        self.assertTrue(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
+        self.assertTrue(os.path.isfile(logpath),
+                        "Expected file %s to exist" % logpath)
+        self.assertFalse(os.path.isfile(archlogpath),
+                        "Expected file %s to not exist" % archlogpath)
 
     # -------------------------------------------------------------------------
     def test_log_multfmt(self):
@@ -865,6 +818,54 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         "Expected '%s' in %s" %
                         (exp, util.line_quote(result)))
 
+    # -------------------------------------------------------------------------
+    def test_log_onefmt(self):
+        # """
+        # Tests for routine CrawlConfig.log():
+        #  - simple string in first argument
+        #  - 1 % formatter in first arg
+        #  - multiple % formatters in first arg
+        #  - too many % formatters for args
+        #  - too many args for % formatters
+        # """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
+
+        # 1 % formatter in first arg
+        a1 = "This has a formatter and one argument: %s"
+        a2 = "did that work?"
+        exp = (util.my_name() +
+               "(%s:%d): " % (util.filename(), util.lineno()+2) +
+               a1 % a2)
+        CrawlConfig.log(a1, a2)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+
+    # -------------------------------------------------------------------------
+    def test_log_simple(self):
+        """
+        Tests for routine CrawlConfig.log():
+         - simple string in first argument
+         - 1 % formatter in first arg
+         - multiple % formatters in first arg
+         - too many % formatters for args
+         - too many args for % formatters
+        """
+        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        CrawlConfig.get_logger(reset=True, soft=True)
+        log = CrawlConfig.get_logger(cmdline=fpath)
+
+        # simple string in first arg
+        exp = util.my_name() + ": " + "This is a simple string"
+        CrawlConfig.log(exp)
+        result = util.contents(fpath)
+        self.assertTrue(exp in result,
+                        "Expected '%s' in %s" %
+                        (exp, util.line_quote(result)))
+                        
     # -------------------------------------------------------------------------
     def test_log_toomany_fmt(self):
         # """

@@ -19,6 +19,7 @@ Extensions to python's standard unittest module
 import CrawlConfig
 import optparse
 import os
+import pdb
 import shutil
 import sys
 import unittest
@@ -128,7 +129,9 @@ def db_config(tdir, tname):
     cfname = '%s/%s.cfg' % (tdir, tname)
     cfgfile(cfname, {'dbi': {'dbtype': 'sqlite',
                              'dbname': '%s/test.db' % tdir,
-                             'tbl_prefix': 'test'}})
+                             'tbl_prefix': 'test'},
+                     'crawler': {'logpath': '%s/%s.log' % (tdir, tname)}
+                     })
     os.environ['CRAWL_CONF'] = cfname
     CrawlConfig.get_config(reset=True, soft=True)
 
@@ -260,10 +263,10 @@ def module_test_setup(dir):
     """
     module_test_setup.crawl_conf_orig = os.getenv('CRAWL_CONF')
     if type(dir) == str:
-        reset_directory(dir)
+        reset_directory(dir, force=True)
     elif type(dir) == list:
         for dirname in dir:
-            reset_directory(dirname)
+            reset_directory(dirname, force=True)
             
 # -----------------------------------------------------------------------------
 def module_test_teardown(dir):
@@ -285,12 +288,12 @@ def module_test_teardown(dir):
         os.environ['CRAWL_CONF'] = module_test_setup.crawl_conf_orig
         
 # -----------------------------------------------------------------------------
-def reset_directory(dirpath, make=True):
+def reset_directory(dirpath, make=True, force=False):
     """
     If dirpath names a directory, remove it and optionally recreate it. This is
     used by module_test_teardown().
     """
-    if not keepfiles():
+    if not keepfiles() or force:
         if os.path.isdir(dirpath):
             shutil.rmtree(dirpath)
         if make and not os.path.exists(dirpath):
@@ -389,6 +392,28 @@ class HelpedTestCase(unittest.TestCase):
     """
     This class adds some goodies to the standard unittest.TestCase
     """
+    # -------------------------------------------------------------------------
+    def assertRaisesMsg(self, exception, message, func, *args, **kwargs):
+        """
+        A more precise version of assertRaises so we can validate the content
+        of the exception thrown.
+        """
+        try:
+            func(*args, **kwargs)
+        except exception, e:
+            if type(message) == str:
+                self.assertTrue(message in str(e),
+                                "Expected '%s', got '%s'" % (message, str(e)))
+            elif type(message) == list:
+                self.assertTrue(any(t in str(e) for t in message),
+                                "Expected one of '%s', got '%s'" % (message, str(e)))
+            else:
+                self.fail("message must be a string or list")
+        except Exception, e:
+            self.fail('Unexpected exception thrown: %s %s' % (type(e), str(e)))
+        else:
+            self.fail('Expected exception %s not thrown' % exception)
+            
     # -------------------------------------------------------------------------
     def expected(self, expval, actual):
         """

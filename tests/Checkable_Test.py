@@ -497,6 +497,26 @@ class CheckableTest(testhelp.HelpedTestCase):
                         "Expected Checkable(), got %s" % r)
     
     # -------------------------------------------------------------------------
+    def test_fdparse_Pf0(self):
+        """
+        Parse an ls -P line from hsi where we're looking at a zero length file
+        . fdparse() should return type='f', path=<file path>, cos.
+        """
+        n = Checkable(path='xyx', type='d')
+        line = ("FILE    /log/2007/05/15/logfile01_200705150306  0       0   " +
+                "         0                      6001    0       1  "+
+                "05/15/2007      03:06:39        02/11/2009       11:06:31")
+        # line = ("FILE    /home/tpb/LoadL_admin   88787   88787   " +
+        #         "3962+411820     X0352700        5081    0       1       " +
+        #         "03/14/2003      07:12:43        03/19/2012       13:09:50")
+        r = n.fdparse(line)
+        self.expected('f', r.type)
+        self.expected('/log/2007/05/15/logfile01_200705150306', r.path)
+        self.expected('6001', r.cos)
+        self.assertTrue(isinstance(r, Checkable),
+                        "Expected Checkable(), got %s" % r)
+    
+    # -------------------------------------------------------------------------
     def test_get_list_nosuch(self):
         """
         Calling .get_list() before .ex_nihilo() should cause an exception
@@ -650,17 +670,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(3, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
-        try:
-            foo.load()
-            foo.persist()
-            self.fail("Expected an exception but didn't get one.")
-        except AssertionError:
-            raise
-        except StandardError, e:
-            self.assertEqual('There appears to be more than one' in str(e),
-                             True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(StandardError,
+                             "There appears to be more than one",
+                             foo.load)
 
         x = Checkable.get_list()
         self.expected(3, len(x))
@@ -840,17 +852,9 @@ class CheckableTest(testhelp.HelpedTestCase):
                          "There should be a duplicate entry in the database.")
         
         foo = Checkable(path=self.testpath, type='f')
-        try:
-            foo.load()
-            foo.persist()
-            self.fail("Expected an exception but didn't get one.")
-        except AssertionError:
-            raise
-        except StandardError, e:
-            self.assertEqual('There appears to be more than one' in str(e),
-                             True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(StandardError,
+                             "There appears to be more than one",
+                             foo.load)
 
         x = Checkable.get_list()
         self.expected(3, len(x))

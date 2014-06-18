@@ -6,6 +6,7 @@ import mpra_lib
 import optparse
 import pdb
 import re
+import rpt_lib
 import sys
 import time
 import toolframe
@@ -44,7 +45,7 @@ def mpra_age(args):
                  action='store_true', default=False, dest='path',
                  help='report paths as well as bitfile IDs')
     p.add_option('-s', '--start',
-                 action='store', default='0', dest='start',
+                 action='store', default='', dest='start',
                  help='starting epoch time')
     p.add_option('-t', '--table',
                  action='store', default='', dest='table',
@@ -54,6 +55,7 @@ def mpra_age(args):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
+    start = 0
     if o.age and o.before:
         raise StandardError("--age and --before are mutually exclusive")
     elif o.age and '' != o.end:
@@ -65,14 +67,15 @@ def mpra_age(args):
     elif o.age:
         end = time.time() - cfg.to_seconds(o.age)
     elif o.end:
-        end = int(o.end)
+        end = util.epoch(o.end)
 
-    start = int(o.start)
+    if o.start:
+        start = util.epoch(o.start)
     if o.table == '':
         o.table = 'migr'
 
     print("%d, %d" % (start, end))
-    result = mpra_lib.age(o.table, start, end, o.count, sys.stdout, path=o.path)
+    mpra_lib.age(o.table, start, end, o.count, sys.stdout, path=o.path)
 
 # -----------------------------------------------------------------------------
 def mpra_date_age(args):
@@ -117,9 +120,50 @@ def mpra_date_age(args):
 
 # -----------------------------------------------------------------------------
 def mpra_epoch(args):
-    """epoch - convert an epoch time to YYYY.mmdd HH:MM:SS
+    """epoch - convert a YYYY.mmdd HH:MM:SS to an epoch time
 
-    usage: mpra epoch 1327513752 ...
+    usage: mpra epoch 2014.0201.10.27.53
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    for ymd in a:
+        print(int(util.epoch(ymd)))
+    
+# -----------------------------------------------------------------------------
+def mpra_history(args):
+    """history - report contents of the mpra table
+
+    usage: mpra history [-s/--since] <date/time>
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-s', '--since',
+                 action='store', default='', dest='since',
+                 help='only report records since ...')
+    
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    n_since = util.epoch(o.since) if o.since else 0
+        
+    db = CrawlDBI.DBI()
+    report = rpt_lib.get_mpra_report(db, n_since)
+    print(report)
+        
+# -----------------------------------------------------------------------------
+def mpra_ymd(args):
+    """ymd - convert an epoch time to YYYY.mmdd HH:MM:SS
+
+    usage: mpra ymd 1327513752 ...
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
@@ -213,7 +257,9 @@ def mpra_migr_recs(args):
 
     if o.count:
         dbargs['fields'] = ['count(*)']
-        
+
+    dbargs['orderby'] = 'record_create_time'
+    
     rows = db.select(**dbargs)
     for row in rows:
         if o.count:
@@ -324,8 +370,25 @@ def mpra_simplug(args):
 
     usage: mpra simplug
 
+    Debugging (-d) is provided by crawl_lib.simplug()
     """
     crawl_lib.simplug('mpra', args)
 
+# -----------------------------------------------------------------------------
+def mpra_xplocks(args):
+    """xplocks - run the xpired lock query against bfpurgerec
+
+    usage: mpra xplocks
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    mpra_lib.xplocks(output=sys.stdout)
+    
 # -----------------------------------------------------------------------------
 toolframe.tf_launch('mpra', __name__)
