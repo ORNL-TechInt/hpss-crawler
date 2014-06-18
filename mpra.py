@@ -55,6 +55,7 @@ def mpra_age(args):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
+    start = 0
     if o.age and o.before:
         raise StandardError("--age and --before are mutually exclusive")
     elif o.age and '' != o.end:
@@ -74,7 +75,7 @@ def mpra_age(args):
         o.table = 'migr'
 
     print("%d, %d" % (start, end))
-    result = mpra_lib.age(o.table, start, end, o.count, sys.stdout, path=o.path)
+    mpra_lib.age(o.table, start, end, o.count, sys.stdout, path=o.path)
 
 # -----------------------------------------------------------------------------
 def mpra_date_age(args):
@@ -373,5 +374,21 @@ def mpra_simplug(args):
     """
     crawl_lib.simplug('mpra', args)
 
+# -----------------------------------------------------------------------------
+def mpra_xplocks(args):
+    """xplocks - run the xpired lock query against bfpurgerec
+
+    usage: mpra xplocks
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    if o.debug: pdb.set_trace()
+
+    mpra_lib.xplocks(output=sys.stdout)
+    
 # -----------------------------------------------------------------------------
 toolframe.tf_launch('mpra', __name__)
