@@ -44,7 +44,10 @@ def main(cfg):
     CrawlConfig.log("got %d bitfiles" % len(bfl))
 
     if len(bfl) == 0:
-        record_checked_ids(cfg, next_nsobj_id, next_nsobj_id+how_many-1, 0, 0)
+        for oid in range(next_nsobj_id, next_nsobj_id+how_many):
+            record_checked_ids(cfg, oid, oid, 1, 0)
+            if cfg.getboolean(sectname, 'verbose'):
+                CrawlConfig.log("Object %d is not complete" % oid)
     else:
         # for each bitfile, if it does not have the right number of copies,
         # report it
