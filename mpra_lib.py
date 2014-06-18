@@ -68,21 +68,22 @@ def age(table,
         dbargs['table'] = 'bfmigrrec'
 
     rows = db.select(**dbargs)
+    recent = 0
     rval = len(rows)
     if count:
         age_report(table, int(time.time()) - end, count, rows, f, path)
     elif 0 < len(rows):
-        recent = 0
         for row in rows:
             if recent < row['RECORD_CREATE_TIME']:
                 recent = row['RECORD_CREATE_TIME']
 
         age_report(table, int(time.time()) - recent, count, rows, f, path)
-        
-        if mark and 0 < recent:
-            mpra_record_recent(table, start, recent, len(rows))
-    elif mark:
-        mpra_record_recent(table, start, end, len(rows))
+
+    if mark:
+        mpra_record_recent(table,
+                           start,
+                           recent if 0 < recent else end,
+                           len(rows))
 
     if opened:
         f.close()
@@ -161,14 +162,69 @@ def mpra_fetch_recent(type):
         return 0
 
     rows = db.select(table='mpra',
-                     fields=['max(end_time)'],
+                     fields=['scan_time, end_time'],
                      where='type = ?',
                      data=(type,))
+    last_end_time = -1
+    max_scan_time = 0
+    for r in rows:
+        if max_scan_time < r[0]:
+            max_scan_time = r[0]
+            last_end_time = r[1]
+            
 
-    if rows[0][0] is None:
+    if last_end_time < 0:
         CrawlConfig.log("No '%s' value in mpra -- returning 0" % type)
         return 0
     else:
         CrawlConfig.log("Fetch '%s' from mpra table -- return %d" %
-                 (type, rows[0][0]))
-        return rows[0][0]
+                 (type, last_end_time))
+        return last_end_time
+
+# -----------------------------------------------------------------------------
+def xplocks(output=None, mark=False):
+    """
+    Look for expired purge locks in bfpurgerec.
+    """
+    cfg = CrawlConfig.get_config()
+    now = time.time()
+    hits = 0
+
+    opened = True
+    if output is None:
+        f = open(cfg.get('mpra', 'report_file'), 'a')
+    elif type(output) == str:
+        f = open(output, 'a')
+    elif type(output) == file:
+        f = output
+        opened = False
+    else:
+        raise StandardError("output type must be 'str' or 'file' ")
+
+    if util.hostname() == 'hpss-dev01':
+        dbname_s = 'subsys'
+    elif util.hostname() == 'hpss-crawler01':
+        dbname_s = 'hsubsys1'
+
+    dbs = CrawlDBI.DBI(dbtype='db2', dbname=dbname_s)
+
+    lock_min = cfg.getint('mpra', 'lock_duration')
+
+    rows = dbs.select(table='bfpurgerec',
+                      fields=['bfid', 'record_lock_time'],
+                      where='record_lock_time <> 0')
+    if 0 < len(rows):
+        f.write("Expired Purge Locks\n")
+        for r in rows:
+            if (lock_min * 60) < (now - r['RECORD_LOCK_TIME']):
+                hits += 1
+                f.write("   %s  %s\n" % (CrawlDBI.DBI.db2.hexstr(r['BFID']),
+                                         util.ymdhms(r['RECORD_LOCK_TIME'])))
+
+    if mark:
+        mpra_record_recent('purge', 0, 0, hits)
+        
+    if opened:
+        f.close()
+
+    return hits
