@@ -3,10 +3,12 @@
 Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import atexit
+import base64
 import CrawlConfig
 import CrawlDBI
 import CrawlPlugin
 import daemon
+import getpass
 import glob
 import optparse
 import os
@@ -256,6 +258,56 @@ def crl_log(argv):
         log = CrawlConfig.get_logger(cfg=cfg)
         
     log.info(" ".join(a))
+
+# ------------------------------------------------------------------------------
+def crl_pw_encode(argv):
+    """pw_encode - accept a password and report its base64 encoding
+
+    usage: crawl pw_encode [-p password]
+
+    If -p is not used, a prompt will be issued to retrieve the password without
+    echo.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-p', '--pwd',
+                 action='store', default='', dest='pwd',
+                 help='password to encode')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    if o.pwd != '':
+        password = o.pwd
+    else:
+        password = getpass.getpass("Password? > ")
+
+    print(base64.b64encode(password))
+    
+# ------------------------------------------------------------------------------
+def crl_pw_decode(argv):
+    """pw_decode - accept a base64 hash and decode it
+
+    usage: crawl pw_decode hash
+
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    if len(a) < 1:
+        print("usage: crawl pw_decode B64STRING")
+        sys.exit(1)
+        
+    print(base64.b64decode(a[0]))
 
 # ------------------------------------------------------------------------------
 def crl_start(argv):
