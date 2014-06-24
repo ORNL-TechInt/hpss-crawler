@@ -41,7 +41,6 @@ tests:
 	nosetests -c $(TEST_D)/nose.cfg $(TEST_D) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
-
 alltests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
