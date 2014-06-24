@@ -289,6 +289,36 @@ def dispatch_help(mod, prefix, cmd=None):
 
 
 # ------------------------------------------------------------------------------
+def dispatch(modname, prefix, args):
+    """
+    Look in module *modname* for routine *prefix*_*args*[1]. Call it with
+    *args*[2:].
+    """
+    mod = sys.modules[modname]
+    if len(args) < 2:
+        dispatch_help(mod, prefix)
+    elif len(args) < 3 and args[1] == 'help':
+        dispatch_help(mod, prefix)
+    elif args[1] == 'help':
+        dispatch_help(mod, prefix, args[2])
+    else:
+        fname = "_".join(prefix, args[1])
+        func = getattr(mod, fname)
+        func(args[2:])
+
+# ------------------------------------------------------------------------------
+def dispatch_help(mod, prefix, cmd=None):
+    if cmd is not None:
+        func = getattr(mod, "_".join(prefix, cmd))
+        print func.__doc__
+    else:
+        for fname in [x for x in dir(mod) if x.startswith(prefix)]:
+            func = getattr(mod, fname)
+            hstr = func.__doc__.split("\n")[0]
+            print hstr
+        
+    
+# ------------------------------------------------------------------------------
 def env_update(cfg):
     """
     Update the environment based on the contents of the 'env' section of the
