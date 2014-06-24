@@ -1,0 +1,4 @@
+#!/usr/bin/env python
+import crawl
+import sys
+crawl.main(sys.argv)

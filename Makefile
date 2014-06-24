@@ -5,7 +5,7 @@ doc: readme refman uguide
 clean:
 	find . -name "*.pyc" | xargs rm
 	find . -name "*~" | xargs rm
-	rm -rf test.d
+	rm -rf test.d MANIFEST
 
 TAGS: *.py tests/*.py
 	etags *.py
@@ -33,3 +33,16 @@ $(WWW)/ReferenceManual.html: RefMan.md
 
 $(WWW)/UserGuide.html: UGuide.md
 	Markdown.pl $< > $@
+
+sdist: *.py
+	setup.py sdist
+
+install:
+	@if [[ `which python` == "/usr/bin/python" ]]; then \
+		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
+	else \
+		pip install --upgrade dist/hpssic-2014.0725dev.tar.gz; \
+	fi
+
+refresh: sdist install
+
