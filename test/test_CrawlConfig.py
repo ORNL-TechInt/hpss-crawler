@@ -2,16 +2,16 @@
 """
 Test class for CrawlConfig.py
 """
-import CrawlConfig
+from hpssic import CrawlConfig
 import copy
 import logging
 import os
 import pdb
 import sys
-import testhelp
+from hpssic import testhelp
 import time
-import toolframe
-import util
+from hpssic import toolframe
+from hpssic import util
 import warnings
 
 # -----------------------------------------------------------------------------
@@ -85,10 +85,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(changeable.loadtime, 0.0)
         changeable.read(cfgfile)
         self.assertEqual(changeable.changed(), False)
-        time.sleep(1.0)
-        f = open(cfgfile, 'a')
-        f.write('\n')
-        f.close()
+        # time.sleep(1.0)
+        os.utime(cfgfile, (time.time() + 5, time.time() + 5))
+        # f = open(cfgfile, 'a')
+        # f.write('\n')
+        # f.close()
         self.assertEqual(changeable.changed(), True)
         self.assertEqual(changeable.filename, cfgfile)
         
