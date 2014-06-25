@@ -1,4 +1,7 @@
 #!/usr/bin/env python
-import crawl
+from hpssic import crawl
+from hpssic import toolframe
+from hpssic import util
+import pdb
 import sys
-crawl.main(sys.argv)
+util.dispatch(modname='hpssic.crawl', prefix='crl', args=sys.argv)

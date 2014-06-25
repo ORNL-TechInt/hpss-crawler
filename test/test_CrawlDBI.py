@@ -8,16 +8,16 @@ The db2 interface only supports read operations, nothing that will change the
 database. Also the db2 interface doesn't use table prefixes.
 """
 import base64
-import CrawlConfig
-import CrawlDBI
+from hpssic import CrawlConfig
+from hpssic import CrawlDBI
 import os
 import pdb
 import socket
 import sys
-import testhelp
-import toolframe
+from hpssic import testhelp
+from hpssic import toolframe
 import traceback as tb
-import util
+from hpssic import util
 import warnings
 
 
@@ -1553,7 +1553,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 # -----------------------------------------------------------------------------
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
-
+    slow = 1
+    
     # -------------------------------------------------------------------------
     def test_select_f(self):
         """
