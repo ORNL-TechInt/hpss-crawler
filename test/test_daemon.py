@@ -2,13 +2,13 @@
 """
 Tests for daemon.py
 """
-import CrawlConfig
-import daemon
+from hpssic import CrawlConfig
+from hpssic import daemon
 import os
 import sys
-import testhelp
-import toolframe
-import util
+from hpssic import testhelp
+from hpssic import toolframe
+from hpssic import util
 
 mself = sys.modules[__name__]
 logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
