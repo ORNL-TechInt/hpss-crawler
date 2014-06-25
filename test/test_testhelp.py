@@ -16,11 +16,11 @@ Extensions to python's standard unittest module
     > self.expected() compares an expected and actual value and reports diffs
     
 """
-import CrawlConfig
+from hpssic import CrawlConfig
 import sys
 import StringIO
-import testhelp
-import toolframe
+from hpssic import testhelp
+from hpssic import toolframe
 import unittest
 
 tlogger = None

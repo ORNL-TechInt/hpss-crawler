@@ -13,7 +13,7 @@ import toolframe
 import util
 
 # -----------------------------------------------------------------------------
-def mpra_age(args):
+def mprf_age(args):
     """age - list the records in table BFMIGRREC or BFPURGEREC older than age
 
     usage: mpra age -t [migr|purge] -a/--age N[S|M|H|d|m|Y] [-c/--count]
@@ -78,7 +78,7 @@ def mpra_age(args):
     mpra_lib.age(o.table, start, end, o.count, sys.stdout, path=o.path)
 
 # -----------------------------------------------------------------------------
-def mpra_date_age(args):
+def mprf_date_age(args):
     """date_age - convert a date in the past to an age from now
 
     usage: mpra date_age YYYY.mmdd
@@ -119,7 +119,7 @@ def mpra_date_age(args):
     print("%s" % mpra_lib.dhms(age))
 
 # -----------------------------------------------------------------------------
-def mpra_epoch(args):
+def mprf_epoch(args):
     """epoch - convert a YYYY.mmdd HH:MM:SS to an epoch time
 
     usage: mpra epoch 2014.0201.10.27.53
@@ -136,7 +136,7 @@ def mpra_epoch(args):
         print(int(util.epoch(ymd)))
     
 # -----------------------------------------------------------------------------
-def mpra_history(args):
+def mprf_history(args):
     """history - report contents of the mpra table
 
     usage: mpra history [-s/--since] <date/time>
@@ -160,7 +160,7 @@ def mpra_history(args):
     print(report)
         
 # -----------------------------------------------------------------------------
-def mpra_ymd(args):
+def mprf_ymd(args):
     """ymd - convert an epoch time to YYYY.mmdd HH:MM:SS
 
     usage: mpra ymd 1327513752 ...
@@ -177,7 +177,7 @@ def mpra_ymd(args):
         print(time.strftime("%Y.%m%d %H:%M:%S", time.localtime(float(epoch))))
     
 # -----------------------------------------------------------------------------
-def mpra_migr_recs(args):
+def mprf_migr_recs(args):
     """migr_recs - list the records in table BFMIGRREC
 
     usage: mpra migr_recs [-l/limit N]
@@ -270,7 +270,7 @@ def mpra_migr_recs(args):
                                 row['MIGRATION_FAILURE_COUNT']))
 
 # -----------------------------------------------------------------------------
-def mpra_times(args):
+def mprf_times(args):
     """times - list (unique) record create times in table BFMIGRREC
 
     usage: mpra unique_times
@@ -324,7 +324,7 @@ def mpra_times(args):
         print("%s (%d)" % (last, count))
 
 # -----------------------------------------------------------------------------
-def mpra_purge_recs(args):
+def mprf_purge_recs(args):
     """purge_recs - list the records in table BFPURGEREC
 
     usage: mpra purge_recs [-l N]
@@ -343,7 +343,7 @@ def mpra_purge_recs(args):
     if o.debug: pdb.set_trace()
 
 # -----------------------------------------------------------------------------
-def mpra_reset(args):
+def mprf_reset(args):
     """reset - drop the mpra table and remove mpra_report.txt
 
     usage: mpra reset
@@ -365,7 +365,7 @@ def mpra_reset(args):
     util.conditional_rm(filename)
 
 # -----------------------------------------------------------------------------
-def mpra_simplug(args):
+def mprf_simplug(args):
     """simplug - simulate the plugin
 
     usage: mpra simplug
@@ -375,7 +375,7 @@ def mpra_simplug(args):
     crawl_lib.simplug('mpra', args)
 
 # -----------------------------------------------------------------------------
-def mpra_xplocks(args):
+def mprf_xplocks(args):
     """xplocks - run the xpired lock query against bfpurgerec
 
     usage: mpra xplocks
