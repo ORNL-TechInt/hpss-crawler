@@ -104,6 +104,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         self.vassert_nin('heartbeat', lcontent)
         self.vassert_nin('fire', lcontent)
+    test_crawl_cfgdump_log_nopath.slow = 1
 
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_log_path(self):
@@ -132,6 +133,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         
         self.vassert_nin('heartbeat', lcontent)
         self.vassert_nin('fire', lcontent)
+    test_crawl_cfgdump_log_path.slow = 1
 
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_nosuch(self):
@@ -146,6 +148,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_in("Traceback", result)
         self.vassert_in("%s does not exist" % cfname,
                         result)
+    test_crawl_cfgdump_nosuch.slow = 1
 
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_read(self):
