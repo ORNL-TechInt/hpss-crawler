@@ -1,0 +1,5 @@
+#!/usr/bin/env python
+from hpssic import mpra
+from hpssic import util
+import sys
+util.dispatch(modname='hpssic.mpra', prefix='mprf', args=sys.argv)
