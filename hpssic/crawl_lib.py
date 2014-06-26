@@ -27,7 +27,12 @@ def simplug(plugin, args):
     cfg = CrawlConfig.get_config()
     CrawlConfig.log("starting %s simplug, just got config" % plugin)
     sys.path.append(cfg.get('crawler', 'plugin-dir'))
-    P = __import__(cfg.get(plugin, 'module'))
+    modname = cfg.get(plugin, 'module')
+    try:
+        P = __import__(modname)
+    except ImportError:
+        H = __import__('hpssic.plugins.' + modname)
+        P = getattr(H.plugins, modname)
     P.main(cfg)
     if 1 < o.iterations:
         for count in range(o.iterations-1):

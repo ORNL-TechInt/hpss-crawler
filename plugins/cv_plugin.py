@@ -1,16 +1,15 @@
-import Alert
-import Checkable
-import ConfigParser
-import CrawlConfig
-import CrawlDBI
-import Dimension
+from hpssic import Alert
+from hpssic import Checkable
+from hpssic import CrawlConfig
+from hpssic import CrawlDBI
+from hpssic import Dimension
 import os
 import pdb
 import pexpect
 import sqlite3 as sql
 import sys
 import time
-import util
+from hpssic import util
 
 plugin_name = 'cv'
 # -----------------------------------------------------------------------------

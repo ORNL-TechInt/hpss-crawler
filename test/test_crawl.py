@@ -47,6 +47,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     """
     Tests for the code in crawl.py
     """
+    slow = False
     testdir = testhelp.testdata(__name__)
     plugdir = '%s/plugins' % testdir
     piddir = "/tmp/crawler"
@@ -163,7 +164,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.vassert_in("Traceback", result)
         self.vassert_in("%s is not readable" % cfname,
                         result)
-
+    
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_stdout(self):
         """
@@ -620,7 +621,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
-        pdb.set_trace()
+        # pdb.set_trace()
         cmd = '%s status' % (self.crawl_cmd())
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), self.cstr['cdown'])

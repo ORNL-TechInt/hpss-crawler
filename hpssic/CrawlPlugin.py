@@ -48,7 +48,8 @@ class CrawlPlugin(object):
         """
         if self.firable:
             CrawlConfig.log("%s: firing" % self.name)
-            sys.modules[self.modname].main(self.cfg)
+            # sys.modules[self.modname].main(self.cfg)
+            self.plugin.main(self.cfg)
             self.last_fired = time.time()
         elif self.cfg.getboolean('crawler', 'verbose'):
             CrawlConfig.log("%s: not firable" % self.name)
@@ -77,9 +78,9 @@ class CrawlPlugin(object):
             old_pdir = self.plugin_dir
         except AttributeError:
             old_pdir = None
-        pdir = cfg.get('crawler', 'plugin-dir')
-        if pdir not in sys.path:
-            sys.path.insert(0, pdir)
+        self.plugin_dir = cfg.get('crawler', 'plugin-dir')
+        if self.plugin_dir not in sys.path:
+            sys.path.insert(0, self.plugin_dir)
 
         self.modname = self.cfg.get(self.name, 'module')
 
@@ -90,9 +91,11 @@ class CrawlPlugin(object):
 
             del sys.modules[self.modname]
             
-        __import__(self.modname)
-
-        self.plugin_dir = cfg.get('crawler', 'plugin-dir')
+        try:
+            self.plugin = __import__(self.modname)
+        except ImportError:
+            H = __import__('hpssic.plugins.' + self.modname)
+            self.plugin = getattr(H.plugins, self.modname)
 
     # -------------------------------------------------------------------------
     def reload(self, cfg):

@@ -71,14 +71,6 @@ class Test_CRAWL(ScriptBase):
 # -----------------------------------------------------------------------------
 class Test_CV(ScriptBase):
     # -------------------------------------------------------------------------
-    def test_cv_which_module(self):
-        super(Test_CV, self).script_which_module("hpssic.cv")
-
-    # -------------------------------------------------------------------------
-    def test_cv_which_command(self):
-        super(Test_CV, self).script_which_command("cv")
-
-    # -------------------------------------------------------------------------
     def test_cv_help(self):
         super(Test_CV, self).script_help("cv",
                                             ["fail_reset - ",
@@ -88,21 +80,21 @@ class Test_CV(ScriptBase):
                                              "simplug - ",
                                              "test_check - ",
                                              ])
+    # -------------------------------------------------------------------------
+    def test_cv_which_command(self):
+        super(Test_CV, self).script_which_command("cv")
+
+    # -------------------------------------------------------------------------
+    def test_cv_which_module(self):
+        super(Test_CV, self).script_which_module("hpssic.cv")
+
+    # -------------------------------------------------------------------------
+    def test_cv_which_plugin(self):
+        super(Test_CV, self).script_which_module("hpssic.plugins.cv_plugin")
+
                                                 
 # -----------------------------------------------------------------------------
 class Test_MPRA(ScriptBase):
-    # -------------------------------------------------------------------------
-    def test_mpra_which_lib(self):
-        super(Test_MPRA, self).script_which_module("hpssic.mpra_lib")
-
-    # -------------------------------------------------------------------------
-    def test_mpra_which_module(self):
-        super(Test_MPRA, self).script_which_module("hpssic.mpra")
-
-    # -------------------------------------------------------------------------
-    def test_mpra_which_command(self):
-        super(Test_MPRA, self).script_which_command("mpra")
-
     # -------------------------------------------------------------------------
     def test_mpra_help(self):
         super(Test_MPRA, self).script_help("mpra",
@@ -118,9 +110,39 @@ class Test_MPRA(ScriptBase):
                                              "xplocks - ",
                                              "ymd",
                                              ])
-                                                
+
+    # -------------------------------------------------------------------------
+    def test_mpra_which_command(self):
+        super(Test_MPRA, self).script_which_command("mpra")
+
+    # -------------------------------------------------------------------------
+    def test_mpra_which_lib(self):
+        super(Test_MPRA, self).script_which_module("hpssic.mpra_lib")
+
+    # -------------------------------------------------------------------------
+    def test_mpra_which_module(self):
+        super(Test_MPRA, self).script_which_module("hpssic.mpra")
+
+    # -------------------------------------------------------------------------
+    def test_mpra_which_plugin(self):
+        super(Test_MPRA, self).script_which_module("hpssic.plugins.mpra_plugin")
+
+
 # -----------------------------------------------------------------------------
 class Test_RPT(ScriptBase):
+    # -------------------------------------------------------------------------
+    def test_rpt_help(self):
+        super(Test_RPT, self).script_help("rpt",
+                                            ["insert - ",
+                                             "report - ",
+                                             "simplug - ",
+                                             "testmail - ",
+                                             ])
+
+    # -------------------------------------------------------------------------
+    def test_rpt_which_command(self):
+        super(Test_RPT, self).script_which_command("rpt")
+
     # -------------------------------------------------------------------------
     def test_rpt_which_lib(self):
         super(Test_RPT, self).script_which_module("hpssic.rpt_lib")
@@ -130,32 +152,12 @@ class Test_RPT(ScriptBase):
         super(Test_RPT, self).script_which_module("hpssic.rpt")
 
     # -------------------------------------------------------------------------
-    def test_rpt_which_command(self):
-        super(Test_RPT, self).script_which_command("rpt")
+    def test_rpt_which_plugin(self):
+        super(Test_RPT, self).script_which_module("hpssic.plugins.rpt_plugin")
 
-    # -------------------------------------------------------------------------
-    def test_rpt_help(self):
-        super(Test_RPT, self).script_help("rpt",
-                                            ["insert - ",
-                                             "report - ",
-                                             "simplug - ",
-                                             "testmail - ",
-                                             ])
                                                 
 # -----------------------------------------------------------------------------
 class Test_TCC(ScriptBase):
-    # -------------------------------------------------------------------------
-    def test_tcc_which_lib(self):
-        super(Test_TCC, self).script_which_module("hpssic.tcc_lib")
-
-    # -------------------------------------------------------------------------
-    def test_tcc_which_module(self):
-        super(Test_TCC, self).script_which_module("hpssic.tcc")
-
-    # -------------------------------------------------------------------------
-    def test_tcc_which_command(self):
-        super(Test_TCC, self).script_which_command("tcc")
-
     # -------------------------------------------------------------------------
     def test_tcc_help(self):
         super(Test_TCC, self).script_help("tcc",
@@ -169,3 +171,19 @@ class Test_TCC(ScriptBase):
                                            "tables - ",
                                            "zreport - ",])
                                                 
+    # -------------------------------------------------------------------------
+    def test_tcc_which_command(self):
+        super(Test_TCC, self).script_which_command("tcc")
+
+    # -------------------------------------------------------------------------
+    def test_tcc_which_lib(self):
+        super(Test_TCC, self).script_which_module("hpssic.tcc_lib")
+
+    # -------------------------------------------------------------------------
+    def test_tcc_which_module(self):
+        super(Test_TCC, self).script_which_module("hpssic.tcc")
+
+    # -------------------------------------------------------------------------
+    def test_tcc_which_plugin(self):
+        super(Test_TCC, self).script_which_module("hpssic.plugins.tcc_plugin")
+
