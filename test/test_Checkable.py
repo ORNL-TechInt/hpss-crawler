@@ -84,7 +84,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .check() on a file should execute the check actions for that
         file and update the item's last_check value.
         """
-        pdb.set_trace()
+        # pdb.set_trace()
         util.conditional_rm(self.testdb)
         Dimension.get_dim('ignore', reset=True)
         testhelp.db_config(self.testdir, util.my_name())
