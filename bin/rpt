@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from hpssic import cv
+from hpssic import rpt
 from hpssic import util
 import sys
-util.dispatch(module='rpt', prefix='rpt', sys.argv)
+util.dispatch(modname='hpssic.rpt', prefix='rptx', args=sys.argv)
