@@ -12,7 +12,7 @@ import toolframe
 import util
 
 # -----------------------------------------------------------------------------
-def rpt_insert(args):
+def rptx_insert(args):
     """insert - test inserting a value into the report table 
     """
     p = optparse.OptionParser()
@@ -32,13 +32,13 @@ def rpt_insert(args):
     db.close()
     
 # -----------------------------------------------------------------------------
-def rpt_report(args):
+def rptx_report(args):
     """report - write a sample report to stdout
     """
     print rpt_lib.get_report()
     
 # -----------------------------------------------------------------------------
-def rpt_simplug(args):
+def rptx_simplug(args):
     """simplug - simulate the plugin
 
     usage: rpt simplug
@@ -47,7 +47,7 @@ def rpt_simplug(args):
     crawl_lib.simplug('rpt', args)
 
 # -----------------------------------------------------------------------------
-def rpt_testmail(args):
+def rptx_testmail(args):
     """testmail - send a test e-mail to a specified address
 
     usage: rpt testmail [-d] -t <addr1>[,<addr2>...] -f <filename> -s <subject>

@@ -1,2 +1,2 @@
-include *.py crawl.cfg.sample
+include *.py crawl.cfg.sample README.md
 recursive-include tests *.py nose.cfg
