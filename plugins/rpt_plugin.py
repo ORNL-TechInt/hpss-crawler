@@ -1,4 +1,4 @@
-import rpt_lib
+from hpssic import rpt_lib
 import time
 
 # -----------------------------------------------------------------------------

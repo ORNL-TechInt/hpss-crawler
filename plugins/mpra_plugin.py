@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-import CrawlConfig
-import mpra_lib
+from hpssic import CrawlConfig
+from hpssic import mpra_lib
 import time
-import util
+from hpssic import util
 
 # -----------------------------------------------------------------------------
 def main(cfg):
