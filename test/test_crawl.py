@@ -28,9 +28,7 @@ def setUpModule():
         sys.exit(1)
         
     testhelp.module_test_setup(CrawlTest.testdir)
-    if not os.path.islink('crawl'):
-        os.symlink('crawl.py', 'crawl')
-        
+
 # ------------------------------------------------------------------------------
 def tearDownModule():
     """
