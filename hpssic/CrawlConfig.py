@@ -229,9 +229,9 @@ class CrawlConfig(ConfigParser.ConfigParser):
             for o in defaults:
                 rval += "%s = %s\n" % (o, defaults[o])
 
-        for s in self.sections():
+        for s in self._sections:
             rval += '\n[%s]\n' % s
-            for o in self.options(s):
+            for o in self._sections[s]:
                 val = self.get(s, o)
                 rval += '%s = %s\n' % (o, val)
         return rval
