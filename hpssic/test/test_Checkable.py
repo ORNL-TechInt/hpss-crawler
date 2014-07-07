@@ -2,6 +2,7 @@
 """
 Tests for Checkable.py
 """
+from nose.plugins.attrib import attr
 from hpssic.Checkable import Checkable
 from hpssic import CrawlDBI
 from hpssic import Dimension
@@ -37,6 +38,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     testpath = '/home/tpb/TODO'
     
     # -------------------------------------------------------------------------
+    @attr(slow=True)
     def test_check_dir(self):
         """
         Calling .check() on a directory should give us back a list of Checkable
@@ -76,9 +78,9 @@ class CheckableTest(testhelp.HelpedTestCase):
                 self.expected(0, c.checksum)
             elif c.path == "%s/subdir2" % testdir:
                 self.expected(0, c.checksum)
-    test_check_dir.slow = 1
 
     # -------------------------------------------------------------------------
+    @attr(slow=True)
     def test_check_file(self):
         """
         Calling .check() on a file should execute the check actions for that
@@ -107,7 +109,6 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertNotEqual(0, item.last_check,
                                 "Expected last_check to be updated but " +
                                 "it was not")
-    test_check_file.slow = 1
     
     # -------------------------------------------------------------------------
     def test_ctor(self):
@@ -250,6 +251,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, rows[0][6])                   # fails
 
     # -------------------------------------------------------------------------
+    @attr(slow=True)
     def test_ex_nihilo_exist(self):
         """
         If the database file and the checkables table already exists, calling
@@ -286,7 +288,6 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.ymdhms(pre[stat.ST_MTIME]),
                       self.ymdhms(post[stat.ST_MTIME]))
         self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
-    test_ex_nihilo_exist.slow = 1
     
     # -------------------------------------------------------------------------
     def test_ex_nihilo_notable(self):
