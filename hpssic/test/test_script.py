@@ -1,8 +1,10 @@
 import os
+import pdb
 import pexpect
 import sys
 from hpssic import testhelp as th
 
+# -----------------------------------------------------------------------------
 class ScriptBase(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def script_which_module(self, modname):
@@ -12,9 +14,16 @@ class ScriptBase(th.HelpedTestCase):
         try:
             mod = sys.modules[modname]
         except KeyError:
-            mod = __import__(modname)
-        self.assertEqual(os.path.dirname(os.path.dirname(mod.__file__)),
-                         os.path.dirname(os.path.dirname(__file__)))
+            sep = impname = ''
+            for comp in modname.split('.'):
+                impname += sep + comp
+                sep = '.'
+                __import__(impname)
+            mod = sys.modules[modname]
+
+        tdir = improot(__file__, __name__)
+        mdir = improot(mod.__file__, modname)
+        self.assertEqual(tdir, mdir, "Expected '%s', got '%s'" % (tdir, mdir))
 
     # -------------------------------------------------------------------------
     def script_which_command(self, cmdname):
@@ -37,7 +46,8 @@ class ScriptBase(th.HelpedTestCase):
         result = pexpect.run("%s help" % cmd)
         self.assertFalse("Traceback" in result)
         for item in helplist:
-            self.assertTrue(item in result)
+            self.assertTrue(item in result,
+                            "Expected '%s' in '%s'" % (item, result))
 
 # -----------------------------------------------------------------------------
 class Test_CRAWL(ScriptBase):
@@ -58,7 +68,6 @@ class Test_CRAWL(ScriptBase):
         super(Test_CRAWL, self).script_help("crawl",
                                             ["cfgdump - ",
                                              "cleanup - ",
-                                             "cvreport - ",
                                              "dbdrop - ",
                                              "fire - ",
                                              "log - ",
@@ -187,3 +196,9 @@ class Test_TCC(ScriptBase):
     def test_tcc_which_plugin(self):
         super(Test_TCC, self).script_which_module("hpssic.plugins.tcc_plugin")
 
+# -----------------------------------------------------------------------------
+def improot(path, modpath):
+    rval = path
+    for x in modpath.split('.'):
+        rval = os.path.dirname(rval)
+    return rval

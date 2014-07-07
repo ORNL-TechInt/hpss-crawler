@@ -7,6 +7,7 @@ We have interface classes for mysql, sqlite, and db2.
 The db2 interface only supports read operations, nothing that will change the
 database. Also the db2 interface doesn't use table prefixes.
 """
+from nose.plugins.attrib import attr
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
@@ -1551,9 +1552,9 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         util.conditional_rm(self.testdb)
         
 # -----------------------------------------------------------------------------
+@attr(slow=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
-    slow = 1
     
     # -------------------------------------------------------------------------
     def test_select_f(self):
