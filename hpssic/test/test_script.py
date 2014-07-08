@@ -3,6 +3,7 @@ import pdb
 import pexpect
 import sys
 from hpssic import testhelp as th
+from hpssic import util as U
 
 # -----------------------------------------------------------------------------
 class ScriptBase(th.HelpedTestCase):
@@ -44,7 +45,9 @@ class ScriptBase(th.HelpedTestCase):
         if cmd is None:
             cmd = "bin/" + cmdname
         result = pexpect.run("%s help" % cmd)
-        self.assertFalse("Traceback" in result)
+        self.assertFalse("Traceback" in result,
+                         "'Traceback' not expected in %s" %
+                         U.line_quote(result))
         for item in helplist:
             self.assertTrue(item in result,
                             "Expected '%s' in '%s'" % (item, result))

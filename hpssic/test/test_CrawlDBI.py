@@ -83,7 +83,7 @@ class DBITestRoot(testhelp.HelpedTestCase):
         db.create(table=table_name, fields=self.fdef)
         db.insert(table=table_name, fields=self.fnames, data=self.testdata)
         return db
-    
+
     # -------------------------------------------------------------------------
     def exc_raises(self, funcname, kwargs, exp):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
@@ -109,7 +109,7 @@ class DBITestRoot(testhelp.HelpedTestCase):
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
 
-    
+
 # -----------------------------------------------------------------------------
 class DBITest(DBITestRoot):
     """
@@ -118,7 +118,7 @@ class DBITest(DBITestRoot):
     testdir = testhelp.testdata(__name__)
     cfgfile = '%s/dbitest.cfg' % testdir
     testdb = '%s/test.db' % testdir
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_nodbname(self):
         """
@@ -145,7 +145,7 @@ class DBITest(DBITestRoot):
                         "Expected to find a _dbobj attribute on %s" % a)
         self.assertTrue(isinstance(a._dbobj, CrawlDBI.DBIsqlite),
                         "Expected %s to be a DBIsqlite object" % a._dbobj)
-        
+
     # -------------------------------------------------------------------------
     def test_repr(self):
         """
@@ -185,7 +185,7 @@ class DBI_in_Base(object):
                 ('zumpy', 45, 9.3242),
                 ('frodo', 23, 212.5),
                 ('zumpy', 55, 90.6758)]
-    
+
     # -------------------------------------------------------------------------
     def test_close(self):
         """
@@ -201,7 +201,7 @@ class DBI_in_Base(object):
             exp = "Cannot operate on a closed database."
             self.assertTrue(exp in str(e),
                             "Expected '%s', got '%s'" % (exp, str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
@@ -233,7 +233,7 @@ class DBI_in_Base(object):
                              CrawlDBI.DBI,
                              cfg=make_tcfg(self.dbtype),
                              badattr='frooble')
-            
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_none(self):
         """
@@ -266,7 +266,7 @@ class DBI_in_Base(object):
                             "Expected %s in %s but it's not there" %
                             (str((tup[1], tup[2], )),
                              util.line_quote(str(rows))))
-    
+
 
     # -------------------------------------------------------------------------
     def test_select_gb_f(self):
@@ -281,7 +281,7 @@ class DBI_in_Base(object):
         self.expected(True, ((40,)) in rows)
         self.expected(True, ((92,)) in rows)
         self.expected(True, ((100,)) in rows)
-        
+
     # -------------------------------------------------------------------------
     def test_select_gb_ns(self):
         """
@@ -300,7 +300,7 @@ class DBI_in_Base(object):
                             in str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-        
+
     # -------------------------------------------------------------------------
     def test_select_gb_u(self):
         """
@@ -321,7 +321,7 @@ class DBI_in_Base(object):
             self.assertTrue(sqlite_msg in str(e) or mysql_msg in str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-        
+
     # -------------------------------------------------------------------------
     def test_select_nq_mtd(self):
         """
@@ -407,7 +407,7 @@ class DBI_in_Base(object):
                              'fields': [],
                              'limit': 'this is a string'},
                             "On select(), limit must be an int")
-        
+
     # -------------------------------------------------------------------------
     #   - limit is an int
     #     > should retrieve the specified number of records
@@ -425,7 +425,7 @@ class DBI_in_Base(object):
             self.assertTrue(tup in rows,
                             "Expected %s in %s but it's not there" %
                             (str(tup), util.line_quote(rows)))
-        
+
     # -------------------------------------------------------------------------
     #   - limit is a float
     #     > should convert to an int and use it
@@ -461,7 +461,7 @@ class DBI_in_Base(object):
             self.assertTrue(tup in rows,
                             "Expected %s in %s but it's not there" %
                             (str(tup), util.line_quote(rows)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_mto(self):
         """
@@ -478,7 +478,7 @@ class DBI_in_Base(object):
         self.assertEqual(list(self.testdata), list(rows),
                          "Expected %s and %s to match" %
                          (list(self.testdata), list(rows)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_mtt(self):
         """
@@ -511,7 +511,7 @@ class DBI_in_Base(object):
         self.assertEqual(list(self.testdata), list(rows),
                          "Expected %s and %s to match" %
                          (list(self.testdata), list(rows)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_nld(self):
         """
@@ -530,7 +530,7 @@ class DBI_in_Base(object):
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_nlf(self):
         """
@@ -548,7 +548,7 @@ class DBI_in_Base(object):
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_nso(self):
         """
@@ -566,7 +566,7 @@ class DBI_in_Base(object):
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_nst(self):
         """
@@ -584,7 +584,7 @@ class DBI_in_Base(object):
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_nsw(self):
         """
@@ -602,7 +602,7 @@ class DBI_in_Base(object):
                             str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_o(self):
         """
@@ -620,7 +620,7 @@ class DBI_in_Base(object):
                          len(rows[0]))
         self.assertEqual(list(exp), list(rows),
                          "Expected %s to match %s" % (str(exp), str(rows)))
-    
+
     # -------------------------------------------------------------------------
     def test_select_w(self):
         """
@@ -636,7 +636,7 @@ class DBI_in_Base(object):
                          len(rows[0]))
         self.assertEqual(list(exp), list(rows),
                          "Expected %s to match %s" % (str(exp), str(rows)))
-    
+
     # -------------------------------------------------------------------------
     def test_table_exists_yes(self):
         """
@@ -658,7 +658,7 @@ class DBI_in_Base(object):
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         self.expected(False, db.table_exists(table=tname))
-        
+
 # -----------------------------------------------------------------------------
 class DBI_out_Base(object):
     """
@@ -683,7 +683,7 @@ class DBI_out_Base(object):
                 ('zumpy', 45, 9.3242),
                 ('frodo', 23, 212.5),
                 ('zumpy', 55, 90.6758)]
-    
+
     # -------------------------------------------------------------------------
     def test_create_mtf(self):
         """
@@ -751,7 +751,7 @@ class DBI_out_Base(object):
                             "Expected %s in %s" % (r, rows))
         self.assertFalse(td['rows'][1] in rows,
                          "%s should have been deleted" % (td['rows'][1],))
-        
+
     # -------------------------------------------------------------------------
     def test_delete_q_nd(self):
         """
@@ -764,7 +764,7 @@ class DBI_out_Base(object):
                              db.delete,
                              table=td['tabname'],
                              where='name=?')
-        
+
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -772,7 +772,7 @@ class DBI_out_Base(object):
         for r in td['rows']:
             self.assertTrue(r in rows,
                             "Expected %s in %s" % (r, rows))
-        
+
     # -------------------------------------------------------------------------
     def test_delete_nq_td(self):
         """
@@ -787,7 +787,7 @@ class DBI_out_Base(object):
                              table=td['tabname'],
                              where='name=foo',
                              data=('meg',))
-        
+
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -795,7 +795,7 @@ class DBI_out_Base(object):
         for r in td['rows']:
             self.assertTrue(r in rows,
                             "Expected %s in %s" % (r, rows))
-        
+
 
     # -------------------------------------------------------------------------
     def test_delete_q_td(self):
@@ -813,7 +813,7 @@ class DBI_out_Base(object):
                             "Expected %s in %s" % (r, rows))
         self.assertFalse(td['rows'][-1] in rows,
                          "%s should have been deleted" % (td['rows'][1],))
-        
+
 
     # -------------------------------------------------------------------------
     def test_delete_mtt(self):
@@ -827,7 +827,7 @@ class DBI_out_Base(object):
                              table='',
                              where='name=?',
                              data=('meg',))
-        
+
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -860,7 +860,7 @@ class DBI_out_Base(object):
                              table=td['tabname'],
                              where='name=?',
                              data='meg')
-        
+
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -881,7 +881,7 @@ class DBI_out_Base(object):
                              table=32,
                              where='name=?',
                              data='meg')
-        
+
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -901,7 +901,7 @@ class DBI_out_Base(object):
                              db.delete,
                              table=td['tabname'],
                              where=[])
-                          
+
         rows = db.select(table=td['tabname'])
         db.close()
 
@@ -927,7 +927,7 @@ class DBI_out_Base(object):
         for r in td['rows'][1:3]:
             self.assertFalse(r in rows,
                              "%s should have been deleted" % (r,))
-        
+
     # -------------------------------------------------------------------------
     def test_insert_fnox(self):
         """
@@ -948,7 +948,7 @@ class DBI_out_Base(object):
             self.assertTrue(sqlite_msg in str(e) or mysql_msg in str(e),
                             "Got the wrong DBIerror: %s" %
                             util.line_quote(str(e)))
-    
+
     # -------------------------------------------------------------------------
     def test_insert_mtd(self):
         """
@@ -961,7 +961,7 @@ class DBI_out_Base(object):
                              table='mtd',
                              fields=['one', 'two'],
                              data=[])
-    
+
     # -------------------------------------------------------------------------
     def test_insert_mtf(self):
         """
@@ -974,7 +974,7 @@ class DBI_out_Base(object):
                              table='mtd',
                              fields=[],
                              data=[(1, 2)])
-    
+
     # -------------------------------------------------------------------------
     def test_insert_mtt(self):
         """
@@ -987,7 +987,7 @@ class DBI_out_Base(object):
                              table='',
                              fields=['one', 'two'],
                              data=[(1, 2)])
-    
+
     # -------------------------------------------------------------------------
     def test_insert_nst(self):
         """
@@ -1026,7 +1026,7 @@ class DBI_out_Base(object):
                              table='nlf',
                              fields=['froo', 'pizzazz'],
                              data={})
-    
+
     # -------------------------------------------------------------------------
     def test_insert_tnox(self):
         """
@@ -1042,7 +1042,7 @@ class DBI_out_Base(object):
                              fields=['one', 'two'],
                              data=[('abc', 'def'),
                                    ('aardvark', 'buffalo')])
-    
+
     # -------------------------------------------------------------------------
     def test_insert_yes(self):
         """
@@ -1058,7 +1058,7 @@ class DBI_out_Base(object):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=fdef)
         db.insert(table=tname, fields=fnames, data=testdata)
-                  
+
         dbc = db.cursor()
         dbc.execute("""
         select * from test_insert_yes
@@ -1077,7 +1077,7 @@ class DBI_out_Base(object):
         udata = [('frodo', 23, 199.7),
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
-        
+
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
@@ -1093,7 +1093,7 @@ class DBI_out_Base(object):
             self.assertTrue(exp in r,
                             "Expected %s in %s but didn't find it" %
                             (str(exp), util.line_quote(r)))
-    
+
     # -------------------------------------------------------------------------
     def test_update_qp(self):
         """
@@ -1104,7 +1104,7 @@ class DBI_out_Base(object):
         udata = [('frodo', 23, 199.7),
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
-        
+
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
@@ -1119,7 +1119,7 @@ class DBI_out_Base(object):
             self.assertTrue("Parameter placeholders should not be quoted"
                             in str(e),
                             "Expected message not found in exception")
-        
+
     # -------------------------------------------------------------------------
     def test_update_mtd(self):
         """
@@ -1147,7 +1147,7 @@ class DBI_out_Base(object):
                              table=tname,
                              fields=[],
                              data=self.testdata)
-    
+
     # -------------------------------------------------------------------------
     def test_update_mtt(self):
         """
@@ -1161,7 +1161,7 @@ class DBI_out_Base(object):
                              table='',
                              fields=self.fnames,
                              data=self.testdata)
-    
+
     # -------------------------------------------------------------------------
     def test_update_mtw(self):
         """
@@ -1171,7 +1171,7 @@ class DBI_out_Base(object):
         udata = [('frodo', 23, 199.7),
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
-        
+
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
@@ -1187,7 +1187,7 @@ class DBI_out_Base(object):
             self.assertTrue(exp in r,
                             "Expected %s in %s but didn't find it" %
                             (str(exp), util.line_quote(r)))
-    
+
     # -------------------------------------------------------------------------
     def test_update_nlf(self):
         """
@@ -1202,7 +1202,7 @@ class DBI_out_Base(object):
                              table=tname,
                              fields=17,
                              data=self.testdata)
-    
+
     # -------------------------------------------------------------------------
     def test_update_nld(self):
         """
@@ -1217,7 +1217,7 @@ class DBI_out_Base(object):
                              table=tname,
                              fields=self.fnames,
                              data='notalist')
-    
+
     # -------------------------------------------------------------------------
     def test_update_nst(self):
         """
@@ -1232,7 +1232,7 @@ class DBI_out_Base(object):
                              table=38,
                              fields=self.fnames,
                              data=self.testdata)
-    
+
     # -------------------------------------------------------------------------
     def test_update_nsw(self):
         """
@@ -1248,7 +1248,7 @@ class DBI_out_Base(object):
                              fields=self.fnames,
                              data=self.testdata,
                              where=[])
-    
+
     # -------------------------------------------------------------------------
     def test_update_w(self):
         """
@@ -1258,7 +1258,7 @@ class DBI_out_Base(object):
         udata = [('frodo', 23, 199.7),
                  ('zippo', 14, 201.3),
                  ('zumpy', 47, 202.1)]
-        
+
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.create(table=tname, fields=self.fdef)
@@ -1274,7 +1274,7 @@ class DBI_out_Base(object):
             self.assertTrue(exp in r,
                             "Expected %s in %s but didn't find it" %
                             (str(exp), util.line_quote(r)))
-        
+
     # -------------------------------------------------------------------------
     def delete_setup(self):
         flist = ['id integer primary key', 'name text', 'age int']
@@ -1294,7 +1294,7 @@ class DBI_out_Base(object):
                   fields=testdata['ifields'],
                   data=testdata['rows'])
         return (db, testdata)
-    
+
 # -----------------------------------------------------------------------------
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
@@ -1314,7 +1314,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
             self.assertTrue(exp in str(e),
                             "Got the wrong DBIerror: %s" +
                             util.line_quote(str(e)))
-            
+
     # -------------------------------------------------------------------------
     def reset_db(self, name=''):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
@@ -1362,7 +1362,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              "unable to open database file",
                              CrawlDBI.DBI,
                              cfg=make_tcfg(self.dbtype))
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_empty(self):
         """
@@ -1378,7 +1378,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         s = os.stat(self.testdb)
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.testdb)
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_fifo(self):
         """
@@ -1390,7 +1390,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              "disk I/O error",
                              CrawlDBI.DBI,
                              cfg=make_tcfg(self.dbtype))
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_nosuch(self):
         """
@@ -1402,7 +1402,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected %s to exists but it does not" % self.testdb)
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sock(self):
         """
@@ -1421,7 +1421,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
             self.assertTrue("unable to open database file" in str(e),
                             "Unexpected DBIerror thrown: %s" %
                             util.line_quote(tb.format_exc()))
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sym_dir(self):
         """
@@ -1482,7 +1482,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         s = os.stat(self.testdb)
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.testdb)
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_dbn_text(self):
         """
@@ -1500,7 +1500,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
             self.assertTrue("file is encrypted or is not a database" in str(e),
                             "Unexpected DBIerror thrown: %s" %
                             util.line_quote(tb.format_exc()))
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_sqlite_dbnreq(self):
         """
@@ -1515,7 +1515,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
             self.assertTrue(exp in str(e),
                             "Got the wrong DBIerror: %s" +
                             util.line_quote(str(e)))
-            
+
     # -------------------------------------------------------------------------
     def test_ctor_sqlite_tbpreq(self):
         """
@@ -1530,7 +1530,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
             self.assertTrue(exp in str(e),
                             "Got the wrong DBIerror: %s" +
                             util.line_quote(str(e)))
-            
+
     # -------------------------------------------------------------------------
     def test_ctor_sqlite_other(self):
         """
@@ -1546,16 +1546,16 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
             self.assertTrue(exp in str(e),
                             "Got the wrong DBIerror: %s" +
                             util.line_quote(str(e)))
-            
+
     # -------------------------------------------------------------------------
     def reset_db(self, name=''):
         util.conditional_rm(self.testdb)
-        
+
 # -----------------------------------------------------------------------------
 @attr(slow=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
-    
+
     # -------------------------------------------------------------------------
     def test_select_f(self):
         """
@@ -1621,7 +1621,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              'groupby': 'unknown_field'},
                             "\"UNKNOWN_FIELD\" is not valid in the " +
                             "context where it")
-                             
+
         # db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         # try:
         #     rows = db.select(table='hpss.logpolicy',
@@ -1636,6 +1636,30 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         #                     util.line_quote(str(e)))
 
     # -------------------------------------------------------------------------
+    def test_select_join(self):
+        """
+        Select should support joining tables.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rows = db.select(table=['server', 'logclient'],
+                         fields=['server_id', 'desc_name', 'logc_directory'],
+                         where="server_id = logc_server_id")
+        self.assertTrue(0 < len(rows),
+                        "Expected at least one row, got 0")
+
+    # -------------------------------------------------------------------------
+    def test_select_join_tn(self):
+        """
+        Select should support joining tables with temporary table names.
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        rows = db.select(table=['server A', 'logclient B'],
+                         fields=['A.server_id', 'A.desc_name', 'B.logc_directory'],
+                         where="A.server_id = B.logc_server_id")
+        self.assertTrue(0 < len(rows),
+                        "Expected at least one row, got 0")
+
+    # -------------------------------------------------------------------------
     #   - limit not an int
     #     > should throw exception
     def test_select_l_nint(self):
@@ -1643,7 +1667,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                             {'table': 'authzacl',
                              'limit': 'not an int'},
                             "On select(), limit must be an int")
-        
+
     # -------------------------------------------------------------------------
     #   - limit is an int
     #     > should retrieve the specified number of records
@@ -1654,7 +1678,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                          limit=rlim)
         self.expected(rlim, len(rows))
         # self.fail('under construction')
-        
+
     # -------------------------------------------------------------------------
     #   - limit is a float
     #     > should convert to an int and use it
@@ -1692,10 +1716,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         mtf_rows = db.select(table='hpss.logclient', fields=[])
         nf_rows = db.select(table='hpss.logclient')
-        
+
         self.expected(len(mtf_rows[0].keys()), len(nf_rows[0].keys()))
         self.expected(mtf_rows[0].keys(), nf_rows[0].keys())
-        
+
 
     # -------------------------------------------------------------------------
     def test_select_mto(self):
@@ -1815,7 +1839,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                             {'table': "hpss.logpolicy",
                              'orderby': 22},
                             "On select(), orderby clause must be a string")
-                            
+
     # -------------------------------------------------------------------------
     def test_select_nst(self):
         """
@@ -1823,7 +1847,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         get an exception
         """
         self.exc_raises('select',
-                            {'table': [],
+                            {'table': 47,
                              'orderby': 22},
                             "On select(), table name must be a string")
 
@@ -1853,7 +1877,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
 
         sord = sorted([CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
                                               for x in ordered_rows])
-        
+
         self.expected(sord, ford)
 
     # -------------------------------------------------------------------------
@@ -1962,8 +1986,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                             {'table': "hpss.bogus",
                              'data': [('a', 'b', 'c')]},
                             "INSERT not supported for DB2")
-        # self.fail('under construction')
-        
+
     # -------------------------------------------------------------------------
     def test_create_exception(self):
         """
@@ -1973,8 +1996,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                             {'table': "hpss.nonesuch",
                              'fields': self.fdef},
                             "CREATE not supported for DB2")
-        # self.fail('under construction')
-        
+
     # -------------------------------------------------------------------------
     def test_delete_exception(self):
         """
@@ -1985,7 +2007,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              'data': [('a',)],
                              'where': "field = ?"},
                             "DELETE not supported for DB2")
-        
+
     # -------------------------------------------------------------------------
     def test_drop_exception(self):
         """
@@ -1994,7 +2016,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.exc_raises("drop",
                             {'table': "hpss.bogus"},
                             "DROP not supported for DB2")
-        
+
     # -------------------------------------------------------------------------
     def test_update_exception(self):
         """
@@ -2040,4 +2062,4 @@ if __name__ == '__main__':
                               'DBIdb2Test'],
                         logfile=testhelp.testlog(__name__))
 
-                
+
