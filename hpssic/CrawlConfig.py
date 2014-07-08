@@ -16,7 +16,8 @@ This class is based on python's standard ConfigParser class. It adds
 
 """
 import ConfigParser
-from ConfigParser import NoSectionError, NoOptionError
+from ConfigParser import NoSectionError, NoOptionError, \
+     InterpolationMissingOptionError
 import os
 import pdb
 import re
