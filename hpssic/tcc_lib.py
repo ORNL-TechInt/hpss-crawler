@@ -4,38 +4,6 @@ import os
 import util
 
 # -----------------------------------------------------------------------------
-def db2cxn(dbsel):
-    """
-    Cache and return the DB2 connection for either the 'cfg' or 'subsys' database
-    """
-    try:
-        rval = db2cxn._db[dbsel]
-    except AttributeError:
-        db2cxn._db = {}
-        cfg = CrawlConfig.get_config()
-        util.env_update(cfg)
-        cfgname = cfg.get('db2', 'db_cfg_name')
-        subname = cfg.get('db2', 'db_sub_name')
-        dbhost = cfg.get('db2', 'hostname')
-        dbport = cfg.get('db2', 'port')
-        dbuser = cfg.get('db2', 'username')
-        dbpwd = base64.b64decode(cfg.get('db2', 'password'))
-        cxnstr = ("database=%s;" % cfgname +
-                  "hostname=%s;" % dbhost +
-                  "port=%s;" % dbport +
-                  "uid=%s;" % dbuser +
-                  "pwd=%s;" % dbpwd)
-        db2cxn._db['cfg'] = db2.connect(cxnstr, "", "")
-        cxnstr = ("database=%s;" % subname +
-                  "hostname=%s;" % dbhost +
-                  "port=%s;" % dbport +
-                  "uid=%s;" % dbuser +
-                  "pwd=%s;" % dbpwd)
-        db2cxn._db['subsys'] = db2.connect(cxnstr, "", "")
-        rval = db2cxn._db[dbsel]
-    return rval
-        
-# -----------------------------------------------------------------------------
 def get_bitfile_path(bitfile):
     """
     Given a bitfile id, walk back up the tree in HPSS to generate the bitfile's
@@ -57,7 +25,7 @@ def get_bitfile_path(bitfile):
                             hexstr(bitfile))
     elif len(bfl) < 1:
         return("<unnamed bitfile>")
-    
+
     x = bfl[0]
     rval = ''
     while x:
@@ -100,26 +68,19 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
           fetch first %d rows only" % limit
     """
-    # !@! need to upgrade select semantic to support joins
-    rval = {}
-    db = db2cxn('subsys')
-    sql = """
-          select A.object_id,
-                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
-                 count(C.storage_class) as sc_count
-          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
-          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
-                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id and A.object_id < ?
-          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
-          """
-    rval = []
-    stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+limit))
-    x = db2.fetch_assoc(stmt)
-    while (x):
-        rval.append(x)
-        x = db2.fetch_assoc(stmt)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rval = db.select(table=['nsobject A',
+                            'bitfile B',
+                            'bftapeseg C'],
+                     fields=['A.object_id',
+                             'B.bfid',
+                             'B.bfattr_cos_id',
+                             'B.bfattr_create_time',
+                             'count(C.storage_class) as sc_count'],
+                     where="A.bitfile_id = B.bfid and B.bfid = C.bfid and " +
+                           "B.bfattr_data_len > 0 and C.bf_offset = 0 and " +
+                           "? <= A.object_id and A.object_id < ? ",
+                     data=(first_nsobj_id, first_nsobj_id + limit))
     return rval
 
 # -----------------------------------------------------------------------------
@@ -127,17 +88,16 @@ def get_cos_info():
     """
     Read COS info from tables COS and HIER in the DB2 database
     """
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rows = db.select(table=['cos A','hier B'],
+                     fields=['A.cos_id',
+                             'A.hier_id',
+                             'B.slevel0_migrate_list_count'],
+                     where="A.hier_id = B.hier_id")
     rval = {}
-    # !@! need to upgrade select semantics to support joins
-    db = db2cxn('cfg')
-    sql = """select a.cos_id, a.hier_id, b.slevel0_migrate_list_count
-             from hpss.cos as a, hpss.hier as b
-             where a.hier_id = b.hier_id"""
-    r = db2.exec_immediate(db, sql)
-    x = db2.fetch_assoc(r)
-    while (x):
-        rval[x['COS_ID']] = x['SLEVEL0_MIGRATE_LIST_COUNT']
-        x = db2.fetch_assoc(r)
+    for r in rows:
+        rval[r['COS_ID']] = r['SLEVEL0_MIGRATE_LIST_COUNT']
+
     return rval
 
 # -----------------------------------------------------------------------------
