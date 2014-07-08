@@ -39,12 +39,7 @@ def age(table,
     else:
         raise StandardError("output type must be 'str' or 'file' ")
 
-    if util.hostname() == 'hpss-dev01':
-        dbname = 'subsys'
-    elif util.hostname() == 'hpss-crawler01':
-        dbname = 'hsubsys1'
-
-    db = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     if start is not None and end is not None:
         dbargs = {'where': '? < record_create_time and record_create_time < ?',
                   'data': (start, end)}
@@ -201,12 +196,7 @@ def xplocks(output=None, mark=False):
     else:
         raise StandardError("output type must be 'str' or 'file' ")
 
-    if util.hostname() == 'hpss-dev01':
-        dbname_s = 'subsys'
-    elif util.hostname() == 'hpss-crawler01':
-        dbname_s = 'hsubsys1'
-
-    dbs = CrawlDBI.DBI(dbtype='db2', dbname=dbname_s)
+    dbs = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
 
     lock_min = cfg.getint('mpra', 'lock_duration')
 

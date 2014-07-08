@@ -3,7 +3,6 @@ import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import hpss
-import ibm_db as db2
 import os
 import pdb
 import pprint
@@ -151,9 +150,7 @@ def highest_nsobject_id():
     """
     if (not hasattr(highest_nsobject_id, '_max_obj_id') or
         (60 < time.time() - highest_nsobject_id._when)):
-        dbname = {'hpss-dev01': 'subsys',
-                  'hpss-crawler01': 'hsubsys1'}[util.hostname()]
-        H = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
+        H = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
         result = H.select(table='nsobject',
                           fields=['max(object_id) as max_obj_id'])
         H.close()

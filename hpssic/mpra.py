@@ -213,12 +213,8 @@ def mprf_migr_recs(args):
     if o.debug: pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
-    if util.hostname() == 'hpss-dev01':
-        dbname = 'subsys'
-    elif util.hostname() == 'hpss-crawler01':
-        dbname = 'hsubsys1'
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
 
     dbargs = {'table': 'bfmigrrec'}
     
@@ -295,17 +291,12 @@ def mprf_times(args):
 
     if o.debug: pdb.set_trace()
 
-    if util.hostname() == 'hpss-dev01':
-        dbname = 'subsys'
-    elif util.hostname() == 'hpss-crawler01':
-        dbname = 'hsubsys1'
-        
     if o.unique:
         fields = ['unique(record_create_time)']
     else:
         fields = ['record_create_time']
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=dbname)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     rows = db.select(table='bfmigrrec',
                      fields=fields,
                      orderby='record_create_time')

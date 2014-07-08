@@ -3,8 +3,7 @@ import base64
 import crawl_lib
 import CrawlConfig
 import hpss
-import ibm_db as db2
-import ibm_db_dbi as db2dbi
+import CrawlDBI
 import optparse
 import os
 import pdb
@@ -27,17 +26,15 @@ def tccp_bfid(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
-    
-    for row in query("""select bfid, bfattr_cos_id, bfattr_create_time
-                        from hpss.bitfile
-                        fetch first 10 rows only""",
-                     dbsect="subsys"):
+
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rows = db.select(table='bitfile',
+                     fields=['bfid', 'bfattr_cos_id', 'bfattr_create_time'],
+                     limit=10)
+    for row in rows:
         ct = time.strftime("%Y.%m%d %H:%M:%S",
                            time.localtime(row['BFATTR_CREATE_TIME']))
         print "%s %d %s" % (tcc_lib.hexstr(row['BFID']),
@@ -57,9 +54,6 @@ def tccp_bfpath(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
@@ -82,16 +76,15 @@ def tccp_bfts(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
-    
-    for row in query("""select bfid, storage_class from hpss.bftapeseg
-                        fetch first 20 rows only""",
-                     dbsect="subsys"):
+
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rows = db.select(table='bftapeseg',
+                     fields=['bfid', 'storage_class'],
+                     limit=20)
+    for row in rows:
         print("%s %s" % (tcc_lib.hexstr(row['BFID']),
                          row['STORAGE_CLASS']))
         
@@ -130,9 +123,6 @@ def tccp_copies_by_file(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
@@ -155,9 +145,6 @@ def tccp_report(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
@@ -185,15 +172,15 @@ def tccp_selbf(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
     
     record = 0
-    for row in query("select * from hpss.bitfile", dbsect="subsys"):
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rows = db.select(table='bitfile',
+                     fields=[])
+    for row in rows:
         print("--- record %d ---" % record)
         record += 1
         for k in sorted(row):
@@ -218,28 +205,6 @@ def tccp_simplug(args):
     crawl_lib.simplug('tcc', args)
 
 # -----------------------------------------------------------------------------
-def tccp_sql(args):
-    """sql - run arbitrary sql
-
-    usage: tcc sql [-d/--debug] -D/--db cfg-section <sql statement>
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='use an alternate database')
-    (o, a) = p.parse_args(args)
-
-    if o.debug: pdb.set_trace()
-
-    sql = " ".join(a)
-    print sql
-    for row in query(sql, dbsect=o.dbsect):
-        pprint.pprint(row)
-
-# -----------------------------------------------------------------------------
 def tccp_tables(args):
     """tables - print a list of tables
 
@@ -256,15 +221,18 @@ def tccp_tables(args):
 
     if o.debug: pdb.set_trace()
     
-    # db = db2.connect('subsys', 'hpss', hpss_password())
-    db = tcc_lib.db2cxn(o.dbsect)
-    cxn = db2dbi.Connection(db)
-    rows = cxn.tables('HPSS', '%')
-    for tab in rows:
-        print("%-10s %-35s %s" % (tab['TABLE_SCHEM'],
-                                  tab['TABLE_NAME'],
-                                  tab['TABLE_TYPE']))
-    cxn.close()
+    db = CrawlDBI.DBI(dbtype='db2',
+                      dbname=CrawlDBI.db2name('subsys'))
+    db._dbobj.tbl_prefix = 'syscat.'
+    rows = db.select(table='tables',
+                     fields=["substr(tabname, 1, 30) as \"Table\"",
+                             "substr(tabschema, 1, 30) as \"Schema\"",
+                             "type"],
+                     where="tabschema = 'HPSS'")
+    print("Table                          Schema                         Type")
+    for r in rows:
+        print("%s %s %s" % (r['Table'], r['Schema'], r['TYPE']))
+
     
 # -----------------------------------------------------------------------------
 def tccp_zreport(args):
@@ -279,9 +247,6 @@ def tccp_zreport(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='which database to access')
     (o, a) = p.parse_args(args)
 
     if o.debug: pdb.set_trace()
@@ -323,15 +288,18 @@ def copies_by_file(limit=10):
     on the quantity of data in those tables, this request may take a while to
     run and may use significant temp space in DB2.
     """
-    result = query("""select A.bfid, A.bfattr_cos_id, A.bfattr_create_time,
-                      count(B.storage_class) as sc_count
-                      from hpss.bitfile A left outer join hpss.bftapeseg B
-                      on A.bfid = B.bfid
-                      where A.bfattr_data_len > 0 and B.bf_offset = 0
-                      group by A.bfid, A.bfattr_cos_id, A.bfattr_create_time
-                      fetch first %d rows only""" % limit,
-                   dbsect="subsys")
-    return result
+    raise DBIerror("May need a raw sql call to support this")
+    # db = CrawlDBI.DBI(dbtype='db2', CrawlDBI.db2name('subsys'))
+    # result = db.select(table
+    # result = query("""select A.bfid, A.bfattr_cos_id, A.bfattr_create_time,
+    #                   count(B.storage_class) as sc_count
+    #                   from hpss.bitfile A left outer join hpss.bftapeseg B
+    #                   on A.bfid = B.bfid
+    #                   where A.bfattr_data_len > 0 and B.bf_offset = 0
+    #                   group by A.bfid, A.bfattr_cos_id, A.bfattr_create_time
+    #                   fetch first %d rows only""" % limit,
+    #                dbsect="subsys")
+    # return result
 
 # -----------------------------------------------------------------------------
 def cos_parse(line):
@@ -369,22 +337,6 @@ def hpss_userpass():
     S.expect(pexpect.EOF)
     [(username, password)] = re.findall('USER (\S+) USING "([^"]+)"', S.before)
     return (username, password)
-
-# -----------------------------------------------------------------------------
-def query(sql, dbsect='cfg'):
-    """
-    Connect to a DB2 database, run an sql command (assumed to be a select), and
-    return the result.
-    """
-
-    db = tcc_lib.db2cxn(dbsect)
-    r = db2.exec_immediate(db, sql)
-    rval = []
-    x = db2.fetch_assoc(r)
-    while (x):
-        rval.append(x)
-        x = db2.fetch_assoc(r)
-    return rval
 
 # -----------------------------------------------------------------------------
 toolframe.tf_launch('tccp', __name__)
