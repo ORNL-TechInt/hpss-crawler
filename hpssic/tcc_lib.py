@@ -1,6 +1,5 @@
 import base64
 import CrawlConfig
-import ibm_db as db2
 import os
 import util
 
@@ -42,24 +41,16 @@ def get_bitfile_path(bitfile):
     Given a bitfile id, walk back up the tree in HPSS to generate the bitfile's
     path
     """
-    db = db2cxn('subsys')
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
 
     if bitfile.startswith("x'") or bitfile.startswith('x"'):
-        sql = """
-              select parent_id, name from hpss.nsobject where bitfile_id = %s
-              """ % bitfile
+        bfarg = bitfile
     else:
-        sql = """
-              select parent_id, name from hpss.nsobject where bitfile_id = %s
-              """ % hexstr(bitfile)
-
-    # CrawlConfig.log("Query: %s" % sql)
-    r = db2.exec_immediate(db, sql)
-    x = db2.fetch_assoc(r)
-    bfl = []
-    while (x):
-        bfl.append(x)
-        x = db2.fetch_assoc(r)
+        bfarg = hexstr(bitfile)
+    bfl = db.select(table='nsobject',
+                    fields=['parent_id', 'name'],
+                    where='bitfile_id = ?',
+                    data=(bfarg,))
 
     if 1 < len(bfl):
         raise StandardError("Multiple objects found for bf %s" %
@@ -74,12 +65,11 @@ def get_bitfile_path(bitfile):
             rval = x['NAME']
         else:
             rval = os.path.join(x['NAME'], rval)
-        sql = """
-              select parent_id, name from hpss.nsobject where object_id = %s
-              """ % x['PARENT_ID']
-        r = db2.exec_immediate(db, sql)
-        x = db2.fetch_assoc(r)
 
+        x = db.select(table='nsobject',
+                      fields=['parent_id', 'name'],
+                      where='object_id = ?',
+                      data=(x['PARENT_ID']))
     return rval
 
 # -----------------------------------------------------------------------------
@@ -110,6 +100,7 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
           fetch first %d rows only" % limit
     """
+    # !@! need to upgrade select semantic to support joins
     rval = {}
     db = db2cxn('subsys')
     sql = """
@@ -137,6 +128,7 @@ def get_cos_info():
     Read COS info from tables COS and HIER in the DB2 database
     """
     rval = {}
+    # !@! need to upgrade select semantics to support joins
     db = db2cxn('cfg')
     sql = """select a.cos_id, a.hier_id, b.slevel0_migrate_list_count
              from hpss.cos as a, hpss.hier as b
