@@ -13,7 +13,8 @@ help:
 	@echo "    refresh      Regenerate the dist and install/upgrade the local copy"
 	@echo "    sdist        Generate the source distribution"
 	@echo "    TAGS         Navigation tags for emacs"
-	@echo "    test         Run and log tests"
+	@echo "    tests        Run and log the fast tests"
+	@echo "    alltests     Run and log all the tests"
 	@echo "    uguide       Generate the User Guide in HTML"
 	@echo ""
 
@@ -36,6 +37,13 @@ tests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 	nosetests -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+
+alltests:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	nosetests -a slow=True -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
 
