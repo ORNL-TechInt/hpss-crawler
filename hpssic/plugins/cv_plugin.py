@@ -6,7 +6,6 @@ from hpssic import Dimension
 import os
 import pdb
 import pexpect
-import sqlite3 as sql
 import sys
 import time
 from hpssic import util
