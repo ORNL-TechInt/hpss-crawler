@@ -1,4 +1,5 @@
 import base64
+import CrawlDBI
 import CrawlConfig
 import os
 import util
@@ -80,7 +81,12 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
                      where="A.bitfile_id = B.bfid and B.bfid = C.bfid and " +
                            "B.bfattr_data_len > 0 and C.bf_offset = 0 and " +
                            "? <= A.object_id and A.object_id < ? ",
-                     data=(first_nsobj_id, first_nsobj_id + limit))
+                     groupby=", ".join(["A.object_id",
+                                        "B.bfid",
+                                        "B.bfattr_cos_id",
+                                        "B.bfattr_create_time"]),
+                     data=(first_nsobj_id, first_nsobj_id + limit),
+                     limit=limit)
     return rval
 
 # -----------------------------------------------------------------------------
@@ -88,7 +94,7 @@ def get_cos_info():
     """
     Read COS info from tables COS and HIER in the DB2 database
     """
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('cfg'))
     rows = db.select(table=['cos A','hier B'],
                      fields=['A.cos_id',
                              'A.hier_id',
