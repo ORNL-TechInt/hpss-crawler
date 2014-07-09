@@ -1,4 +1,4 @@
-import pexpect
+from hpssic import pexpect
 import sys
 
 
