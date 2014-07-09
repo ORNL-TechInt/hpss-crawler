@@ -1,6 +1,6 @@
 import os
 import pdb
-import pexpect
+from hpssic import pexpect
 import sys
 from hpssic import testhelp as th
 from hpssic import util as U

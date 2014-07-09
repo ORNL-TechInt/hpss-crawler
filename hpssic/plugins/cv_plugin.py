@@ -5,7 +5,7 @@ from hpssic import CrawlDBI
 from hpssic import Dimension
 import os
 import pdb
-import pexpect
+from hpssic import pexpect
 import sys
 import time
 from hpssic import util
@@ -29,9 +29,9 @@ def main(cfg):
     try:
         clist = Checkable.Checkable.get_list(odds, rootlist=dataroot)
     except CrawlDBI.DBIerror, e:
-        sqlite_msg = "no such table: checkables"
-        mysql_msg = "Table '.*' doesn't exist"
-        if util.rgxin(sqlite_msg, str(e)) or util.rgxin(mysql_msg, str(e)):
+        if any([util.rgxin(msg, str(e))
+                for msg in ["no such table: checkables",
+                            "Table '.*' doesn't exist"]]):
             CrawlConfig.log("calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
             clist = Checkable.Checkable.get_list(odds)
