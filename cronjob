@@ -1,0 +1,7 @@
+#!/bin/bash
+cd $HOME/prj/hpssic/dev
+export CRAWL_CONF=$HOME/prj/hpssic/dev/hpss-dev01.crawl.cfg
+export PYTHONPATH=$HOME/prj/hpssic/dev
+/bin/date +"Starting at %Y.%m%d %H:%M:%S"
+/usr/bin/gmake crontests
+/bin/date +"Finished at %Y.%m%d %H:%M:%S"
