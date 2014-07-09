@@ -1111,10 +1111,12 @@ class DBIdb2(DBI_abstract):
 
         # Translate any db2 errors to DBIerror
         except ibm_db_dbi.Error, e:
-            raise DBIerror(str(e), dbname=self.dbname)
+            errmsg = str(e) + "\nSQL: '" + cmd + "'"
+            raise DBIerror(errmsg, dbname=self.dbname)
         except Exception, e:
             if self.__recognized_exception__(e):
-                raise DBIerror(str(e), dbname=self.dbname)
+                errmsg = str(e) + "\nSQL: '" + cmd + "'"
+                raise DBIerror(errmsg, dbname=self.dbname)
             else:
                 raise
 
