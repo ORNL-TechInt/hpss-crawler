@@ -31,10 +31,8 @@ def make_tcfg(dbtype):
     tcfg.set('dbi', 'tbl_prefix', 'test')
     xcfg = CrawlConfig.get_config(reset=True)
     if dbtype == 'mysql':
-        tcfg.set('dbi', 'dbname', 'hpssic')
-        tcfg.set('dbi', 'host', 'db-hpssic.ccs.ornl.gov')
-        tcfg.set('dbi', 'username', 'hpssic_user')
-        tcfg.set('dbi', 'password', xcfg.get('dbi', 'password'))
+        for dbparm in ['dbname', 'host', 'username', 'password']:
+            tcfg.set('dbi', dbparm, xcfg.get('dbi', dbparm))
     elif dbtype == 'db2':
         tcfg.add_section('db2')
         tcfg.set('dbi', 'dbname', 'hcfg')
@@ -1029,11 +1027,13 @@ class DBI_out_Base(object):
         """
         Calling insert on a non-existent table should get an exception
         """
+        mcfg = make_tcfg(self.dbtype)
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=mcfg)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              ["no such table: test_tnox",
-                              "Table 'hpssic.test_tnox' doesn't exist"],
+                              "Table '%s.test_tnox' doesn't exist" %
+                              mcfg.get('dbi', 'dbname')],
                              db.insert,
                              table='tnox',
                              fields=['one', 'two'],
@@ -1306,7 +1306,6 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     @classmethod
     def tearDownClass(cls):
-        # testhelp.module_test_teardown(DBITest.testdir)
         if not testhelp.keepfiles():
             tcfg = make_tcfg('mysql')
             tcfg.set('dbi', 'tbl_prefix', '')
