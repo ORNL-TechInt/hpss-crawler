@@ -240,6 +240,7 @@ def dispatch_help(mod, prefix, cmd=None):
         func = getattr(mod, "_".join(prefix, cmd))
         print func.__doc__
     else:
+        print("")
         for fname in [x for x in dir(mod) if x.startswith(prefix)]:
             func = getattr(mod, fname)
             try:
@@ -247,7 +248,8 @@ def dispatch_help(mod, prefix, cmd=None):
             except AttributeError:
                 raise HpssicError(
                     "Function '%s' seems to be missing a docstring" % fname)
-            print hstr
+            print "    " + hstr
+        print("")
         
     
 # ------------------------------------------------------------------------------
