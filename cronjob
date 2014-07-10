@@ -1,7 +1,20 @@
 #!/bin/bash
-cd $HOME/prj/hpssic/dev
 export CRAWL_CONF=$HOME/prj/hpssic/dev/hpss-dev01.crawl.cfg
 export PYTHONPATH=$HOME/prj/hpssic/dev
-/bin/date +"Starting at %Y.%m%d %H:%M:%S"
-/usr/bin/gmake crontests
-/bin/date +"Finished at %Y.%m%d %H:%M:%S"
+export CRONOUT=/tmp/cronjob.$$.out
+
+/bin/echo "--------------------------------------------" > $CRONOUT
+
+/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
+cd $HOME/prj/hpssic/dev
+/usr/bin/nosetests -c test/nosecron.cfg test >> $CRONOUT 2>&1
+STATUS=$?
+/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
+
+if [[ "$STATUS" == "0" ]]; then
+    SUBJECT="HPSSIC tests: all passed"
+else
+    SUBJECT="HPSSIC tests: some FAILED"
+fi
+/bin/mail -s "$SUBJECT" tbarron@ornl.gov tusculum@gmail.com < $CRONOUT
+/bin/rm $CRONOUT
