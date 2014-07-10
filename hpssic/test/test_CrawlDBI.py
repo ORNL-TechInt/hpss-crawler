@@ -1310,7 +1310,6 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     @classmethod
     def tearDownClass(cls):
-        # testhelp.module_test_teardown(DBITest.testdir)
         if not testhelp.keepfiles():
             tcfg = make_tcfg('mysql')
             tcfg.set('dbi', 'tbl_prefix', '')
