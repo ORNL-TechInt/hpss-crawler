@@ -205,14 +205,15 @@ class DBI_in_Base(object):
         """
         a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         dirl = [q for q in dir(a) if not q.startswith('_')]
-        xattr = ['close', 'create', 'dbname', 'delete', 'drop', 'insert',
-                 'select', 'table_exists', 'update',
-                 'cursor']
+        xattr_req = ['close', 'create', 'dbname', 'delete', 'drop', 'insert',
+                     'select', 'table_exists', 'update',
+                     'cursor']
+        xattr_allowed = ['sql']
 
         for attr in dirl:
-            if attr not in xattr:
+            if attr not in xattr_req and attr not in xattr_allowed:
                 self.fail("Unexpected attribute %s on object %s" % (attr, a))
-        for attr in xattr:
+        for attr in xattr_req:
             if attr not in dirl:
                 self.fail("Expected attribute %s not found on object %s" %
                           (attr, a))
