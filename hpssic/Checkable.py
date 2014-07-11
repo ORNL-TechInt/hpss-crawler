@@ -284,6 +284,7 @@ class Checkable(object):
                           'path       text',
                           'type       text',
                           'cos        text',
+                          'cart       text',
                           'checksum   int',
                           'last_check int',
                           'fails      int',

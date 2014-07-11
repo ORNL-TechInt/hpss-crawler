@@ -217,6 +217,10 @@ class DBI(object):
         return self._dbobj.select(**kwargs)
     
     # -------------------------------------------------------------------------
+    def sql(self, *args, **kwargs):
+        return self._dbobj.sql(*args, **kwargs)
+
+    # -------------------------------------------------------------------------
     def update(self, **kwargs):
         """
         Update data in the table. Where indicates which records are to be
@@ -837,6 +841,20 @@ class DBImysql(DBI_abstract):
             c.close()
             return rv
         # Translate any sqlite3 errors to DBIerror
+        except mysql_exc.Error, e:
+            raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
+    def sql(self, command):
+        """
+        Run a string of SQL against the database
+        """
+        if self.closed:
+            raise DBIerror("Cannot operate on a closed database.")
+        try:
+            c = self.dbh.cursor()
+            c.execute(command)
+            c.close()
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
