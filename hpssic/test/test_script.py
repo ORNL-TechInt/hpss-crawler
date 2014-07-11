@@ -217,7 +217,6 @@ class Test_PEP8(th.HelpedTestCase):
             if any([r == "./test", ".git" in r, ".attic" in r]):
                 continue
             pylist = [os.path.join(r, fn) for fn in f if fn.endswith('.py')]
-            if pylist:
                 inputs = " ".join(pylist)
                 result = pexpect.run("pep8 %s" % inputs)
                 self.assertEqual("", result, "\n" + result)
