@@ -225,8 +225,8 @@ def cv_nulltest(argv):
     """nulltest - how do NULL values show up when queried?
 
     After doing 'alter table dev_checkables add fails int', the added fields
-    (fails, reported) are NULL, not 0. What does that look like when I select a
-    record?
+    (fails, reported, cart) are NULL, not 0. What does that look like when I
+    select a record?
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
@@ -248,8 +248,20 @@ def cv_nulltest(argv):
     db = CrawlDBI.DBI()
 
     rows = db.select(table='checkables',
-                     where="rowid < 10")
-    print rows
+                     where="fails is null or reported is null or cart is null")
+    hfmt = "%5s %-45s %4s %-4s %-8s %3s %11s %3s %3s"
+    rfmt = "%5d %-47.47s %-2s %4s %-8s %2d  %11d %2d  %2d"
+    headers = ("Rowid", "Path", "Type", "COS", "Cart", "Chk", "Last Check",
+               "Fls", "Rpt")
+    print(hfmt % headers)
+    rcount = 0
+    for r in rows:
+        print(rfmt % r)
+        rcount += 1
+        if 50 < rcount:
+            print(hfmt % headers)
+            rcount = 0
+
     db.close()
  
 # -----------------------------------------------------------------------------
