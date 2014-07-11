@@ -246,9 +246,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/home/somebody', rows[0][1])    # path
         self.expected('d', rows[0][2])                 # type
         self.expected('', rows[0][3])                  # cos
-        self.expected(0, rows[0][4])                   # checksum
-        self.expected(0, rows[0][5])                   # last_check
-        self.expected(0, rows[0][6])                   # fails
+        self.expected(None, rows[0][4])                # cart
+        self.expected(0, rows[0][5])                   # checksum
+        self.expected(0, rows[0][6])                   # last_check
+        self.expected(0, rows[0][7])                   # fails
 
     # -------------------------------------------------------------------------
     @attr(slow=True)
@@ -355,9 +356,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/', rows[0][1])     # path
         self.expected('d', rows[0][2])     # type
         self.expected('', rows[0][3])      # cos
-        self.expected(0, rows[0][4])       # checksum
-        self.expected(0, rows[0][5])       # last_check
-        self.expected(0, rows[0][6])       # fails
+        self.expected(None, rows[0][4])    # cart
+        self.expected(0, rows[0][5])       # checksum
+        self.expected(0, rows[0][6])       # last_check
+        self.expected(0, rows[0][7])       # fails
 
     # -------------------------------------------------------------------------
     def test_ex_nihilo_rootlist(self):
