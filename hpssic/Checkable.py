@@ -277,6 +277,29 @@ class Checkable(object):
         Start from scratch. Create the database if necessary. Create the
         table(s) if necessary. Bootstrap the queue by adding the root
         director(ies).
+
+        Field path is the location of the file or directory in the HPSS
+        archive.
+
+        Field type is 'f' for files or 'd' for directories.
+
+        Field cos is the class of service for the file. For directories, cos is
+        empty.
+
+        Field cart starts with a null value. When populated from hsi, it may be
+        set to the name of a tape cartridge or to ''. Empty files take up no
+        space on any cartridge, so for them the field is empty.
+
+        Field checksum is 0 if we have not computed or discoverd a checksum for
+        the file. Once we know a checksum has been stored for the file, we set
+        this to 1.
+
+        Field last_check is the epoch time at which the file was last checked.
+
+        Field fails is the number of times hashcreate and/or hashverify has
+        failed on the file.
+
+        Field reported is 0 or 1 indicating whether we've reported
         """
         db = CrawlDBI.DBI()
         db.create(table='checkables',
