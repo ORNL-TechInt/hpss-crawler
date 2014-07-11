@@ -154,6 +154,137 @@ def populate_cart_field(db, h, path, dbcart, max, dryrun):
 
 
 # -----------------------------------------------------------------------------
+def cv_addcart(argv):
+    """addcart - Add field cart to checkable table
+
+    Add text field cart to table <CTX>_checkables.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug: pdb.set_trace()
+
+    db = CrawlDBI.DBI()
+    table = db._dbobj.prefix("checkables")
+    cmd = "alter table %s add column cart text after cos" % table
+    db.sql(cmd)
+    db.close()
+
+# -----------------------------------------------------------------------------
+def cv_dropcart(argv):
+    """dropcart - Drop field cart from checkable table
+
+    Drop the field cart from the checkable table
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug: pdb.set_trace()
+
+    db = CrawlDBI.DBI()
+    table = db._dbobj.prefix("checkables")
+    cmd = "alter table %s drop column cart" % table
+    db.sql(cmd)
+    db.close()
+
+# -----------------------------------------------------------------------------
+def cv_popcart(argv):
+    """popcart - Populate field cart in checkable table
+
+    usage: cv popcart [-d] [path ...]
+
+    For each file path in the mysql database that doesn't already have a cart
+    name, issue an 'ls -P <path>' in hsi to retrieve the name of the cartridge
+    where the file is stored. Record the cartridge name in the database.
+
+    If path name(s) are specified on the command line, only the records for
+    those paths will be updated with a cart name.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-m', '--max',
+                 action='store', default="0", dest='max',
+                 help='stop after doing this many records')
+    p.add_option('-n', '--dry-run',
+                 action='store_true', default=False, dest='dryrun',
+                 help='show which rows would be updated')
+    p.add_option('-s', '--skip',
+                 action='store_true', default=False, dest='skip',
+                 help='skip rows with non-null cart')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug: pdb.set_trace()
+
+    db = CrawlDBI.DBI()
+    if o.skip:
+        where = "type = 'f' and last_check <> 0 and cart is null"
+    else:
+        where = "type = 'f' and last_check <> 0"
+
+    path_l = db.select(table="checkables",
+                       fields=["path", "cart"],
+                       where=where)
+
+    h = hpss.HSI(verbose=True)
+    if len(a) <= 0:
+        for (path,cart) in path_l:
+            if populate_cart_field(db, h, path, cart,
+                                   int(o.max), o.dryrun):
+                break
+    else:
+        path_d = dict(path_l)
+        for path in a:
+            if path in path_d:
+                if populate_cart_field(db, h, path, path_d[path],
+                                       int(o.max), o.dryrun):
+                    break
+            else:
+                print("NOTINDB %-8s %s" % (" ", path))
+    h.quit()
+    db.close()
+
+# -----------------------------------------------------------------------------
+def populate_cart_field(db, h, path, dbcart, max, dryrun):
+    info = h.lsP(path)
+    cartname = info.split("\t")[5].strip()
+    if dbcart != cartname:
+        if 0 < max:
+            try:
+                populate_cart_field._count += 1
+            except AttributeError:
+                populate_cart_field._count = 1
+            if max < populate_cart_field._count:
+                return True
+        if dryrun:
+            print("would set %s %s" % (cartname, path))
+        else:
+            print("setting %s %s" % (cartname, path))
+            db.update(table="checkables",
+                      fields=['cart'],
+                      where="path = ?",
+                      data=[(cartname, path)])
+    else:
+        print("ALREADY %s %s" % (dbcart, path))
+    return False
+
+# -----------------------------------------------------------------------------
 def cv_report(argv):
     """report - show the checksum verifier database status
 

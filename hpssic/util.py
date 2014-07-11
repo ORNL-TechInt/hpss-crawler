@@ -251,7 +251,44 @@ def daybase(epoch):
                         tm.tm_wday, tm.tm_yday, tm.tm_isdst])
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def dispatch(modname, prefix, args):
+    """
+    Look in module *modname* for routine *prefix*_*args*[1]. Call it with
+    *args*[2:].
+    """
+    mod = sys.modules[modname]
+    if len(args) < 2:
+        dispatch_help(mod, prefix)
+    elif len(args) < 3 and args[1] == 'help':
+        dispatch_help(mod, prefix)
+    elif args[1] == 'help':
+        dispatch_help(mod, prefix, args[2])
+    else:
+        fname = "_".join([prefix, args[1]])
+        func = getattr(mod, fname)
+        func(args[2:])
+
+
+# -----------------------------------------------------------------------------
+def dispatch_help(mod, prefix, cmd=None):
+    if cmd is not None:
+        func = getattr(mod, "_".join(prefix, cmd))
+        print func.__doc__
+    else:
+        print("")
+        for fname in [x for x in dir(mod) if x.startswith(prefix)]:
+            func = getattr(mod, fname)
+            try:
+                hstr = func.__doc__.split("\n")[0]
+            except AttributeError:
+                raise HpssicError(
+                    "Function '%s' seems to be missing a docstring" % fname)
+            print "    " + hstr
+        print("")
+
+
+# -----------------------------------------------------------------------------
 def dispatch(modname, prefix, args):
     """
     Look in module *modname* for routine *prefix*_*args*[1]. Call it with
@@ -288,42 +325,6 @@ def dispatch_help(mod, prefix, cmd=None):
         print("")
 
 
-# ------------------------------------------------------------------------------
-def dispatch(modname, prefix, args):
-    """
-    Look in module *modname* for routine *prefix*_*args*[1]. Call it with
-    *args*[2:].
-    """
-    mod = sys.modules[modname]
-    if len(args) < 2:
-        dispatch_help(mod, prefix)
-    elif len(args) < 3 and args[1] == 'help':
-        dispatch_help(mod, prefix)
-    elif args[1] == 'help':
-        dispatch_help(mod, prefix, args[2])
-    else:
-        fname = "_".join([prefix, args[1]])
-        func = getattr(mod, fname)
-        func(args[2:])
-
-# ------------------------------------------------------------------------------
-def dispatch_help(mod, prefix, cmd=None):
-    if cmd is not None:
-        func = getattr(mod, "_".join(prefix, cmd))
-        print func.__doc__
-    else:
-        print("")
-        for fname in [x for x in dir(mod) if x.startswith(prefix)]:
-            func = getattr(mod, fname)
-            try:
-                hstr = func.__doc__.split("\n")[0]
-            except AttributeError:
-                raise HpssicError(
-                    "Function '%s' seems to be missing a docstring" % fname)
-            print "    " + hstr
-        print("")
-        
-    
 # ------------------------------------------------------------------------------
 def env_update(cfg):
     """
@@ -439,6 +440,8 @@ def memoize(f):
 # -----------------------------------------------------------------------------
 def memoize(f):
     cache = {}
+
+    # -------------------------------------------------------------------------
     def helper(x):
         try:
             return cache[x]
@@ -447,12 +450,22 @@ def memoize(f):
             return cache[x]
     return helper
 
+
 # -----------------------------------------------------------------------------
 def my_name():
     """
     Return the caller's name
     """
     return sys._getframe(1).f_code.co_name
+
+
+# -----------------------------------------------------------------------------
+def pop0(list):
+    try:
+        rval = list.pop(0)
+    except IndexError:
+        rval = None
+    return rval
 
 
 # -----------------------------------------------------------------------------

@@ -61,6 +61,31 @@ def get_cv_report(db, last_rpt_time):
         rval += ("Since last report, " +
                  "%d items added to population, " % (c_pop_size) +
                  "%d items added to sample" % (c_sample_size))
+
+        c = Dimension.Dimension(name='cart')
+        rval += c.report()
+        rval += "\n"
+
+        # get the population and sample entries added since the last report
+        rows = db.select(table="checkables",
+                         fields=["count(path)"],
+                         where='type = "f" and cart is not null and ? < last_check',
+                         data=(last_rpt_time,))
+        (c_pop_size) = rows[0]
+
+        rows = db.select(table="checkables",
+                         fields=["count(path)"],
+                         where='type = "f" and cart is not null and ' +
+                               'checksum = 1 and ? < last_check',
+                         data=(last_rpt_time,))
+        (c_sample_size) = rows[0]
+
+        # report the deltas
+        rval += ("Since last report, " +
+                 "%d items added to population, " % (c_pop_size) +
+                 "%d items added to sample" % (c_sample_size))
+
+
     else:
         rval += "   No checksum verifier data to report."
 
