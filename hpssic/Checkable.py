@@ -62,6 +62,8 @@ class Checkable(object):
         self.type = '-'
         # which COS the file is in (empty for directories)
         self.cos = ''
+        # which tape cartridge(s) the file is stored on
+        self.cart = None
         # 1 if we have a checksum stored, else 0
         self.checksum = 0
         # how many times we've tried and failed to retrieve the file content
@@ -87,6 +89,7 @@ class Checkable(object):
                          'type',
                          'checksum',
                          'cos',
+                         'cart',
                          'dim',
                          'fails',
                          'reported',
@@ -102,6 +105,7 @@ class Checkable(object):
                 setattr(self, attr, 0)
         self.dim = {}
         self.dim['cos'] = Dimension.get_dim('cos')
+        self.dim['cart'] = Dimension.get_dim('cart')
         super(Checkable, self).__init__()
         
     # -------------------------------------------------------------------------
@@ -113,6 +117,7 @@ class Checkable(object):
                "path='%s', " % self.path +
                "type='%s', " % self.type +
                "cos='%s', " % self.cos +
+               "cart=%s, " % (self.cart if self.cart is None else "'%s'" % self.cart) +
                "checksum=%d, " % self.checksum +
                "last_check=%f)" % self.last_check)
 
@@ -155,13 +160,16 @@ class Checkable(object):
                 return "access denied"
             else:
                 CrawlConfig.log("completed hashcreate on %s", self.path)
-            
+
         if self.checksum == 0:
+            for dn in self.dim:
+                cat = getattr(self, dn)
+                self.dim[dn].addone(cat)
             self.set('checksum', 1)
             return "checksummed"
 
     # -------------------------------------------------------------------------
-    def addable(self, category):
+    def addable(self):
         """
         Determine which Dimensions want this item added. Note that we want this
         routine to be general across dimensions so we don't want it to assume
@@ -169,16 +177,17 @@ class Checkable(object):
         for example). That why calls to this pass in cos rather than looking at
         the value in the object.
         """
-        rval = False
-        votes = {}
-        for k in self.dim:
-            votes[k] = self.dim[k].vote(category)
-            
-        # if the dimensions vote for it, roll the dice to decide
-        if 0 < sum(votes.values()):
-            if random.random() < self.probability:
-                rval = True
-        return rval
+        for dn in self.dim:
+            cval = getattr(self, dn)
+            if self.dim[dn].vote(cval) == False:
+                CrawlConfig.log("%s votes against %s -- skipping" %
+                                (dn, self.path))
+                return False
+        if self.probability < random.random():
+            CrawlConfig.log("random votes against %s -- skipping" %
+                            (self.path))
+            return False
+        return True
     
     # -------------------------------------------------------------------------
     def check(self):
@@ -214,8 +223,6 @@ class Checkable(object):
         accordingly.
 
         Then, we persist the object to the database.
-
-        Finally, we load the dimension object to ensure it's up to date.
         """
         # fire up hsi
         # self.probability = probability
@@ -242,12 +249,14 @@ class Checkable(object):
                         new.persist()
                         # returning list of items found in the directory
         elif self.type == 'f':
+            if self.cart is None:
+                self.populate_cart(h)
             if self.checksum == 0:
                 if self.has_hash(h):
                     self.add_to_sample(h, already_hashed=True)
                     rval = self.verify(h)
                     # returning "matched", "checksummed", "skipped", or Alert()
-                elif self.addable(self.cos):
+                elif self.addable():
                     rval = self.add_to_sample(h)
                     # returning "access denied" or "checksummed"
                 else:
@@ -339,12 +348,19 @@ class Checkable(object):
             FILE    /home/tpb/halloy_test   111670  111670  3962+300150
                 X0352700        5081    0       1  01/29/2004       15:25:02
                 03/19/2012      13:09:50
+
+        If the file is empty, it looks like:
+
+            FILE    /home/tpb/hic_test/empty     0       0            0
+                                6056    0       1  07/10/2014       14:30:40
+                07/10/2014      14:30:40
+
+        The fields are separated by '\t', which is probably the easiest way to
+        parse the line, especially when some values are missing.
         """
         try:
-            q = cls.rgxP
+            q = cls.rgxl
         except AttributeError:
-            cls.rgxP = re.compile("(FILE|DIRECTORY)\s+(\S+)(\s+\d+\s+\d+" +
-                                  "\s+\S+(\s+\S+)?\s+(\d+))?")
             cls.rgxl = re.compile("(.)([r-][w-][x-]){3}(\s+\S+){3}" +
                                   "(\s+\d+)(\s+\w{3}\s+\d+\s+[\d:]+)" +
                                   "\s+(\S+)")
@@ -352,21 +368,29 @@ class Checkable(object):
                        'd': 'd',
                        'FILE': 'f',
                        '-': 'f'}
-            
-        ltup = re.findall(cls.rgxP, value)
-        if ltup:
-            (type, fname, ign1, c1, c2) = ltup[0]
-            # cos may land in either of the last two elements, depending on
-            # whether the file is empty. If the file is empty, c2 will be '0'
-            # and c1 will contain the cos. Otherwise, c2 will contain the cos.
-            return Checkable(path=fname, type=cls.map[type],
-                             cos=c1.strip() if c2 == '0' else c2.strip())
 
-        ltup = re.findall(cls.rgxl, value)
-        if ltup:
-            (type, ign1, ign2, ign3, ign4, fname) = ltup[0]
-            return Checkable(path=fname, type=cls.map[type])
-
+        if any([value.startswith("FILE"),
+                value.startswith("DIRECTORY")]):
+            x = value.split('\t')
+            ptype = cls.map[util.pop0(x)]
+            pname = util.pop0(x).strip()
+            util.pop0(x)
+            util.pop0(x)
+            util.pop0(x)
+            cart = util.pop0(x)
+            if cart is not None:
+                cart = cart.strip()
+            cos = util.pop0(x)
+            if cos is not None:
+                cos = cos.strip()
+            else:
+                cos = ''
+            return Checkable(path=pname, type=ptype, cos=cos, cart=cart)
+        else:
+            ltup = re.findall(cls.rgxl, value)
+            if ltup:
+                (type, ign1, ign2, ign3, ign4, fname) = ltup[0]
+                return Checkable(path=fname, type=cls.map[type])
         return None
 
     # -------------------------------------------------------------------------
@@ -394,7 +418,7 @@ class Checkable(object):
         db = CrawlDBI.DBI()
         rows = db.select(table='checkables',
                          fields=['rowid', 'path', 'type',
-                                 'cos', 'checksum', 'last_check',
+                                 'cos', 'cart', 'checksum', 'last_check',
                                  'fails', 'reported'],
                          orderby='last_check')
 
@@ -412,7 +436,7 @@ class Checkable(object):
         if reselect:
             rows = db.select(table='checkables',
                              fields=['rowid', 'path', 'type',
-                                     'cos', 'checksum', 'last_check',
+                                     'cos', 'cart', 'checksum', 'last_check',
                                      'fails', 'reported'],
                              orderby='last_check')
             
@@ -421,10 +445,11 @@ class Checkable(object):
                             path=row[1],
                             type=row[2],
                             cos=row[3],
-                            checksum=row[4],
-                            last_check=row[5],
-                            fails=row[6],
-                            reported=row[7],
+                            cart=row[4],
+                            checksum=row[5],
+                            last_check=row[6],
+                            fails=row[7],
+                            reported=row[8],
                             probability=prob,
                             in_db=True,
                             dirty=False)
@@ -463,14 +488,14 @@ class Checkable(object):
         db = CrawlDBI.DBI()
         if self.rowid is not None:
             rows = db.select(table='checkables',
-                             fields=['rowid', 'path', 'type', 'cos',
+                             fields=['rowid', 'path', 'type', 'cos', 'cart',
                                      'checksum', 'last_check', 'fails',
                                      'reported'],
                              where="rowid = ?",
                              data=(self.rowid,))
         else:
             rows = db.select(table='checkables',
-                             fields=['rowid', 'path', 'type', 'cos',
+                             fields=['rowid', 'path', 'type', 'cos', 'cart',
                                      'checksum', 'last_check', 'fails',
                                      'reported'],
                              where="path = ?",
@@ -479,20 +504,22 @@ class Checkable(object):
             self.in_db = False
         elif 1 == len(rows):
             self.in_db = True
-            self.rowid = rows[0][0]
-            self.path = rows[0][1]
-            self.type = rows[0][2]
-            self.cos = rows[0][3]
-            self.checksum = rows[0][4]
-            self.last_check = rows[0][5]
-            if rows[0][6] is None:
+            rz = list(rows[0])
+            self.rowid = rz.pop(0)
+            self.path = rz.pop(0)
+            self.type = rz.pop(0)
+            self.cos = rz.pop(0)
+            self.cart = rz.pop(0)
+            self.checksum = rz.pop(0)
+            self.last_check = rz.pop(0)
+            try:
+                self.fails = rz.pop(0)
+            except IndexError:
                 self.fails = 0
-            else:
-                self.fails = int(rows[0][6])
-            if rows[0][7] is None:
+            try:
+                self.reported = rz.pop(0)
+            except IndexError:
                 self.reported = 0
-            else:
-                self.reported = int(rows[0][7])
             self.dirty = False
         else:
             raise StandardError("There appears to be more than one copy " +
@@ -537,6 +564,7 @@ class Checkable(object):
                       fields=['path',
                               'type',
                               'cos',
+                              'cart',
                               'checksum',
                               'last_check',
                               'fails',
@@ -544,6 +572,7 @@ class Checkable(object):
                       data=[(self.path,
                              self.type,
                              self.cos,
+                             self.cart,
                              self.checksum,
                              self.last_check,
                              self.fails,
@@ -556,6 +585,7 @@ class Checkable(object):
                           fields=['path',
                                   'type',
                                   'cos',
+                                  'cart',
                                   'checksum',
                                   'last_check',
                                   'fails',
@@ -564,6 +594,7 @@ class Checkable(object):
                           data=[(self.path,
                                  self.type,
                                  self.cos,
+                                 self.cart,
                                  self.checksum,
                                  self.last_check,
                                  self.fails,
@@ -573,6 +604,7 @@ class Checkable(object):
                 db.update(table='checkables',
                           fields=['type',
                                   'cos',
+                                  'cart',
                                   'checksum',
                                   'last_check',
                                   'fails',
@@ -580,6 +612,7 @@ class Checkable(object):
                           where="path = ?",
                           data=[(self.type,
                                  self.cos,
+                                 self.cart,
                                  self.checksum,
                                  self.last_check,
                                  self.fails,
@@ -588,93 +621,19 @@ class Checkable(object):
             self.dirty = False
 
         self.dim['cos'].load()
+        self.dim['cart'].load()
         db.close()
     
-        # # assume it's already present
-        # rval = False
-        # db = CrawlDBI.DBI()
-        # if self.rowid != None:
-        #     # we have a rowid, so it should be in the database
-        #     rows = db.select(table='checkables',
-        #                      fields=[],
-        #                      where='rowid=?',
-        #                      data=(self.rowid,))
-        #     # it wasn't there! raise an exception
-        #     if 0 == len(rows):
-        #         raise StandardError("%s has rowid, should be in database" %
-        #                             self)
-        #     # exactly one copy is in database. That's good.
-        #     elif 1 == len(rows):
-        #         # oops! the paths don't match. raise an exception
-        #         if rows[0][1] != self.path:
-        #             raise StandardError("Path value does not match for " +
-        #                                 "%s and %s" % (self, rows[0][1]))
-        #         # The type is changing. Let's set last_check to 0.0. We can
-        #         # also reset checksum and cos. If it's going 'f' -> 'd',
-        #         # checksum should be 0 and cos should be '' for a directory. If
-        #         # it's going 'd' -> 'f', we assume we don't have a checksum for
-        #         # the new file and we don't know what the cos is.
-        #         if rows[0][2] != self.type:
-        #             self.cos = ''
-        #             self.checksum = 0
-        #             self.last_check = 0.0
-        #         # update it
-        #         db.update(table='checkables',
-        #                   fields=['type', 'cos', 'checksum', 'last_check'],
-        #                   where='rowid=?',
-        #                   data=[(self.type, self.cos, self.checksum,
-        #                          self.last_check, self.rowid)])
-        #     # hmm... we found more than one copy in the database. raise an
-        #     # exception
-        #     else:
-        #         raise StandardError("There appears to be more than one copy " +
-        #                             "of %s in the database" % self)
-        # 
-        # else:
-        #     rows = self.find_by_path()
-        #     # it's not there -- we need to insert it
-        #     if 0 == len(rows):
-        #         db.insert(table='checkables',
-        #                   fields=['path', 'type', 'cos', 'checksum',
-        #                           'last_check'],
-        #                   data=[(self.path, self.type, self.cos, self.checksum,
-        #                          self.last_check)])
-        #         rval = True
-        #     # it is in the database -- we need to update it
-        #     elif 1 == len(rows):
-        #         # if type is changing, last_check resets to 0.0, checksum to 0,
-        #         # cos to ''
-        #         if rows[0][2] != self.type:
-        #             self.last_check = 0.0
-        #             self.checksum = 0
-        #             self.cos = ''
-        #             flist=['type', 'cos', 'checksum', 'last_check']
-        #             dlist=[(self.type, self.cos, self.checksum,
-        #                     self.last_check, rows[0][0])]
-        #         elif rows[0][5] < self.last_check:
-        #             flist=['type', 'cos', 'checksum', 'last_check']
-        #             dlist=[(self.type, self.cos, self.checksum,
-        #                     self.last_check, rows[0][0])]
-        #         elif ((self.cos == rows[0][3]) and
-        #               (self.checksum == rows[0][4]) and
-        #               (self.last_check == rows[0][5])):
-        #             # everything matches -- no need to update it
-        #             flist = []
-        #             dlist = []
-        #         else:
-        #             flist=['type', 'cos', 'checksum']
-        #             dlist=[(self.type, self.cos, self.checksum, rows[0][0])]
-        # 
-        #         # if an update is needed, do it
-        #         if flist != []:
-        #             db.update(table='checkables',
-        #                       fields=flist,
-        #                       where='rowid=?',
-        #                       data=dlist)
-        #     # more than a single copy in the database -- raise an exception
-        #     else:
-        #         raise StandardError("There appears to be more than one copy " +
-        #                             "of %s in the database" % self)
+    # -------------------------------------------------------------------------
+    def populate_cart(self, h):
+        rsp = h.lsP(self.path)
+        tmp = Checkable.fdparse(rsp.split("\n")[1])
+        try:
+            self.cart = tmp.cart
+        except AttributeError:
+            self.cart = ''
+            CrawlConfig.log("%s <- Checkable.fdparse('%s')" %
+                            (tmp, rsp.split("\n")[1]))
 
     # -------------------------------------------------------------------------
     def set(self, attrname, value):
@@ -692,7 +651,8 @@ class Checkable(object):
         if "TIMEOUT" in rsp or "ERROR" in rsp:
             rval = "skipped"
             self.set('fails', self.fails + 1)
-            CrawlConfig.log("hashverify transfer incomplete on %s" % self.path)
+            CrawlConfig.log("hashverify transfer incomplete on %s -- skipping"
+                            % self.path)
             h.quit()
         elif "%s: (md5) OK" % self.path in rsp:
             rval = "matched"

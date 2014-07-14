@@ -3,6 +3,7 @@
 Track stratum proportions in a sample against a population
 """
 import CrawlDBI
+import pdb
 
 # -----------------------------------------------------------------------------
 def get_dim(dname, reset=False):
@@ -93,34 +94,49 @@ class Dimension(object):
     # -------------------------------------------------------------------------
     def _compute_dict(self, rows):
         d = {}
-        for (pcount, cos) in rows:
-            d[cos] = {'count': pcount}
+        for (pcount, cat) in rows:
+            if cat is not None and cat != '':
+                d[cat] = {'count': pcount}
         total = sum(map(lambda x: x['count'], d.values()))
-        for cos in d:
-            d[cos]['pct'] = 100.0 * d[cos]['count'] / total
+        for cat in d:
+            d[cat]['pct'] = 100.0 * d[cat]['count'] / total
         return d
+
+    # -------------------------------------------------------------------------
+    def addone(self, cat):
+        if cat not in self.s_sum:
+            self.s_sum[cat] = {'count': 0, 'pct': 0}
+        self.s_sum[cat]['count'] += 1
+        tot = self.sum_total(which='s')
+        for cval in self.s_sum:
+            self.s_sum[cval]['pct'] = 100.0 * self.s_sum[cval]['count'] / tot
 
     # -------------------------------------------------------------------------
     def load(self, already_open=False):
         """
         Load this object with data from the database
         """
+        # pdb.set_trace()
         if not already_open:
             self.db = CrawlDBI.DBI()
 
-        # populate the p_sum structure
-        rows = self.db.select(table='checkables',
-                              fields=["count(path)", "cos"],
-                              where='type="f" and last_check <> 0',
-                              groupby='cos')
-        self.p_sum = self._compute_dict(rows)
+        dimname = self.name
+        try:
+            # populate the p_sum structure
+            rows = self.db.select(table='checkables',
+                                  fields=["count(path)", dimname],
+                                  where='type="f" and last_check <> 0',
+                                  groupby=dimname)
+            self.p_sum = self._compute_dict(rows)
 
-        # populate the s_sum structure
-        rows = self.db.select(table='checkables',
-                              fields=["count(path)", "cos"],
-                              where='type = "f" and checksum = 1',
-                              groupby='cos')
-        self.s_sum = self._compute_dict(rows)
+            # populate the s_sum structure
+            rows = self.db.select(table='checkables',
+                                  fields=["count(path)", dimname],
+                                  where='type = "f" and checksum = 1',
+                                  groupby=dimname)
+            self.s_sum = self._compute_dict(rows)
+        except CrawlDBI.DBIerror:
+            pass
         
         for cval in self.p_sum:
             if cval not in self.s_sum:
@@ -134,20 +150,20 @@ class Dimension(object):
         """
         Generate a string reflecting the current contents of the dimension
         """
-        rval = ("\n   %-8s     %17s   %17s" % (self.name,
+        rval = ("\n   %-20s     %17s   %17s" % (self.name,
                                             "Population",
                                             "Sample"))
 
-        rval += ("\n   %8s     %17s   %17s" % (8 * '-',
+        rval += ("\n   %20s     %17s   %17s" % (20 * '-',
                                             17 * '-',
                                             17 * '-'))
         for cval in self.p_sum:
-            rval += ("\n   %-8s  "   % cval +
+            rval += ("\n   %-20s  "   % cval +
                      "   %8d"   % self.p_sum[cval]['count'] +
                      "   %6.2f" % self.p_sum[cval]['pct'] +
                      "   %8d"   % self.s_sum[cval]['count'] +
                      "   %6.2f" % self.s_sum[cval]['pct'])
-        rval += ("\n   %-8s     %8d   %6.2f   %8d   %6.2f" %
+        rval += ("\n   %-20s     %8d   %6.2f   %8d   %6.2f" %
                  ("Total",
                   self.sum_total(which='p'),
                   sum(map(lambda x: x['pct'], self.p_sum.values())),
@@ -184,7 +200,9 @@ class Dimension(object):
         Even if we vote for a category here, it only has a probability of
         getting intothe sample. It's not a sure thing.
         """
-        if category not in self.s_sum:
+        if category is None or category == '':
+            return 0
+        elif category not in self.s_sum:
             return 1
         elif self.s_sum[category]['pct'] < self.p_sum[category]['pct']:
             return 1
