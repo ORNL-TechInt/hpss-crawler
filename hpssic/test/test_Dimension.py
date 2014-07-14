@@ -40,6 +40,33 @@ class DimensionTest(testhelp.HelpedTestCase):
     testdb = '%s/test.db' % testdir
     
     # -------------------------------------------------------------------------
+    def test_addone(self):
+        """
+        Given a set of values in a Dimension object, verify that addone does
+        the right thing.
+        """
+        # testhelp.db_config(self.testdir, util.my_name())
+        # Checkable.Checkable.ex_nihilo()
+        a = Dimension(name='addone')
+        a.p_sum = {'6001': {'count': 10, 'pct': 50.0},
+                   '5081': {'count': 10, 'pct': 50.0}
+                   }
+        a.s_sum = {'6001': {'count': 2, 'pct': 40.0},
+                   '5081': {'count': 3, 'pct': 60.0}
+                   }
+        a.addone('6001')
+        self.expected(3, a.s_sum['6001']['count'])
+        self.expected(50.0, a.s_sum['6001']['pct'])
+
+        a.addone('6001')
+        self.expected(4, a.s_sum['6001']['count'])
+        exp = 100.0 * 4.0 / 7.0
+        self.expected(exp, a.s_sum['6001']['pct'])
+
+        self.expected(10, a.p_sum['6001']['count'])
+        self.expected(10, a.p_sum['5081']['count'])
+
+    # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
         Verify that a newly created Dimension object has the following attributes:
@@ -51,7 +78,7 @@ class DimensionTest(testhelp.HelpedTestCase):
             > sum_total
             > load
         """
-        dimname = 'ctor_attrs'
+        dimname = 'cos'
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.Checkable.ex_nihilo()
         a = Dimension(name=dimname,
@@ -75,37 +102,13 @@ class DimensionTest(testhelp.HelpedTestCase):
         dimname = 'bad_attr'
         testhelp.db_config(self.testdir, util.my_name())
         got_exception = False
-        try:
-            a = Dimension(name=dimname,
-                          catl=[1,2,3])
-        except StandardError, e:
-            got_exception = True
-            self.assertTrue("Attribute 'catl' is not valid" in tb.format_exc(),
-                            "Got the wrong StandardError: " +
-                            '\n"""\n%s\n"""' % str(e))
-        except:
-            self.fail("Got unexpected exception: " +
-                      '"""\n%s\n"""' % tb.format_exc())
-        self.assertTrue(got_exception,
-                        "Expected a StandardError but didn't " +
-                        "get one for attr 'catl'")
+        self.assertRaisesMsg(StandardError,
+                             "Attribute 'catl' is not valid",
+                             Dimension, name=dimname, catl=[1,2,3])
 
-        got_exception = False    
-        try:
-            a = Dimension(name=dimname,
-                          aardvark='Fanny Brice')
-        except StandardError, e:
-            got_exception = True
-            self.assertTrue("Attribute 'aardvark' is not valid" in
-                            tb.format_exc(),
-                            "Got the wrong StandardError: " +
-                            '\n"""\n%s\n"""' % tb.format_exc())
-        except:
-            self.fail("Got unexpected exception: " +
-                      '"""\n%s\n"""' % tb.format_exc())
-        self.assertTrue(got_exception,
-                        "Expected an StandardError but didn't get " +
-                        "one for attr 'aardvark'")
+        self.assertRaisesMsg(StandardError,
+                             "Attribute 'aardvark' is not valid",
+                             Dimension, name=dimname, aardvark='Fanny Brice')
             
     # -------------------------------------------------------------------------
     def test_ctor_defaults(self):
@@ -113,7 +116,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         A new Dimension with only the name specified should have the right
         defaults.
         """
-        dimname = 'defaults'
+        dimname = 'cos'
         testhelp.db_config(self.testdir, util.my_name())
         a = Dimension(name=dimname)
         self.expected(dimname, a.name)
@@ -127,22 +130,10 @@ class DimensionTest(testhelp.HelpedTestCase):
         Attempting to create a Dimension without providing a name should get an
         exception.
         """
-        got_exception = False
-        testhelp.db_config(self.testdir, util.my_name())
-        try:
-            a = Dimension()
-        except StandardError, e:
-            got_exception = True
-            self.assertTrue("Caller must set attribute 'name'" in
-                            tb.format_exc(),
-                            "Got the wrong StandardError: " +
-                            '\n"""\n%s\n"""' % tb.format_exc())
-        except:
-            self.fail("Got unexpected exception: " +
-                      '"""\n%s\n"""' % tb.format_exc())
-        self.assertTrue(got_exception,
-                        "Expected an exception but didn't get one")
-        
+        self.assertRaisesMsg(StandardError,
+                             "Caller must set attribute 'name'",
+                             Dimension)
+
     # -------------------------------------------------------------------------
     # def test_db_already_no_table(self):
     #     """
@@ -229,10 +220,6 @@ class DimensionTest(testhelp.HelpedTestCase):
             chk(rowid=9, path="/abc/009", type='f', cos='6003', checksum=0, last_check=0),
             ]
 
-        # create the dimension table without putting anything in it
-        # z = Dimension(name='foobar')
-        # z.persist()
-    
         # insert some test data into the table
         for t in testdata:
             t.persist()
@@ -261,7 +248,7 @@ class DimensionTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_load_new(self):
         """
-        With the database and dimension table in place, create a new Dimension
+        With the database and checkables table in place, create a new Dimension
         that is not in the table. Calling load() on it should be a no-op -- the
         object should not be stored to the database and its contents should not
         be changed.
@@ -291,85 +278,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(ref.p_sum, test.p_sum)
         self.expected(ref.s_sum, test.s_sum)
 
-        # TODO: verify that the object still is not in the table
-        
-    # -------------------------------------------------------------------------
-    # def test_persist_already(self):
-    #     """
-    #     With the database and dimension table in place and a named Dimension in
-    #     place in the table, updating and persisting a Dimension with the same
-    #     name should update the database record.
-    #     """
-    #     util.conditional_rm(self.testdb)
-    #     testhelp.db_config(self.testdir, util.my_name())
-    # 
-    #     # first, we need to stick some records in the table
-    #     test = Dimension(name='foobar')
-    #     test.update_category('<1M')
-    #     test.update_category('<1G')
-    #     test.persist()
-    # 
-    #     # verify that the records are in the table as expected
-    #     db = CrawlDBI.DBI()
-    #     rows = db.select(table='dimension',
-    #                      fields=['name', 'category', 'p_count', 'p_pct',
-    #                              's_count', 's_pct'])
-    #     self.expected(2, len(rows))
-    #     self.expected(('foobar', '<1M', 1, 50.0, 0, 0.0), rows[0])
-    #     self.expected(('foobar', '<1G', 1, 50.0, 0, 0.0), rows[1])
-    # 
-    #     # update the Dimension values
-    #     test.update_category('<1M', s_suminc=1)
-    #     test.update_category('<1G', s_suminc=2)
-    #     test.update_category('<1T', s_suminc=1)
-    #     test.persist()
-    #     
-    #     # verify that the records in the database got updated
-    #     rows = db.select(table='dimension',
-    #                      fields=['name', 'category', 'p_count', 'p_pct',
-    #                              's_count', 's_pct'])
-    #     db.close()
-    #     self.expected(3, len(rows))
-    #     self.expected(('foobar', '<1M', 2, 40.0, 1, 25.0), rows[0])
-    #     self.expected(('foobar', '<1G', 2, 40.0, 2, 50.0), rows[1])
-    #     self.expected(('foobar', '<1T', 1, 20.0, 1, 25.0), rows[2])
-        
-    # -------------------------------------------------------------------------
-    # def test_persist_new(self):
-        """
-        With the database and dimension table in place, create a new Dimension
-        that is not in the table. Calling persist() on it should store it in
-        the dimension table in the database.
-
-        We no longer persist the Dimension object -- this test is obsolete
-        """
-        # util.conditional_rm(self.testdb)
-        # testhelp.db_config(self.testdir, util.my_name())
-        # Checkable.Checkable.ex_nihilo()
-        # 
-        # # instantiating the object initializes the database
-        # new = Dimension(name='notintable')
-        # new.update_category('5081', s_suminc=1)
-        # new.update_category('6001')
-        # new.update_category('6002', s_suminc=1)
-        # new.update_category('6003')
-        # new.persist()
-        # 
-        # # verify that the data is in the table
-        # db = CrawlDBI.DBI()
-        # rows = db.select(table='dimension',
-        #                  fields=['name', 'category', 'p_count', 'p_pct',
-        #                          's_count', 's_pct'])
-        # db.close()
-        # self.expected(4, len(rows))
-        # testdata = [('notintable', '5081', 1, 25.0, 1, 50.0),
-        #             ('notintable', '6001', 1, 25.0, 0, 0.0),
-        #             ('notintable', '6002', 1, 25.0, 1, 50.0),
-        #             ('notintable', '6003', 1, 25.0, 0, 0.0)]
-        # for row in testdata:
-        #     self.assertTrue(row in rows,
-        #                     "Expected '%s' to be in rows (%s)" % (row, rows))
-        
     # -------------------------------------------------------------------------
     def test_repr(self):
         """
@@ -408,44 +316,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(5, a.sum_total(which='s'))
         self.expected(5, a.sum_total(dict=a.s_sum))
         
-    # # -------------------------------------------------------------------------
-    # def test_update_category_already(self):
-    #     """
-    #     If the category exists, the psum and ssum counts and percentages should
-    #     be updated appropriately. Call sum_total and sum_pct to check the
-    #     summary counts and percentages.
-    #     """
-    #     testhelp.db_config(self.testdir, util.my_name())
-    #     a = Dimension(
-    #                   name='xcat',
-    #                   sampsize=0.05)
-    #     a.update_category('6001', p_suminc=1, s_suminc=1)
-    #     a.update_category('5081')
-    #     self.expected('xcat', a.name)
-    #     self.expected(0.05, a.sampsize)
-    #     self.expected({'count': 1, 'pct': 50.0}, a.p_sum['5081'])
-    #     self.expected({'count': 1, 'pct': 50.0}, a.p_sum['6001'])
-    #     self.expected({'count': 1, 'pct': 100.0}, a.s_sum['6001'])
-    #     self.expected({'count': 0, 'pct': 0.0}, a.s_sum['5081'])
-    # 
-    # # -------------------------------------------------------------------------
-    # def test_update_category_new(self):
-    #     """
-    #     If the category does not exist, it should be added to psum and ssum as
-    #     dictionary keys and the counts and percentages should be updated
-    #     appropriately. Call sum_total and sum_pct to check the summary counts
-    #     and percentages.
-    #     """
-    #     testhelp.db_config(self.testdir, util.my_name())
-    #     a = Dimension(
-    #                   name='newcat',
-    #                   sampsize=0.01)
-    #     a.update_category('5081', p_suminc=1, s_suminc=1)
-    #     self.expected('newcat', a.name)
-    #     self.expected(0.01, a.sampsize)
-    #     self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.p_sum)
-    #     self.expected({'5081': {'count': 1, 'pct': 100.0}}, a.s_sum)
-
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='DimensionTest',

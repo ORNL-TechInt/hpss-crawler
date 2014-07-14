@@ -121,7 +121,9 @@ def main(cfg):
 
     # Report the dimension data in the log
     d = Dimension.Dimension(name='cos')
+    t = Dimension.Dimension(name='cart')
     CrawlConfig.log(d.report())
+    CrawlConfig.log(t.report())
 
 stats_table = 'cvstats'
 # -----------------------------------------------------------------------------
