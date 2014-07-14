@@ -13,6 +13,7 @@ import sqlite3
 import util
 import warnings
 
+
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
     """
@@ -21,7 +22,7 @@ class DBI_abstract(object):
     """
     settable_attrl = ['cfg', 'dbname', 'host', 'username', 'password',
                       'tbl_prefix']
-    
+
     # -------------------------------------------------------------------------
     def prefix(self, tabname):
         if self.tbl_prefix == '':
@@ -33,6 +34,7 @@ class DBI_abstract(object):
             return tabname[1:]
         else:
             return self.tbl_prefix + tabname
+
 
 # -----------------------------------------------------------------------------
 class DBI(object):
@@ -79,11 +81,12 @@ class DBI(object):
                                (key, self.__class__))
         if 0 < len(args):
             if not isinstance(args[0], CrawlConfig.CrawlConfig):
-                raise DBIerror("Unrecognized argument to %s. " % self.__class__ +
+                raise DBIerror("Unrecognized argument to %s. " %
+                               self.__class__ +
                                "Only 'cfg=<config>' is accepted")
         if 'dbtype' in kwargs and kwargs['dbtype'] != 'db2':
             raise DBIerror("Only dbtype='db2' may be specified explicitly")
-        
+
         if 'dbname' in kwargs and 'dbtype' not in kwargs:
             raise DBIerror("dbname may only be specified if dbtype = 'db2'")
 
@@ -115,7 +118,7 @@ class DBI(object):
             else:
                 raise StandardError("'%s not in kwargs(%s)" %
                                     ("'dbtype' and 'cfg' both in and",
-                                    str(kwargs)))
+                                     str(kwargs)))
         except CrawlConfig.NoSectionError, e:
             raise DBIerror("A 'dbi' section is required in the configuration")
         except CrawlConfig.NoOptionError, e:
@@ -141,7 +144,7 @@ class DBI(object):
         database-specific class.
         """
         return self._dbobj.__repr__()
-    
+
     # -------------------------------------------------------------------------
     def table_exists(self, **kwargs):
         """
@@ -157,7 +160,7 @@ class DBI(object):
         operations are not allowed on the database.
         """
         return self._dbobj.close()
-    
+
     # -------------------------------------------------------------------------
     def create(self, **kwargs):
         """
@@ -167,14 +170,14 @@ class DBI(object):
             ['id int primary key', 'name text', 'category xtext', ... ]
         """
         return self._dbobj.create(**kwargs)
-    
+
     # -------------------------------------------------------------------------
     def cursor(self, **kwargs):
         """
         Return a database cursor
         """
         return self._dbobj.cursor(**kwargs)
-    
+
     # -------------------------------------------------------------------------
     def delete(self, **kwargs):
         """
@@ -182,14 +185,14 @@ class DBI(object):
         where clause (string). data is a tuple of fields.
         """
         return self._dbobj.delete(**kwargs)
-    
+
     # -------------------------------------------------------------------------
     def drop(self, **kwargs):
         """
         Drop the named table.
         """
         return self._dbobj.drop(**kwargs)
-    
+
     # -------------------------------------------------------------------------
     def insert(self, **kwargs):
         """
@@ -197,7 +200,7 @@ class DBI(object):
         list of tuples.
         """
         return self._dbobj.insert(**kwargs)
-    
+
     # -------------------------------------------------------------------------
     def select(self, **kwargs):
         """
@@ -215,7 +218,7 @@ class DBI(object):
         rows are returned in that order.
         """
         return self._dbobj.select(**kwargs)
-    
+
     # -------------------------------------------------------------------------
     def sql(self, *args, **kwargs):
         return self._dbobj.sql(*args, **kwargs)
@@ -227,7 +230,8 @@ class DBI(object):
         updated. Fields is a list of field names. Data is a list of tuples.
         """
         return self._dbobj.update(**kwargs)
-    
+
+
 # -----------------------------------------------------------------------------
 class DBIerror(Exception):
     """
@@ -241,11 +245,13 @@ class DBIerror(Exception):
         """
         self.value = str(value)
         self.dbname = dbname
+
     def __str__(self):
         """
         Report the exception value (should be a string).
         """
         return "%s (dbname=%s)" % (str(self.value), self.dbname)
+
 
 # -----------------------------------------------------------------------------
 class DBIsqlite(DBI_abstract):
@@ -286,7 +292,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def close(self):
         """
-        See DBI.close() 
+        See DBI.close()
         """
         # Close the database connection
         try:
@@ -294,7 +300,7 @@ class DBIsqlite(DBI_abstract):
         # Convert any sqlite3 error into a DBIerror
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
-    
+
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
@@ -360,7 +366,7 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror("Criteria are not fully specified",
                            dbname=self.dbname)
 
-        # Build and run the select statement 
+        # Build and run the select statement
         try:
             cmd = "delete from %s" % self.prefix(table)
             if where != '':
@@ -438,7 +444,7 @@ class DBIsqlite(DBI_abstract):
         except sqlite3.Error, e:
             raise DBIerror(cmd + ": " + ''.join(e.args),
                            dbname=self.dbname)
-        
+
     # -------------------------------------------------------------------------
     def select(self, table='',
                fields=[],
@@ -477,8 +483,8 @@ class DBIsqlite(DBI_abstract):
                            dbname=self.dbname)
         elif limit is not None and type(limit) not in [int, float]:
             raise DBIerror("On select(), limit must be an int")
-        
-        # Build and run the select statement 
+
+        # Build and run the select statement
         try:
             cmd = "select "
             if 0 < len(fields):
@@ -571,6 +577,7 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror(''.join(e.args),
                            dbname=self.dbname)
 
+
 # -----------------------------------------------------------------------------
 class DBImysql(DBI_abstract):
     # -------------------------------------------------------------------------
@@ -604,7 +611,7 @@ class DBImysql(DBI_abstract):
             self.closed = False
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
-        
+
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
@@ -616,7 +623,7 @@ class DBImysql(DBI_abstract):
     # -------------------------------------------------------------------------
     def close(self):
         """
-        See DBI.close() 
+        See DBI.close()
         """
         # Close the database connection
         if self.closed:
@@ -627,7 +634,7 @@ class DBImysql(DBI_abstract):
         # Convert any mysql error into a DBIerror
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
-    
+
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
@@ -696,7 +703,7 @@ class DBImysql(DBI_abstract):
             raise DBIerror("Criteria are not fully specified",
                            dbname=self.dbname)
 
-        # Build and run the select statement 
+        # Build and run the select statement
         try:
             cmd = "delete from %s" % self.prefix(table)
             if where != '':
@@ -735,7 +742,7 @@ class DBImysql(DBI_abstract):
         # Convert any db specific error into a DBIerror
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
-        
+
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
         """
@@ -774,7 +781,7 @@ class DBImysql(DBI_abstract):
         # Translate sqlite specific exception into a DBIerror
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
-        
+
     # -------------------------------------------------------------------------
     def select(self,
                table='',
@@ -815,7 +822,7 @@ class DBImysql(DBI_abstract):
         elif limit is not None and type(limit) not in [int, float]:
             raise DBIerror("On select(), limit must be an int")
 
-        # Build and run the select statement 
+        # Build and run the select statement
         try:
             cmd = "select "
             if 0 < len(fields):
@@ -924,6 +931,7 @@ class DBImysql(DBI_abstract):
         except mysql_exc.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
+
 # -----------------------------------------------------------------------------
 class DBIdb2(DBI_abstract):
     # -------------------------------------------------------------------------
@@ -969,7 +977,7 @@ class DBIdb2(DBI_abstract):
             self.closed = False
         except ibm_db_dbi.Error, e:
             raise DBIerror("%s" % str(e))
-    
+
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
@@ -999,7 +1007,7 @@ class DBIdb2(DBI_abstract):
     # -------------------------------------------------------------------------
     def close(self):
         """
-        See DBI.close() 
+        See DBI.close()
         """
         # Close the database connection
         if self.closed:
@@ -1011,7 +1019,7 @@ class DBIdb2(DBI_abstract):
         # Convert any mysql error into a DBIerror
         except ibm_db_dbi.Error, e:
             raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
-    
+
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
@@ -1040,14 +1048,14 @@ class DBIdb2(DBI_abstract):
     # -------------------------------------------------------------------------
     def drop(self, table=''):
         raise DBIerror("DROP not supported for DB2")
-        
+
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
         """
         Insert not supported for DB2
         """
         raise DBIerror("INSERT not supported for DB2")
-        
+
     # -------------------------------------------------------------------------
     def select(self,
                table='',
@@ -1062,7 +1070,8 @@ class DBIdb2(DBI_abstract):
         """
         # Handle invalid arguments
         if type(table) != str and type(table) != list:
-            raise DBIerror("On select(), table name must be a string or a list",
+            raise DBIerror("On select(), table name must be " +
+                           "a string or a list",
                            dbname=self.dbname)
         elif table == '' or table == []:
             raise DBIerror("On select(), table name must not be empty",
@@ -1088,7 +1097,7 @@ class DBIdb2(DBI_abstract):
         elif limit is not None and type(limit) not in [int, float]:
             raise DBIerror("On select(), limit must be an int")
 
-        # Build and run the select statement 
+        # Build and run the select statement
         try:
             cmd = "select "
             if 0 < len(fields):
@@ -1109,7 +1118,7 @@ class DBIdb2(DBI_abstract):
                 cmd += " order by %s" % orderby
             if limit is not None:
                 cmd += " fetch first %d rows only" % int(limit)
-                
+
             rval = []
             if '?' in cmd:
                 stmt = db2.prepare(self.dbh, cmd)
@@ -1124,7 +1133,7 @@ class DBIdb2(DBI_abstract):
                 while (x):
                     rval.append(x)
                     x = db2.fetch_assoc(r)
-                
+
             return rval
 
         # Translate any db2 errors to DBIerror
@@ -1161,7 +1170,7 @@ class DBIdb2(DBI_abstract):
         """
         raise DBIerror("UPDATE not supported for DB2")
 
-    # -----------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @classmethod
     def hexstr(cls, bfid):
         """
@@ -1171,14 +1180,15 @@ class DBIdb2(DBI_abstract):
         return rval
 
     @classmethod
-    # -----------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def hexstr_uq(cls, bfid):
         """
-        Convert a raw bitfile id into an unquoted hexadecimal string as presented
-        by DB2.
+        Convert a raw bitfile id into an unquoted hexadecimal string as
+        presented by DB2.
         """
         rval = "".join(["%02x" % ord(c) for c in list(bfid)])
         return rval.upper()
+
 
 # -----------------------------------------------------------------------------
 @util.memoize
