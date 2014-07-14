@@ -363,6 +363,14 @@ def my_name():
     return sys._getframe(1).f_code.co_name
 
 # -----------------------------------------------------------------------------
+def pop0(list):
+    try:
+        rval = list.pop(0)
+    except IndexError:
+        rval = None
+    return rval
+
+# -----------------------------------------------------------------------------
 def raiseError(record):
     """
     This is used in the log file handler to cause errors in logging to get
