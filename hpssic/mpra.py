@@ -12,6 +12,7 @@ import time
 import toolframe
 import util
 
+
 # -----------------------------------------------------------------------------
 def mprf_age(args):
     """age - list the records in table BFMIGRREC or BFPURGEREC older than age
@@ -52,7 +53,8 @@ def mprf_age(args):
                  help='which table to age')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
     start = 0
@@ -77,12 +79,12 @@ def mprf_age(args):
     print("%d, %d" % (start, end))
     mpra_lib.age(o.table, start, end, o.count, sys.stdout, path=o.path)
 
+
 # -----------------------------------------------------------------------------
 def mprf_date_age(args):
     """date_age - convert a date in the past to an age from now
 
     usage: mpra date_age YYYY.mmdd
-                                 
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
@@ -90,12 +92,14 @@ def mprf_date_age(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     format_l = ['%Y.%m%d %H:%M:%S',
                 '%Y.%m%d %H:%M',
                 '%Y.%m%d %H',
-                '%Y.%m%d',]
+                '%Y.%m%d',
+                ]
     done = False
     fmt = format_l.pop(0)
     while not done:
@@ -108,7 +112,7 @@ def mprf_date_age(args):
             except IndexError:
                 print("Can't parse date/time '%s'" % a[0])
                 sys.exit(1)
-    
+
     # then = int(time.mktime(time.strptime(a[0], "%Y.%m%d")))
     now = int(time.time())
     age = now - then
@@ -117,6 +121,7 @@ def mprf_date_age(args):
     print("minutes: %d" % (age/60))
     print("seconds: %d" % (age))
     print("%s" % mpra_lib.dhms(age))
+
 
 # -----------------------------------------------------------------------------
 def mprf_epoch(args):
@@ -130,11 +135,13 @@ def mprf_epoch(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     for ymd in a:
         print(int(util.epoch(ymd)))
-    
+
+
 # -----------------------------------------------------------------------------
 def mprf_history(args):
     """history - report contents of the mpra table
@@ -148,17 +155,19 @@ def mprf_history(args):
     p.add_option('-s', '--since',
                  action='store', default='', dest='since',
                  help='only report records since ...')
-    
+
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     n_since = util.epoch(o.since) if o.since else 0
-        
+
     db = CrawlDBI.DBI()
     report = rpt_lib.get_mpra_report(db, n_since)
     print(report)
-        
+
+
 # -----------------------------------------------------------------------------
 def mprf_ymd(args):
     """ymd - convert an epoch time to YYYY.mmdd HH:MM:SS
@@ -171,11 +180,13 @@ def mprf_ymd(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     for epoch in a:
         print(time.strftime("%Y.%m%d %H:%M:%S", time.localtime(float(epoch))))
-    
+
+
 # -----------------------------------------------------------------------------
 def mprf_migr_recs(args):
     """migr_recs - list the records in table BFMIGRREC
@@ -183,7 +194,7 @@ def mprf_migr_recs(args):
     usage: mpra migr_recs [-l/limit N]
                           [-b/--before DATE-TIME]
                           [-a/--after DATE-TIME]
-                                 
+
     with -l N, only report the first N records
 
     with -b DATE-TIME, only report the records with create times before
@@ -210,21 +221,22 @@ def mprf_migr_recs(args):
                  help='fetch records from after the date/time')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
 
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
 
     dbargs = {'table': 'bfmigrrec'}
-    
+
     if o.limit == '' and o.before == '' and o.after == '':
         dbargs['limit'] = 30
 
     elif o.limit == '' and o.before == '' and o.after != '':
         dbargs['where'] = '? < record_create_time'
         dbargs['data'] = (util.epoch(o.after),)
-        
+
     elif o.limit == '' and o.before != '' and o.after == '':
         dbargs['where'] = 'record_create_time < ?'
         dbargs['data'] = (util.epoch(o.before),)
@@ -232,7 +244,7 @@ def mprf_migr_recs(args):
     elif o.limit == '' and o.before != '' and o.after != '':
         dbargs['where'] = '? < record_create_time and record_create_time < ?'
         dbargs['data'] = (util.epoch(o.after), util.epoch(o.before))
-        
+
     elif o.limit != '' and o.before == '' and o.after == '':
         dbargs['limit'] = int(o.limit)
 
@@ -240,7 +252,7 @@ def mprf_migr_recs(args):
         dbargs['limit'] = int(o.limit)
         dbargs['where'] = '? < record_create_time'
         dbargs['data'] = (util.epoch(o.after),)
-        
+
     elif o.limit != '' and o.before != '' and o.after == '':
         dbargs['limit'] = int(o.limit)
         dbargs['where'] = 'record_create_time < ?'
@@ -255,7 +267,7 @@ def mprf_migr_recs(args):
         dbargs['fields'] = ['count(*)']
 
     dbargs['orderby'] = 'record_create_time'
-    
+
     rows = db.select(**dbargs)
     for row in rows:
         if o.count:
@@ -264,6 +276,7 @@ def mprf_migr_recs(args):
             print("%s %s %d" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
                                 util.ymdhms(row['RECORD_CREATE_TIME']),
                                 row['MIGRATION_FAILURE_COUNT']))
+
 
 # -----------------------------------------------------------------------------
 def mprf_times(args):
@@ -289,7 +302,8 @@ def mprf_times(args):
                  help='count unique timestamps')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     if o.unique:
         fields = ['unique(record_create_time)']
@@ -314,6 +328,7 @@ def mprf_times(args):
     if 0 < count:
         print("%s (%d)" % (last, count))
 
+
 # -----------------------------------------------------------------------------
 def mprf_purge_recs(args):
     """purge_recs - list the records in table BFPURGEREC
@@ -331,7 +346,9 @@ def mprf_purge_recs(args):
                  help='which database to access')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
+
 
 # -----------------------------------------------------------------------------
 def mprf_reset(args):
@@ -346,7 +363,8 @@ def mprf_reset(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
     db = CrawlDBI.DBI()
@@ -354,6 +372,7 @@ def mprf_reset(args):
 
     filename = cfg.get('mpra', 'report_file')
     util.conditional_rm(filename)
+
 
 # -----------------------------------------------------------------------------
 def mprf_simplug(args):
@@ -364,6 +383,7 @@ def mprf_simplug(args):
     Debugging (-d) is provided by crawl_lib.simplug()
     """
     crawl_lib.simplug('mpra', args)
+
 
 # -----------------------------------------------------------------------------
 def mprf_xplocks(args):
@@ -377,9 +397,10 @@ def mprf_xplocks(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     mpra_lib.xplocks(output=sys.stdout)
-    
+
 # -----------------------------------------------------------------------------
 toolframe.tf_launch('mpra', __name__)

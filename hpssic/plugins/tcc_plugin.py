@@ -13,6 +13,8 @@ import time
 from hpssic import util
 
 sectname = 'tcc'
+
+
 # -----------------------------------------------------------------------------
 def main(cfg):
     """
@@ -23,7 +25,7 @@ def main(cfg):
     # retrieve configuration items as needed
     how_many = int(cfg.get_d(sectname, 'operations', 10))
     CrawlConfig.log("tape-copy-checker: firing up for %d items" % how_many)
-    
+
     # retrieve COS info
     cosinfo = tcc_lib.get_cos_info()
     # for cos_id in cosinfo:
@@ -32,14 +34,14 @@ def main(cfg):
     # get the nsobject_id of the next bitfile to process from mysql
     next_nsobj_id = get_next_nsobj_id(cfg)
     CrawlConfig.log("next nsobject id = %d" % next_nsobj_id)
-    
+
     # fetch the next N bitfiles from DB2
     CrawlConfig.log("looking for nsobject ids between %d and %d"
-             % (next_nsobj_id, next_nsobj_id+how_many-1))
+                    % (next_nsobj_id, next_nsobj_id+how_many-1))
     bfl = tcc_lib.get_bitfile_set(cfg,
-                                     int(next_nsobj_id),
-                                     how_many)
-    
+                                  int(next_nsobj_id),
+                                  how_many)
+
     CrawlConfig.log("got %d bitfiles" % len(bfl))
 
     if len(bfl) == 0:
@@ -58,21 +60,22 @@ def main(cfg):
                 correct = 0
                 error = 1
                 CrawlConfig.log("%s %s %d != %d" %
-                         (bf['OBJECT_ID'],
-                          tcc_lib.hexstr(bf['BFID']),
-                          bf['SC_COUNT'],
-                          cosinfo[bf['BFATTR_COS_ID']]))
+                                (bf['OBJECT_ID'],
+                                 tcc_lib.hexstr(bf['BFID']),
+                                 bf['SC_COUNT'],
+                                 cosinfo[bf['BFATTR_COS_ID']]))
             elif cfg.getboolean(sectname, 'verbose'):
                 CrawlConfig.log("%s %s %d == %d" %
-                         (bf['OBJECT_ID'],
-                          tcc_lib.hexstr(bf['BFID']),
-                          bf['SC_COUNT'],
-                          cosinfo[bf['BFATTR_COS_ID']]))
-            
+                                (bf['OBJECT_ID'],
+                                 tcc_lib.hexstr(bf['BFID']),
+                                 bf['SC_COUNT'],
+                                 cosinfo[bf['BFATTR_COS_ID']]))
+
             last_obj_id = int(bf['OBJECT_ID'])
             record_checked_ids(cfg, last_obj_id, last_obj_id, correct, error)
 
         CrawlConfig.log("last nsobject in range: %d" % last_obj_id)
+
 
 # -----------------------------------------------------------------------------
 def get_next_nsobj_id(cfg):
@@ -102,7 +105,8 @@ def get_next_nsobj_id(cfg):
                 rval = 1
     db.close()
     return rval
-        
+
+
 # -----------------------------------------------------------------------------
 def record_checked_ids(cfg, low, high, correct, error):
     """
@@ -116,7 +120,7 @@ def record_checked_ids(cfg, low, high, correct, error):
     If we get a hit with the right copy count, we store it by itself as
 
        (<time>, <hit-id>, <hit-id>, 1, 0)
-    
+
     If we get a hit with the wrong copy count, we store it by itself as
 
        (<time>, <hit-id>, <hit-id>, 0, 1)
@@ -143,13 +147,14 @@ def record_checked_ids(cfg, low, high, correct, error):
               data=[(ts, low, high, correct, error)])
     db.close()
 
+
 # -----------------------------------------------------------------------------
 def highest_nsobject_id():
     """
     Cache and return the largest NSOBJECT id in the DB2 database.
     """
-    if (not hasattr(highest_nsobject_id, '_max_obj_id') or
-        (60 < time.time() - highest_nsobject_id._when)):
+    if any([not hasattr(highest_nsobject_id, '_max_obj_id'),
+            60 < time.time() - highest_nsobject_id._when]):
         H = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
         result = H.select(table='nsobject',
                           fields=['max(object_id) as max_obj_id'])

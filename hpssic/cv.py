@@ -14,6 +14,7 @@ import toolframe
 prefix = "cv"
 H = None
 
+
 # -----------------------------------------------------------------------------
 def cv_addcart(argv):
     """addcart - Add field cart to checkable table
@@ -29,13 +30,15 @@ def cv_addcart(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s add column cart text after cos" % table
     db.sql(cmd)
     db.close()
+
 
 # -----------------------------------------------------------------------------
 def cv_dropcart(argv):
@@ -52,13 +55,15 @@ def cv_dropcart(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s drop column cart" % table
     db.sql(cmd)
     db.close()
+
 
 # -----------------------------------------------------------------------------
 def cv_popcart(argv):
@@ -91,7 +96,8 @@ def cv_popcart(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
     if o.skip:
@@ -105,7 +111,7 @@ def cv_popcart(argv):
 
     h = hpss.HSI(verbose=True)
     if len(a) <= 0:
-        for (path,cart) in path_l:
+        for (path, cart) in path_l:
             if populate_cart_field(db, h, path, cart,
                                    int(o.max), o.dryrun):
                 break
@@ -120,6 +126,7 @@ def cv_popcart(argv):
                 print("NOTINDB %-8s %s" % (" ", path))
     h.quit()
     db.close()
+
 
 # -----------------------------------------------------------------------------
 def populate_cart_field(db, h, path, dbcart, max, dryrun):
@@ -144,6 +151,7 @@ def populate_cart_field(db, h, path, dbcart, max, dryrun):
     else:
         print("ALREADY %s %s" % (dbcart, path))
     return False
+
 
 # -----------------------------------------------------------------------------
 def cv_report(argv):
@@ -170,7 +178,8 @@ def cv_report(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     if o.config != '':
         cfg = CrawlConfig.get_config(o.config)
@@ -186,6 +195,7 @@ def cv_report(argv):
 
     print dim['cos'].report()
     print dim['cart'].report()
+
 
 # -----------------------------------------------------------------------------
 def cv_nulltest(argv):
@@ -210,7 +220,8 @@ def cv_nulltest(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
 
@@ -230,7 +241,8 @@ def cv_nulltest(argv):
             rcount = 0
 
     db.close()
- 
+
+
 # -----------------------------------------------------------------------------
 def cv_fail_reset(argv):
     """fail_reset - reset a failing path so it can be checked again
@@ -254,12 +266,13 @@ def cv_fail_reset(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     if o.pathname == '':
         print("pathname is required")
         return
-        
+
     db = CrawlDBI.DBI()
 
     db.update(table='checkables',
@@ -268,7 +281,8 @@ def cv_fail_reset(argv):
               data=[(0, 0, o.pathname)])
 
     db.close()
- 
+
+
 # -----------------------------------------------------------------------------
 def cv_show_next(argv):
     """show_next - Report the Checkables in the order they will be checked
@@ -293,7 +307,8 @@ def cv_show_next(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     clist = Checkable.Checkable.get_list()
     for c in clist:
@@ -305,7 +320,8 @@ def cv_show_next(argv):
             print("%s %s %s" % (ymdhms(c.last_check),
                                 c.type,
                                 c.path))
-    
+
+
 # -----------------------------------------------------------------------------
 def cv_simplug(argv):
     """simplug - Simulate running a plugin
@@ -315,13 +331,14 @@ def cv_simplug(argv):
     Simulate running the checksum-verifier plugin
     """
     crawl_lib.simplug('cv', argv)
-    
+
+
 # -----------------------------------------------------------------------------
 def cv_test_check(argv):
     """test_check - Run Checkable.check() on a specified entry
 
     usage: cvtool test_check [-p/--path PATH] [-i/--id ROWID]
-    
+
     The options are mutually exclusive.
     """
     p = optparse.OptionParser()
@@ -342,7 +359,8 @@ def cv_test_check(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     if o.path != '' and o.id != '':
         print("Only --path or --id is allowed, not both.")
@@ -354,14 +372,15 @@ def cv_test_check(argv):
     else:
         print("One of --path or --id is required.")
         return
-        
+
     c.load()
     c.check()
- 
+
+
 # -----------------------------------------------------------------------------
 def ymdhms(epoch):
     return time.strftime("%Y.%m%d %H:%M:%S",
                          time.localtime(epoch))
 
 # -----------------------------------------------------------------------------
-toolframe.tf_launch(prefix, __name__)
+# toolframe.tf_launch(prefix, __name__)

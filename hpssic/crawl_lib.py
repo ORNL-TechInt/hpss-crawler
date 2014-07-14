@@ -8,6 +8,8 @@ import pdb
 import sys
 import time
 
+
+# -----------------------------------------------------------------------------
 def simplug(plugin, args):
     """
     Common plugin simulator. May be used by the interactive tools to simulate
@@ -22,8 +24,9 @@ def simplug(plugin, args):
                  help='how many iterations to run')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     cfg = CrawlConfig.get_config()
     CrawlConfig.log("starting %s simplug, just got config" % plugin)
     sys.path.append(cfg.get('crawler', 'plugin-dir'))

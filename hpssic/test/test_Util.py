@@ -13,12 +13,14 @@ from hpssic import testhelp
 from hpssic import toolframe
 from hpssic import util
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for testing
     """
     testhelp.module_test_setup(UtilTest.testdir)
+
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
@@ -28,10 +30,11 @@ def tearDownModule():
     if not testhelp.keepfiles():
         util.conditional_rm("/tmp/crawl.log")
     testhelp.module_test_teardown(UtilTest.testdir)
-    
+
 # -----------------------------------------------------------------------------
 # def logErr(record):
 #     raise
+
 
 # -----------------------------------------------------------------------------
 class UtilTest(testhelp.HelpedTestCase):
@@ -39,7 +42,7 @@ class UtilTest(testhelp.HelpedTestCase):
     Tests for util.py
     """
     testdir = testhelp.testdata(__name__)
-    
+
     # -------------------------------------------------------------------------
     def test_csv_list(self):
         """
@@ -53,7 +56,7 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected(['xyz'], util.csv_list("xyz"))
         self.expected(['abc', ''], util.csv_list("  abc, "))
         self.expected(['a', 'b', 'c'], util.csv_list(" a,b ,  c  "))
-                       
+
     # -------------------------------------------------------------------------
     def test_content(self):
         """
@@ -67,8 +70,8 @@ class UtilTest(testhelp.HelpedTestCase):
                          "Expected a string but got a %s" % type(x))
         expected = 'def contents('
         self.assertTrue(expected in x,
-                      "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
-                      (expected, x))
+                        "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
+                        (expected, x))
 
     # --------------------------------------------------------------------------
     def test_date_end(self):
@@ -90,7 +93,7 @@ class UtilTest(testhelp.HelpedTestCase):
         f.close()
 
         self.expected("2014.0501", util.date_end(tfilename))
-        
+
     # --------------------------------------------------------------------------
     def test_date_start(self):
         """
@@ -107,13 +110,6 @@ class UtilTest(testhelp.HelpedTestCase):
 
         self.expected("2014.0412", util.date_start(tfilename))
 
-
-    # --------------------------------------------------------------------------
-    # def test_date_parse(self):
-    #     """
-    #     
-    #     """
-        
     # --------------------------------------------------------------------------
     def test_env_add_folded_none(self):
         """
@@ -130,20 +126,20 @@ class UtilTest(testhelp.HelpedTestCase):
         # make sure the target env variable is not defined
         if evname in os.environ:
             del os.environ[evname]
-            
+
         # create a config object with an 'env' section and a '+' option
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, '+' + add)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
-        
+
         # raise testhelp.UnderConstructionError()
-    
+
     # --------------------------------------------------------------------------
     def test_env_add_folded_pre(self):
         """
@@ -160,20 +156,20 @@ class UtilTest(testhelp.HelpedTestCase):
 
         # make sure the target env variable has the expected value
         os.environ[evname] = pre_val
-            
+
         # create a config object with an 'env' section and a folded '+' option
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, '+' + add)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
-        
+
         # raise testhelp.UnderConstructionError()
-    
+
     # --------------------------------------------------------------------------
     def test_env_add_none(self):
         """
@@ -189,20 +185,20 @@ class UtilTest(testhelp.HelpedTestCase):
         # make sure the target env variable is not defined
         if evname in os.environ:
             del os.environ[evname]
-            
+
         # create a config object with an 'env' section and a '+' option
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, '+' + add)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
-        
+
         # raise testhelp.UnderConstructionError()
-    
+
     # --------------------------------------------------------------------------
     def test_env_add_pre(self):
         """
@@ -223,16 +219,16 @@ class UtilTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, "+" + add)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the target env variable now contains both old and added
         # values
         self.expected(exp, os.environ[evname])
 
         # raise testhelp.UnderConstructionError()
-        
+
     # --------------------------------------------------------------------------
     def test_env_set_folded_none(self):
         """
@@ -254,13 +250,13 @@ class UtilTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, newval)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
-    
+
     # --------------------------------------------------------------------------
     def test_env_set_pre_folded(self):
         """
@@ -282,17 +278,17 @@ class UtilTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, add)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the target env variable now contains the new value and
         # the old value is gone
         self.expected(exp, os.environ[evname])
         self.assertTrue(pre_val not in os.environ[evname],
                         "The old value should be gone but still seems to be " +
                         " hanging around")
-        
+
     # --------------------------------------------------------------------------
     def test_env_set_none(self):
         """
@@ -313,15 +309,13 @@ class UtilTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, exp)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
-        
-        # raise testhelp.UnderConstructionError()
-    
+
     # --------------------------------------------------------------------------
     def test_env_set_pre(self):
         """
@@ -343,10 +337,10 @@ class UtilTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section(sname)
         cfg.set(sname, evname, add)
-        
+
         # pass the config object to util.env_update()
         util.env_update(cfg)
-        
+
         # verify that the target env variable now contains the new value and
         # the old value is gone
         self.expected(exp, os.environ[evname])
@@ -364,7 +358,7 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected(1388635200, util.epoch("2014.0101.23"))
         self.expected(1388552400, util.epoch("2014.0101"))
         self.expected(1388552399, util.epoch("1388552399"))
-        
+
     # -------------------------------------------------------------------------
     def test_hostname_default(self):
         """
@@ -386,7 +380,7 @@ class UtilTest(testhelp.HelpedTestCase):
         hn = util.hostname(True)
         self.assertTrue('.' in hn,
                         "Expected long hostname but got '%s'" % hn)
-        
+
     # -------------------------------------------------------------------------
     def test_hostname_short(self):
         """
@@ -399,7 +393,7 @@ class UtilTest(testhelp.HelpedTestCase):
         hn = util.hostname(False)
         self.assertFalse('.' in hn,
                          "Expected short hostname but got '%s'" % hn)
-        
+
     # -------------------------------------------------------------------------
     def test_line_quote(self):
         """
@@ -416,190 +410,12 @@ class UtilTest(testhelp.HelpedTestCase):
         act = util.line_quote("'abc'")
         self.assertEqual(exp, act,
                          "Expected %s, got %s" % (exp, act))
-                      
+
         exp = '\n"""\nabc\n"""'
         act = util.line_quote('"abc"')
         self.assertEqual(exp, act,
                          "Expected %s, got %s" % (exp, act))
 
-    # # -------------------------------------------------------------------------
-    # def test_log_default(self):
-    #     """
-    #     If util.log() is called with no logger already instantiated, 
-    #     """
-    #     # reset any logger already initialized
-    #     util.get_logger(reset=True, soft=True)
-    # 
-    #     # now attempt to log a message to the default file
-    #     msg = "This is a test log message %s"
-    #     arg = "with a format specifier"
-    #     if 0 == os.getuid():
-    #         exp_logfile = "/var/log/crawl.log"
-    #     else:
-    #         exp_logfile = "/tmp/crawl.log"
-    #     exp = (util.my_name() +
-    #            "(%s:%d): " % (sys._getframe().f_code.co_filename,
-    #                           sys._getframe().f_lineno + 2) +
-    #            msg % arg)
-    #     util.log(msg, arg)
-    #     result = util.contents(exp_logfile)
-    #     self.assertTrue(exp in result,
-    #                     "Expected '%s' in %s" %
-    #                     (exp, util.line_quote(result)))
-    #         
-    #     
-    # # -------------------------------------------------------------------------
-    # def test_log_simple(self):
-    #     """
-    #     Tests for routine util.log():
-    #      - simple string in first argument
-    #      - 1 % formatter in first arg
-    #      - multiple % formatters in first arg
-    #      - too many % formatters for args
-    #      - too many args for % formatters
-    #     """
-    #     fpath = "%s/%s.log" % (self.testdir, util.my_name())
-    #     util.get_logger(reset=True, soft=True)
-    #     log = util.get_logger(cmdline=fpath)
-    # 
-    #     # simple string in first arg
-    #     exp = util.my_name() + ": " + "This is a simple string"
-    #     util.log(exp)
-    #     result = util.contents(fpath)
-    #     self.assertTrue(exp in result,
-    #                     "Expected '%s' in %s" %
-    #                     (exp, util.line_quote(result)))
-    #                     
-    # # -------------------------------------------------------------------------
-    # def test_log_onefmt(self):
-    #     # """
-    #     # Tests for routine util.log():
-    #     #  - simple string in first argument
-    #     #  - 1 % formatter in first arg
-    #     #  - multiple % formatters in first arg
-    #     #  - too many % formatters for args
-    #     #  - too many args for % formatters
-    #     # """
-    #     fpath = "%s/%s.log" % (self.testdir, util.my_name())
-    #     util.get_logger(reset=True, soft=True)
-    #     log = util.get_logger(cmdline=fpath)
-    # 
-    #     # 1 % formatter in first arg
-    #     a1 = "This has a formatter and one argument: %s"
-    #     a2 = "did that work?"
-    #     exp = (util.my_name() +
-    #            "(%s:%d): " % (util.filename(), util.lineno()+2) +
-    #            a1 % a2)
-    #     util.log(a1, a2)
-    #     result = util.contents(fpath)
-    #     self.assertTrue(exp in result,
-    #                     "Expected '%s' in %s" %
-    #                     (exp, util.line_quote(result)))
-    # 
-    # # -------------------------------------------------------------------------
-    # def test_log_multfmt(self):
-    #     # """
-    #     # Tests for routine util.log():
-    #     #  - simple string in first argument
-    #     #  - 1 % formatter in first arg
-    #     #  - multiple % formatters in first arg
-    #     #  - too many % formatters for args
-    #     #  - too many args for % formatters
-    #     # """
-    #     fpath = "%s/%s.log" % (self.testdir, util.my_name())
-    #     util.get_logger(reset=True, soft=True)
-    #     log = util.get_logger(cmdline=fpath)
-    # 
-    #     # multiple % formatters in first arg
-    #     a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
-    #     a2 = "zebedee"
-    #     a3 = 94
-    #     a4 = 23.12348293402
-    #     exp = (util.my_name() +
-    #            "(%s:%d): " % (util.filename(), util.lineno()+2) +
-    #            a1 % (a2, a3, a4))
-    #     util.log(a1, a2, a3, a4)
-    #     result = util.contents(fpath)
-    #     self.assertTrue(exp in result,
-    #                     "Expected '%s' in %s" %
-    #                     (exp, util.line_quote(result)))
-    # 
-    # # -------------------------------------------------------------------------
-    # def test_log_toomany_fmt(self):
-    #     # """
-    #     # Tests for routine util.log():
-    #     #  - simple string in first argument
-    #     #  - 1 % formatter in first arg
-    #     #  - multiple % formatters in first arg
-    #     #  - too many % formatters for args
-    #     #  - too many args for % formatters
-    #     # """
-    #     fpath = "%s/%s.log" % (self.testdir, util.my_name())
-    #     util.get_logger(reset=True, soft=True)
-    #     log = util.get_logger(cmdline=fpath)
-    # 
-    #     # this allows exceptions thrown from inside the logging handler to
-    #     # propagate up so we can catch it.
-    #     log.handlers[0].handleError = logErr
-    #     
-    #     # multiple % formatters in first arg
-    #     a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f; %g"
-    #     a2 = "zebedee"
-    #     a3 = 94
-    #     a4 = 23.12348293402
-    #     exp = util.my_name() + ": " + a1 % (a2, a3, a4, 17.9)
-    #     try:
-    #         util.log(a1, a2, a3, a4)
-    #         self.fail("Expected exception not thrown")
-    #     except TypeError,e:
-    #         self.assertEqual("not enough arguments for format string", str(e),
-    #                          "Wrong TypeError thrown")
-    # 
-    #     result = util.contents(fpath)
-    #     self.assertFalse(exp in result,
-    #                     "Expected '%s' in %s" %
-    #                     (exp, util.line_quote(result)))
-    # 
-    # 
-    #     
-    # # -------------------------------------------------------------------------
-    # def test_log_toomany_args(self):
-    #     # """
-    #     # Tests for routine util.log():
-    #     #  - simple string in first argument
-    #     #  - 1 % formatter in first arg
-    #     #  - multiple % formatters in first arg
-    #     #  - too many % formatters for args
-    #     #  - too many args for % formatters
-    #     # """
-    #     fpath = "%s/%s.log" % (self.testdir, util.my_name())
-    #     util.get_logger(reset=True, soft=True)
-    #     log = util.get_logger(cmdline=fpath)
-    # 
-    #     # this allows exceptions thrown from inside the logging handler to
-    #     # propagate up so we can catch it.
-    #     log.handlers[0].handleError = logErr
-    #     
-    #     # multiple % formatters in first arg
-    #     a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
-    #     a2 = "zebedee"
-    #     a3 = 94
-    #     a4 = 23.12348293402
-    #     a5 = "friddle"
-    #     exp = (util.my_name() + ": " + a1 % (a2, a3, a4))
-    #     try:
-    #         util.log(a1, a2, a3, a4, a5)
-    #         self.fail("Expected exception not thrown")
-    #     except TypeError, e:
-    #         exc = "not all arguments converted during string formatting"
-    #         self.assertEqual(exc, str(e),
-    #                          "Expected '%s', got '%s'" % (exc, str(e)))
-    #     
-    #     result = util.contents(fpath)
-    #     self.assertFalse(exp in result,
-    #                      "Expected '%s' in %s" %
-    #                      (exp, util.line_quote(result)))
-        
     # -------------------------------------------------------------------------
     def test_my_name(self):
         """
@@ -618,7 +434,7 @@ class UtilTest(testhelp.HelpedTestCase):
         the list is empty, it should return None. After pop0() returns, the
         list should be one element shorter.
         """
-        tl = [1,2,3,4,5]
+        tl = [1, 2, 3, 4, 5]
         x = copy.copy(tl)
         e = util.pop0(x)
         self.expected(1, e)
@@ -645,9 +461,4 @@ class UtilTest(testhelp.HelpedTestCase):
         self.assertTrue(util.rgxin(rgx, tstring2),
                         "'%s' should match '%s'" % (rgx, tstring2))
         self.assertFalse(util.rgxin(rgx, fstring),
-                        "'%s' should NOT match '%s'" % (rgx, fstring))
-                        
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='UtilTest',
-                        logfile=testhelp.testlog(__name__))
+                         "'%s' should NOT match '%s'" % (rgx, fstring))

@@ -14,9 +14,10 @@ Extensions to python's standard unittest module
  - HelpedTestCase:
     > self.cd() into testdir creates testdir if it does not exist
     > self.expected() compares an expected and actual value and reports diffs
-    
+
 """
 from hpssic import CrawlConfig
+import pdb
 import sys
 import StringIO
 from hpssic import testhelp
@@ -24,6 +25,7 @@ from hpssic import toolframe
 import unittest
 
 tlogger = None
+
 
 # -----------------------------------------------------------------------------
 class TesthelpTest(unittest.TestCase):
@@ -57,17 +59,17 @@ class TesthelpTest(unittest.TestCase):
         """
         tlist = ['one', 'two', 'three', 'four', 'five']
         self.try_redirected_list([],
-                                  '',
-                                  tlist,
-                                  "one\ntwo\nthree\nfour\nfive\n")
+                                 '',
+                                 tlist,
+                                 "one\ntwo\nthree\nfour\nfive\n")
         self.try_redirected_list(['', 'o'],
-                                  '',
-                                  tlist,
-                                  "one\ntwo\nfour\n")
+                                 '',
+                                 tlist,
+                                 "one\ntwo\nfour\n")
         self.try_redirected_list(['', 'e'],
-                                  '',
-                                  tlist,
-                                  "one\nthree\nfive\n")
+                                 '',
+                                 tlist,
+                                 "one\nthree\nfive\n")
 
     # -------------------------------------------------------------------------
     def try_redirected_list(self, args, final, testlist, expected):
@@ -99,12 +101,15 @@ class TesthelpTest(unittest.TestCase):
                             "EXPECTED: 'one'\n" +
                             "GOT:      'two'\n")
 
-    # # -------------------------------------------------------------------------
-    # def test_HelpedTestCase(self):
-    #     q = testhelp.HelpedTestCase()
-    #     for attr in ['expected', 'expected_in', 'write_cfg_file']:
-    #         self.assertTrue(hasattr(q, attr),
-    #                         "Expected %s to have attr %s" % (q, attr))
+    # -------------------------------------------------------------------------
+    def test_HelpedTestCase(self):
+        """
+        Verify that a HelpedTestCase object has the expected attributes
+        """
+        q = testhelp.HelpedTestCase(methodName='noop')
+        for attr in ['expected', 'expected_in', 'write_cfg_file']:
+            self.assertTrue(hasattr(q, attr),
+                            "Expected %s to have attr %s" % (q, attr))
 
     # -------------------------------------------------------------------------
     def redirected_evg(self, exp, got, expected):
@@ -127,7 +132,7 @@ class TesthelpTest(unittest.TestCase):
         except AssertionError:
             print "expected: '''\n%s'''" % expected
             print "got:      '''\n%s'''" % r
-        
+
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='TesthelpTest',

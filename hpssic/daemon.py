@@ -11,6 +11,7 @@ from signal import SIGTERM
 
 MAXFD = 2048
 
+
 # -----------------------------------------------------------------------------
 class Daemon:
     """
@@ -42,7 +43,7 @@ class Daemon:
         self.pidfile = pidfile
         self.logger = logger
         self.workdir = workdir
-        
+
     # -------------------------------------------------------------------------
     def __repr__(self):
         return("Daemon<pidfile=%s>" % self.pidfile)
@@ -62,9 +63,10 @@ class Daemon:
                 sys.exit(0)
             self.dlog("fork #1 child: %d" % os.getpid())
         except OSError, e:
-            sys.stderr.write("fork #1 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.stderr.write("fork #1 failed: %d (%s)\n" %
+                             (e.errno, e.strerror))
             sys.exit(1)
-        
+
         # decouple from parent environment
         if not os.path.exists(self.workdir):
             os.mkdir(self.workdir)
@@ -74,7 +76,7 @@ class Daemon:
         os.chdir(self.workdir)
         os.setsid()
         os.umask(0)
-        
+
         # do second fork
         try:
             pid = os.fork()
@@ -83,17 +85,18 @@ class Daemon:
                 sys.exit(0)
             self.dlog("fork #2 child: %d" % os.getpid())
         except OSError, e:
-            sys.stderr.write("fork #2 failed: %d (%s)\n" % (e.errno, e.strerror))
+            sys.stderr.write("fork #2 failed: %d (%s)\n" %
+                             (e.errno, e.strerror))
             sys.exit(1)
-            
+
         # redirect standard file descriptors
         self.dlog("flushing stdout, stderr")
         sys.stdout.flush()
         sys.stderr.flush()
 
-        self.dlog("closing all open files");
+        self.dlog("closing all open files")
         dont_close = []
-        if self.logger != None:
+        if self.logger is not None:
             dont_close.append(self.logger.handlers[0].stream.fileno())
 
         # close all open files
@@ -115,7 +118,7 @@ class Daemon:
         sys.stderr = se
 
         self.dlog("leaving daemonize")
-        
+
     # -------------------------------------------------------------------------
     def close_if_open(self, fd):
         """
@@ -132,7 +135,7 @@ class Daemon:
                 sys.stdout.write("Failed to close file descriptor %(fd)d"
                                  + " (%(exc)s)" % vars())
                 raise exc
-            
+
     # -------------------------------------------------------------------------
     def dlog(self, message):
         """
@@ -140,7 +143,7 @@ class Daemon:
         """
         if self.logger:
             self.logger.info(message)
-            
+
     # -------------------------------------------------------------------------
     def delpid(self):
         """
@@ -158,7 +161,7 @@ class Daemon:
         if result == resource.RLIM_INFINITY:
             result = MAXFD
         return result
-    
+
     # -------------------------------------------------------------------------
     def start(self):
         """
@@ -167,12 +170,12 @@ class Daemon:
         # Check for a pidfile to see if the daemon is already running
         try:
             self.dlog("checking for pidfile %s" % self.pidfile)
-            pf = file(self.pidfile,'r')
+            pf = file(self.pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
             pid = None
-       
+
         if pid:
             message = "pidfile %s already exists. Daemon already running?"
             self.dlog(message)
@@ -180,13 +183,13 @@ class Daemon:
             sys.stderr.write(message % self.pidfile)
             sys.stderr.write("\n")
             sys.exit(1)
-            
+
         # Start the daemon
         self.dlog("daemon.start: calling daemon.daemonize")
         self.daemonize()
         self.dlog("daemon.start: calling daemon.run")
         self.run()
-            
+
     # -------------------------------------------------------------------------
     def stop(self):
         """
@@ -194,18 +197,18 @@ class Daemon:
         """
         # Get the pid from the pidfile
         try:
-            pf = file(self.pidfile,'r')
+            pf = file(self.pidfile, 'r')
             pid = int(pf.read().strip())
             pf.close()
         except IOError:
             pid = None
-            
+
         if not pid:
             message = "pidfile %s does not exist. Daemon not running?\n"
             sys.stderr.write(message % self.pidfile)
-            return # not an error in a restart
-        
-        # Try killing the daemon process       
+            return  # not an error in a restart
+
+        # Try killing the daemon process
         try:
             while 1:
                 os.kill(pid, SIGTERM)
@@ -218,7 +221,7 @@ class Daemon:
             else:
                 print str(err)
                 sys.exit(1)
-                
+
     # -------------------------------------------------------------------------
     def restart(self):
         """
@@ -226,7 +229,7 @@ class Daemon:
         """
         self.stop()
         self.start()
- 
+
     # -------------------------------------------------------------------------
     def run(self):
         """

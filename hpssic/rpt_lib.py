@@ -7,6 +7,7 @@ import smtplib
 import time
 import util
 
+
 # -----------------------------------------------------------------------------
 def get_cv_report(db, last_rpt_time):
     # get the body of the report from a Dimension object
@@ -26,7 +27,8 @@ def get_cv_report(db, last_rpt_time):
 
         rows = db.select(table="checkables",
                          fields=["count(path)"],
-                         where='type = "f" and checksum = 1 and ? < last_check',
+                         where='type = "f" and checksum = 1 and ' +
+                               '? < last_check',
                          data=(last_rpt_time,))
         (c_sample_size) = rows[0]
 
@@ -42,7 +44,9 @@ def get_cv_report(db, last_rpt_time):
         # get the population and sample entries added since the last report
         rows = db.select(table="checkables",
                          fields=["count(path)"],
-                         where='type = "f" and cart is not null and ? < last_check',
+                         where='type = "f" and ' +
+                               'cart is not null and ' +
+                               '? < last_check',
                          data=(last_rpt_time,))
         (c_pop_size) = rows[0]
 
@@ -57,14 +61,13 @@ def get_cv_report(db, last_rpt_time):
         rval += ("Since last report, " +
                  "%d items added to population, " % (c_pop_size) +
                  "%d items added to sample" % (c_sample_size))
-
-
     else:
         rval += "   No checksum verifier data to report."
 
     rval += "\n"
 
     return rval
+
 
 # -----------------------------------------------------------------------------
 def get_mpra_report(db, last_rpt_time):
@@ -94,7 +97,8 @@ def get_mpra_report(db, last_rpt_time):
                             r[4])
 
         if 0 < len(body):
-            body = hfmt % ('Type', 'Scan Time', 'Start', 'End', 'Records') + body
+            body = (hfmt % ('Type', 'Scan Time', 'Start', 'End', 'Records') +
+                    body)
         else:
             body = "   No records found to report"
 
@@ -102,8 +106,9 @@ def get_mpra_report(db, last_rpt_time):
         body = "   No MPRA result to report at this time."
 
     rval += body + "\n"
-    
+
     return rval
+
 
 # -----------------------------------------------------------------------------
 def get_tcc_report(db, last_rpt_time):
@@ -128,8 +133,9 @@ def get_tcc_report(db, last_rpt_time):
                  "%-34s  errors: %7d\n" % (' ', error))
     else:
         rval += ("   No Tape Copy Checker results to report")
-    
+
     return rval
+
 
 # -----------------------------------------------------------------------------
 def get_report():
@@ -142,11 +148,13 @@ def get_report():
     set_last_rpt_time(db)
     return report
 
+
 # -----------------------------------------------------------------------------
 def set_last_rpt_time(db):
     db.insert(table='report',
               fields=['report_time'],
               data=[(int(time.time()),)])
+
 
 # -----------------------------------------------------------------------------
 def get_last_rpt_time(db):
@@ -160,9 +168,10 @@ def get_last_rpt_time(db):
         (rval) = rows[0][0]
         if rval is None:
             rval = 0
-            
+
     CrawlConfig.log("time of last report: %d" % rval)
     return rval
+
 
 # -----------------------------------------------------------------------------
 def sendmail(sender='',
@@ -176,7 +185,7 @@ def sendmail(sender='',
         raise StandardError("Can't send mail without at least one recipient")
     if '@' not in to:
         raise StandardError("'%s' does not look like an e-mail address" % to)
-        
+
     if sender.strip() == '':
         raise StandardError("Can't send mail without a sender")
 
@@ -195,5 +204,3 @@ def sendmail(sender='',
     s = smtplib.SMTP('localhost')
     s.sendmail(sender, to, payload.as_string())
     s.quit()
-    
-    

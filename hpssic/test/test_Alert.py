@@ -18,6 +18,7 @@ from hpssic import testhelp
 from hpssic import toolframe
 from hpssic import util
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -25,12 +26,14 @@ def setUpModule():
     """
     testhelp.module_test_setup(AlertTest.testdir)
 
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
     Clean up test directory, removing any test data left in it.
     """
     testhelp.module_test_teardown(AlertTest.testdir)
+
 
 # -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):
@@ -49,7 +52,7 @@ class AlertTest(testhelp.HelpedTestCase):
         self.assertEqual('dispatch' in dir(x), True,
                          "'dispatch' should be an attribute of the Alert" +
                          " object, but is not")
-    
+
     # -------------------------------------------------------------------------
     def test_alert_log(self):
         """
@@ -71,7 +74,7 @@ class AlertTest(testhelp.HelpedTestCase):
                          True,
                          "'this is a test message' expected in log file" +
                          " but not found")
-    
+
     # -------------------------------------------------------------------------
     def test_alert_shell(self):
         """
@@ -105,7 +108,7 @@ class AlertTest(testhelp.HelpedTestCase):
         self.assertTrue(os.path.exists(outfile),
                         "expected %s to exist but it's not found" %
                         outfile)
-    
+
     # -------------------------------------------------------------------------
     def test_alert_shell_nospec(self):
         """
@@ -140,7 +143,7 @@ class AlertTest(testhelp.HelpedTestCase):
         self.assertTrue(os.path.exists(outfile),
                         "expected %s to exist but it's not found" %
                         outfile)
-    
+
     # -------------------------------------------------------------------------
     def test_alert_email(self):
         """

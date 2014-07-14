@@ -2,12 +2,14 @@
 """
 Tests for hpss.py
 """
+from nose.plugins.attrib import attr
 from hpssic import CrawlConfig
 from hpssic import hpss
 from hpssic import testhelp
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
+
 
 # -----------------------------------------------------------------------------
 def setUpModule():
@@ -16,7 +18,8 @@ def setUpModule():
     """
     testhelp.module_test_setup(hpssTest.testdir)
     CrawlConfig.get_logger("%s/hpssTest.log" % hpssTest.testdir, reset=True)
-    
+
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
@@ -25,18 +28,19 @@ def tearDownModule():
     CrawlConfig.get_logger(reset=True, soft=True)
     testhelp.module_test_teardown(hpssTest.testdir)
 
+
 # -----------------------------------------------------------------------------
+@attr(slow=True)
 class hpssTest(testhelp.HelpedTestCase):
     """
     Tests for the hpss.HSI class
     """
-    slow = 1
     testdir = testhelp.testdata(__name__)
     hdir = "/home/tpb/hic_test"
     stem = "hashable"
-    plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1,4)]
+    plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1, 4)]
     paths = " ".join(plist)
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
@@ -50,7 +54,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue(hasattr(a, attr),
                             "Expected %s to have attribute '%s'" %
                             (a, attr))
-        
+
     # -------------------------------------------------------------------------
     def test_chdir_noarg(self):
         """
@@ -64,7 +68,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("chdir() takes exactly 2 arguments" in str(e),
                             "Got the wrong TypeError: %s" %
                             util.line_quote(tb.format_exc()))
-        
+
     # -------------------------------------------------------------------------
     def test_chdir_notdir(self):
         """
@@ -155,7 +159,7 @@ class hpssTest(testhelp.HelpedTestCase):
         Issue "hashcreate" in hsi with a wildcard argument, return results
         """
         glop = "%s/%s*" % (self.hdir, self.stem)
-        
+
         h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         result = h.hashcreate(glop)
         h.quit()
@@ -460,7 +464,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         exp = "hashnot failed: no valid checksum found"
         self.expected_in(exp, result)
-        
+
     # -------------------------------------------------------------------------
     def test_hashverify_ok_list(self):
         """
@@ -605,9 +609,8 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue("HPSS Unavailable" in str(e),
                             "Got unexpected HSIerror: %s" %
                             util.line_quote(str(e)))
-    
+
 # -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='hpssTest',
-                        logfile=testhelp.testlog(__name__))
-        
+# if __name__ == '__main__':
+#     toolframe.ez_launch(test='hpssTest',
+#                         logfile=testhelp.testlog(__name__))

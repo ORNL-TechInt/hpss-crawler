@@ -7,13 +7,13 @@ Usage:
         [plugin]
         ...
         alerts = plug_alert_section
-        
+
         [plug_alert_section]
         email = addr1, addr2, addr3
         log   = !!!ALERT!!! %s
         shell = echo %s
         use   = other_section
-    
+
     ...
     x = Alert("The balrog frobnicated!")
     ...
@@ -37,6 +37,7 @@ import smtplib
 import socket
 import util
 
+
 # -----------------------------------------------------------------------------
 class Alert(object):
     # -------------------------------------------------------------------------
@@ -47,7 +48,7 @@ class Alert(object):
         self.cfg = cfg
         if dispatch:
             self.dispatch()
-        
+
     # -------------------------------------------------------------------------
     def dispatch(self):
         # mainmod = sys.modules['__main__']
@@ -81,7 +82,7 @@ class Alert(object):
                     os.system(cmdline)
                     CrawlConfig.log("ran: '%s'" % (cmdline))
                     done = True
-                    
+
                 elif opt == 'email':
                     # send mail
                     hostname = util.hostname(long=True)
@@ -97,7 +98,7 @@ class Alert(object):
                     s.quit()
                     CrawlConfig.log("sent mail to %s", addrlist)
                     done = True
-                    
+
                 elif opt == 'use':
                     # delegate to another section
                     done = True
@@ -112,7 +113,3 @@ class Alert(object):
                         section = new_section
                         done = False
                     break
-                    
-
-
-

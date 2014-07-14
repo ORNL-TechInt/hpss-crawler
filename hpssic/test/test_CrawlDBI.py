@@ -44,6 +44,7 @@ def make_tcfg(dbtype):
 
     return tcfg
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -51,6 +52,7 @@ def setUpModule():
     """
     # pdb.set_trace()
     testhelp.module_test_setup(DBITest.testdir)
+
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
@@ -71,6 +73,7 @@ def tearDownModule():
                               where='table_name like "test_%"')
         for (tname,) in tlist:
             db.drop(table=tname)
+
 
 # -----------------------------------------------------------------------------
 class DBITestRoot(testhelp.HelpedTestCase):
@@ -124,14 +127,10 @@ class DBITest(DBITestRoot):
         CrawlDBI ctor should not accept a dbname argument. It has to take its
         dbname from the config.
         """
-        try:
-            a = CrawlDBI.DBI(dbname='foobar')
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            exp = "dbname may only be specified if dbtype = 'db2'"
-            self.assertTrue(exp in str(e),
-                            "Got the wrong DBIerror: %s" +  # <-- !@!looks wrong
-                            util.line_quote(str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "dbname may only be specified if dbtype = 'db2'",
+                             CrawlDBI.DBI,
+                             dbname='foobar')
 
     # -------------------------------------------------------------------------
     def test_ctor_sqlite(self):
@@ -155,6 +154,7 @@ class DBITest(DBITestRoot):
         a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'))
         b = CrawlDBI.DBIsqlite(dbname=self.testdb, tbl_prefix='test')
         self.expected(str(b), str(a))
+
 
 # -----------------------------------------------------------------------------
 class DBI_in_Base(object):
@@ -251,25 +251,25 @@ class DBI_in_Base(object):
         """
         Calling select() specifying fields should get only the fields requested
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=['size', 'weight'])
         self.assertEqual(len(rows[0]), 2,
-                         "Expected two fields in each row, got %d" % len(rows[0]))
+                         "Expected two fields in each row, got %d" %
+                         len(rows[0]))
         for tup in self.testdata:
             self.assertTrue((tup[1], tup[2]) in rows,
                             "Expected %s in %s but it's not there" %
                             (str((tup[1], tup[2], )),
                              util.line_quote(str(rows))))
 
-
     # -------------------------------------------------------------------------
     def test_select_gb_f(self):
         """
         Select with a group by clause on a field that is present in the table.
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=['sum(size)'], groupby='name')
@@ -284,7 +284,7 @@ class DBI_in_Base(object):
         Select with a group by clause that is not a string -- should get an
         exception.
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -303,7 +303,7 @@ class DBI_in_Base(object):
         Select with a group by clause on a field that is unknown should get an
         exception.
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
         ns_field = 'fiddle'
 
@@ -324,7 +324,7 @@ class DBI_in_Base(object):
         Calling select() with where with no '?' and an empty data list is fine.
         The data returned should match the where clause.
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=[],
@@ -338,7 +338,7 @@ class DBI_in_Base(object):
         Calling select() with a where clause with a '?' and an empty data list
         should get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -360,7 +360,7 @@ class DBI_in_Base(object):
         Calling select() with where clause with no '?' and data in the list
         should get an exception -- the data would be ignored
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -378,13 +378,13 @@ class DBI_in_Base(object):
         Calling select() with a where clause containing '?' and data in the
         data list should return the data matching the where clause
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=[],
                          where='name = ?', data=('zippo',))
         self.expected(1, len(rows))
-        self.expected([self.testdata[1],], list(rows))
+        self.expected([self.testdata[1], ], list(rows))
 
     # -------------------------------------------------------------------------
     # Adding tests for limit in select. Conditions to be tested:
@@ -398,17 +398,19 @@ class DBI_in_Base(object):
     def test_select_l_nint(self):
         tname = util.my_name().replace("test_", "")
         self.setup_select(tname)
-        self.exc_raises('select',
-                            {'table': tname,
-                             'fields': [],
-                             'limit': 'this is a string'},
-                            "On select(), limit must be an int")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), limit must be an int",
+                             db.select,
+                             table=tname,
+                             fields=[],
+                             limit='this is a string')
 
     # -------------------------------------------------------------------------
     #   - limit is an int
     #     > should retrieve the specified number of records
     def test_select_l_int(self):
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rlim = 3
@@ -426,7 +428,7 @@ class DBI_in_Base(object):
     #   - limit is a float
     #     > should convert to an int and use it
     def test_select_l_float(self):
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rlim = 2.7
@@ -446,7 +448,7 @@ class DBI_in_Base(object):
         Calling select() with an empty field list should get all the data -- an
         empty field list indicates the wildcard option
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=[])
@@ -464,7 +466,7 @@ class DBI_in_Base(object):
         Calling select() with an empty orderby should get the data in the order
         inserted
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=[], orderby='')
@@ -480,7 +482,7 @@ class DBI_in_Base(object):
         """
         Calling select() with an empty table name should get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -497,7 +499,7 @@ class DBI_in_Base(object):
         """
         Calling select() with an empty where arg should get all the data
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=[], where='')
@@ -514,7 +516,7 @@ class DBI_in_Base(object):
         Calling select() with a non-tuple as the data argument should
         get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -533,7 +535,7 @@ class DBI_in_Base(object):
         Calling select() with a non-list as the fields argument should
         get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -551,7 +553,7 @@ class DBI_in_Base(object):
         Calling select() with a non-string orderby argument should
         get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -569,7 +571,7 @@ class DBI_in_Base(object):
         Calling select() with a non-string table argument should
         get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -587,7 +589,7 @@ class DBI_in_Base(object):
         Calling select() with a non-string where argument should
         get an exception
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
         try:
@@ -605,7 +607,7 @@ class DBI_in_Base(object):
         Calling select() specifying orderby should get the rows in the
         order requested
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
         exp = [self.testdata[2], self.testdata[4], self.testdata[0],
                self.testdata[3], self.testdata[1]]
@@ -622,7 +624,7 @@ class DBI_in_Base(object):
         """
         Calling select() specifying where should get only the rows requested
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
         exp = [self.testdata[0], self.testdata[2], self.testdata[3]]
 
@@ -654,6 +656,7 @@ class DBI_in_Base(object):
         self.reset_db(tname)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         self.expected(False, db.table_exists(table=tname))
+
 
 # -----------------------------------------------------------------------------
 class DBI_out_Base(object):
@@ -792,7 +795,6 @@ class DBI_out_Base(object):
             self.assertTrue(r in rows,
                             "Expected %s in %s" % (r, rows))
 
-
     # -------------------------------------------------------------------------
     def test_delete_q_td(self):
         """
@@ -809,7 +811,6 @@ class DBI_out_Base(object):
                             "Expected %s in %s" % (r, rows))
         self.assertFalse(td['rows'][-1] in rows,
                          "%s should have been deleted" % (td['rows'][1],))
-
 
     # -------------------------------------------------------------------------
     def test_delete_mtt(self):
@@ -1046,7 +1047,7 @@ class DBI_out_Base(object):
         """
         Calling insert with good arguments should put the data in the table
         """
-        tname=util.my_name().replace('test_', '')
+        tname = util.my_name().replace('test_', '')
         self.reset_db(tname)
         fdef = ['id int primary key', 'name text', 'size int']
         fnames = [x.split()[0] for x in fdef]
@@ -1293,6 +1294,7 @@ class DBI_out_Base(object):
                   data=testdata['rows'])
         return (db, testdata)
 
+
 # -----------------------------------------------------------------------------
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
@@ -1339,6 +1341,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     def reset_db(self, name=''):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.drop(table=name)
+
 
 # -----------------------------------------------------------------------------
 class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
@@ -1581,6 +1584,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     def reset_db(self, name=''):
         util.conditional_rm(self.testdb)
 
+
 # -----------------------------------------------------------------------------
 @attr(slow=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
@@ -1619,7 +1623,8 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         rows = db.select(table='hpss.logpolicy',
-                         fields=['max(desc_name) as mdn', 'log_record_type_mask'],
+                         fields=['max(desc_name) as mdn',
+                                 'log_record_type_mask'],
                          groupby='log_record_type_mask')
         self.assertEqual(len(rows[0].keys()), 2,
                          "Expected two fields in each row, got %d" %
@@ -1654,26 +1659,15 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Select with a group by clause on a field that is unknown should get an
         exception.
         """
-        self.exc_raises('select',
-                            {'table': 'hpss.logpolicy',
-                             'fields': ['max(desc_name) as mdn',
-                                        'log_record_type_mask'],
-                             'groupby': 'unknown_field'},
-                            "\"UNKNOWN_FIELD\" is not valid in the " +
-                            "context where it")
-
-        # db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        # try:
-        #     rows = db.select(table='hpss.logpolicy',
-        #                      fields=['max(desc_name) as mdn',
-        #                              'log_record_type_mask'],
-        #                      groupby='unknown_field')
-        #     self.fail("Expected exception not thrown")
-        # except CrawlDBI.DBIerror, e:
-        #     exp = "\"UNKNOWN_FIELD\" is not valid in the context where it"
-        #     self.assertTrue(exp in str(e),
-        #                     "Got the wrong DBIerror: %s" %
-        #                     util.line_quote(str(e)))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             '"UNKNOWN_FIELD" is not valid in the context ' +
+                             'where it',
+                             db.select,
+                             table="hpss.logpolicy",
+                             fields=['max(desc_name) as mdn',
+                                     'log_record_type_mask'],
+                             groupby='unknown_field')
 
     # -------------------------------------------------------------------------
     def test_select_join(self):
@@ -1694,7 +1688,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         rows = db.select(table=['server A', 'logclient B'],
-                         fields=['A.server_id', 'A.desc_name', 'B.logc_directory'],
+                         fields=['A.server_id',
+                                 'A.desc_name',
+                                 'B.logc_directory'],
                          where="A.server_id = B.logc_server_id")
         self.assertTrue(0 < len(rows),
                         "Expected at least one row, got 0")
@@ -1703,10 +1699,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     #   - limit not an int
     #     > should throw exception
     def test_select_l_nint(self):
-        self.exc_raises('select',
-                            {'table': 'authzacl',
-                             'limit': 'not an int'},
-                            "On select(), limit must be an int")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), limit must be an int",
+                             db.select,
+                             table="authzacl",
+                             limit='not an int')
 
     # -------------------------------------------------------------------------
     #   - limit is an int
@@ -1760,7 +1758,6 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.expected(len(mtf_rows[0].keys()), len(nf_rows[0].keys()))
         self.expected(mtf_rows[0].keys(), nf_rows[0].keys())
 
-
     # -------------------------------------------------------------------------
     def test_select_mto(self):
         """
@@ -1770,8 +1767,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         ordered_rows = db.select(table='hpss.logclient', orderby='')
         unordered_rows = db.select(table='hpss.logclient')
-        okl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID']) for x in ordered_rows]
-        ukl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID']) for x in unordered_rows]
+        okl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+               for x in ordered_rows]
+        ukl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+               for x in unordered_rows]
         self.expected(ukl, okl)
 
     # -------------------------------------------------------------------------
@@ -1811,12 +1810,14 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-tuple as the data argument should
         get an exception
         """
-        self.exc_raises('select',
-                            {'table': 'hpss.logpolicy',
-                             'fields': [],
-                             'where': 'desc_name = ?',
-                             'data': 'prudhoe'},
-                            "On select(), data must be a tuple")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), data must be a tuple",
+                             db.select,
+                             table="hpss.logpolicy",
+                             fields=[],
+                             where="desc_name = ?",
+                             data='prudhoe')
 
     # -------------------------------------------------------------------------
     def test_select_nlf(self):
@@ -1824,12 +1825,14 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-list as the fields argument should
         get an exception
         """
-        self.exc_raises('select',
-                            {'table': 'hpss.logpolicy',
-                             'fields': 92,
-                             'where': 'desc_name = ?',
-                             'data': ('prudhoe',)},
-                            "On select(), fields must be a list")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), fields must be a list",
+                             db.select,
+                             table="hpss.logpolicy",
+                             fields=92,
+                             where="desc_name = ?",
+                             data=('prudhoe', ))
 
     # -------------------------------------------------------------------------
     def test_select_nq_ld(self):
@@ -1837,12 +1840,14 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with where clause with no '?' and data in the list
         should get an exception -- the data would be ignored
         """
-        self.exc_raises('select',
-                            {'table': 'hpss.logpolicy',
-                             'fields': [],
-                             'where': 'desc_name = ""',
-                             'data': ('prudhoe',)},
-                            "Data would be ignored")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Data would be ignored",
+                             db.select,
+                             table="hpss.logpolicy",
+                             fields=[],
+                             where="desc_name = ''",
+                             data=('prudhoe', ))
 
     # -------------------------------------------------------------------------
     def test_select_nq_mtd(self):
@@ -1861,24 +1866,18 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                             "Expected '%s' in '%s' but it's missing" %
                             (crit, x['DESC_NAME']))
 
-    # # -------------------------------------------------------------------------
-    # def test_select_nq_mtd(self):
-    #     """
-    #     Calling select() with where with no '?' and an empty data list is fine.
-    #     The data returned should match the where clause.
-    #     """
-    #     self.fail('under construction')
-
     # -------------------------------------------------------------------------
     def test_select_nso(self):
         """
         Calling select() with a non-string orderby argument should
         get an exception
         """
-        self.exc_raises('select',
-                            {'table': "hpss.logpolicy",
-                             'orderby': 22},
-                            "On select(), orderby clause must be a string")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), orderby clause must be a string",
+                             db.select,
+                             table="hpss.logpolicy",
+                             orderby=22)
 
     # -------------------------------------------------------------------------
     def test_select_nst(self):
@@ -1886,10 +1885,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-string table argument should
         get an exception
         """
-        self.exc_raises('select',
-                            {'table': 47,
-                             'orderby': 22},
-                            "On select(), table name must be a string")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), table name must be a string",
+                             db.select,
+                             table=47,
+                             orderby=22)
 
     # -------------------------------------------------------------------------
     def test_select_nsw(self):
@@ -1897,10 +1898,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-string where argument should
         get an exception
         """
-        self.exc_raises('select',
-                            {'table': 'hpss.server',
-                             'where': []},
-                            "On select(), where clause must be a string")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On select(), where clause must be a string",
+                             db.select,
+                             table="hpss.server",
+                             where=[])
 
     # -------------------------------------------------------------------------
     def test_select_o(self):
@@ -1916,7 +1919,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                 for x in ordered_rows]
 
         sord = sorted([CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
-                                              for x in ordered_rows])
+                       for x in ordered_rows])
 
         self.expected(sord, ford)
 
@@ -1944,10 +1947,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         should get an exception
         """
         self.exc_raises('select',
-                            {'table': "hpss.logpolicy",
-                             'data': (),
-                             'where': "DESC_NAME = ?"},
-                            "0 params bound not matching 1 required")
+                        {'table': "hpss.logpolicy",
+                         'data': (),
+                         'where': "DESC_NAME = ?"},
+                        "0 params bound not matching 1 required")
 
     # -------------------------------------------------------------------------
     def test_select_w(self):
@@ -2023,9 +2026,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         On a db2 database, insert should throw an exception.
         """
         self.exc_raises("insert",
-                            {'table': "hpss.bogus",
-                             'data': [('a', 'b', 'c')]},
-                            "INSERT not supported for DB2")
+                        {'table': "hpss.bogus",
+                         'data': [('a', 'b', 'c')]},
+                        "INSERT not supported for DB2")
 
     # -------------------------------------------------------------------------
     def test_create_exception(self):
@@ -2033,9 +2036,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         On a db2 database, create should throw an exception.
         """
         self.exc_raises("create",
-                            {'table': "hpss.nonesuch",
-                             'fields': self.fdef},
-                            "CREATE not supported for DB2")
+                        {'table': "hpss.nonesuch",
+                         'fields': self.fdef},
+                        "CREATE not supported for DB2")
 
     # -------------------------------------------------------------------------
     def test_delete_exception(self):
@@ -2043,10 +2046,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         On a db2 database, delete should throw an exception.
         """
         self.exc_raises("delete",
-                            {'table': "hpss.bogus",
-                             'data': [('a',)],
-                             'where': "field = ?"},
-                            "DELETE not supported for DB2")
+                        {'table': "hpss.bogus",
+                         'data': [('a',)],
+                         'where': "field = ?"},
+                        "DELETE not supported for DB2")
 
     # -------------------------------------------------------------------------
     def test_drop_exception(self):
@@ -2054,8 +2057,8 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         On a db2 database, drop should throw an exception.
         """
         self.exc_raises("drop",
-                            {'table': "hpss.bogus"},
-                            "DROP not supported for DB2")
+                        {'table': "hpss.bogus"},
+                        "DROP not supported for DB2")
 
     # -------------------------------------------------------------------------
     def test_update_exception(self):
@@ -2063,43 +2066,8 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         On a db2 database, update should throw an exception.
         """
         self.exc_raises("update",
-                            {'table': "hpss.bogus",
-                             'fields': ['one', 'two'],
-                             'data': [('a', 'b', 'c')],
-                             'where': "one = ?"},
-                            "UPDATE not supported for DB2")
-
-    # # -------------------------------------------------------------------------
-    # def exc_raises(self, funcname, kwargs, exp):
-    #     db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-    #     try:
-    #         if funcname == 'create':
-    #             db.create(**kwargs)
-    #         elif funcname == 'delete':
-    #             db.delete(**kwargs)
-    #         elif funcname == 'drop':
-    #             db.drop(**kwargs)
-    #         elif funcname == 'insert':
-    #             db.insert(**kwargs)
-    #         elif funcname == 'select':
-    #             rows = db.select(**kwargs)
-    #         elif funcname == 'update':
-    #             db.update(**kwargs)
-    #         else:
-    #             raise StandardError("unsupported function name '%s'" %
-    #                                 funcname)
-    #         self.fail("Expected exception not thrown")
-    #     except CrawlDBI.DBIerror, e:
-    #         self.assertTrue(exp in str(e),
-    #                         "Got the wrong DBIerror: %s" %
-    #                         util.line_quote(str(e)))
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test=['DBITest',
-                              'DBIsqliteTest',
-                              'DBImysqlTest',
-                              'DBIdb2Test'],
-                        logfile=testhelp.testlog(__name__))
-
-
+                        {'table': "hpss.bogus",
+                         'fields': ['one', 'two'],
+                         'data': [('a', 'b', 'c')],
+                         'where': "one = ?"},
+                        "UPDATE not supported for DB2")

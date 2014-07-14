@@ -16,6 +16,7 @@ import time
 import toolframe
 import util
 
+
 # -----------------------------------------------------------------------------
 def tccp_bfid(args):
     """bfid - report  a list of bfids
@@ -28,7 +29,8 @@ def tccp_bfid(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     rows = db.select(table='bitfile',
@@ -41,6 +43,7 @@ def tccp_bfid(args):
                             row['BFATTR_COS_ID'],
                             ct)
 
+
 # -----------------------------------------------------------------------------
 def tccp_bfpath(args):
     """bfpath - construct a bitfile path from a bitfile id
@@ -48,7 +51,8 @@ def tccp_bfpath(args):
     usage: tcc bfpath BFID
 
     E.G.:
-     tcc bfpath "x'8484A9A36E02E2119B4910005AFA75BFA2F9616A36FDD01193CB000000000004'"
+     tcc bfpath "x'8484A9A36E02E2119B4910005AFA75BFA2F9616A36FDD01193CB00000' +
+                  '0000004'"
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
@@ -56,7 +60,8 @@ def tccp_bfpath(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     try:
         bitfile = a[0]
@@ -65,7 +70,8 @@ def tccp_bfpath(args):
 
     bfpath = tcc_lib.get_bitfile_path(bitfile)
     print(bfpath)
-    
+
+
 # -----------------------------------------------------------------------------
 def tccp_bfts(args):
     """bfts - whats in bftapeseg?
@@ -78,7 +84,8 @@ def tccp_bfts(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     rows = db.select(table='bftapeseg',
@@ -87,7 +94,8 @@ def tccp_bfts(args):
     for row in rows:
         print("%s %s" % (tcc_lib.hexstr(row['BFID']),
                          row['STORAGE_CLASS']))
-        
+
+
 # -----------------------------------------------------------------------------
 def tccp_copies_by_cos(args):
     """copies_by_cos - get a list of cos and the copy count for each
@@ -103,11 +111,13 @@ def tccp_copies_by_cos(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     cbc = copies_by_cos()
     for cos in sorted(cbc.keys()):
         print("%s %d" % (cos, cbc[cos]))
+
 
 # -----------------------------------------------------------------------------
 def tccp_copies_by_file(args):
@@ -125,11 +135,13 @@ def tccp_copies_by_file(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     result = copies_by_file()
     for row in result:
         print row
+
 
 # -----------------------------------------------------------------------------
 def tccp_report(args):
@@ -147,8 +159,9 @@ def tccp_report(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     cbc = copies_by_cos()
     cbf = copies_by_file()
     print("%63s %10d %6s %5d" % ("Bitfile ID",
@@ -162,6 +175,7 @@ def tccp_report(args):
                    file['BFATTR_COS_ID'],
                    int(cbc[file['BFATTR_COS_ID']])))
 
+
 # -----------------------------------------------------------------------------
 def tccp_selbf(args):
     """selbf - select records from bitfile table
@@ -174,8 +188,9 @@ def tccp_selbf(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     record = 0
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     rows = db.select(table='bitfile',
@@ -196,6 +211,7 @@ def tccp_selbf(args):
             else:
                 print("%s: %s" % (k, row[k]))
 
+
 # -----------------------------------------------------------------------------
 def tccp_simplug(args):
     """simplug - run one iteration of the plugin
@@ -203,6 +219,7 @@ def tccp_simplug(args):
     usage: tcc simplug
     """
     crawl_lib.simplug('tcc', args)
+
 
 # -----------------------------------------------------------------------------
 def tccp_tables(args):
@@ -219,8 +236,9 @@ def tccp_tables(args):
                  help='use an alternate database')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     db = CrawlDBI.DBI(dbtype='db2',
                       dbname=CrawlDBI.db2name('subsys'))
     db._dbobj.tbl_prefix = 'syscat.'
@@ -233,7 +251,7 @@ def tccp_tables(args):
     for r in rows:
         print("%s %s %s" % (r['Table'], r['Schema'], r['TYPE']))
 
-    
+
 # -----------------------------------------------------------------------------
 def tccp_zreport(args):
     """zreport - show what tcc_report will do with a bitfile id
@@ -249,14 +267,15 @@ def tccp_zreport(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     try:
         nsobj_id = a[0]
     except:
         print("usage: tcc zreport OBJECT_ID")
         return
-    
+
     cfg = CrawlConfig.get_config()
     outfile = cfg.get(tcc_lib.sectname(), 'report_file')
 
@@ -265,7 +284,8 @@ def tccp_zreport(args):
     print("Writing output to %s" % outfile)
     for bf in bfl:
         tcc_lib.tcc_report(bf, cosinfo)
-    
+
+
 # -----------------------------------------------------------------------------
 def copies_by_cos():
     """
@@ -280,6 +300,7 @@ def copies_by_cos():
         if tup:
             cbc[tup[0]] = int(tup[1])
     return cbc
+
 
 # -----------------------------------------------------------------------------
 def copies_by_file(limit=10):
@@ -301,6 +322,7 @@ def copies_by_file(limit=10):
     #                dbsect="subsys")
     # return result
 
+
 # -----------------------------------------------------------------------------
 def cos_parse(line):
     """
@@ -314,6 +336,7 @@ def cos_parse(line):
         rval = None
     return rval
 
+
 # -----------------------------------------------------------------------------
 def hpss_password():
     """
@@ -325,6 +348,7 @@ def hpss_password():
     S.expect(pexpect.EOF)
     [q] = re.findall('USER \S+ USING "([^"]+)"', S.before)
     return q
+
 
 # -----------------------------------------------------------------------------
 def hpss_userpass():
@@ -339,4 +363,4 @@ def hpss_userpass():
     return (username, password)
 
 # -----------------------------------------------------------------------------
-toolframe.tf_launch('tccp', __name__)
+# toolframe.tf_launch('tccp', __name__)

@@ -1,6 +1,8 @@
 import ConfigParser
 import sys
 
+
+# -----------------------------------------------------------------------------
 def main(cfg):
     try:
         msg = cfg.get('example', 'message')
@@ -9,4 +11,3 @@ def main(cfg):
 
     log = sys.modules['__main__'].get_logger()
     log.info('EXAMPLE: This is plugin EXAMPLE saying "%s"' % msg)
-
