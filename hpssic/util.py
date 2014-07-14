@@ -12,6 +12,7 @@ import sys
 import time
 import traceback as tb
 
+
 # -----------------------------------------------------------------------------
 class Chdir(object):
     """
@@ -25,6 +26,7 @@ class Chdir(object):
     No matter what happens in do_stuff(), we're guaranteed that at the assert,
     we'll be back in the directory we started from.
     """
+
     # ------------------------------------------------------------------------
     def __init__(self, target):
         """
@@ -32,6 +34,7 @@ class Chdir(object):
         """
         self.start = os.getcwd()
         self.target = target
+
     # ------------------------------------------------------------------------
     def __enter__(self):
         """
@@ -40,6 +43,7 @@ class Chdir(object):
         """
         os.chdir(self.target)
         return self.target
+
     # ------------------------------------------------------------------------
     def __exit__(self, type, value, traceback):
         """
@@ -47,6 +51,7 @@ class Chdir(object):
         starting directory.
         """
         os.chdir(self.start)
+
 
 # -----------------------------------------------------------------------------
 class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
@@ -66,7 +71,7 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
                 self.archdir = kwargs['archdir']
             del kwargs['archdir']
         super(ArchiveLogfileHandler, self).__init__(filename, **kwargs)
-        
+
     # ------------------------------------------------------------------------
     def doRollover(self):
         """
@@ -83,7 +88,7 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
             archdir = self.archdir
         except AttributeError:
             return
-            
+
         path1 = self.baseFilename + ".1"
         target = "%s/%s.%s-%s" % (archdir,
                                   os.path.basename(self.baseFilename),
@@ -92,7 +97,8 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
         if not os.path.isdir(archdir):
             os.makedirs(archdir)
         shutil.copy2(path1, target)
-        
+
+
 # -----------------------------------------------------------------------------
 class RRfile(object):
     """
@@ -125,14 +131,14 @@ class RRfile(object):
         """
         new = RRfile(filename, mode)
         return new
-    
+
     # ------------------------------------------------------------------------
     def close(self):
         """
         Close the file this object contains.
         """
         self.f.close()
-        
+
     # ------------------------------------------------------------------------
     def revread(self):
         """
@@ -147,16 +153,17 @@ class RRfile(object):
 
         if self.f.tell() == 0:
             self.bof = True
-            
+
         rval = self.f.read(self.chunk)
         try:
             self.f.seek(-self.chunk, os.SEEK_CUR)
             self.f.seek(-self.chunk/2, os.SEEK_CUR)
         except IOError:
             self.f.seek(0, os.SEEK_SET)
-            
+
         return rval
-            
+
+
 # -----------------------------------------------------------------------------
 def conditional_rm(filepath, tree=False):
     """
@@ -183,6 +190,7 @@ def conditional_rm(filepath, tree=False):
         os.unlink(filepath)
     return rv
 
+
 # -----------------------------------------------------------------------------
 def contents(filename, string=True):
     """
@@ -197,6 +205,7 @@ def contents(filename, string=True):
     f.close()
     return rval
 
+
 # ------------------------------------------------------------------------------
 def csv_list(value, delimiter=","):
     """
@@ -205,6 +214,7 @@ def csv_list(value, delimiter=","):
     """
     rval = [x.strip() for x in value.split(delimiter)]
     return rval
+
 
 # -----------------------------------------------------------------------------
 def daybase(epoch):
@@ -215,6 +225,7 @@ def daybase(epoch):
     return time.mktime([tm.tm_year, tm.tm_mon, tm.tm_mday,
                         0, 0, 0,
                         tm.tm_wday, tm.tm_yday, tm.tm_isdst])
+
 
 # ------------------------------------------------------------------------------
 def dispatch(modname, prefix, args):
@@ -234,6 +245,7 @@ def dispatch(modname, prefix, args):
         func = getattr(mod, fname)
         func(args[2:])
 
+
 # ------------------------------------------------------------------------------
 def dispatch_help(mod, prefix, cmd=None):
     if cmd is not None:
@@ -250,8 +262,8 @@ def dispatch_help(mod, prefix, cmd=None):
                     "Function '%s' seems to be missing a docstring" % fname)
             print "    " + hstr
         print("")
-        
-    
+
+
 # ------------------------------------------------------------------------------
 def env_update(cfg):
     """
@@ -272,6 +284,7 @@ def env_update(cfg):
             os.environ[uvar] = value[1:]
         else:
             os.environ[uvar] = value
+
 
 # -----------------------------------------------------------------------------
 def epoch(ymdhms):
@@ -304,12 +317,14 @@ def epoch(ymdhms):
 
     return rval
 
+
 # -----------------------------------------------------------------------------
 def filename():
     """
     Return the name of the file where the currently running code resides.
     """
     return sys._getframe(1).f_code.co_filename
+
 
 # -----------------------------------------------------------------------------
 def hostname(long=False):
@@ -321,6 +336,7 @@ def hostname(long=False):
     else:
         rval = socket.gethostname().split('.')[0]
     return rval
+
 
 # -----------------------------------------------------------------------------
 def line_quote(value):
@@ -336,6 +352,7 @@ def line_quote(value):
         rv = value
     return '\n"""\n%s\n"""' % str(rv)
 
+
 # -----------------------------------------------------------------------------
 def lineno():
     """
@@ -344,9 +361,12 @@ def lineno():
     """
     return sys._getframe(1).f_lineno
 
+
 # -----------------------------------------------------------------------------
 def memoize(f):
     cache = {}
+
+    # -------------------------------------------------------------------------
     def helper(x):
         try:
             return cache[x]
@@ -355,12 +375,14 @@ def memoize(f):
             return cache[x]
     return helper
 
+
 # -----------------------------------------------------------------------------
 def my_name():
     """
     Return the caller's name
     """
     return sys._getframe(1).f_code.co_name
+
 
 # -----------------------------------------------------------------------------
 def pop0(list):
@@ -370,6 +392,7 @@ def pop0(list):
         rval = None
     return rval
 
+
 # -----------------------------------------------------------------------------
 def raiseError(record):
     """
@@ -378,6 +401,7 @@ def raiseError(record):
     """
     raise
 
+
 # -----------------------------------------------------------------------------
 def rgxin(needle, haystack):
     """
@@ -385,7 +409,10 @@ def rgxin(needle, haystack):
     """
     return bool(re.search(needle, haystack))
 
+
 default_logfile_name = "/var/log/crawl.log"
+
+
 # -----------------------------------------------------------------------------
 def setup_logging(logfile='',
                   logname='crawl',
@@ -398,7 +425,7 @@ def setup_logging(logfile='',
     """
     if logfile == '':
         logfile = default_logfile_name
-    
+
     rval = logging.getLogger(logname)
     rval.setLevel(logging.INFO)
     host = hostname()
@@ -423,16 +450,17 @@ def setup_logging(logfile='',
                     logfile = "/tmp/%s" % os.path.basename(logfile)
                 else:
                     raise
-                
+
         strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
         fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
         fh.setFormatter(fmt)
         fh.handleError = raiseError
-        
+
         rval.addHandler(fh)
     if bumper:
         rval.info('-' * (55 - len(host)))
     return rval
+
 
 # -----------------------------------------------------------------------------
 def date_parse(data, idx):
@@ -454,6 +482,7 @@ def date_parse(data, idx):
         rval = "%s.%s" % (q[idx][0], q[idx][1])
     return rval
 
+
 # -----------------------------------------------------------------------------
 def date_end(filename):
     """
@@ -461,7 +490,7 @@ def date_end(filename):
     """
     rval = date_parse('', 0)
     f = RRfile.open(filename, 'r')
-    
+
     data = f.revread()
     while rval == date_parse._fail and data != '':
         rval = date_parse(data, -1)
@@ -469,7 +498,8 @@ def date_end(filename):
 
     f.close()
     return rval
-    
+
+
 # -----------------------------------------------------------------------------
 def date_start(filename):
     """
@@ -483,9 +513,10 @@ def date_start(filename):
     while rval == date_parse._fail and line != '':
         rval = date_parse(line, 0)
         line = f.readline()
-    
+
     f.close()
     return rval
+
 
 # -----------------------------------------------------------------------------
 def ymdhms(epoch):
@@ -495,9 +526,11 @@ def ymdhms(epoch):
     return time.strftime("%Y.%m%d %H:%M:%S",
                          time.localtime(epoch))
 
+
 # -----------------------------------------------------------------------------
 class HpssicError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
