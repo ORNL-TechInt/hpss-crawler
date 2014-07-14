@@ -3,6 +3,7 @@ import Checkable
 import crawl_lib
 import CrawlConfig
 import CrawlDBI
+import Dimension
 import hpss
 import optparse
 import pdb
@@ -172,53 +173,19 @@ def cv_report(argv):
     if o.debug: pdb.set_trace()
 
     if o.config != '':
-        cfgname = o.config
+        cfg = CrawlConfig.get_config(o.config)
     else:
-        cfgname = 'crawl.cfg'
-    cfg = CrawlConfig.get_config(cfgname)
+        cfg = CrawlConfig.get_config()
 
     if o.prefix != '':
         cfg.set('dbi', 'tbl_prefix', o.prefix)
 
-    db = CrawlDBI.DBI(cfg=cfg)
-    # d = {}
-    pop = db.select(table="checkables",
-                       fields=["cos", "count(*)"],
-                       where="type = 'f'",
-                       groupby="cos")
-    # for r in pop:
-    #     d[r[0]] = {'p_count': r[1]}
-    d = dict((z[0], {'p_count': z[1]}) for z in pop)
+    dim = {}
+    dim['cos'] = Dimension.get_dim('cos')
+    dim['cart'] = Dimension.get_dim('cart')
 
-    samp = db.select(table="checkables",
-                     fields=["cos", "count(*)"],
-                     where="checksum <> 0",
-                     groupby="cos")
-    # for r in samp:
-    #     d[r[0]].update({'s_count': r[1]})
-    map(lambda x: d[x[0]].update({'s_count': x[1]}), samp)
-
-    ptot = sum(map(lambda x: x['p_count'], d.values()))
-    stot = sum(map(lambda x: x['s_count'], d.values()))
-
-    # for cos in d:
-        # d[cos]['p_pct'] = 100.0 * d[cos]['p_count'] / ptot
-        # d[cos]['s_pct'] = 100.0 * d[cos]['s_count'] / stot
-
-    map(lambda x: x.update({'p_pct': 100.0 * x['p_count'] / ptot}), d.values())
-    map(lambda x: x.update({'s_pct': 100.0 * x['s_count'] / stot}), d.values())
-    
-    print("%8s %8s %15s %15s" % ("Name",
-                                 "Category",
-                                 "==Population===",
-                                 "====Sample====="))
-    for cos in sorted(d.keys()):
-        print("%8s %8s %7d %7.2f %7d %7.2f" % ('cos', cos,
-                                               d[cos]['p_count'], d[cos]['p_pct'],
-                                               d[cos]['s_count'], d[cos]['s_pct']))
-    print("%8s %8s %7d %7s %7d" % (" ", "Total", ptot, " ", stot))
-                                
-    db.close()
+    print dim['cos'].report()
+    print dim['cart'].report()
 
 # -----------------------------------------------------------------------------
 def cv_nulltest(argv):
