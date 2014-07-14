@@ -2,6 +2,7 @@
 """
 Tests for util.py
 """
+import copy
 from hpssic import CrawlConfig
 import logging
 import os
@@ -609,6 +610,25 @@ class UtilTest(testhelp.HelpedTestCase):
         self.assertEqual(expected, actual,
                          "Expected '%s' to match '%s'" %
                          (expected, actual))
+
+    # -------------------------------------------------------------------------
+    def test_pop0(self):
+        """
+        Routine pop0() should remove and return the 0th element of a list. If
+        the list is empty, it should return None. After pop0() returns, the
+        list should be one element shorter.
+        """
+        tl = [1,2,3,4,5]
+        x = copy.copy(tl)
+        e = util.pop0(x)
+        self.expected(1, e)
+        self.expected(tl[1:], x)
+        self.expected(len(tl) - 1, len(x))
+
+        x = ['abc']
+        self.expected('abc', util.pop0(x))
+        self.expected(None, util.pop0(x))
+        self.expected(None, util.pop0(x))
 
     # -------------------------------------------------------------------------
     def test_rgxin(self):
