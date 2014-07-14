@@ -1,5 +1,5 @@
 which python
 python --version
-ls /usr/local/bin/nose*
+env
 nosetests1.1 -c test/nosecron.cfg test
 
