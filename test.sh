@@ -1,1 +1,2 @@
-make alltests
+nosetests -c test/nosecron.cfg test
+
