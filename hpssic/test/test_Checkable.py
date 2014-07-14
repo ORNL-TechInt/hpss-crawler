@@ -16,13 +16,15 @@ from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Create the test directory in preparation to run the tests.
     """
     testhelp.module_test_setup(CheckableTest.testdir)
-    
+
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
@@ -30,13 +32,14 @@ def tearDownModule():
     """
     testhelp.module_test_teardown(CheckableTest.testdir)
 
+
 # -----------------------------------------------------------------------------
 class CheckableTest(testhelp.HelpedTestCase):
     testdir = testhelp.testdata(__name__)
     testdb = '%s/test.db' % testdir
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
     testpath = '/home/tpb/TODO'
-    
+
     # -------------------------------------------------------------------------
     @attr(slow=True)
     def test_check_dir(self):
@@ -47,15 +50,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.ex_nihilo()
-        testdir='/home/tpb/hic_test'
+        testdir = '/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
         x = Checkable.get_list()
-        
+
         self.expected(2, len(x))
         dirlist = x[1].check()
         if type(dirlist) == str and dirlist == "unavailable":
             return
-        
+
         c = Checkable(path=testdir + '/crawler.tar', type='f')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
@@ -91,7 +94,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Dimension.get_dim('ignore', reset=True)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.ex_nihilo()
-        testdir='/home/tpb/hic_test'
+        testdir = '/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
         self.db_add_one(path=testdir + '/crawler.tar', type='f')
         self.db_add_one(path=testdir + '/crawler.tar.idx', type='f')
@@ -109,7 +112,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertNotEqual(0, item.last_check,
                                 "Expected last_check to be updated but " +
                                 "it was not")
-    
+
     # -------------------------------------------------------------------------
     def test_ctor(self):
         """
@@ -128,7 +131,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, x.fails)
         self.expected(None, x.rowid)
         self.expected(0.1, x.probability)
-            
+
     # -------------------------------------------------------------------------
     def test_ctor_args(self):
         """
@@ -139,7 +142,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                       last_check=72, probability=0.01)
         for method in self.methods:
             self.assertEqual(method in dir(x), True,
-                         "Checkable object is missing %s method" % method)
+                             "Checkable object is missing %s method" % method)
         self.expected(3, x.rowid)
         self.expected('/one/two/three', x.path)
         self.expected('f', x.type)
@@ -161,7 +164,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                              in str(e), True,
                              "Got the wrong StandardError: %s" %
                              util.line_quote(tb.format_exc()))
-            
+
     # -------------------------------------------------------------------------
     def test_eq(self):
         """
@@ -228,7 +231,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
-        
+
         # this call should create it
         Checkable.ex_nihilo(dataroot="/home/somebody")
 
@@ -274,7 +277,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
-        
+
         # create a dummy .db file and set its mtime back by 500 seconds
         testhelp.touch(self.testdb)
         s = os.stat(self.testdb)
@@ -284,7 +287,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # create a dummy 'checkables' table in the test database
         Checkable.ex_nihilo()
         pre = os.stat(self.testdb)
-        
+
         # call the test target routine
         time.sleep(1.0)
         Checkable.ex_nihilo()
@@ -294,7 +297,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.ymdhms(pre[stat.ST_MTIME]),
                       self.ymdhms(post[stat.ST_MTIME]))
         self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
-    
+
     # -------------------------------------------------------------------------
     def test_ex_nihilo_notable(self):
         """
@@ -328,7 +331,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI()
         self.assertTrue(db.table_exists(table='checkables'),
                         "Expected table 'checkables' to exist in db")
-        
+
     # -------------------------------------------------------------------------
     def test_ex_nihilo_scratch(self):
         """
@@ -350,7 +353,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
         db = CrawlDBI.DBI()
-        
+
         # there should be one row
         rows = db.select(table='checkables', fields=[])
         self.expected(1, len(rows))
@@ -386,7 +389,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
         db = CrawlDBI.DBI()
-        
+
         # there should be two rows, one for each item in the dataroot list
         rows = db.select(table='checkables', fields=[])
         self.expected(2, len(rows))
@@ -396,7 +399,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         self.expected('def', rows[1][1])
         self.expected('d', rows[1][2])
-        
+
     # -------------------------------------------------------------------------
     def test_fdparse_ldr(self):
         """
@@ -418,8 +421,8 @@ class CheckableTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_fdparse_ldy(self):
         """
-        Parse an ls -l line from hsi where we're looking at a directory with a year
-        in the date. fdparse() should return type='d', path=<file name>.
+        Parse an ls -l line from hsi where we're looking at a directory with a
+        year in the date. fdparse() should return type='d', path=<file name>.
         """
         n = Checkable(path='xyx', type='d')
         line = ('drwxr-xr-x    2 tpb       ccsstaff         ' +
@@ -474,7 +477,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         line = '/home/tpb/cli_test:'
         z = n.fdparse(line)
         self.expected(None, z)
-    
+
     # -------------------------------------------------------------------------
     def test_fdparse_Pd(self):
         """
@@ -493,8 +496,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(None, r.cart)
         self.assertTrue(isinstance(r, Checkable),
                         "Expected Checkable(), got %s" % r)
-                                   
-    
+
     # -------------------------------------------------------------------------
     def test_fdparse_Pf(self):
         """
@@ -502,9 +504,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         should return type='f', path=<file path>, cos.
         """
         n = Checkable(path='xyx', type='d')
-        line = ("FILE\t    /home/tpb/LoadL_admin\t   88787\t   88787\t   " +
-                "3962+411820\t     X0352700\t        5081\t    0\t       1\t       " +
-                "03/14/2003\t      07:12:43\t        03/19/2012\t       13:09:50")
+        line = ("FILE\t /home/tpb/LoadL_admin\t 88787\t   88787\t   " +
+                "3962+411820\t X0352700\t 5081\t 0\t 1\t       " +
+                "03/14/2003\t  07:12:43\t 03/19/2012\t 13:09:50")
         r = n.fdparse(line)
         self.expected('f', r.type)
         self.expected('/home/tpb/LoadL_admin', r.path)
@@ -512,7 +514,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('X0352700', r.cart)
         self.assertTrue(isinstance(r, Checkable),
                         "Expected Checkable(), got %s" % r)
-    
+
     # -------------------------------------------------------------------------
     def test_fdparse_Pf0(self):
         """
@@ -520,12 +522,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         . fdparse() should return type='f', path=<file path>, cos.
         """
         n = Checkable(path='xyx', type='d')
-        line = ("FILE\t    /log/2007/05/15/logfile01_200705150306\t  0\t       0\t   " +
-                "         0\t        \t              6001\t    0\t       1\t  "+
-                "05/15/2007\t      03:06:39\t        02/11/2009\t       11:06:31")
-        # line = ("FILE    /home/tpb/LoadL_admin   88787   88787   " +
-        #         "3962+411820     X0352700        5081    0       1       " +
-        #         "03/14/2003      07:12:43        03/19/2012       13:09:50")
+        line = ("FILE\t/log/2007/05/15/logfile01_200705150306\t 0\t 0\t   " +
+                "0\t        \t              6001\t    0\t       1\t  " +
+                "05/15/2007\t   03:06:39\t  02/11/2009\t  11:06:31")
         r = n.fdparse(line)
         self.expected('f', r.type)
         self.expected('/log/2007/05/15/logfile01_200705150306', r.path)
@@ -533,7 +532,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('', r.cart)
         self.assertTrue(isinstance(r, Checkable),
                         "Expected Checkable(), got %s" % r)
-    
+
     # -------------------------------------------------------------------------
     def test_get_list_nosuch(self):
         """
@@ -541,7 +540,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
-        
+
         try:
             Checkable.get_list()
             self.fail("Expected an exception but didn't get one.")
@@ -549,7 +548,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertEqual("no such table: test_checkables" in str(e), True,
                              "Got the wrong DBIerror: %s" %
                              util.line_quote(tb.format_exc()))
-    
+
     # -------------------------------------------------------------------------
     def test_get_list_known(self):
         """
@@ -559,7 +558,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
-        
+
         # create some test data (path, type, cos, last_check)
         testdata = [('/', 'd', '', 0),
                     ('/abc', 'd', '', 17),
@@ -569,7 +568,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # testdata has to be sorted by last_check since that's the way get_list
         # will order the list it returns
-        testdata.sort(key=lambda x : x[3])
+        testdata.sort(key=lambda x: x[3])
 
         # create the .db file
         Checkable.ex_nihilo()
@@ -580,7 +579,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=testdata[1:])
         db.close()
-        
+
         # run the target routine
         x = Checkable.get_list()
 
@@ -595,7 +594,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.expected(testdata[idx][1], item.type)
             self.expected(testdata[idx][2], item.cos)
             self.expected(testdata[idx][3], item.last_check)
-    
+
     # -------------------------------------------------------------------------
     def test_get_list_newroot(self):
         """
@@ -612,7 +611,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
-        
+
         # create some test data (path, type, cos, last_check)
         testdata = [('/', 'd', '', 0),
                     ('/abc', 'd', '', 17),
@@ -622,7 +621,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         nrpath = '/newroot'
         nrtup = (nrpath, 'd', '', 0)
-        
+
         # create the .db file
         Checkable.ex_nihilo()
 
@@ -632,7 +631,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=testdata[1:])
         db.close()
-        
+
         # run the target routine
         x = Checkable.get_list(rootlist=['/abc', nrpath])
 
@@ -642,7 +641,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # testdata has to be sorted by last_check since that's the way get_list
         # will order the list it returns
-        testdata.sort(key=lambda x : x[3])
+        testdata.sort(key=lambda x: x[3])
 
         self.expected(len(testdata), len(x))
 
@@ -653,7 +652,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.expected(testdata[idx][1], item.type)
             self.expected(testdata[idx][2], item.cos)
             self.expected(testdata[idx][3], item.last_check)
-    
+
     # -------------------------------------------------------------------------
     def test_persist_last_check(self):
         """
@@ -665,7 +664,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo(dataroot=testpath)
 
         when = time.time()
-        
+
         x = Checkable.get_list()
         x[0].set('last_check', when)
         x[0].persist()
@@ -699,7 +698,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         root = Checkable(path='/', type='d')
         self.assertEqual(root in x, True,
                          "Object root not found in database")
-    
+
     # -------------------------------------------------------------------------
     def test_persist_dir_new(self):
         """
@@ -722,7 +721,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         root = Checkable(path='/', type='d')
         self.assertEqual(root in x, True,
                          "Object root not found in database")
-    
+
     # -------------------------------------------------------------------------
     def test_persist_dir_exist_dd(self):
         """
@@ -735,7 +734,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         now = time.time()
         self.db_add_one(path=self.testpath, type='d', last_check=now)
-        
+
         x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
@@ -752,7 +751,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('d', x[1].type)
         self.expected(now, x[1].last_check)
         self.expected('', x[1].cos)
-    
+
     # -------------------------------------------------------------------------
     def test_persist_dir_exist_fd(self):
         """
@@ -767,13 +766,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         now = time.time()
         self.db_add_one(path=self.testpath, type='f',
                         cos='1234', last_check=now)
-        
+
         x = Checkable.get_list()
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(now, x[1].last_check)
         self.expected('1234', x[1].cos)
-        
+
         x[1].set('last_check', 0)
         x[1].set('cos', '')
         x[1].set('rowid', None)
@@ -786,7 +785,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('d', x[1].type)
         self.expected(0, x[1].last_check)
         self.expected('', x[1].cos)
-    
+
     # -------------------------------------------------------------------------
     def test_persist_dir_invalid(self):
         """
@@ -826,7 +825,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         c = Checkable(path='/home', type='d')
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
         self.expected(self.ymdhms(t1), self.ymdhms(x[1].last_check))
-        
+
     # -------------------------------------------------------------------------
     def test_persist_dir_update(self):
         """
@@ -851,7 +850,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('/', x[0].path)
         self.expected('d', x[0].type)
         self.expected(now, x[0].last_check)
-            
+
     # -------------------------------------------------------------------------
     def test_persist_file_duplicate(self):
         """
@@ -868,7 +867,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(3, len(x))
         self.assertEqual(x[1], x[2],
                          "There should be a duplicate entry in the database.")
-        
+
         foo = Checkable(path=self.testpath, type='f')
         self.assertRaisesMsg(StandardError,
                              "There appears to be more than one",
@@ -883,7 +882,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                          "Object root not found in database")
         self.assertEqual(x[1], x[2],
                          "There should be a duplicate entry in the database.")
-        
+
     # -------------------------------------------------------------------------
     def test_persist_file_new(self):
         """
@@ -906,7 +905,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(2, len(x))
         self.expected(self.testpath, x[1].path)
         self.expected(0, x[1].last_check)
-    
+
     # -------------------------------------------------------------------------
     def test_persist_file_exist_df(self):
         """
@@ -937,7 +936,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(1, x[1].checksum)
         self.expected(0, x[1].last_check)
         self.expected('1234', x[1].cos)
-    
+
     # -------------------------------------------------------------------------
     def test_persist_file_exist_ff(self):
         """
@@ -968,7 +967,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected('f', x[1].type)
         self.expected(0, x[1].last_check)
         self.expected('2222', x[1].cos)
-        
+
     # -------------------------------------------------------------------------
     def test_persist_file_ok(self):
         """
@@ -1027,10 +1026,10 @@ class CheckableTest(testhelp.HelpedTestCase):
                "cart=None, " +
                "checksum=0, " +
                "last_check=%f)" % now)
-                    
+
         x = eval(exp)
         self.expected(exp, x.__repr__())
-                        
+
     # -------------------------------------------------------------------------
     def db_add_one(self,
                    path=testpath,
@@ -1059,7 +1058,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', 0)])
         db.close()
-        
+
     # -------------------------------------------------------------------------
     def ymdhms(self, dt):
         """
@@ -1067,9 +1066,3 @@ class CheckableTest(testhelp.HelpedTestCase):
         ("YYYY.mmdd.HHMMSS")
         """
         return time.strftime("%Y.%m%d.%H%M%S", time.localtime(dt))
-    
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='CheckableTest',
-                        logfile=testhelp.testlog(__name__))
-    

@@ -12,6 +12,7 @@ import sys
 import time
 import util
 
+
 # -----------------------------------------------------------------------------
 class CrawlPlugin(object):
     """
@@ -32,8 +33,8 @@ class CrawlPlugin(object):
         the plugin is updated by a reconfigure, it won't lose its last fire
         time but will stay on the same schedule.
         """
-        assert(name != None)
-        assert(cfg != None)
+        assert(name is not None)
+        assert(cfg is not None)
         self.cfg = cfg
         l = CrawlConfig.get_logger(cfg=cfg)
         CrawlConfig.log("%s: Initializing plugin data" % name)
@@ -62,7 +63,7 @@ class CrawlPlugin(object):
         """
         if name != '':
             self.name = name
-        if cfg != None:
+        if cfg is not None:
             self.cfg = cfg
         try:
             x = cfg.get(self.name, 'fire')
@@ -90,7 +91,7 @@ class CrawlPlugin(object):
             util.conditional_rm(filename)
 
             del sys.modules[self.modname]
-            
+
         try:
             self.plugin = __import__(self.modname)
         except ImportError:
@@ -103,7 +104,7 @@ class CrawlPlugin(object):
         Re-initialize this object from the configuration.
         """
         self.init_cfg_data(cfg=cfg)
-        
+
     # -------------------------------------------------------------------------
     def time_to_fire(self):
         """

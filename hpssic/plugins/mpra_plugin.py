@@ -4,6 +4,7 @@ from hpssic import mpra_lib
 import time
 from hpssic import util
 
+
 # -----------------------------------------------------------------------------
 def main(cfg):
     """
@@ -28,9 +29,8 @@ def main(cfg):
                     (start, util.ymdhms(start), end, util.ymdhms(end)))
     result = mpra_lib.age("migr", start=start, end=end, mark=True)
     CrawlConfig.log("found %d migration records in the range" % result)
-                
+
     start = mpra_lib.mpra_fetch_recent("purge")
     CrawlConfig.log("Looking for expired purge locks")
     result = mpra_lib.xplocks(mark=True)
     CrawlConfig.log("found %d expired purge locks" % result)
-        

@@ -6,22 +6,27 @@ import sys
 import traceback as tb
 import util
 
+
 # -----------------------------------------------------------------------------
 class HSIerror(Exception):
     """
     This class is used to return HSI errors to the application
     """
+    # -------------------------------------------------------------------------
     def __init__(self, value):
         """
         Set the value for the exception. It should be a string.
         """
         self.value = str(value)
+
+    # -------------------------------------------------------------------------
     def __str__(self):
         """
         Report the exception value (should be a string).
         """
         return "%s" % (str(self.value))
-    
+
+
 # -----------------------------------------------------------------------------
 class HSI(object):
     hsierrs = ["Aborting transfer",
@@ -32,7 +37,7 @@ class HSI(object):
                "Error -?\d+ on transfer",
                "checksum not set",
                "HPSS_ESYSTEM"]
-    
+
     # -------------------------------------------------------------------------
     def __init__(self, connect=True, *args, **kwargs):
         self.prompt = "]:"
@@ -40,7 +45,7 @@ class HSI(object):
         self.unavailable = False
         self.xobj = None
         self.timeout = 60
-        
+
         cmdopts = " ".join(args)
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -67,7 +72,7 @@ class HSI(object):
         which = self.xobj.expect([self.prompt] + self.hsierrs)
         if 0 != which or self.unavailable:
             raise HSIerror("HPSS Unavailable")
-        
+
     # -------------------------------------------------------------------------
     def hashcreate(self, pathnames):
         """
@@ -92,8 +97,8 @@ class HSI(object):
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
             while which == 1 and 1 < len(self.xobj.before):
-                CrawlConfig.log("got a timeout, continuing because before is not" +
-                         " empty and does not contain an error")
+                CrawlConfig.log("got a timeout, continuing because before " +
+                                "is not empty and does not contain an error")
                 rval += self.xobj.before
                 which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                          self.hsierrs)
@@ -103,7 +108,7 @@ class HSI(object):
             elif 0 != which:
                 rval += " ERROR"
         return rval
-    
+
     # -------------------------------------------------------------------------
     def hashdelete(self, pathnames):
         """
@@ -124,7 +129,7 @@ class HSI(object):
         self.xobj.sendline("hashdelete %s" % pargs)
         self.xobj.expect(self.prompt)
         return self.xobj.before
-    
+
     # -------------------------------------------------------------------------
     def hashlist(self, pathnames):
         """
@@ -145,7 +150,7 @@ class HSI(object):
         self.xobj.sendline("hashlist %s" % pargs)
         self.xobj.expect(self.prompt)
         return self.xobj.before
-    
+
     # -------------------------------------------------------------------------
     def hashverify(self, pathnames):
         """
@@ -169,8 +174,8 @@ class HSI(object):
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
             while which == 1 and 1 < len(self.xobj.before):
-                CrawlConfig.log("got a timeout, continuing because before is not" +
-                         " empty and does not contain an error")
+                CrawlConfig.log("got a timeout, continuing because before " +
+                                "is not empty and does not contain an error")
                 rval += self.xobj.before
                 which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                          self.hsierrs)
@@ -180,13 +185,13 @@ class HSI(object):
             elif 0 != which:
                 rval += " ERROR"
         return rval
-    
+
     # -------------------------------------------------------------------------
     def lscos(self):
         self.xobj.sendline("lscos")
         self.xobj.expect(self.prompt)
         return self.xobj.before
-    
+
     # -------------------------------------------------------------------------
     def lsP(self, pathnames=''):
         """
@@ -207,7 +212,7 @@ class HSI(object):
         self.xobj.sendline("ls -P %s" % parg)
         self.xobj.expect(self.prompt)
         return self.xobj.before
-    
+
     # -------------------------------------------------------------------------
     def pid(self):
         return self.xobj.pid

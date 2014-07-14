@@ -7,6 +7,7 @@ import tcc_lib
 import time
 import util
 
+
 # -----------------------------------------------------------------------------
 def age(table,
         start=None,
@@ -50,7 +51,7 @@ def age(table,
         dbargs = {'where': '? < record_create_time',
                   'data': (start, )}
     # if both start and end are None, we leave the select unconstrained
-    
+
     if count:
         dbargs['fields'] = ['count(*)']
     else:
@@ -85,6 +86,7 @@ def age(table,
 
     return rval
 
+
 # -----------------------------------------------------------------------------
 def age_report(table, age, count, result, f, path=False):
     """
@@ -98,8 +100,8 @@ def age_report(table, age, count, result, f, path=False):
         f.write("%-67s %-18s %s\n" % ("BFID", "Created", "MigrFails"))
         for row in result:
             f.write("%s %s %9d\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
-                                    util.ymdhms(row['RECORD_CREATE_TIME']),
-                                    row['MIGRATION_FAILURE_COUNT']))
+                                     util.ymdhms(row['RECORD_CREATE_TIME']),
+                                     row['MIGRATION_FAILURE_COUNT']))
             if path:
                 path = tcc_lib.get_bitfile_path(row['BFID'])
                 f.write("   %s\n" % path)
@@ -108,14 +110,16 @@ def age_report(table, age, count, result, f, path=False):
         f.write("%-67s %-18s\n" % ("BFID", "Created"))
         for row in result:
             f.write("%s %s\n" % (CrawlDBI.DBIdb2.hexstr(row['BFID']),
-                                    util.ymdhms(row['RECORD_CREATE_TIME'])))
+                                 util.ymdhms(row['RECORD_CREATE_TIME'])))
             if path:
                 path = tcc_lib.get_bitfile_path(row['BFID'])
                 f.write("   %s\n" % path)
 
+
 # -----------------------------------------------------------------------------
 def idivrem(secs, div):
     return(int(secs)/div, int(secs) % div)
+
 
 # -----------------------------------------------------------------------------
 def dhms(age_s):
@@ -123,6 +127,7 @@ def dhms(age_s):
     (hours, rem) = idivrem(rem, 3600)
     (minutes, seconds) = idivrem(rem, 60)
     return("%dd-%02d:%02d:%02d" % (days, hours, minutes, seconds))
+
 
 # -----------------------------------------------------------------------------
 def mpra_record_recent(type, start, end, hits):
@@ -145,6 +150,7 @@ def mpra_record_recent(type, start, end, hits):
               fields=['type', 'scan_time', 'start_time', 'end_time', 'hits'],
               data=[(type, int(time.time()), int(start), int(end), hits)])
 
+
 # -----------------------------------------------------------------------------
 def mpra_fetch_recent(type):
     """
@@ -166,15 +172,15 @@ def mpra_fetch_recent(type):
         if max_scan_time < r[0]:
             max_scan_time = r[0]
             last_end_time = r[1]
-            
 
     if last_end_time < 0:
         CrawlConfig.log("No '%s' value in mpra -- returning 0" % type)
         return 0
     else:
         CrawlConfig.log("Fetch '%s' from mpra table -- return %d" %
-                 (type, last_end_time))
+                        (type, last_end_time))
         return last_end_time
+
 
 # -----------------------------------------------------------------------------
 def xplocks(output=None, mark=False):
@@ -213,7 +219,7 @@ def xplocks(output=None, mark=False):
 
     if mark:
         mpra_record_recent('purge', 0, 0, hits)
-        
+
     if opened:
         f.close()
 

@@ -23,6 +23,8 @@ import traceback as tb
 import util
 
 exit_file = 'crawler.exit'
+
+
 # ------------------------------------------------------------------------------
 def crl_cfgdump(argv):
     """cfgdump - load a config file and dump its contents
@@ -44,9 +46,11 @@ def crl_cfgdump(argv):
                  help='specify where to send the output')
     (o, a) = p.parse_args(argv)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
-    if o.target == '':    o.target = 'stdout'
+    if o.target == '':
+        o.target = 'stdout'
 
     cfg = CrawlConfig.get_config(o.config)
     dumpstr = cfg.dump()
@@ -57,6 +61,7 @@ def crl_cfgdump(argv):
         log = CrawlConfig.get_logger(o.logpath, cfg)
         for line in dumpstr.split("\n"):
             log.info(line)
+
 
 # ------------------------------------------------------------------------------
 def crl_cleanup(argv):
@@ -75,14 +80,16 @@ def crl_cleanup(argv):
                  help='see what would happen')
     (o, a) = p.parse_args(argv)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     testdirs = glob.glob("/tmp/hpss-crawl.*")
     for td in testdirs:
         if o.dryrun:
             print("would do 'shutil.rmtree(%s)'" % td)
         else:
             shutil.rmtree(td)
+
 
 # ------------------------------------------------------------------------------
 def crl_dbdrop(argv):
@@ -101,7 +108,8 @@ def crl_dbdrop(argv):
                  help='proceed without confirmation')
     (o, a) = p.parse_args(argv)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     cfg = CrawlConfig.get_config()
     tbpfx = cfg.get('dbi', 'tbl_prefix')
@@ -110,7 +118,7 @@ def crl_dbdrop(argv):
                        (tbpfx, tname))
     if answer[0].lower() != "y":
         sys.exit()
-        
+
     db = CrawlDBI.DBI()
     db.drop(table=tname)
     if db.table_exists(table=tname):
@@ -118,7 +126,8 @@ def crl_dbdrop(argv):
     else:
         print("Attempt to drop table '%s_%s' was successful" % (tbpfx, tname))
     db.close()
-    
+
+
 # ------------------------------------------------------------------------------
 def crl_fire(argv):
     """fire - run a plugin
@@ -139,8 +148,9 @@ def crl_fire(argv):
                  action='store', default='', dest='plugname',
                  help='which plugin to fire')
     (o, a) = p.parse_args(argv)
-    
-    if o.debug: pdb.set_trace()
+
+    if o.debug:
+        pdb.set_trace()
 
     cfg = CrawlConfig.get_config(o.config)
     log = CrawlConfig.get_logger(o.logpath, cfg)
@@ -153,7 +163,8 @@ def crl_fire(argv):
         __import__(o.plugname)
         log.info('firing %s' % o.plugname)
         sys.modules[o.plugname].main(cfg)
-    
+
+
 # ------------------------------------------------------------------------------
 def crl_log(argv):
     """log - write a message to the indicated log file
@@ -168,16 +179,18 @@ def crl_log(argv):
                  action='store', default=None, dest='logfile',
                  help='specify the log file')
     (o, a) = p.parse_args(argv)
-    
-    if o.debug: pdb.set_trace()
+
+    if o.debug:
+        pdb.set_trace()
 
     if o.logfile is not None:
         log = CrawlConfig.get_logger(o.logfile)
     else:
         cfg = CrawlConfig.get_config()
         log = CrawlConfig.get_logger(cfg=cfg)
-        
+
     log.info(" ".join(a))
+
 
 # ------------------------------------------------------------------------------
 def crl_pw_encode(argv):
@@ -206,7 +219,8 @@ def crl_pw_encode(argv):
         password = getpass.getpass("Password? > ")
 
     print(base64.b64encode(password))
-    
+
+
 # ------------------------------------------------------------------------------
 def crl_pw_decode(argv):
     """pw_decode - accept a base64 hash and decode it
@@ -226,8 +240,9 @@ def crl_pw_decode(argv):
     if len(a) < 1:
         print("usage: crawl pw_decode B64STRING")
         sys.exit(1)
-        
+
     print(base64.b64decode(a[0]))
+
 
 # ------------------------------------------------------------------------------
 def crl_start(argv):
@@ -256,8 +271,9 @@ def crl_start(argv):
                  action='store', default='', dest='context',
                  help="context of crawler ('TEST' or 'PROD')")
     (o, a) = p.parse_args(argv)
-    
-    if o.debug: pdb.set_trace()
+
+    if o.debug:
+        pdb.set_trace()
 
     cfg = CrawlConfig.get_config(o.config)
 
@@ -271,7 +287,7 @@ def crl_start(argv):
     except CrawlConfig.NoOptionError, e:
         print("No exit path is specified in the configuration")
         sys.exit(1)
-        
+
     log = CrawlConfig.get_logger(o.logfile, cfg)
     pfpath = make_pidfile(os.getpid(),
                           cfg.get('crawler', 'context'),
@@ -286,6 +302,7 @@ def crl_start(argv):
     crawler.start()
     pass
 
+
 # ------------------------------------------------------------------------------
 def crl_status(argv):
     """status - report whether the crawler is running or not
@@ -297,8 +314,9 @@ def crl_status(argv):
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
     (o, a) = p.parse_args(argv)
-    
-    if o.debug: pdb.set_trace()
+
+    if o.debug:
+        pdb.set_trace()
 
     rpi_l = running_pid()
     if rpi_l == []:
@@ -311,7 +329,8 @@ def crl_status(argv):
             if os.path.exists(exitpath):
                 print("Termination has been requested (%s exists)" %
                       (exitpath))
-            
+
+
 # ------------------------------------------------------------------------------
 def crl_stop(argv):
     """stop - shut down the crawler daemon if it is running
@@ -329,8 +348,9 @@ def crl_stop(argv):
                  action='store', default='', dest='context',
                  help="context of crawler (PROD/DEV/TEST)")
     (o, a) = p.parse_args(argv)
-    
-    if o.debug: pdb.set_trace()
+
+    if o.debug:
+        pdb.set_trace()
 
     rpid_l = running_pid()
     if rpid_l == []:
@@ -358,7 +378,8 @@ def crl_stop(argv):
         idx = ctx_l.index(o.context)
         print("Stopping the %s crawler..." % ctx_l[idx])
         testhelp.touch(rpid_l[idx][2])
-    
+
+
 # ------------------------------------------------------------------------------
 def get_timeval(cfg, section, option, default):
     """
@@ -367,6 +388,7 @@ def get_timeval(cfg, section, option, default):
     """
     log = CrawlConfig.get_logger()
     return cfg.gettime(section, option, default, log)
+
 
 # ------------------------------------------------------------------------------
 def is_running(context=None):
@@ -382,14 +404,15 @@ def is_running(context=None):
             emsg = ("No option 'context' in section 'crawler', file '%s'" %
                     cfg.filename)
             raise StandardError(emsg)
-        
+
     rpi_l = running_pid()
     for rpi in rpi_l:
         if rpi[1] == context:
             running = True
 
     return running
-    
+
+
 # ------------------------------------------------------------------------------
 def make_pidfile(pid, context, exitpath, just_check=False):
     """
@@ -416,16 +439,17 @@ def make_pidfile(pid, context, exitpath, just_check=False):
     pfname = "%s/%d" % (piddir, pid)
     if just_check:
         return pfname
-    
+
     with open(pfname, 'w') as f:
         f.write("%s %s\n" % (context, exitpath))
 
     return pfname
 
+
 # ------------------------------------------------------------------------------
 def running_pid(proc_required=True):
     """
-    Return a list of pids if the crawler is running (per ps(1)) or [] otherwise.
+    Return a list of pids if the crawler is running (per ps(1)) or [] otherwise
     """
     rval = []
     if proc_required:
@@ -445,7 +469,8 @@ def running_pid(proc_required=True):
             rval.append((pid, ctx, xpath))
 
     return rval
-    
+
+
 # ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
     """
@@ -454,6 +479,7 @@ class CrawlDaemon(daemon.Daemon):
     invoke a plugin.
     """
     piddir = "/tmp/crawler"
+
     # --------------------------------------------------------------------------
     def give_up_yet(self, tbstr):
         """
@@ -485,7 +511,7 @@ class CrawlDaemon(daemon.Daemon):
         else:
             self.xseen[tbstr] = 1
         self.xtotal += 1
-            
+
         # log the traceback
         for line in tbstr.split('\n'):
             self.dlog("crawl: '%s'" % line)
@@ -501,7 +527,7 @@ class CrawlDaemon(daemon.Daemon):
             self.dlog("crawl: shutting down because we got " +
                       "%d total errors" % self.zlimit)
             rval = True
-            
+
         # give up if we got enough errors in the time window
         dt = now - self.ewhen
         if self.climit <= self.ecount and dt < self.tlimit:
@@ -517,7 +543,7 @@ class CrawlDaemon(daemon.Daemon):
         # CrawlConfig.log("rval = %s; ecount = %d; dt = %f; whenq = %s" %
         #                 (rval, self.ecount, dt, self.whenq))
         return rval
-            
+
     # --------------------------------------------------------------------------
     def fire_plugins(self, plugin_d):
         """
@@ -533,7 +559,7 @@ class CrawlDaemon(daemon.Daemon):
             bail_out = self.give_up_yet(tb.format_exc())
 
         return bail_out
-            
+
     # --------------------------------------------------------------------------
     def run(self):
         """
@@ -558,7 +584,8 @@ class CrawlDaemon(daemon.Daemon):
                 for s in pluglist:
                     self.dlog('crawl: CONFIG: [%s]' % s)
                     for o in self.cfg.options(s):
-                        self.dlog('crawl: CONFIG: %s: %s' % (o, self.cfg.get(s, o)))
+                        self.dlog('crawl: CONFIG: %s: %s' %
+                                  (o, self.cfg.get(s, o)))
                     if s == 'crawler':
                         continue
                     elif s in plugin_d.keys():
@@ -574,7 +601,7 @@ class CrawlDaemon(daemon.Daemon):
                     if p not in self.cfg.sections():
                         CrawlConfig.log("unloading obsolete plugin %s" % p)
                         del plugin_d[p]
-                
+
                 heartbeat = self.cfg.get_time('crawler', 'heartbeat', 10)
                 # hb_msg = "crawl: heartbeat... "
                 while keep_going:
@@ -595,7 +622,7 @@ class CrawlDaemon(daemon.Daemon):
                     if 0 == (int(time.time()) % heartbeat):
                         # self.dlog('crawl: heartbeat...')
                         self.dlog(hb_msg)
-                            
+
                     # CrawlConfig.log("check for config changes")
                     #
                     # If config file has changed, reload it.

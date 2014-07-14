@@ -17,7 +17,7 @@ options and arguments):
     * Call toolframe.tf_launch() (no args) outside any function
 
     * Additional features:
-    
+
        * When run as 'program.py -L', symlink program -> program.py is
          created so the program can be easily called from the command
          line without typing the .py suffix.
@@ -62,7 +62,7 @@ def tf_main(args, prefix=None, noarg='help'):
     Dispatch a subfunction from mainmod
     """
     mainmod = sys.modules['__main__']
-    if prefix == None:
+    if prefix is None:
         prefix = mainmod.prefix()
     if len(args) < 2:
         if noarg == 'shell':
@@ -104,7 +104,7 @@ def tf_help(A, prefix=None):
     each __doc__ member.
     """
     d = dir(sys.modules['__main__'])
-    if prefix == None:
+    if prefix is None:
         prefix = sys.modules['__main__'].prefix()
     if 0 < len(A):
         if '%s_%s' % (prefix, A[0]) in d:
@@ -127,7 +127,7 @@ def tf_help(A, prefix=None):
         elif o == 'tf_help':
             docsum = tf_help.__doc__.split('\n')[0]
             print "   %s" % (docsum)
-            
+
 
 # -----------------------------------------------------------------------------
 def tf_launch(prefix,
@@ -179,7 +179,7 @@ def tf_dispatch(prefix, args):
             print("No such subcommand '%s'" % args[0])
         except:
             tb.print_exc()
-            
+
 
 # -----------------------------------------------------------------------------
 def tf_shell(prefix, args):
@@ -219,7 +219,7 @@ def ez_launch(main=None,
             if test is None:
                 unittest.main()
             else:
-                if setup != None:
+                if setup is not None:
                     setup()
                 keep = testhelp.main(sys.argv, test, logfile=logfile)
                 if not keep and cleanup is not None:

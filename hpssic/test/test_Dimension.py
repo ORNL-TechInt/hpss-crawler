@@ -17,19 +17,22 @@ from hpssic import util
 mself = sys.modules[__name__]
 logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for testing
     """
     testhelp.module_test_setup(DimensionTest.testdir)
-    
+
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
     Clean up after testing
     """
     testhelp.module_test_teardown(DimensionTest.testdir)
+
 
 # -----------------------------------------------------------------------------
 class DimensionTest(testhelp.HelpedTestCase):
@@ -38,7 +41,7 @@ class DimensionTest(testhelp.HelpedTestCase):
     """
     testdir = '%s/test.d' % os.path.dirname(mself.__file__)
     testdb = '%s/test.db' % testdir
-    
+
     # -------------------------------------------------------------------------
     def test_addone(self):
         """
@@ -69,7 +72,8 @@ class DimensionTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
-        Verify that a newly created Dimension object has the following attributes:
+        Verify that a newly created Dimension object has the following
+        attributes:
          - name (string)
          - sampsize (small float value, e.g., 0.005)
          - p_sum (empty dict)
@@ -88,7 +92,8 @@ class DimensionTest(testhelp.HelpedTestCase):
                      'p_sum',
                      's_sum',
                      'sum_total',
-                     'load',]:
+                     'load',
+                     ]:
             self.assertTrue(hasattr(a, attr),
                             "Object %s does not have expected attribute %s" %
                             (a, attr))
@@ -104,12 +109,12 @@ class DimensionTest(testhelp.HelpedTestCase):
         got_exception = False
         self.assertRaisesMsg(StandardError,
                              "Attribute 'catl' is not valid",
-                             Dimension, name=dimname, catl=[1,2,3])
+                             Dimension, name=dimname, catl=[1, 2, 3])
 
         self.assertRaisesMsg(StandardError,
                              "Attribute 'aardvark' is not valid",
                              Dimension, name=dimname, aardvark='Fanny Brice')
-            
+
     # -------------------------------------------------------------------------
     def test_ctor_defaults(self):
         """
@@ -123,7 +128,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(0.01, a.sampsize)
         self.expected({}, a.p_sum)
         self.expected({}, a.s_sum)
-        
+
     # -------------------------------------------------------------------------
     def test_ctor_no_name(self):
         """
@@ -134,68 +139,6 @@ class DimensionTest(testhelp.HelpedTestCase):
                              "Caller must set attribute 'name'",
                              Dimension)
 
-    # -------------------------------------------------------------------------
-    # def test_db_already_no_table(self):
-    #     """
-    #     Creating a Dimension object should initialize the dimension table in
-    #     the existing database if the db exists but the table does not.
-    #     """
-    #     util.conditional_rm(self.testdb)
-    #     testhelp.db_config(self.testdir, util.my_name())
-    #     db = CrawlDBI.DBI()
-    #     self.assertFalse(db.table_exists(table='dimension'),
-    #                     'Did not expect table \'dimension\' in database')
-    #     self.assertTrue(os.path.exists(self.testdb),
-    #                     "Expected to find database file '%s'" % self.testdb)
-    # 
-    #     a = Dimension(name='already_nt')
-    #     a.persist()
-    #     self.assertTrue(os.path.exists(self.testdb),
-    #                     "Expected to find database file '%s'" % self.testdb)
-    # 
-    #     self.assertTrue(db.table_exists(table='dimension'),
-    #                     'Expected table \'dimension\' in database')
-    #     db.close()
-        
-    # -------------------------------------------------------------------------
-    # def test_ex_nihilo_nofile(self):
-    #     """
-    #     Creating and persisting a Dimension object should initialize the
-    #     database and table dimension if they do not exist.
-    #     """
-    #     util.conditional_rm(self.testdb)
-    #     testhelp.db_config(self.testdir, util.my_name())
-    # 
-    #     a = Dimension(name='ex_nihilo')
-    #     a.persist()
-    #     self.assertTrue(os.path.exists(self.testdb),
-    #                     "Expected to find database file '%s'" % self.testdb)
-    # 
-    #     db = CrawlDBI.DBI()
-    #     self.assertTrue(db.table_exists(table='dimension'),
-    #                     "Expected table 'dimension' in database")
-    #     db.close()
-        
-    # -------------------------------------------------------------------------
-    # def test_ex_nihilo_notable(self):
-    #     """
-    #     If the db file exists but the table does not, creating and persisting a
-    #     Dimension object should create the table 'dimension'.
-    #     """
-    #     util.conditional_rm(self.testdb)
-    #     testhelp.db_config(self.testdir, util.my_name())
-    #     testhelp.touch(self.testdb)
-    #     
-    #     a = Dimension(name='ex_nihilo')
-    #     a.persist()
-    #     self.assertTrue(os.path.exists(self.testdb),
-    #                     "Expected to find database file '%s'" % self.testdb)
-    # 
-    #     db = CrawlDBI.DBI()
-    #     self.assertTrue(db.table_exists(table='dimension'),
-    #                     "Expected table 'dimension' in database")
-    #     db.close()
-        
     # -------------------------------------------------------------------------
     def test_load_already(self):
         """
@@ -209,26 +152,35 @@ class DimensionTest(testhelp.HelpedTestCase):
         Checkable.Checkable.ex_nihilo()
         chk = Checkable.Checkable
         testdata = [
-            chk(rowid=1, path="/abc/001", type='f', cos='6001', checksum=0, last_check=0),
-            chk(rowid=2, path="/abc/002", type='f', cos='6002', checksum=0, last_check=5),
-            chk(rowid=3, path="/abc/003", type='f', cos='6003', checksum=1, last_check=0),
-            chk(rowid=4, path="/abc/004", type='f', cos='6001', checksum=1, last_check=17),
-            chk(rowid=5, path="/abc/005", type='f', cos='6002', checksum=0, last_check=0),
-            chk(rowid=6, path="/abc/006", type='f', cos='6003', checksum=0, last_check=8),
-            chk(rowid=7, path="/abc/007", type='f', cos='6001', checksum=0, last_check=0),
-            chk(rowid=8, path="/abc/008", type='f', cos='6002', checksum=0, last_check=19),
-            chk(rowid=9, path="/abc/009", type='f', cos='6003', checksum=0, last_check=0),
+            chk(rowid=1, path="/abc/001", type='f', cos='6001', checksum=0,
+                last_check=0),
+            chk(rowid=2, path="/abc/002", type='f', cos='6002', checksum=0,
+                last_check=5),
+            chk(rowid=3, path="/abc/003", type='f', cos='6003', checksum=1,
+                last_check=0),
+            chk(rowid=4, path="/abc/004", type='f', cos='6001', checksum=1,
+                last_check=17),
+            chk(rowid=5, path="/abc/005", type='f', cos='6002', checksum=0,
+                last_check=0),
+            chk(rowid=6, path="/abc/006", type='f', cos='6003', checksum=0,
+                last_check=8),
+            chk(rowid=7, path="/abc/007", type='f', cos='6001', checksum=0,
+                last_check=0),
+            chk(rowid=8, path="/abc/008", type='f', cos='6002', checksum=0,
+                last_check=19),
+            chk(rowid=9, path="/abc/009", type='f', cos='6003', checksum=0,
+                last_check=0),
             ]
 
         # insert some test data into the table
         for t in testdata:
             t.persist()
-    
+
         # get a default Dimension with the same name as the data in the table
         q = Dimension(name='cos')
         # this should load the data from the table into the object
         q.load()
-    
+
         # verify the loaded data in the object
         # pdb.set_trace()
         self.expected('cos', q.name)
@@ -285,7 +237,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         the default. If the dbname is something else, __repr__ should show it.
         Like so: <Dimension(name='baz', dbname='./test.d/test.db')>
         """
-        
+
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.Checkable.ex_nihilo()
         exp = "Dimension(name='foo')"
@@ -295,7 +247,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         exp = "Dimension(name='baz')"
         b = eval(exp)
         self.expected(exp, b.__repr__())
-        
+
     # -------------------------------------------------------------------------
     def test_sum_total(self):
         """
@@ -315,9 +267,3 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(4, a.sum_total(dict=a.p_sum))
         self.expected(5, a.sum_total(which='s'))
         self.expected(5, a.sum_total(dict=a.s_sum))
-        
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='DimensionTest',
-                        logfile=logfile)
-        
