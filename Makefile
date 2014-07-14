@@ -43,7 +43,7 @@ tests:
 alltests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -a slow=True -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	nosetests -c test/nosecron.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
 
