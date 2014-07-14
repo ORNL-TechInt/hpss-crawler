@@ -1,7 +1,7 @@
 from nose.plugins.attrib import attr
 import os
 import pdb
-from hpssic import pexpect
+import pexpect
 import sys
 from hpssic import testhelp as th
 from hpssic import util as U

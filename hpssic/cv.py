@@ -168,13 +168,15 @@ def cv_addcart(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s add column cart text after cos" % table
     db.sql(cmd)
     db.close()
+
 
 # -----------------------------------------------------------------------------
 def cv_dropcart(argv):
@@ -191,13 +193,15 @@ def cv_dropcart(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s drop column cart" % table
     db.sql(cmd)
     db.close()
+
 
 # -----------------------------------------------------------------------------
 def cv_popcart(argv):
@@ -230,7 +234,8 @@ def cv_popcart(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
     if o.skip:
@@ -244,7 +249,7 @@ def cv_popcart(argv):
 
     h = hpss.HSI(verbose=True)
     if len(a) <= 0:
-        for (path,cart) in path_l:
+        for (path, cart) in path_l:
             if populate_cart_field(db, h, path, cart,
                                    int(o.max), o.dryrun):
                 break
@@ -259,6 +264,7 @@ def cv_popcart(argv):
                 print("NOTINDB %-8s %s" % (" ", path))
     h.quit()
     db.close()
+
 
 # -----------------------------------------------------------------------------
 def populate_cart_field(db, h, path, dbcart, max, dryrun):
@@ -283,6 +289,7 @@ def populate_cart_field(db, h, path, dbcart, max, dryrun):
     else:
         print("ALREADY %s %s" % (dbcart, path))
     return False
+
 
 # -----------------------------------------------------------------------------
 def cv_report(argv):

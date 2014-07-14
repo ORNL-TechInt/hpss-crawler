@@ -76,6 +76,7 @@ def tearDownModule():
                 db.drop(table=tname)
 
 
+
 # -----------------------------------------------------------------------------
 class DBITestRoot(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
@@ -1691,7 +1692,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         rows = db.select(table=['server A', 'logclient B'],
-                         fields=['A.server_id', 'A.desc_name', 'B.logc_directory'],
+                         fields=['A.server_id',
+                                 'A.desc_name',
+                                 'B.logc_directory'],
                          where="A.server_id = B.logc_server_id")
         self.assertTrue(0 < len(rows),
                         "Expected at least one row, got 0")
