@@ -10,6 +10,11 @@ mkdir -p $LOCAL_SITE_PKG
 easy_install --prefix ${CWD}/local virtualenv
 export PATH=${PATH}:${LOCAL}/bin
 
+which python
+python --version
+env
+nosetests1.1 -c test/nosecron.cfg test
+
 #
 # Next, we set up a virtual environment where we can install all our
 # dependencies. We put it in local, where easy_install just put
