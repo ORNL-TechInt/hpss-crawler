@@ -889,7 +889,8 @@ if mysql_available:
                     warnings.filterwarnings("ignore",
                                             "Can't read dir of .*")
                     dbc.execute("""
-                                select table_name from information_schema.tables
+                                select table_name
+                                from information_schema.tables
                                 where table_name=%s
                                 """, (self.prefix(table),))
                 rows = dbc.fetchall()
@@ -898,7 +899,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def update(self, table='', where='', fields=[], data=[]):
             """
             See DBI.update()
@@ -1120,7 +1121,8 @@ if db2_available:
                 if type(table) == str:
                     cmd += " from %s" % self.prefix(table)
                 elif type(table) == list:
-                    cmd += " from %s" % ",".join([self.prefix(x) for x in table])
+                    cmd += " from %s" % ",".join([self.prefix(x)
+                                                  for x in table])
 
                 if where != '':
                     cmd += " where %s" % where
@@ -1169,8 +1171,8 @@ if db2_available:
             try:
                 rows = self.select(table="@syscat.tables",
                                    fields=['tabname'],
-                                   where="tabschema = 'HPSS' and tabname = '%s'" %
-                                   table.upper())
+                                   where="tabschema = 'HPSS' and " +
+                                   "tabname = '%s'" % table.upper())
                 return 0 < len(rows)
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
@@ -1186,7 +1188,8 @@ if db2_available:
         @classmethod
         def hexstr(cls, bfid):
             """
-            Convert a raw bitfile id into a hexadecimal string as presented by DB2.
+            Convert a raw bitfile id into a hexadecimal string as presented by
+            DB2.
             """
             rval = "x'" + DBIdb2.hexstr_uq(bfid) + "'"
             return rval
@@ -1201,8 +1204,7 @@ if db2_available:
             rval = "".join(["%02x" % ord(c) for c in list(bfid)])
             return rval.upper()
 
-
-    # -----------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     @util.memoize
     def db2name(which):
         if which == 'subsys':
