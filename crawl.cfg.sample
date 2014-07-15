@@ -84,7 +84,7 @@ dbname = ./crawl.db
 ## The trailing underscore is optional and will be added if not
 ## present so table names will look like, e.g., 'dev_checkables',
 ## 'prod_dimension', etc.
-# tbl_prefix = dev
+tbl_prefix = test
 
 # dbtype = mysql
 # host = localhost

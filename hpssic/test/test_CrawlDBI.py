@@ -62,17 +62,18 @@ def tearDownModule():
     # pdb.set_trace()
     testhelp.module_test_teardown(DBITest.testdir)
     if not testhelp.keepfiles():
-        tcfg = make_tcfg('mysql')
-        tcfg.set('dbi', 'tbl_prefix', '')
-        db = CrawlDBI.DBI(cfg=tcfg)
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore",
-                                    "Can't read dir of .*")
-            tlist = db.select(table="information_schema.tables",
-                              fields=['table_name'],
-                              where='table_name like "test_%"')
-        for (tname,) in tlist:
-            db.drop(table=tname)
+        if CrawlDBI.mysql_available:
+            tcfg = make_tcfg('mysql')
+            tcfg.set('dbi', 'tbl_prefix', '')
+            db = CrawlDBI.DBI(cfg=tcfg)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore",
+                                        "Can't read dir of .*")
+                tlist = db.select(table="information_schema.tables",
+                                  fields=['table_name'],
+                                  where='table_name like "test_%"')
+            for (tname,) in tlist:
+                db.drop(table=tname)
 
 
 # -----------------------------------------------------------------------------
