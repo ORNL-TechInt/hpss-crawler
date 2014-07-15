@@ -13,6 +13,5 @@ set +x
 . ${VENV}/bin/activate
 set -x
 pip install -r jenkins_requirements.txt
-which nosetests
-nosetests -v -c test/nosecron.cfg hpssic/test
-
+cp crawl.cfg.sample crawl.cfg
+nosetests -v -c hpssic/test/nose_jenkins.cfg hpssic/test
