@@ -1271,6 +1271,7 @@ class DBI_out_Base(object):
 
 
 # -----------------------------------------------------------------------------
+@attr(heavy=True)
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
     pass
@@ -1561,7 +1562,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 
 
 # -----------------------------------------------------------------------------
-@attr(slow=True)
+@attr(slow=True, heavy=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
 
