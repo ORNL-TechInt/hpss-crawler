@@ -1,13 +1,16 @@
 CWD=`pwd`
 echo $CWD
-export PYTHONPATH=".:${CWD}/local/lib/python2.6/site-packages"
-mkdir -p $PYTHONPATH
+LOCAL=${CWD}/local
+LOCAL_SITE_PKG=${LOCAL}/lib/python2.6/site-packages
+export PYTHONPATH=".:${LOCAL_SITE_PKG}"
+mkdir -p $LOCAL_SITE_PKG
 easy_install --prefix ${CWD}/local virtualenv
-export PATH=${PATH}:${CWD}/local/bin
-virtualenv ${CWD}/hpssic
-export PATH=${PATH}:${CWD}/hpssic/bin
+export PATH=${PATH}:${LOCAL}/bin
+VENV=${CWD}/hpssic
+virtualenv ${VENV}
+export PATH=${PATH}:${VENV}/bin
 set +x
-. ${CWD}/hpssic/bin/activate
+. ${VENV}/bin/activate
 set -x
 pip install -r requirements.txt
 which nosetests
