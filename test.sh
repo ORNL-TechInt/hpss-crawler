@@ -1,6 +1,6 @@
 CWD=`pwd`
 echo $CWD
-export PYTHONPATH=${CWD}/local/lib/python2.6/site-packages
+export PYTHONPATH=".:${CWD}/local/lib/python2.6/site-packages"
 mkdir -p $PYTHONPATH
 easy_install --prefix ${CWD}/local virtualenv
 export PATH=${PATH}:${CWD}/local/bin
@@ -9,8 +9,7 @@ export PATH=${PATH}:${CWD}/hpssic/bin
 set +x
 . ${CWD}/hpssic/bin/activate
 set -x
-pip install pexpect
-pip install nose
+pip install -r requirements.txt
 which nosetests
 nosetests -v -c test/nosecron.cfg hpssic/test
 
