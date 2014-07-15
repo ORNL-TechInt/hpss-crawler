@@ -1,7 +1,7 @@
 CWD=`pwd`
 echo $CWD
-echo $PYTHONPATH
-export PYTHONPATH=${PYTHONPATH}:${CWD}/local/lib/python2.6/site-packages
+export PYTHONPATH=${CWD}/local/lib/python2.6/site-packages
+mkdir -p $PYTHONPATH
 easy_install --prefix ${CWD}/local virtualenv
 export PATH=${PATH}:${CWD}/local/bin
 virtualenv ${CWD}/hpssic
