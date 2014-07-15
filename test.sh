@@ -1,10 +1,12 @@
-echo $HOME
-pwd
-# easy_install --user virtualenv
-# export PATH=${PATH}:$HOME/.local/bin
-# virtualenv hpssic
-# export PATH=${PATH}:hpssic/bin
-# . hpssic/bin/activate
-# pip install pexpect
-# nosetests1.1 -c test/nosecron.cfg hpssic/test
+CWD=`pwd`
+echo $CWD
+echo $PYTHONPATH
+export PYTHONPATH=${PYTHONPATH}:${CWD}/local/lib/python2.6/site-packages
+easy_install --prefix ${CWD}/local virtualenv
+export PATH=${PATH}:${CWD}/local/bin
+virtualenv ${CWD}/hpssic
+export PATH=${PATH}:${CWD}/hpssic/bin
+. ${CWD}/hpssic/bin/activate
+pip install pexpect
+nosetests1.1 -c test/nosecron.cfg hpssic/test
 
