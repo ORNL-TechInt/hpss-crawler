@@ -10,7 +10,7 @@ set +x
 . ${CWD}/hpssic/bin/activate
 set -x
 pip install pexpect
-pip install nosetests
+pip install nose
 which nosetests
 nosetests -v -c test/nosecron.cfg hpssic/test
 
