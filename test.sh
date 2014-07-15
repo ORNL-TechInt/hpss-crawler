@@ -12,7 +12,7 @@ export PATH=${PATH}:${VENV}/bin
 set +x
 . ${VENV}/bin/activate
 set -x
-pip install -r requirements.txt
+pip install -r jenkins_requirements.txt
 which nosetests
 nosetests -v -c test/nosecron.cfg hpssic/test
 
