@@ -72,13 +72,13 @@ unique_option = foobar
 # ------------------------------------------------------------
 [dbi]
 # database type. Can be 'sqlite', 'mysql', or 'db2'
-# dbtype = sqlite
+dbtype = sqlite
 
 # database name. 
 ## dbtype == 'sqlite'  ==> dbname is a file name
 ## dbtype == 'mysql'   ==> dbname is a database name
 ## dbtype == 'db2'     ==> dbname is a database name
-# dbname = ./crawl.db
+dbname = ./crawl.db
 
 # table name prefix. E.g., 'dev_', 'demo', 'prod'
 ## The trailing underscore is optional and will be added if not
