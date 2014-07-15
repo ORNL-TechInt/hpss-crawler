@@ -41,7 +41,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     testpath = '/home/tpb/TODO'
 
     # -------------------------------------------------------------------------
-    @attr(slow=True)
+    @attr(slow=True, heavy=True)
     def test_check_dir(self):
         """
         Calling .check() on a directory should give us back a list of Checkable
@@ -83,7 +83,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                 self.expected(0, c.checksum)
 
     # -------------------------------------------------------------------------
-    @attr(slow=True)
+    @attr(slow=True, heavy=True)
     def test_check_file(self):
         """
         Calling .check() on a file should execute the check actions for that

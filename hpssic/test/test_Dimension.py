@@ -2,8 +2,8 @@
 """
 Track stratum proportions in a sample against a population
 """
-from hpssic import Checkable
 import copy
+from hpssic import Checkable
 from hpssic import CrawlDBI
 from hpssic.Dimension import Dimension
 import os
