@@ -86,31 +86,6 @@ class DBITestRoot(testhelp.HelpedTestCase):
         db.insert(table=table_name, fields=self.fnames, data=self.testdata)
         return db
 
-    # -------------------------------------------------------------------------
-    def exc_raises(self, funcname, kwargs, exp):
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        try:
-            if funcname == 'create':
-                db.create(**kwargs)
-            elif funcname == 'delete':
-                db.delete(**kwargs)
-            elif funcname == 'drop':
-                db.drop(**kwargs)
-            elif funcname == 'insert':
-                db.insert(**kwargs)
-            elif funcname == 'select':
-                rows = db.select(**kwargs)
-            elif funcname == 'update':
-                db.update(**kwargs)
-            else:
-                raise StandardError("unsupported function name '%s'" %
-                                    funcname)
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue(exp in str(e),
-                            "Got the wrong DBIerror: %s" %
-                            util.line_quote(str(e)))
-
 
 # -----------------------------------------------------------------------------
 class DBITest(DBITestRoot):
@@ -1946,11 +1921,13 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a where clause with a '?' and an empty data list
         should get an exception
         """
-        self.exc_raises('select',
-                        {'table': "hpss.logpolicy",
-                         'data': (),
-                         'where': "DESC_NAME = ?"},
-                        "0 params bound not matching 1 required")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "0 params bound not matching 1 required",
+                             db.select,
+                             table="hpss.logpolicy",
+                             data=(),
+                             where="DESC_NAME = ?")
 
     # -------------------------------------------------------------------------
     def test_select_w(self):
@@ -2025,49 +2002,59 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         On a db2 database, insert should throw an exception.
         """
-        self.exc_raises("insert",
-                        {'table': "hpss.bogus",
-                         'data': [('a', 'b', 'c')]},
-                        "INSERT not supported for DB2")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "INSERT not supported for DB2",
+                             db.insert,
+                             table="hpss.bogus",
+                             data=[('a', 'b', 'c')])
 
     # -------------------------------------------------------------------------
     def test_create_exception(self):
         """
         On a db2 database, create should throw an exception.
         """
-        self.exc_raises("create",
-                        {'table': "hpss.nonesuch",
-                         'fields': self.fdef},
-                        "CREATE not supported for DB2")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "CREATE not supported for DB2",
+                             db.create,
+                             table="hpss.nonesuch",
+                             fields=self.fdef)
 
     # -------------------------------------------------------------------------
     def test_delete_exception(self):
         """
         On a db2 database, delete should throw an exception.
         """
-        self.exc_raises("delete",
-                        {'table': "hpss.bogus",
-                         'data': [('a',)],
-                         'where': "field = ?"},
-                        "DELETE not supported for DB2")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "DELETE not supported for DB2",
+                             db.delete,
+                             table="hpss.bogus",
+                             data=[('a',)],
+                             where="field = ?")
 
     # -------------------------------------------------------------------------
     def test_drop_exception(self):
         """
         On a db2 database, drop should throw an exception.
         """
-        self.exc_raises("drop",
-                        {'table': "hpss.bogus"},
-                        "DROP not supported for DB2")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "DROP not supported for DB2",
+                             db.drop,
+                             table="hpss.bogus")
 
     # -------------------------------------------------------------------------
     def test_update_exception(self):
         """
         On a db2 database, update should throw an exception.
         """
-        self.exc_raises("update",
-                        {'table': "hpss.bogus",
-                         'fields': ['one', 'two'],
-                         'data': [('a', 'b', 'c')],
-                         'where': "one = ?"},
-                        "UPDATE not supported for DB2")
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "UPDATE not supported for DB2",
+                             db.update,
+                             table="hpss.bogus",
+                             fields=['one', 'two'],
+                             data=[('a', 'b', 'c')],
+                             where="one = ?")
