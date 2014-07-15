@@ -6,7 +6,11 @@ easy_install --prefix ${CWD}/local virtualenv
 export PATH=${PATH}:${CWD}/local/bin
 virtualenv ${CWD}/hpssic
 export PATH=${PATH}:${CWD}/hpssic/bin
+set +x
 . ${CWD}/hpssic/bin/activate
+set -x
 pip install pexpect
-nosetests1.1 -c test/nosecron.cfg hpssic/test
+pip install nosetests
+which nosetests
+nosetests -v -c test/nosecron.cfg hpssic/test
 
