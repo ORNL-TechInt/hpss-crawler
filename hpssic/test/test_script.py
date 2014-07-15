@@ -213,7 +213,7 @@ class Test_TCC(ScriptBase):
 class Test_PEP8(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_pep8(self):
-        for r, d, f in os.walk('.'):
+        for r, d, f in os.walk('hpssic'):
             if any([r == "./test", ".git" in r, ".attic" in r]):
                 continue
             pylist = [os.path.join(r, fn) for fn in f if fn.endswith('.py')]
