@@ -30,7 +30,7 @@ def tearDownModule():
 
 
 # -----------------------------------------------------------------------------
-@attr(slow=True)
+@attr(slow=True, heavy=True)
 class hpssTest(testhelp.HelpedTestCase):
     """
     Tests for the hpss.HSI class
