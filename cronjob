@@ -7,14 +7,16 @@ export CRONOUT=/tmp/cronjob.$$.out
 
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 cd $HOME/prj/hpssic/dev
-/usr/bin/nosetests -c test/nosecron.cfg test >> $CRONOUT 2>&1
+/usr/bin/nosetests -c hpssic/test/nosecron.cfg test >> $CRONOUT 2>&1
 STATUS=$?
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 
 if [[ "$STATUS" == "0" ]]; then
-    SUBJECT="HPSSIC tests: all passed"
+    SUMMARY=$(grep "^Ran" $CRONOUT)
 else
-    SUBJECT="HPSSIC tests: some FAILED"
+    SUMMARY=$(grep "^FAILED" $CRONOUT)
 fi
+
+SUBJECT="HPSSIC tests: $SUMMARY"
 /bin/mail -s "$SUBJECT" tbarron@ornl.gov tusculum@gmail.com < $CRONOUT
 /bin/rm $CRONOUT
