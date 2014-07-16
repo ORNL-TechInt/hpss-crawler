@@ -5,6 +5,7 @@ CrawlConfig
 crawler_pid
 crawler.exit
 DODO
+.hpssic_version
 hsitool*
 ls.PR*
 MANIFEST

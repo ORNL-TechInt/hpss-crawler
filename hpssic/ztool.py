@@ -40,7 +40,7 @@ def c_mkhooks(argv):
         base = U.basename(target)
         os.symlink(target, U.pathjoin(srcdir, base))
 
-    
+
 # -----------------------------------------------------------------------------
 def c_cscount(argv):
     """cscount - count checksummed files in log and in database
