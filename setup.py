@@ -8,6 +8,7 @@ import os
 f = open(".hpssic_version")
 hpssic_version = f.read().strip()
 f.close()
+sitelib = os.path.join(get_python_lib(), 'hpssic')
 
 copy_file("README.md", "README")
 setup(name='hpssic',
@@ -24,5 +25,6 @@ setup(name='hpssic',
                'bin/tcc',
                ],
       packages=['hpssic', 'hpssic/plugins', 'hpssic/test'],
-      data_files=[('lib/python2.6/site-packages/hpssic', ['.hpssic_version'])]
+      data_files=[(sitelib, ['.hpssic_version', 'README.md', 'crawl.cfg.sample']),
+                  ]
       )
