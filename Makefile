@@ -1,5 +1,6 @@
 WWW = $(HOME)/www/hpssic
 PYFILES = $(shell find . -name "*.py")
+TEST_D=hpssic/test
 
 help:
 	@echo ""
@@ -26,28 +27,29 @@ pristine: clean
 clean:
 	find . -name "*.pyc" | xargs rm -f
 	find . -name "*~" | xargs rm -f
-	rm -rf test/test.d MANIFEST README
+	rm -rf $(TEST_D)/test.d MANIFEST README
 
 TAGS: 
 	find . -name "*.py" | xargs etags
 
-TESTLOG=test/nosetests.log
+TESTLOG=$(TEST_D)/nosetests.log
+TESTCFG=$(TEST_D)/nose.cfg
 NOSE_WHICH=test
 tests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	nosetests -c $(TEST_D)/nose.cfg $(TEST_D) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
 
 alltests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -c test/nosecron.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	nosetests -c $(TEST_D)/nosecron.cfg $(TEST_D) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
 pep8:
-	nosetests test/test_script.py:Test_PEP8.test_pep8
+	nosetests $(TEST_D)/test_script.py:Test_PEP8.test_pep8
 
 readme: $(WWW)/README.html
 
@@ -72,6 +74,13 @@ install:
 		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
 	else \
 		pip install --upgrade dist/hpssic-2014.0725dev.tar.gz; \
+	fi
+
+uninstall:
+	@if [[ `which python` == "/usr/bin/python" ]]; then \
+		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
+	else \
+		pip uninstall hpssic; \
 	fi
 
 refresh: sdist install

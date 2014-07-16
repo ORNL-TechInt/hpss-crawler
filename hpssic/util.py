@@ -165,6 +165,30 @@ class RRfile(object):
 
 
 # -----------------------------------------------------------------------------
+def abspath(relpath):
+    """
+    Convenience wrapper for os.path.abspath()
+    """
+    return os.path.abspath(relpath)
+
+
+# -----------------------------------------------------------------------------
+def basename(relpath):
+    """
+    Convenience wrapper for os.path.basename()
+    """
+    return os.path.basename(relpath)
+
+
+# -----------------------------------------------------------------------------
+def pathjoin(a, *p):
+    """
+    Convenience wrapper for os.path.join()
+    """
+    return os.path.join(a, *p)
+
+
+# -----------------------------------------------------------------------------
 def conditional_rm(filepath, tree=False):
     """
     We want to delete filepath but we don't want to generate an error if it
