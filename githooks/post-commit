@@ -4,5 +4,5 @@
 # commit is made.
 #
 # To enable this hook, rename this file to "post-commit".
-
+import os
 os.system("git describe > .hpssic_version")
