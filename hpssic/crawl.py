@@ -433,6 +433,28 @@ def crl_stop(argv):
 
 
 # ------------------------------------------------------------------------------
+def crl_version(argv):
+    """version - report the crawler software version
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    if util.git_repo(__file__):
+        path = ".hpssic_version"
+    else:
+        path = util.pathjoin(util.dirname(__file__), ".hpssic_version")
+
+    hpssic_version = util.contents(path).strip()
+    print("HPSS Integrity Crawler version %s" % hpssic_version)
+
+
+# ------------------------------------------------------------------------------
 def get_timeval(cfg, section, option, default):
     """
     Return the number of seconds indicated by the time spec, using default if

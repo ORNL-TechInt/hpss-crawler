@@ -114,4 +114,3 @@ def c_failtest(argv):
                      where="rowid < 10")
     print rows
     db.close()
-

@@ -173,11 +173,19 @@ def abspath(relpath):
 
 
 # -----------------------------------------------------------------------------
-def basename(relpath):
+def basename(path):
     """
     Convenience wrapper for os.path.basename()
     """
-    return os.path.basename(relpath)
+    return os.path.basename(path)
+
+
+# -----------------------------------------------------------------------------
+def dirname(path):
+    """
+    Convenience wrapper for os.path.dirname()
+    """
+    return os.path.dirname(path)
 
 
 # -----------------------------------------------------------------------------
@@ -397,6 +405,20 @@ def hostname(long=False):
     else:
         rval = socket.gethostname().split('.')[0]
     return rval
+
+
+# -----------------------------------------------------------------------------
+def git_repo(path):
+    """
+    If path is inside a git repo (including the root), return the root of the
+    git repo. Otherwise, return ''
+    """
+    dotgit = pathjoin(path, ".git")
+    while not os.path.exists(dotgit) and path != "/":
+        path = dirname(path)
+        dotgit = pathjoin(path, ".git")
+
+    return path.rstrip('/')
 
 
 # -----------------------------------------------------------------------------
