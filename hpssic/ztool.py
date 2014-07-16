@@ -38,7 +38,11 @@ def c_mkhooks(argv):
     srcdir = U.abspath(".git/hooks")
     for target in glob.glob(U.abspath("githooks/*")):
         base = U.basename(target)
-        os.symlink(target, U.pathjoin(srcdir, base))
+        src = U.pathjoin(srcdir, base)
+        if os.path.exists(src):
+            print("%s already exists" % src)
+        else:
+            os.symlink(target, U.pathjoin(srcdir, base))
 
 
 # -----------------------------------------------------------------------------
