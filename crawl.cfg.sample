@@ -59,7 +59,7 @@ schedule      = * 2,3,4 1 * *
 operations    = 20
 
 # read filename and include any configuration information found there
-include       = filename
+# include       = filename
 
 # This plugin can decide to pass file paths along to downstream
 # plugins for further operations
@@ -68,6 +68,15 @@ downstream    = plugin-name
 # Arbitrary config items can be added to a plugin's section to support any needs
 # it has
 unique_option = foobar
+
+# ------------------------------------------------------------
+[db2]
+# db_cfg_name = hcfg
+# db_sub_name = hsubsys1
+# hostname = production_server
+# port = 50000
+# username = hpssic_user
+# password = base64-encoded-password
 
 # ------------------------------------------------------------
 [dbi]
