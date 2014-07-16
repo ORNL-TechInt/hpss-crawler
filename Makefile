@@ -51,6 +51,15 @@ alltests:
 pep8:
 	nosetests $(TEST_D)/test_script.py:Test_PEP8.test_pep8
 
+alltests:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	nosetests -c test/nosecron.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+pep8:
+	nosetests test/test_script.py:Test_PEP8.test_pep8
+
 readme: $(WWW)/README.html
 
 refman: $(WWW)/ReferenceManual.html
