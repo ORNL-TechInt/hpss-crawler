@@ -1,15 +1,46 @@
 #!/usr/bin/env python
+import glob
 from hpssic import CrawlDBI
 import hpss
 import optparse
+import os
 import pdb
-from hpssic import pexpect
+import pexpect
 import toolframe
+from hpssic import util as U
 
 prefix = "c"
 H = None
 
 
+# -----------------------------------------------------------------------------
+def c_mkhooks(argv):
+    """mkhooks - create a symlink in .git/hooks for each of githooks/*
+
+    Install repo-specific git hooks
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    if not os.path.isdir(".git"):
+        print("We don't appear to be in the root of a git repo")
+        sys.exit(1)
+
+    srcdir = U.abspath(".git/hooks")
+    for target in glob.glob(U.abspath("githooks/*")):
+        base = U.basename(target)
+        os.symlink(target, U.pathjoin(srcdir, base))
+
+    
 # -----------------------------------------------------------------------------
 def c_cscount(argv):
     """cscount - count checksummed files in log and in database
@@ -84,5 +115,3 @@ def c_failtest(argv):
     print rows
     db.close()
 
-# -----------------------------------------------------------------------------
-toolframe.tf_launch(prefix, __name__)

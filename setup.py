@@ -3,7 +3,7 @@
 from distutils.core import setup
 from distutils.file_util import copy_file
 
-# copy_file("README.md", "README")
+copy_file("README.md", "README")
 setup(name='hpssic',
       version='2014.0725dev',
       description='HPSS Integrity Crawler',
@@ -17,5 +17,5 @@ setup(name='hpssic',
                'bin/mpra',
                'bin/tcc',
                ],
-      packages=['hpssic', 'hpssic/plugins'],
+      packages=['hpssic', 'hpssic/plugins', 'hpssic/test'],
       )
