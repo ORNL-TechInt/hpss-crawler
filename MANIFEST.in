@@ -1,2 +1,2 @@
-include *.py crawl.cfg.sample README.md
-recursive-include tests *.py nose.cfg
+include crawl.cfg.sample README.md .hpssic_version
+recursive-include hpssic *.py *.cfg
