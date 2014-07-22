@@ -6,8 +6,11 @@ import CrawlDBI
 import Dimension
 import hpss
 import optparse
+import os
 import pdb
 import pexpect
+from pprint import pprint
+import re
 import time
 import toolframe
 
@@ -513,6 +516,241 @@ def cv_test_check(argv):
 
     c.load()
     c.check()
+
+
+# -----------------------------------------------------------------------------
+def cv_ttype_add(argv):
+    """ttype_add - Add field 'ttype' to the checkables table
+
+    usage: cv ttype_add [-d]
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    # lookup and report tape type for each pathname specified
+
+
+# -----------------------------------------------------------------------------
+def cv_ttype_drop(argv):
+    """ttype_drop - Drop field 'ttype' from the checkables table
+
+    usage: cv ttype_drop [-d]
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    # lookup and report tape type for each pathname specified
+
+
+# -----------------------------------------------------------------------------
+def cv_ttype_lookup(argv):
+    """ttype_lookup - Look up the tape type for a specified pathname
+
+    usage: cv ttype_lookup [-d] path ...
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    # lookup and report tape type for each pathname specified
+
+
+# -----------------------------------------------------------------------------
+def cv_ttype_populate(argv):
+    """ttype_populate - populate the ttype field in checkables
+
+    usage: cv ttype_populate [-d] [-a] [path ...]
+
+    If one or more paths are specified, those records will be looked up in
+    checkables and populated with media type information if present. If no
+    paths are specified and -a/--all is, all records in checkables will be
+    updated with media type info.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-a', '--all',
+                 action='store_true', default=False, dest='all',
+                 help='process all records in checkables')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    # lookup and report tape type for each pathname specified
+
+
+# -----------------------------------------------------------------------------
+def cv_ttype_table(argv):
+    """ttype_table - create (or drop) table tape_types
+
+    usage: cv ttype_table [-d] {-D|-r /opt/hpss}
+
+    Without the -D/--drop option, create the table tape_types in the mysql
+    database. Populate it with information from an HPSS build tree (default is
+    /opt/hpss).
+
+    With -D or --drop, drop the table.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-D', '--drop',
+                 action='store_true', default=False, dest='drop',
+                 help='drop the table')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-r', '--root',
+                 action='store', default='', dest='hpssroot',
+                 help='where to look for data')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    db = CrawlDBI.DBI()
+    # lookup and report tape type for each pathname specified
+    if o.drop:
+        db.drop(table="tape_types")
+    else:
+        if not db.table_exists(table="tape_types"):
+            db.create(table="tape_types",
+                      fields=["type int",
+                              "subtype int",
+                              "name text"])
+
+        hpssroot = o.hpssroot
+        if hpssroot == '':
+            hpssroot = os.getenv("HPSS_ROOT")
+        if hpssroot is None:
+            hpssroot = "/opt/hpss"
+
+        tape_types_populate(hpssroot)
+
+
+# -----------------------------------------------------------------------------
+def tape_types_populate(hpssroot):
+    """
+    {'MT_TAPE_3590':
+        {'val': '0x01000005',
+         '0x00000000': ['MT_SUB_3590_O', 'MT_SUB_3590_SINGLELEN',
+                        'MT_SUB_3590_O_SINGLELEN']
+         '0x00000001': ['MT_SUB_3590_E', 'MT_SUB_3590_E_SINGLELEN']
+
+    """
+    media_type_file = os.path.join(hpssroot, "include", "hpss_media_type.x")
+    msg_file = os.path.join(hpssroot, "include", "cs_LogErr.h")
+
+    mt = open(media_type_file, "r")
+    hint = lambda x: int(x.replace(";", ""), 0)
+    TT = {}
+    rait_types = []
+
+    def dubk(d, x, y, z):
+        try:
+            d[x][y]['list'].append(z)
+        except KeyError, e:
+            d[x][y] = {'list': [z]}
+
+    for line in mt.readlines():
+        x = line.split()
+        if "const MT_TAPE_" in line:
+            name = x[1]
+            t = name.replace("MT_TAPE_", "")
+            val = hint(x[3])
+            TT[val] = {'name': name}
+            TT[t] = TT[val]
+            continue
+
+        if "const MT_RAIT_" in line:
+            name = x[1]
+            t = name.replace("MT_", "")
+            val = hint(x[3])
+            TT[val] = {'name': name}
+            TT[t] = TT[val]
+            rait_types.append(t)
+            continue
+
+        if "const MT_SUB_RAIT_" in line:
+            name = x[1]
+            val = hint(x[3])
+            for rt in rait_types:
+                dubk(TT, rt, val, name)
+            continue
+
+        if "const MT_SUB_" in line:
+            name = x[1]
+            val = hint(x[3])
+            t = name.split("_")[2]
+            if t in ["SMALL", "MEDIUM", "LARGE"]:
+                for t in ["DD2", "DST"]:
+                    dubk(TT, t, val, name)
+            elif t in ["2", "5GB"]:
+                dubk(TT, "8MM", val, name)
+            else:
+                dubk(TT, t, val, name)
+
+    mt.close()
+
+    msg = open(msg_file, "r")
+    for line in msg.readlines():
+        if all(["MT_TAPE_" in line, "_DEF " in line]):
+            x = line.strip().split(None, 2)
+            name = x[1]
+            t = name.split("_")[2]
+            # t = name.replace("_DEF", "")
+            # t = re.sub("_DEF$", "", name)
+            label = x[2].strip('"').replace("\\n", "")
+            TT[t]['label'] = label
+            continue
+
+        if all(["MT_SUB_" in line, "_DEF " in line]):
+            x = line.strip().split(None, 2)
+            name = x[1]
+            t = re.sub("_DEF$", "", name)
+            k = name.split("_")[2]
+            if k in ['2', '5GB']:
+                k = '8MM'
+            label = x[2].strip('"').replace("\\n", "")
+            kklist = [kk for kk in TT[k].keys() if type(kk) == int]
+            for kk in kklist:
+                stlist = TT[k][kk]['list']
+                if any(t in s for s in stlist):
+                    TT[k][kk]['label'] = label
+                    break
+    msg.close()
 
 
 # -----------------------------------------------------------------------------
