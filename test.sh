@@ -12,6 +12,11 @@ easy_install --prefix ${CWD}/local virtualenv
 export PATH=${PATH}:${LOCAL}/bin
 
 #
+# hpssic needs a default place to put log files and such like
+CRAWL=${CWD}
+mkdir -p ${CRAWL}/work
+
+#
 # Next, we set up a virtual environment where we can install all our
 # dependencies. We put it in local, where easy_install just put
 # virtualenv itself, so we keep everything together.
@@ -35,6 +40,10 @@ pip install -r jenkins_requirements.txt
 # crawl.cfg.sample is set up with sqlite specified in its [dbi]
 # section, so deploying it will allow us to run the sqlite DBI tests.
 cp crawl.cfg.sample crawl.cfg
+
+#
+# look and see what's in the current dir
+ls -al
 
 #
 # And run the tests! 

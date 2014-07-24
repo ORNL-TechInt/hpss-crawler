@@ -2,7 +2,7 @@
 
 # The directory where the crawler is running from. This will be used later in
 # the file. Customize this for your installation.
-root = $HOME/hpssic
+root = $CRAWL
 hpssdb = /var/hpss/hpssdb
 
 # ------------------------------------------------------------
@@ -21,7 +21,7 @@ context = SAMPLE
 exitpath = /tmp/crawler/SAMPLE.exit
 
 # where to write log information
-logpath    = %(root)s/hpss_crawl.log
+logpath    = %(root)s/work/hpss_crawl.log
 
 # max size of a log file before rotating it
 logsize    = 5mb
