@@ -1,5 +1,6 @@
 CWD=`pwd`
 echo $CWD
+echo $HOME
 #
 # This is where we're going to put our local (non-system) stuff.
 # First, we need to get virtualenv.

@@ -173,9 +173,9 @@ PATH: +%(hpssdb)s/sqllib/bin:
 ## present so table names will look like, e.g., 'dev_checkables',
 ## 'prod_dimension', etc.
 
-# dbtype = sqlite
-# dbname = ./crawl.db
-# tbl_prefix = dev
+dbtype = sqlite
+dbname = ./crawl.db
+tbl_prefix = dev
 
 # dbtype = mysql
 # host = localhost
