@@ -13,7 +13,7 @@ export PATH=${PATH}:${LOCAL}/bin
 
 #
 # hpssic needs a default place to put log files and such like
-CRAWL=${CWD}
+export CRAWL=${CWD}
 mkdir -p ${CRAWL}/work
 
 #
