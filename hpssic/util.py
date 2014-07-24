@@ -189,6 +189,14 @@ def dirname(path):
 
 
 # -----------------------------------------------------------------------------
+def expand(path):
+    """
+    Expand ~user and environment variables in a string
+    """
+    return os.path.expanduser(os.path.expandvars(path))
+
+
+# -----------------------------------------------------------------------------
 def pathjoin(a, *p):
     """
     Convenience wrapper for os.path.join()
@@ -539,6 +547,8 @@ def setup_logging(logfile='',
     """
     if logfile == '':
         logfile = default_logfile_name
+
+    logfile = expand(logfile)
 
     rval = logging.getLogger(logname)
     rval.setLevel(logging.INFO)
