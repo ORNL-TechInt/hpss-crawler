@@ -2,7 +2,7 @@
 
 # The directory where the crawler is running from. This will be used later in
 # the file. Customize this for your installation.
-root = $CRAWL
+root = ${CRAWL:-.}
 hpssdb = /var/hpss/hpssdb
 
 # ------------------------------------------------------------
