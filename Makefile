@@ -29,7 +29,7 @@ clean:
 	find . -name "*~" | xargs rm -f
 	rm -rf $(TEST_D)/test.d MANIFEST README
 
-TAGS: 
+TAGS: hpssic/*.py hpssic/test/*.py
 	find . -name "*.py" | xargs etags
 
 TESTLOG=$(TEST_D)/nosetests.log

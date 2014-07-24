@@ -193,7 +193,25 @@ def expand(path):
     """
     Expand ~user and environment variables in a string
     """
-    return os.path.expanduser(os.path.expandvars(path))
+    def parse(var):
+        z = re.search("([^$]*)(\$({([^}]*)}|\w*))(.*)", var)
+        if z:
+            return(z.groups()[0],
+                   z.groups()[3] or z.groups()[2],
+                   z.groups()[-1])
+        else:
+            return(None, None, None)
+
+    rval = os.path.expanduser(os.path.expandvars(path))
+    while '$' in rval:
+        pre, var, post = parse(rval)
+        if ':' in var:
+            vname, vdef = var.split(":")
+            vval = os.getenv(vname, vdef[1:])
+        else:
+            vval = os.getenv(var, "")
+        rval = pre + os.path.expanduser(vval) + post
+    return rval
 
 
 # -----------------------------------------------------------------------------

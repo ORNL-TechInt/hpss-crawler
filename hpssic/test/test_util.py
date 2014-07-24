@@ -360,6 +360,84 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected(1388552399, util.epoch("1388552399"))
 
     # -------------------------------------------------------------------------
+    def test_expand_unset(self):
+        # make sure our variable is not set
+        vname = "EXPAND_UNSET"
+        if vname in os.environ:
+            del os.environ[vname]
+
+        bare_str = "before  $%s   after" % vname
+        exp = "before     after"
+        actual = util.expand(bare_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        braced_str = "before/${%s}/after" % vname
+        exp = "before//after"
+        actual = util.expand(braced_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        def_str = "before.${%s:-default-value}.after" % vname
+        exp = "before.default-value.after"
+        actual = util.expand(def_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+    # -------------------------------------------------------------------------
+    def test_expand_empty(self):
+        # make sure our variable is not set
+        vname = "EXPAND_EMPTY"
+        if vname not in os.environ:
+            os.environ[vname] = ""
+
+        bare_str = "before  $%s   after" % vname
+        exp = "before     after"
+        actual = util.expand(bare_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        braced_str = "before/${%s}/after" % vname
+        exp = "before//after"
+        actual = util.expand(braced_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        def_str = "before.${%s:-default-value}.after" % vname
+        exp = "before..after"
+        actual = util.expand(def_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        del os.environ[vname]
+
+    # -------------------------------------------------------------------------
+    def test_expand_filled(self):
+        vname = "EXPAND_FILLED"
+        if vname not in os.environ:
+            os.environ[vname] = "SOMETHING"
+
+        bare_str = "before  $%s   after" % vname
+        exp = "before  SOMETHING   after"
+        actual = util.expand(bare_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        braced_str = "before/${%s}/after" % vname
+        exp = "before/SOMETHING/after"
+        actual = util.expand(braced_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        def_str = "before.${%s:-default-value}.after" % vname
+        exp = "before.SOMETHING.after"
+        actual = util.expand(def_str)
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        del os.environ[vname]
+
+    # -------------------------------------------------------------------------
     def test_hostname_default(self):
         """
         Calling util.hostname() with no argument should get the short hostname
