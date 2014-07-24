@@ -155,10 +155,10 @@ def crl_fire(argv):
     cfg = CrawlConfig.get_config(o.config)
     log = CrawlConfig.get_logger(o.logpath, cfg)
 
-    if o.plugin == '':
-        print("'-p <plugin-name' is required")
+    if o.plugname == '':
+        print("'-p <plugin-name>' is required")
     elif not cfg.has_section(o.plugname):
-        print("No plugin named '%s' found in configuration" % o.plugin)
+        print("No plugin named '%s' found in configuration" % o.plugname)
     else:
         plugdir = cfg.get('crawler', 'plugin-dir')
         sys.path.append(plugdir)
