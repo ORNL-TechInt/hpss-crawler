@@ -187,6 +187,17 @@ class CrawlTest(testhelp.HelpedTestCase):
                                 (item, self.cdict[section][item]), result)
 
     # --------------------------------------------------------------------------
+    def test_crawl_fire_badplug(self):
+        """
+        TEST: crawl fire -p <not-a-plugmod>
+        EXP: error message that plugin not found in config
+        """
+        plugname = 'no_such_plugin'
+        result = pexpect.run("%s fire -p %s" % (self.crawl_cmd(), plugname))
+        exp = "No plugin named '%s' found in configuration" % plugname
+        self.vassert_in(exp, result)
+
+    # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_fire_log_path(self):
         """
@@ -231,6 +242,17 @@ class CrawlTest(testhelp.HelpedTestCase):
         # lfname should exist and contain specific strings
         self.assertEqual(os.path.exists(lfname), True)
         self.vassert_in('firing plugin_1', util.contents(lfname))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_fire_noplug(self):
+        """
+        TEST: crawl fire <plugmod>
+        EXP: error message that "-p <plugin-name>" is required
+        """
+        plugname = 'plugin_1'
+        result = pexpect.run("%s fire %s" % (self.crawl_cmd(), plugname))
+        exp = "'-p <plugin-name>' is required"
+        self.vassert_in(exp, result)
 
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
