@@ -129,7 +129,7 @@ def crl_cvreport(argv):
     (dim_p_count, dim_s_count) = rows[0]
 
     rows = db.select(table="cvstats",
-                     fields=[])
+                     fields=['rowid', 'checksums', 'matches', 'failures'])
     (total_checksums) = rows[0][1]
 
     pflag = sflag = cflag = ""
