@@ -285,6 +285,63 @@ def check_for_duplicates(path):
 
 
 # -----------------------------------------------------------------------------
+class Test_MISC(th.HelpedTestCase):
+    # -------------------------------------------------------------------------
+    def test_duplicates(self):
+        """
+        Scan all .py files for duplicate function names
+        """
+        dupl = {}
+        for r, d, f in os.walk('.'):
+            if r.endswith("/hpssic"):
+                for fname in f:
+                    path = os.path.join(r, fname)
+                    if "CrawlDBI" in path:
+                        continue
+                    if path.endswith(".py"):
+                        result = check_for_duplicates(path)
+                        if result != '':
+                            dupl[path] = result
+        if dupl != {}:
+            rpt = ''
+            for key in dupl:
+                rpt += "Duplicates in %s:" % key + dupl[key] + "\n"
+            self.fail(rpt)
+
+
+# -----------------------------------------------------------------------------
+@U.memoize
+def defrgx(obarg):
+    """
+    Return a compiled regex for finding function definitions
+    """
+    return re.compile("^\s*def\s+(\w+)\s*\(")
+
+
+# -----------------------------------------------------------------------------
+def check_for_duplicates(path):
+    """
+    Scan *path* for duplicate function names
+    """
+    rgx = defrgx(0)
+    flist = []
+    rval = ''
+    with open(path, 'r') as f:
+        for l in f.readlines():
+            q = rgx.match(l)
+            if q:
+                flist.append(q.groups()[0])
+    if len(flist) != len(set(flist)):
+        flist.sort()
+        last = ''
+        for foof in flist:
+            if last == foof and foof != '__init__':
+                rval += "\n   %s" % foof
+            last = foof
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def improot(path, modpath):
     """
     Navigate upward in *path* as many levels as there are in *modpath*
