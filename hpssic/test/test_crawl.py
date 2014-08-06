@@ -2,7 +2,6 @@
 """
 Tests for code in crawl.py
 """
-from nose.plugins.attrib import attr
 from hpssic import CrawlConfig
 from hpssic import crawl
 import copy
@@ -16,6 +15,14 @@ from hpssic import testhelp
 import time
 from hpssic import toolframe
 from hpssic import util
+
+
+M = sys.modules['__main__']
+if 'py.test' in M.__file__:
+    import pytest
+    attr = pytest.mark.attr
+else:
+    from nose.plugins.attrib import attr
 
 
 # ------------------------------------------------------------------------------

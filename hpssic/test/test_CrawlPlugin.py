@@ -18,6 +18,14 @@ import traceback as tb
 from hpssic import util
 
 
+M = sys.modules['__main__']
+if 'py.test' in M.__file__:
+    import pytest
+    attr = pytest.mark.attr
+else:
+    from nose.plugins.attrib import attr
+
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
@@ -207,12 +215,16 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     def test_init_plugin_inmod(self):
         """
         If plugin does exist and is in module list and its config file changes,
-        it should be reloaded
+        it should be reloaded.
+
+        We stick a 'z' on the front of the method name when setting pname so
+        that py.test won't think it's a test object and munge it in a way that
+        prevents it being reloaded.
         """
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
-        pname = util.my_name()
+        pname = 'z' + util.my_name()
         self.make_plugin(pname)
 
         # get it into the module list, remove the .pyc file
@@ -234,8 +246,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         try:
             p = CrawlPlugin.CrawlPlugin(pname, c)
             self.assertTrue('added' in dir(sys.modules[pname]),
-                            "expected 'added' in " +
-                            "dir(sys.modules[%s]) not found" % (pname))
+                            "expected 'added' in %s" % dir(sys.modules[pname]))
         except ImportError:
             self.fail("Expected import to succeed but it did not.")
 

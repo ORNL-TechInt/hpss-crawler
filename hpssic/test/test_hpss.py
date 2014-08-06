@@ -2,13 +2,22 @@
 """
 Tests for hpss.py
 """
-from nose.plugins.attrib import attr
+# from nose.plugins.attrib import attr
 from hpssic import CrawlConfig
 from hpssic import hpss
+import sys
 from hpssic import testhelp
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
+
+
+M = sys.modules['__main__']
+if 'py.test' in M.__file__:
+    import pytest
+    attr = pytest.mark.attr
+else:
+    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
