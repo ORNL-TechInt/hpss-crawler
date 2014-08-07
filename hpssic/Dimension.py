@@ -120,7 +120,7 @@ class Dimension(object):
         """
         # pdb.set_trace()
         if not already_open:
-            self.db = CrawlDBI.DBI()
+            self.db = CrawlDBI.DBI(dbtype='crawler')
 
         dimname = self.name
         try:

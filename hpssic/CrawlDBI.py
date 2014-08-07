@@ -24,6 +24,9 @@ except ImportError:
     mysql_available = False
 
 
+HPSS_SECTION = 'db2'
+CRWL_SECTION = 'dbi'
+
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
     """
@@ -94,54 +97,50 @@ class DBI(object):
                 raise DBIerror("Unrecognized argument to %s. " %
                                self.__class__ +
                                "Only 'cfg=<config>' is accepted")
-        if 'dbtype' in kwargs and kwargs['dbtype'] != 'db2':
-            raise DBIerror("Only dbtype='db2' may be specified explicitly")
-
-        if 'dbname' in kwargs and 'dbtype' not in kwargs:
-            raise DBIerror("dbname may only be specified if dbtype = 'db2'")
-
-        # Figure out the dbtype
-        try:
-            if 'dbtype' in kwargs and 'cfg' in kwargs:
-                cfg = kwargs['cfg']
-                dbtype = kwargs['dbtype']
-                del kwargs['dbtype']
-                tbl_pfx = 'hpss'
-                dbname = kwargs['dbname']
-            elif 'dbtype' not in kwargs and 'cfg' in kwargs:
-                cfg = kwargs['cfg']
-                dbtype = cfg.get('dbi', 'dbtype')
-                tbl_pfx = cfg.get('dbi', 'tbl_prefix')
-                dbname = cfg.get('dbi', 'dbname')
-            elif 'dbtype' in kwargs and 'cfg' not in kwargs:
-                cfg = CrawlConfig.get_config()
-                dbtype = kwargs['dbtype']
-                del kwargs['dbtype']
-                tbl_pfx = 'hpss'
-                dbname = kwargs['dbname']
-            elif 'dbtype' not in kwargs and 'cfg' not in kwargs:
-                cfg = CrawlConfig.get_config()
-                dbtype = cfg.get('dbi', 'dbtype')
-                tbl_pfx = cfg.get('dbi', 'tbl_prefix')
-                dbname = cfg.get('dbi', 'dbname')
-                kwargs['cfg'] = cfg
             else:
-                raise StandardError("'%s not in kwargs(%s)" %
-                                    ("'dbtype' and 'cfg' both in and",
-                                     str(kwargs)))
-        except CrawlConfig.NoSectionError, e:
-            raise DBIerror("A 'dbi' section is required in the configuration")
-        except CrawlConfig.NoOptionError, e:
-            raise DBIerror(str(e))
+                cfg = args[0]
+        elif 'cfg' in kwargs:
+            cfg = kwargs['cfg']
+        else:
+            cfg = CrawlConfig.get_config()
 
-        kwargs['dbname'] = dbname
-        kwargs['tbl_prefix'] = tbl_pfx
+        # pdb.set_trace()
+        dbtype = ''
+        dbname = ''
+        tbl_pfx = ''
+        if 'dbtype' not in kwargs:
+            raise DBIerror("dbtype must be 'hpss' or 'crawler'")
+        elif kwargs['dbtype'] == 'db2' or kwargs['dbtype'] == 'hpss':
+            dbtype = kwargs['dbtype']
+            tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
+            if 'dbname' not in kwargs:
+                raise DBIerror("With dbtype=%s, dbname must be specified" %
+                               dbtype)
+            elif kwargs['dbname'] not in cfg.options(HPSS_SECTION):
+                raise DBIerror("dbname %s not defined in the configuration" %
+                               kwargs['dbname'])
+            else:
+                dbname = cfg.get(HPSS_SECTION, kwargs['dbname'])
+        elif kwargs['dbtype'] == 'dbi' or kwargs['dbtype'] == 'crawler':
+            if 'dbname' in kwargs:
+                raise DBIerror("dbname may not be specified here")
+            dbtype = cfg.get(CRWL_SECTION, 'dbtype')
+            try:
+                dbname = cfg.get(CRWL_SECTION, 'dbname')
+            except CrawlConfig.NoOptionError, e:
+                raise DBIerror(e)
+            tbl_pfx = cfg.get(CRWL_SECTION, 'tbl_prefix')
+
+        okw = {}
+        okw['cfg'] = cfg
+        okw['dbname'] = dbname
+        okw['tbl_prefix'] = tbl_pfx
         if dbtype == 'sqlite':
-            self._dbobj = DBIsqlite(*args, **kwargs)
+            self._dbobj = DBIsqlite(*args, **okw)
         elif dbtype == 'mysql':
-            self._dbobj = DBImysql(*args, **kwargs)
+            self._dbobj = DBImysql(*args, **okw)
         elif dbtype == 'db2':
-            self._dbobj = DBIdb2(*args, **kwargs)
+            self._dbobj = DBIdb2(*args, **okw)
         else:
             raise DBIerror("Unknown database type")
 
@@ -610,9 +609,9 @@ if mysql_available:
             if self.tbl_prefix != '':
                 self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
             cfg = kwargs['cfg']
-            host = cfg.get('dbi', 'host')
-            username = cfg.get('dbi', 'username')
-            password = base64.b64decode(cfg.get('dbi', 'password'))
+            host = cfg.get(CRWL_SECTION, 'host')
+            username = cfg.get(CRWL_SECTION, 'username')
+            password = base64.b64decode(cfg.get(CRWL_SECTION, 'password'))
             try:
                 self.dbh = mysql.connect(host=host,
                                          user=username,
@@ -945,9 +944,9 @@ if mysql_available:
 
 
 if db2_available:
-    # -----------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     class DBIdb2(DBI_abstract):
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def __init__(self, *args, **kwargs):
             """
             See DBI.__init__()
@@ -958,26 +957,27 @@ if db2_available:
                 else:
                     raise DBIerror("Attribute '%s'" % attr +
                                    " is not valid for %s" % self.__class__)
-            if not hasattr(self, 'dbname'):
-                raise DBIerror("A database name is required")
-            if not hasattr(self, 'tbl_prefix'):
-                self.tbl_prefix = 'hpss'
-
-            if self.tbl_prefix != '':
-                self.tbl_prefix = self.tbl_prefix.rstrip('.') + '.'
             try:
                 cfg = kwargs['cfg']
             except:
                 cfg = CrawlConfig.get_config()
+
+            if not hasattr(self, 'dbname'):
+                raise DBIerror("A database name is required")
+            if not hasattr(self, 'tbl_prefix'):
+                self.tbl_prefix = cfg.get_d(HPSS_SECTION, 'tbl_prefix', 'hpss')
+
+            if self.tbl_prefix != '':
+                self.tbl_prefix = self.tbl_prefix.rstrip('.') + '.'
             util.env_update(cfg)
-            host = cfg.get('db2', 'hostname')
-            port = cfg.get('db2', 'port')
+            host = cfg.get(HPSS_SECTION, 'hostname')
+            port = cfg.get(HPSS_SECTION, 'port')
             try:
-                username = cfg.get('db2', 'username')
+                username = cfg.get(HPSS_SECTION, 'username')
             except:
                 username = ''
             try:
-                password = base64.b64decode(cfg.get('db2', 'password'))
+                password = base64.b64decode(cfg.get(HPSS_SECTION, 'password'))
             except:
                 password = ''
             try:
@@ -1016,6 +1016,13 @@ if db2_available:
                     rval = True
                     break
             return rval
+
+        # -------------------------------------------------------------------------
+        def alter(self, table='', change=''):
+            """
+            See DBI.alter()
+            """
+            raise DBIerror("ALTER not supported for DB2")
 
         # -------------------------------------------------------------------------
         def close(self):
@@ -1207,6 +1214,10 @@ if db2_available:
     # -------------------------------------------------------------------------
     @util.memoize
     def db2name(which):
+        """
+        @DEPRECATED: This routine is going away, to be replaced by setting
+        database names in the configuration.
+        """
         if which == 'subsys':
             if util.hostname() == 'hpss-dev01':
                 return 'subsys'
