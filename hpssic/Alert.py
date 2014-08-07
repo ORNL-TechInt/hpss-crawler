@@ -43,6 +43,10 @@ class Alert(object):
     # -------------------------------------------------------------------------
     def __init__(self, msg='unspecified alert', caller='', dispatch=True,
                  cfg=None):
+        """
+        Constructor for alert object. Calls dispatch if the *dispatch* argument
+        is True.
+        """
         self.msg = msg
         self.caller = caller
         self.cfg = cfg
@@ -51,6 +55,11 @@ class Alert(object):
 
     # -------------------------------------------------------------------------
     def dispatch(self):
+        """
+        Figure out where we're supposed to send this alert and send it.
+        Possible destinations are the log file, one or more e-mail addresses,
+        and/or a shell program.
+        """
         # mainmod = sys.modules['__main__']
         # cfg = mainmod.get_config()
         # log = mainmod.get_logger()
