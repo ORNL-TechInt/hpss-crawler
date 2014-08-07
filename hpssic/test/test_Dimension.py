@@ -78,33 +78,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(10, a.p_sum['5081']['count'])
 
     # -------------------------------------------------------------------------
-    def test_addone(self):
-        """
-        Given a set of values in a Dimension object, verify that addone does
-        the right thing.
-        """
-        # testhelp.db_config(self.testdir, util.my_name())
-        # Checkable.Checkable.ex_nihilo()
-        a = Dimension(name='addone')
-        a.p_sum = {'6001': {'count': 10, 'pct': 50.0},
-                   '5081': {'count': 10, 'pct': 50.0}
-                   }
-        a.s_sum = {'6001': {'count': 2, 'pct': 40.0},
-                   '5081': {'count': 3, 'pct': 60.0}
-                   }
-        a.addone('6001')
-        self.expected(3, a.s_sum['6001']['count'])
-        self.expected(50.0, a.s_sum['6001']['pct'])
-
-        a.addone('6001')
-        self.expected(4, a.s_sum['6001']['count'])
-        exp = 100.0 * 4.0 / 7.0
-        self.expected(exp, a.s_sum['6001']['pct'])
-
-        self.expected(10, a.p_sum['6001']['count'])
-        self.expected(10, a.p_sum['5081']['count'])
-
-    # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
         Verify that a newly created Dimension object has the following
