@@ -441,10 +441,9 @@ def cvv_ttype_lookup(argv):
     if o.debug:
         pdb.set_trace()
 
-    H = hpss.HSI()
-    H.lsX
-    # lookup and report tape type for each pathname specified
-
+    path = a[0]
+    media = cv_lib.ttype_lookup(path)
+    print("%s is stored on %s" % (path, media))
 
 # -----------------------------------------------------------------------------
 def cvv_ttype_populate(argv):

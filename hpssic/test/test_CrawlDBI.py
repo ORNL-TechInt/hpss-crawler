@@ -7,7 +7,6 @@ We have interface classes for mysql, sqlite, and db2.
 The db2 interface only supports read operations, nothing that will change the
 database. Also the db2 interface doesn't use table prefixes.
 """
-# from nose.plugins.attrib import attr
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
