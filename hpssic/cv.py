@@ -459,7 +459,6 @@ def cvv_ttype_lookup(argv):
             print("%*s %s %s" % (-pwid, path, c, m))
 
 
-
 # -----------------------------------------------------------------------------
 def cvv_ttype_populate(argv):
     """ttype_populate - populate the ttype field in checkables

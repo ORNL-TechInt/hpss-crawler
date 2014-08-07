@@ -242,6 +242,9 @@ class Test_MISC(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     @attr(slow=True)
     def test_pep8(self):
+        """
+        Check code for pep8 conformance
+        """
         result = ""
         for r, d, f in os.walk('hpssic'):
             pylist = [os.path.join(r, fn) for fn in f if fn.endswith('.py')]
