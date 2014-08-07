@@ -40,7 +40,7 @@ def make_tcfg(dbtype):
     if dbtype == 'mysql':
         for dbparm in ['dbname', 'host', 'username', 'password']:
             tcfg.set('dbi', dbparm, xcfg.get('dbi', dbparm))
-    elif dbtype == 'db2':
+    elif dbtype == 'db2' or dbtype == 'hpss':
         tcfg.add_section('db2')
         tcfg.set('dbi', 'dbname', 'hcfg')
         tcfg.set('dbi', 'tbl_prefix', 'hpss')
@@ -72,7 +72,7 @@ def tearDownModule():
         if CrawlDBI.mysql_available:
             tcfg = make_tcfg('mysql')
             tcfg.set('dbi', 'tbl_prefix', '')
-            db = CrawlDBI.DBI(cfg=tcfg)
+            db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore",
                                         "Can't read dir of .*")
@@ -89,7 +89,7 @@ class DBITestRoot(testhelp.HelpedTestCase):
     def setup_select(self, table_name):
         self.reset_db(table_name)
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=table_name, fields=self.fdef)
         db.insert(table=table_name, fields=self.fnames, data=self.testdata)
         return db
@@ -109,9 +109,11 @@ class DBITest(DBITestRoot):
         """
         CrawlDBI ctor should not accept a dbname argument. It has to take its
         dbname from the config.
+
+        CrawlDBI ctor called without dbtype should throw an exception.
         """
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "dbname may only be specified if dbtype = 'db2'",
+                             "dbtype must be 'hpss' or 'crawler' (dbname=None)",
                              CrawlDBI.DBI,
                              dbname='foobar')
 
@@ -121,7 +123,7 @@ class DBITest(DBITestRoot):
         With a config object specifying sqlite as the database type, DBI should
         instantiate itself with an internal DBIsqlite object.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'))
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
         self.assertTrue(hasattr(a, '_dbobj'),
                         "Expected to find a _dbobj attribute on %s" % a)
         self.assertTrue(isinstance(a._dbobj, CrawlDBI.DBIsqlite),
@@ -134,7 +136,7 @@ class DBITest(DBITestRoot):
         __repr__ on a DBI object should produce a representation that looks
         like a DBIsqlite object.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'))
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
         b = CrawlDBI.DBIsqlite(dbname=self.testdb, tbl_prefix='test')
         self.expected(str(b), str(a))
 
@@ -174,7 +176,7 @@ class DBI_in_Base(object):
         Calling close() should free up the db resources and make the database
         handle unusable.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         a.close()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "Cannot operate on a closed database.",
@@ -186,7 +188,7 @@ class DBI_in_Base(object):
         Verify that a new object has the right attributes with the right
         default values
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         dirl = [q for q in dir(a) if not q.startswith('_')]
         xattr_req = ['close', 'create', 'dbname', 'delete', 'drop', 'insert',
                      'select', 'table_exists', 'update',
@@ -218,16 +220,14 @@ class DBI_in_Base(object):
         """
         Attempt to create an object with no dbname should get an exception
         """
-        try:
-            tcfg = make_tcfg(self.dbtype)
-            tcfg.remove_option('dbi', 'dbname')
-            a = CrawlDBI.DBI(cfg=tcfg)
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            exp = "No option 'dbname' in section: 'dbi'"
-            self.assertTrue(exp in str(e),
-                            "Got the wrong DBIerror: " +
-                            '"""\n%s\n"""' % str(e))
+        tcfg = make_tcfg(self.dbtype)
+        tcfg.remove_option('dbi', 'dbname')
+        exp = "No option 'dbname' in section: 'dbi'"
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             exp,
+                             CrawlDBI.DBI,
+                             cfg=tcfg,
+                             dbtype='crawler')
 
     # -------------------------------------------------------------------------
     def test_select_f(self):
@@ -381,7 +381,7 @@ class DBI_in_Base(object):
     def test_select_l_nint(self):
         tname = util.my_name().replace("test_", "")
         self.setup_select(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), limit must be an int",
                              db.select,
@@ -625,7 +625,7 @@ class DBI_in_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.create(table=tname, fields=self.fdef)
         self.expected(True, db.table_exists(table=tname))
 
@@ -637,7 +637,7 @@ class DBI_in_Base(object):
         """
         tname = util.my_name().replace('test_', '')
         self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.expected(False, db.table_exists(table=tname))
 
 
@@ -671,7 +671,7 @@ class DBI_out_Base(object):
         """
         Calling create() with an empty field list should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
 
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On create(), fields must not be empty",
@@ -684,7 +684,7 @@ class DBI_out_Base(object):
         """
         Calling create() with an empty table name should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On create(), table name must not be empty",
                              db.create,
@@ -697,7 +697,7 @@ class DBI_out_Base(object):
         Calling create() with a non-list as the fields argument should
         get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On create(), fields must be a list",
                              db.create,
@@ -710,7 +710,7 @@ class DBI_out_Base(object):
         Calling create() with correct arguments should create the table
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         if db.table_exists(table='create_yes'):
             db.drop(table='create_yes')
         db.create(table='create_yes', fields=['one text',
@@ -914,7 +914,7 @@ class DBI_out_Base(object):
         Calling insert on fields not in the table should get an exception
         """
         self.reset_db('fnox')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table='fnox', fields=['one text', 'two text'])
         try:
             db.insert(table='fnox',
@@ -934,7 +934,7 @@ class DBI_out_Base(object):
         """
         Calling insert with an empty data list should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On insert(), data list must not be empty",
                              db.insert,
@@ -947,7 +947,7 @@ class DBI_out_Base(object):
         """
         Calling insert with an empty field list should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On insert(), fields list must not be empty",
                              db.insert,
@@ -960,7 +960,7 @@ class DBI_out_Base(object):
         """
         Calling insert with an empty table name should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On insert(), table name must not be empty",
                              db.insert,
@@ -973,7 +973,7 @@ class DBI_out_Base(object):
         """
         Calling insert with a non-string table name should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On insert(), table name must be a string",
                              db.insert,
@@ -986,7 +986,7 @@ class DBI_out_Base(object):
         """
         Calling insert with a non-list fields arg should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On insert(), fields must be a list",
                              db.insert,
@@ -999,7 +999,7 @@ class DBI_out_Base(object):
         """
         Calling insert with a non-list data arg should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On insert(), data must be a list",
                              db.insert,
@@ -1014,7 +1014,7 @@ class DBI_out_Base(object):
         """
         mcfg = make_tcfg(self.dbtype)
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=mcfg)
+        db = CrawlDBI.DBI(cfg=mcfg, dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              ["no such table: test_tnox",
                               "Table '%s.test_tnox' doesn't exist" %
@@ -1037,7 +1037,7 @@ class DBI_out_Base(object):
         testdata = [(1, 'sinbad', 54),
                     (2, 'zorro', 98)]
 
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=tname, fields=fdef)
         db.insert(table=tname, fields=fnames, data=testdata)
 
@@ -1061,7 +1061,7 @@ class DBI_out_Base(object):
                  ('zumpy', 47, 202.1)]
 
         self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1088,7 +1088,7 @@ class DBI_out_Base(object):
                  ('zumpy', 47, 202.1)]
 
         self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         try:
@@ -1108,7 +1108,7 @@ class DBI_out_Base(object):
         Calling update() with an empty data list should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), data must not be empty",
                              db.update,
@@ -1122,7 +1122,7 @@ class DBI_out_Base(object):
         Calling update() with an empty field list should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), fields must not be empty",
                              db.update,
@@ -1136,7 +1136,7 @@ class DBI_out_Base(object):
         Calling update() with an empty table name should get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), table name must not be empty",
                              db.update,
@@ -1155,7 +1155,7 @@ class DBI_out_Base(object):
                  ('zumpy', 47, 202.1)]
 
         self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1177,7 +1177,7 @@ class DBI_out_Base(object):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), fields must be a list",
                              db.update,
@@ -1192,7 +1192,7 @@ class DBI_out_Base(object):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), data must be a list of tuples",
                              db.update,
@@ -1207,7 +1207,7 @@ class DBI_out_Base(object):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), table name must be a string",
                              db.update,
@@ -1222,7 +1222,7 @@ class DBI_out_Base(object):
         get an exception
         """
         tname = util.my_name().replace('test_', '')
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On update(), where clause must be a string",
                              db.update,
@@ -1242,7 +1242,7 @@ class DBI_out_Base(object):
                  ('zumpy', 47, 202.1)]
 
         self.reset_db(tname)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=tname, fields=self.fdef)
         db.insert(table=tname, fields=self.fnames, data=self.testdata)
         db.update(table=tname,
@@ -1269,7 +1269,7 @@ class DBI_out_Base(object):
                              (4, 'meg', 19),
                              (5, 'gertrude', 95)]}
         self.reset_db(testdata['tabname'])
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table=testdata['tabname'],
                   fields=testdata['flist'])
         db.insert(table=testdata['tabname'],
@@ -1282,6 +1282,7 @@ class DBI_out_Base(object):
 @attr(heavy=True)
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
+    dbctype = 'crawler'
     pass
 
     # -------------------------------------------------------------------------
@@ -1296,7 +1297,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         if not testhelp.keepfiles():
             tcfg = make_tcfg('mysql')
             tcfg.set('dbi', 'tbl_prefix', '')
-            db = CrawlDBI.DBI(cfg=tcfg)
+            db = CrawlDBI.DBI(cfg=tcfg, dbtype=cls.dbctype)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore",
                                         "Can't read dir of .*")
@@ -1323,13 +1324,14 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 
     # -------------------------------------------------------------------------
     def reset_db(self, name=''):
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.drop(table=name)
 
 
 # -----------------------------------------------------------------------------
 class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'sqlite'
+    dbctype = 'crawler'
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -1349,7 +1351,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         # first, we create a database file from scratch
         util.conditional_rm(self.testdb)
         tabname = util.my_name()
-        dba = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        dba = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         dba.create(table=tabname, fields=['field1 text'])
         dba.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -1359,7 +1361,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                             "Expected %s to contain some data" % self.testdb)
 
         # now, when we try to access it, it should be there
-        dbb = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        dbb = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertTrue(dbb.table_exists(table=tabname))
         dbb.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -1378,7 +1380,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype))
+                             cfg=make_tcfg(self.dbtype),
+                             dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_empty(self):
@@ -1387,7 +1390,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         util.conditional_rm(self.testdb)
         testhelp.touch(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.create(table='testtab', fields=['gru text'])
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
@@ -1406,7 +1409,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "disk I/O error",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype))
+                             cfg=make_tcfg(self.dbtype),
+                             dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_nosuch(self):
@@ -1415,7 +1419,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         create it.
         """
         util.conditional_rm(self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.close()
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected %s to exists but it does not" % self.testdb)
@@ -1432,7 +1436,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         tcfg = make_tcfg(self.dbtype)
         tcfg.set('dbi', 'dbname', sockname)
         try:
-            db = CrawlDBI.DBI(cfg=tcfg)
+            db = CrawlDBI.DBI(cfg=tcfg, dbtype=self.dbctype)
             self.fail("Expected exception was not thrown")
         except CrawlDBI.DBIerror, e:
             self.assertTrue("unable to open database file" in str(e),
@@ -1450,7 +1454,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         os.mkdir(self.testdb + '_xyz', 0777)
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
         try:
-            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
             self.fail("Expected exception was not thrown")
         except CrawlDBI.DBIerror, e:
             self.assertTrue("unable to open database file" in str(e),
@@ -1468,7 +1472,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         util.conditional_rm(self.testdb + '_xyz')
         testhelp.touch(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.create(table='testtab', fields=['froob text'])
         db.close
 
@@ -1489,7 +1493,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         util.conditional_rm(self.testdb)
         util.conditional_rm(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         db.create(table='testtab', fields=['froob text'])
         db.close
 
@@ -1511,7 +1515,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         f.close()
 
         try:
-            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
             self.fail("Expected exception was not thrown")
         except CrawlDBI.DBIerror, e:
             self.assertTrue("file is encrypted or is not a database" in str(e),
@@ -1573,6 +1577,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 @attr(slow=True, heavy=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
+    dbctype = 'hpss'
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -1589,7 +1594,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Calling select() specifying fields should get only the fields requested
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table='hpss.server',
                          fields=['desc_name', 'flags'])
         self.assertEqual(len(rows[0].keys()), 2,
@@ -1605,7 +1610,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Select with a group by clause on a field that is present in the table.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table='hpss.logpolicy',
                          fields=['max(desc_name) as mdn',
                                  'log_record_type_mask'],
@@ -1624,7 +1629,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Select with a group by clause that is not a string -- should get an
         exception.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         try:
             rows = db.select(table='hpss.logpolicy',
                              fields=['max(desc_name) as mdn',
@@ -1643,7 +1648,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Select with a group by clause on a field that is unknown should get an
         exception.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              '"UNKNOWN_FIELD" is not valid in the context ' +
                              'where it',
@@ -1658,7 +1663,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Select should support joining tables.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table=['server', 'logclient'],
                          fields=['server_id', 'desc_name', 'logc_directory'],
                          where="server_id = logc_server_id")
@@ -1670,7 +1675,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Select should support joining tables with temporary table names.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table=['server A', 'logclient B'],
                          fields=['A.server_id',
                                  'A.desc_name',
@@ -1684,7 +1689,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Select should support joining tables.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table=['server', 'logclient'],
                          fields=['server_id', 'desc_name', 'logc_directory'],
                          where="server_id = logc_server_id")
@@ -1696,7 +1701,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Select should support joining tables with temporary table names.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table=['server A', 'logclient B'],
                          fields=['A.server_id',
                                  'A.desc_name',
@@ -1709,7 +1714,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     #   - limit not an int
     #     > should throw exception
     def test_select_l_nint(self):
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), limit must be an int",
                              db.select,
@@ -1720,7 +1725,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     #   - limit is an int
     #     > should retrieve the specified number of records
     def test_select_l_int(self):
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rlim = 3
         rows = db.select(table='hpss.server',
                          limit=rlim)
@@ -1731,7 +1736,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     #   - limit is a float
     #     > should convert to an int and use it
     def test_select_l_float(self):
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rlim = 4.5
         rows = db.select(table='hpss.server',
                          limit=rlim)
@@ -1744,7 +1749,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with an empty field list should get all the data -- an
         empty field list indicates the wildcard option
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         rows = db.select(table='hpss.gatekeeper',
                          fields=[])
         self.expected(3, len(rows[0].keys()))
@@ -1761,7 +1766,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with no field list should get all the data -- fields
         should default to the empty list, indicating the wildcard option
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         mtf_rows = db.select(table='hpss.logclient', fields=[])
         nf_rows = db.select(table='hpss.logclient')
 
@@ -1774,7 +1779,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with an empty orderby should get the data in the
         same order as using no orderby at all.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         ordered_rows = db.select(table='hpss.logclient', orderby='')
         unordered_rows = db.select(table='hpss.logclient')
         okl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
@@ -1788,7 +1793,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         Calling select() with an empty table name should get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         try:
             rows = db.select(table='',
                              fields=['max(desc_name) as mdn',
@@ -1807,7 +1812,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with an empty where arg should get the same data as no
         where arg at all
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         w_rows = db.select(table='hpss.logpolicy', where='')
         x_rows = db.select(table='hpss.logpolicy')
         self.expected(len(x_rows), len(w_rows))
@@ -1820,7 +1825,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-tuple as the data argument should
         get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), data must be a tuple",
                              db.select,
@@ -1835,7 +1840,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-list as the fields argument should
         get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), fields must be a list",
                              db.select,
@@ -1850,7 +1855,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with where clause with no '?' and data in the list
         should get an exception -- the data would be ignored
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "Data would be ignored",
                              db.select,
@@ -1865,7 +1870,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with where with no '?' and an empty data list is fine.
         The data returned should match the where clause.
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         crit = 'Server'
         rows = db.select(table='hpss.server',
                          fields=['desc_name', 'rpc_prog_num', 'server_type'],
@@ -1882,7 +1887,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-string orderby argument should
         get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), orderby clause must be a string",
                              db.select,
@@ -1895,7 +1900,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         Calling select() with a non-string table argument should
         get an exception
         """
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), table name must be a string",
                              db.select,
@@ -2030,7 +2035,6 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         b = CrawlDBI.DBIdb2(dbname='hcfg', tbl_prefix='hpss',
                             cfg=CrawlConfig.get_config())
         self.expected(str(b), str(a))
-        # self.fail('under construction')
 
     # -------------------------------------------------------------------------
     def test_insert_exception(self):
