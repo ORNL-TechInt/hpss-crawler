@@ -435,6 +435,43 @@ def lineno():
 
 
 # -----------------------------------------------------------------------------
+def lsp_parse(lspout):
+    """
+    We assume *lspout* comes from an hsi 'ls -P' command and parse it as such,
+    returning file type ('f' or 'd'), file name, cartridge (if available), and
+    cos (if available). Directories don't have cartridge or cos values.
+    """
+    lines = lspout.split("\r\n")
+    while [] == re.findall("(FILE|DIRECTORY)", lines[0]):
+        pop0(lines)
+
+    if len(lines) < 1:
+        raise HpssicError("ls -P output not found in lsp_parse input")
+
+    x = lines[0].split("\t")
+    itype = pop0(x)        # 'FILE' or 'DIRECTORY'
+    if itype == 'FILE':
+        itype = 'f'
+    elif itype == 'DIRECTORY':
+        itype = 'd'
+    else:
+        raise HpssicError("Invalid file type in 'ls -P' output")
+    iname = pop0(x)        # name of file or dir
+    pop0(x)
+    pop0(x)
+    pop0(x)
+    cart = pop0(x)         # name of cart
+    if cart is not None:
+        cart = cart.strip()
+    cos = pop0(x)          # name of cos
+    if cos is not None:
+        cos = cos.strip()
+    else:
+        cos = ''
+    return(itype, iname, cart, cos)
+
+
+# -----------------------------------------------------------------------------
 def memoize(f):
     cache = {}
 
