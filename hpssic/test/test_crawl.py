@@ -1085,32 +1085,6 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected [], got '%s'" % result)
 
     # --------------------------------------------------------------------------
-    def test_running_pid_noproc1(self):
-        """
-        Preconditions:
-         - /tmp/crawler contains a single pid file, proc not running (use
-           make_pidfile to set up pidfile)
-         - running_pid() called with proc_required=False
-        Postconditions:
-         - running_pid() returns list containing single tuple with pid,
-           context, exitpath
-        """
-        # set up single pidfile
-        util.conditional_rm(self.piddir, tree=True)
-        pid = 6700
-        context = 'TEST'
-        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
-        crawl.make_pidfile(pid, context, exitpath)
-
-        # run the target routine
-        result = crawl.running_pid(proc_required=False)
-
-        # verify postconditions
-        exp = [(6700, context, exitpath)]
-        self.assertEqual(result, exp,
-                         "Expected '%s', got '%s'" % (exp, result))
-
-    # --------------------------------------------------------------------------
     def test_running_pid_proc2(self):
         """
         Preconditions:
