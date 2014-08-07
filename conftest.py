@@ -4,6 +4,9 @@ import sys
 
 
 def pytest_addoption(parser):
+    """
+    Add option --all to py.test command line
+    """
     global attr
     parser.addoption("--all", action="store_true",
                      help="run all tests")
@@ -11,6 +14,8 @@ def pytest_addoption(parser):
 
 
 def pytest_runtest_setup(item):
-    # pdb.set_trace()
+    """
+    Decide whether to skip a test under consideration
+    """
     if 'attr' in item.keywords and not item.config.getoption("--all"):
         pytest.skip('slow')
