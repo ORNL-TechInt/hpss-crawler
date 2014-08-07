@@ -293,14 +293,15 @@ class Test_MISC(th.HelpedTestCase):
         """
         dupl = {}
         for r, d, f in os.walk('.'):
-            for fname in f:
-                path = os.path.join(r, fname)
-                if "CrawlDBI" in path:
-                    continue
-                if path.endswith(".py"):
-                    result = check_for_duplicates(path)
-                    if result != '':
-                        dupl[path] = result
+            if r.endswith("/hpssic"):
+                for fname in f:
+                    path = os.path.join(r, fname)
+                    if "CrawlDBI" in path:
+                        continue
+                    if path.endswith(".py"):
+                        result = check_for_duplicates(path)
+                        if result != '':
+                            dupl[path] = result
         if dupl != {}:
             rpt = ''
             for key in dupl:
