@@ -445,6 +445,7 @@ def cvv_ttype_lookup(argv):
     media = cv_lib.ttype_lookup(path)
     print("%s is stored on %s" % (path, media))
 
+
 # -----------------------------------------------------------------------------
 def cvv_ttype_populate(argv):
     """ttype_populate - populate the ttype field in checkables

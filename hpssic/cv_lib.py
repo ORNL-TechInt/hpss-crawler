@@ -41,7 +41,8 @@ def ttype_cart_lookup(cartname):
     db = CrawlDBI.DBI(dbtype='hpss', dbname='cfg')
     rows = db.select(table="pvlpv",
                      fields=["phys_vol_type_type",
-                             "phys_vol_type_subtype",],
+                             "phys_vol_type_subtype",
+                             ],
                      where="cartridge_id = ?",
                      data=(cartname,))
     db.close()
