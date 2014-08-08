@@ -27,6 +27,7 @@ except ImportError:
 HPSS_SECTION = 'db2'
 CRWL_SECTION = 'dbi'
 
+
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
     """
@@ -111,7 +112,7 @@ class DBI(object):
         if 'dbtype' not in kwargs:
             raise DBIerror("dbtype must be 'hpss' or 'crawler'")
         elif kwargs['dbtype'] == 'db2' or kwargs['dbtype'] == 'hpss':
-            dbtype = kwargs['dbtype']
+            dbtype = cfg.get(HPSS_SECTION, 'dbtype')
             tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
             if 'dbname' not in kwargs:
                 raise DBIerror("With dbtype=%s, dbname must be specified" %

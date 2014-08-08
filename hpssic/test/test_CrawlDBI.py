@@ -113,7 +113,8 @@ class DBITest(DBITestRoot):
         CrawlDBI ctor called without dbtype should throw an exception.
         """
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "dbtype must be 'hpss' or 'crawler' (dbname=None)",
+                             "dbtype must be 'hpss' or 'crawler' " +
+                             "(dbname=None)",
                              CrawlDBI.DBI,
                              dbname='foobar')
 
