@@ -17,6 +17,7 @@ Extensions to python's standard unittest module
 
 """
 import CrawlConfig
+import glob
 import optparse
 import os
 import pdb
@@ -308,13 +309,15 @@ def reset_directory(dirpath, make=True, force=False):
     If dirpath names a directory, remove it and optionally recreate it. This is
     used by module_test_teardown().
     """
-    if not keepfiles() or force:
-        logger = CrawlConfig.get_logger(reset=True, soft=True)
-        if os.path.isdir(dirpath):
-            shutil.rmtree(dirpath)
-        if make and not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-
+    try:
+        if not keepfiles() or force:
+            logger = CrawlConfig.get_logger(reset=True, soft=True)
+            if os.path.isdir(dirpath):
+                shutil.rmtree(dirpath)
+            if make and not os.path.exists(dirpath):
+                os.makedirs(dirpath)
+    except OSError:
+        print glob.glob("%s/*" % dirpath)
 
 # -----------------------------------------------------------------------------
 def test_name(obj=None):

@@ -191,10 +191,10 @@ class DBI_in_Base(object):
         """
         a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
         dirl = [q for q in dir(a) if not q.startswith('_')]
-        xattr_req = ['close', 'create', 'dbname', 'delete', 'drop', 'insert',
-                     'select', 'table_exists', 'update',
-                     'cursor']
-        xattr_allowed = ['sql']
+        xattr_req = ['alter', 'close', 'create', 'dbname', 'delete',
+                     'describe', 'drop',
+                     'insert', 'select', 'table_exists', 'update', 'cursor']
+        xattr_allowed = ['alter']
 
         for attr in dirl:
             if attr not in xattr_req and attr not in xattr_allowed:
@@ -207,7 +207,7 @@ class DBI_in_Base(object):
     # -------------------------------------------------------------------------
     def test_ctor_bad_attrs(self):
         """
-        Attempt to create an object is invalid attribute should get an
+        Attempt to create an object with an invalid attribute should get an
         exception
         """
         self.assertRaisesMsg(CrawlDBI.DBIerror,
@@ -666,6 +666,184 @@ class DBI_out_Base(object):
                 ('zumpy', 45, 9.3242),
                 ('frodo', 23, 212.5),
                 ('zumpy', 55, 90.6758)]
+
+    # db.alter() tests
+    #
+    # Syntax:
+    #    db.alter(table=<tabname>, addcol=<col desc>, pos='first|after <col>')
+    #    db.alter(table=<tabname>, dropcol=<col name>)
+    #
+    # - sqlite does not support dropping columns
+    #
+    # - sqlite does not pay attention to the pos argument. The default location
+    #   for adding a column in mysql is after the last existing column. This is
+    #   also sqlite's behavior
+    # -------------------------------------------------------------------------
+    def test_alter_add_exists(self):
+        """
+        Calling alter() to add an existing column should get an exception
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # try to add an existing column
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             ["Duplicate column name 'size'",
+                              "duplicate column name: size"
+                              ],
+                             db.alter,
+                             table=tname,
+                             addcol='size int')
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_injection(self):
+        """
+        Calling alter() to add a column with injection should get an exception
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # try to add an existing column
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Invalid addcol argument",
+                             db.alter,
+                             table=tname,
+                             addcol='size int; select * from somewhere')
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_ok(self):
+        """
+        Calling alter() to add a column with valid syntax should work. With no
+        pos argument, both mysql and sqlite should add the new column at the
+        end
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+
+        if self.dbtype == 'mysql':
+            exp = ('comment', 4L, 'text')
+        elif self.dbtype == 'sqlite':
+            exp = (3, 'comment', 'text', 0, None, 0)
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_drop_injection(self):
+        """
+        Calling alter() to drop a column with injection should get an exception
+          mysql: exception on injection
+          sqlite: exception on drop arg
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             ["Invalid dropcol argument",
+                              "SQLite does not support dropping columns"
+                              ],
+                             db.alter,
+                             table=tname,
+                             dropcol="size; select * from other")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_drop_nx(self):
+        """
+        Calling alter() to drop a column that does not exist should get an
+        exception
+          mysql: exception on nx col
+          sqlite: exception on drop arg
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             ["Can't DROP 'fripperty'; " +
+                              "check that column/key exists",
+                              "SQLite does not support dropping columns"
+                              ],
+                             db.alter,
+                             table=tname,
+                             dropcol="fripperty")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_mt_add(self):
+        """
+        Calling alter() with an empty add should get an exception
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On alter(), addcol must not be empty",
+                             db.alter,
+                             table=tname,
+                             addcol="")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_mt_drop(self):
+        """
+        Calling alter() with an empty add should get an exception
+          sqlite: exception on drop argument
+          mysql: exception on empty drop arg
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             ["On alter, dropcol must not be empty",
+                              "SQLite does not support dropping columns"
+                              ],
+                             db.alter,
+                             table=tname,
+                             dropcol="")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_mt_table(self):
+        """
+        Calling alter() with no table name should get an exception
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "On alter(), table name must not be empty",
+                             db.alter,
+                             table="",
+                             addcol="dragon")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_alter_no_action(self):
+        """
+        Calling alter() with no action should get an exception
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "ALTER requires an action",
+                             db.alter,
+                             table=tname)
+        db.close()
 
     # -------------------------------------------------------------------------
     def test_create_mtf(self):
@@ -1309,6 +1487,96 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                 db.drop(table=tname)
 
     # -------------------------------------------------------------------------
+    def test_alter_add_after(self):
+        """
+        Calling alter() to add a column with valid syntax should work
+          mysql: add column after spec
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg('mysql'), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text', pos='after name')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+
+        exp = ('comment', 2L, 'text')
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_first(self):
+        """
+        Calling alter() to add a column with valid syntax should work
+          mysql: add column first
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg('mysql'), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text', pos='first')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+
+        exp = ('comment', 1L, 'text')
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_mt_pos(self):
+        """
+        Calling alter() to add a column with an empty pos argument should get
+        an exception.
+          mysql: same as no pos -- add at end
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text', pos='')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+
+        exp = ('comment', 4L, 'text')
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_drop_ok(self):
+        """
+        Calling alter() to drop a column with valid syntax should work (except
+        that drop column is not supported by sqlite)
+          mysql: column dropped
+        """
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, dropcol='size')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+
+        exp = ('size', 4L, 'int')
+        self.assertFalse(exp in c,
+                        "Not expecting '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
     def test_ctor_mysql_dbnreq(self):
         """
         The DBImysql ctor requires 'dbname' and 'tbl_prefix' as keyword
@@ -1343,6 +1611,90 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     @classmethod
     def tearDownClass(cls):
         testhelp.module_test_teardown(DBITest.testdir)
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_after(self):
+        """
+        Calling alter() to add a column with valid syntax should work
+          sqlite: add column at end
+        """
+        # pdb.set_trace()
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text', pos='after name')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+        exp = (3, 'comment', 'text', 0, None, 0)
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_first(self):
+        """
+        Calling alter() to add a column with valid syntax should work
+          sqlite: add column at end
+        """
+        # pdb.set_trace()
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text', pos='first')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+        exp = (3, 'comment', 'text', 0, None, 0)
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_add_mt_pos(self):
+        """
+        Calling alter() to add a column with an empty pos argument should get
+        an exception.
+          sqlite: ignore pos arg and add column at end
+        """
+        # pdb.set_trace()
+        tname = util.my_name().replace('test_', '')
+        # create test table
+        db = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+
+        # add column at specified location
+        db.alter(table=tname, addcol='comment text', pos='')
+
+        # verify new column and its location
+        c = db.describe(table=tname)
+        db.close()
+        exp = (3, 'comment', 'text', 0, None, 0)
+        self.assertTrue(exp in c,
+                        "Expected '%s' in '%s'" % (exp, c))
+
+    # -------------------------------------------------------------------------
+    def test_alter_drop_ok(self):
+        """
+        Calling alter() to drop a column with valid syntax should work (except
+        that drop column is not supported by sqlite)
+          sqlite: exception on drop arg
+        """
+        tname = util.my_name().replace('test_', '')
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype='crawler')
+        db.create(table=tname, fields=self.fdef)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "SQLite does not support dropping columns",
+                             db.alter,
+                             table=tname,
+                             dropcol="size")
+        db.close()
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_db(self):
@@ -1731,7 +2083,6 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         rows = db.select(table='hpss.server',
                          limit=rlim)
         self.expected(rlim, len(rows))
-        # self.fail('under construction')
 
     # -------------------------------------------------------------------------
     #   - limit is a float
@@ -1742,7 +2093,6 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         rows = db.select(table='hpss.server',
                          limit=rlim)
         self.expected(int(rlim), len(rows))
-        # self.fail('under construction')
 
     # -------------------------------------------------------------------------
     def test_select_mtf(self):
@@ -2009,7 +2359,6 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         db.close()
         self.expected(True, db._dbobj.closed)
-        # self.fail('under construction')
 
     # -------------------------------------------------------------------------
     def test_close_closed(self):
