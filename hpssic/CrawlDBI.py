@@ -167,6 +167,7 @@ class DBI(object):
         okw['cfg'] = cfg
         okw['dbname'] = dbname
         okw['tbl_prefix'] = tbl_pfx
+
         if dbtype == 'sqlite':
             self._dbobj = DBIsqlite(*args, **kwargs)
         elif dbtype == 'mysql':
