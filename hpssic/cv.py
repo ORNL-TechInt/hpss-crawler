@@ -37,7 +37,7 @@ def cvv_addcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s add column cart text after cos" % table
     db.sql(cmd)
@@ -62,7 +62,7 @@ def cvv_dropcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s drop column cart" % table
     db.sql(cmd)  # !@! this needs to be db.alter(table=table,...)
@@ -103,7 +103,7 @@ def cvv_popcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     if o.skip:
         where = "type = 'f' and last_check <> 0 and cart is null"
     else:
@@ -227,7 +227,7 @@ def cvv_nulltest(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
 
     rows = db.select(table='checkables',
                      where="fails is null or reported is null or cart is null")
@@ -277,7 +277,7 @@ def cvv_fail_reset(argv):
         print("pathname is required")
         return
 
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
 
     db.update(table='checkables',
               fields=['fails', 'reported'],
@@ -399,7 +399,11 @@ def cvv_ttype_add(argv):
     if o.debug:
         pdb.set_trace()
 
-    # lookup and report tape type for each pathname specified
+    db = CrawlDBI.DBI(dbtype="crawler")
+    db.alter(table="checkables",
+             addcol="ttypes text",
+             pos="after cart")
+    db.close()
 
 
 # -----------------------------------------------------------------------------
@@ -420,7 +424,10 @@ def cvv_ttype_drop(argv):
     if o.debug:
         pdb.set_trace()
 
-    # lookup and report tape type for each pathname specified
+    db = CrawlDBI.DBI(dbtype="crawler")
+    db.alter(table="checkables",
+             dropcol="ttypes")
+    db.close()
 
 
 # -----------------------------------------------------------------------------
@@ -477,7 +484,40 @@ def cvv_ttype_populate(argv):
     if o.debug:
         pdb.set_trace()
 
-    # lookup and report tape type for each pathname specified
+    db = CrawlDBI.DBI(dbtype="crawler")
+    for path in a:
+        rows = db.select(table="checkables",
+                         fields=["path", "type", "ttypes", "cart"],
+                         where="path = ?",
+                         data=(path,))
+        if len(rows) < 1:
+            print("path '%s' not found in crawler database" % path)
+            continue
+
+        # get a list of cartnames and media type descriptions
+        cml = cv_lib.ttype_lookup(path)
+        # make a comma-separated list of cart names from cml
+        cartnames = ",".join([x[0] for x in cml])
+        # make a comma-separated list of media descriptions from cml
+        mdescs = ",".join([x[1] for x in cml])
+
+        if rows[0][3] is None:
+            fields = ["ttypes", "cart"]
+            data = (mdescs, cartnames, path)
+        else:
+            fields = ["ttypes"]
+            data = (mdescs, path)
+
+        db.update(table="checkables",
+                  fields=fields,
+                  where="path = ?",
+                  data=[data])
+
+        rows = db.select(table="checkables",
+                         fields=["path", "cart", "ttypes", "last_check"],
+                         where="path = ?",
+                         data=(path,))
+        print rows
 
 
 # -----------------------------------------------------------------------------
@@ -510,7 +550,7 @@ def cvv_ttype_table(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     # lookup and report tape type for each pathname specified
     if o.drop:
         db.drop(table="tape_types")
