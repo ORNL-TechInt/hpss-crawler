@@ -689,6 +689,9 @@ if mysql_available:
             """
             mysql: Alter the table as indicated.
             """
+            if self.closed:
+                raise DBIerror("Cannot operate on a closed database",
+                               dbname=self.dbname)
             cmd = ''
             if type(table) != str:
                 raise DBIerror("On alter(), table name must be a string",
@@ -728,7 +731,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def close(self):
             """
-            See DBI.close()
+            mysql: See DBI.close()
             """
             # Close the database connection
             if self.closed:
@@ -743,7 +746,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
             """
-            See DBI.create()
+            mysql: See DBI.create()
             """
             # Handle bad arguments
             if type(fields) != list:
