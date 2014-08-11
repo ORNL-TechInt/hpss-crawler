@@ -311,6 +311,18 @@ class Test_MISC(th.HelpedTestCase):
                 rpt += "Duplicates in %s:" % key + dupl[key] + "\n"
             self.fail(rpt)
 
+    # -------------------------------------------------------------------------
+    @attr(slow=True)
+    def test_pep8(self):
+        result = ""
+        for r, d, f in os.walk('hpssic'):
+            pylist = [os.path.join(r, fn) for fn in f if fn.endswith('.py')]
+            inputs = " ".join(pylist)
+            if any([r == "./test", ".git" in r, ".attic" in r, "" == inputs]):
+                continue
+            result += pexpect.run("pep8 %s" % inputs)
+        self.assertEqual("", result, "\n" + result)
+
 
 # -----------------------------------------------------------------------------
 @U.memoize
