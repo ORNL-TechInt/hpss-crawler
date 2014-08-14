@@ -976,33 +976,40 @@ if mysql_available:
                 raise DBIerror("On select(), limit must be an int")
 
             # Build and run the select statement
-            try:
-                cmd = "select "
-                if 0 < len(fields):
-                    cmd += ",".join(fields)
-                else:
-                    cmd += "*"
-                cmd += " from %s" % self.prefix(table)
-                if where != '':
-                    cmd += " where %s" % where.replace('?', '%s')
-                if groupby != '':
-                    cmd += " group by %s" % groupby
-                if orderby != '':
-                    cmd += " order by %s" % orderby
-                if limit is not None:
-                    cmd += " limit 0, %d" % int(limit)
+            cmd = "select "
+            if 0 < len(fields):
+                cmd += ",".join(fields)
+            else:
+                cmd += "*"
+            cmd += " from %s" % self.prefix(table)
+            if where != '':
+                cmd += " where %s" % where.replace('?', '%s')
+            if groupby != '':
+                cmd += " group by %s" % groupby
+            if orderby != '':
+                cmd += " order by %s" % orderby
+            if limit is not None:
+                cmd += " limit 0, %d" % int(limit)
 
-                c = self.dbh.cursor()
-                if '%s' in cmd:
-                    c.execute(cmd, data)
-                else:
-                    c.execute(cmd)
-                rv = c.fetchall()
-                c.close()
-                return rv
-            # Translate any sqlite3 errors to DBIerror
-            except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+            sleeptime = 0.1
+            while True:
+                try:
+                    c = self.dbh.cursor()
+                    if '%s' in cmd:
+                        c.execute(cmd, data)
+                    else:
+                        c.execute(cmd)
+                    rv = c.fetchall()
+                    c.close()
+                    return rv
+                # Translate any sqlite3 errors to DBIerror
+                except mysql_exc.Error, e:
+                    if 1047 == e.args[0]:
+                        print("RETRY")
+                        time.sleep(sleeptime)
+                        sleeptime = min(2*sleeptime, 1.0)
+                    else:
+                        raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
         # -------------------------------------------------------------------------
         def table_exists(self, table=''):
