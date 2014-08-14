@@ -34,14 +34,12 @@ def make_db2_tcfg(dbeng):
     tcfg = CrawlConfig.CrawlConfig()
     xcfg = CrawlConfig.get_config(reset=True)
     section = 'dbi-hpss'
-    # section = 'db2'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
-    # tcfg.set(section, 'dbname', 'hcfg')
     tcfg.set(section, 'tbl_prefix', 'hpss')
     for optname in ['cfg', 'sub', 'dbtype', 'tbl_prefix',
                     'hostname', 'port', 'username', 'password']:
-        tcfg.set('db2', optname, xcfg.get('db2', optname))
+        tcfg.set(section, optname, xcfg.get(section, optname))
     return tcfg
 
 
@@ -50,7 +48,6 @@ def make_mysql_tcfg(dbeng):
     tcfg = CrawlConfig.CrawlConfig()
     xcfg = CrawlConfig.get_config(reset=True)
     section = 'dbi-crawler'
-    # section = 'dbi'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
     tcfg.set(section, 'dbname', DBITest.testdb)
@@ -65,7 +62,6 @@ def make_sqlite_tcfg(dbeng):
     tcfg = CrawlConfig.CrawlConfig()
     xcfg = CrawlConfig.get_config(reset=True)
     section = 'dbi-crawler'
-    # section = 'dbi'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
     tcfg.set(section, 'dbname', DBITest.testdb)
@@ -77,56 +73,8 @@ def make_sqlite_tcfg(dbeng):
 def make_tcfg(dbtype):
     # pdb.set_trace()
     func = getattr(sys.modules[__name__], 'make_%s_tcfg' % dbtype)
-    if func:
-        rval = func(dbtype)
-        return rval
-        
-
-    # tcfg = CrawlConfig.CrawlConfig()
-    # xcfg = CrawlConfig.get_config(reset=True)
-    # if dbtype == 'mysql':
-    #     for dbparm in ['dbname', 'host', 'username', 'password']:
-    #         tcfg.set('dbi', dbparm, xcfg.get('dbi', dbparm))
-    # elif dbtype == 'db2' or dbtype == 'hpss':
-    #     tcfg.add_section('db2')
-    #     tcfg.set('dbi', 'dbname', 'hcfg')
-    #     tcfg.set('dbi', 'tbl_prefix', 'hpss')
-    #     for optname in ['cfg', 'sub', 'dbtype', 'tbl_prefix',
-    #                     'hostname', 'port', 'username', 'password']:
-    #         tcfg.set('db2', optname, xcfg.get('db2', optname))
-    # 
-    # # pdb.set_trace()
-    # return tcfg
-
-
-# -----------------------------------------------------------------------------
-def make_mysql_tcfg(dbeng):
-    tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config(reset=True)
-    section = 'dbi-crawler'
-    tcfg.add_section(section)
-    tcfg.set(section, 'dbtype', dbeng)
-    tcfg.set(section, 'tbl_prefix', 'test')
-    for dbparm in ['dbname', 'host', 'username', 'password']:
-        tcfg.set(section, dbparm, xcfg.get(section, dbparm))
-
-    
-# -----------------------------------------------------------------------------
-def make_sqlite_tcfg(dbeng):
-    tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config(reset=True)
-    section = 'dbi-crawler'
-    tcfg.add_section(section)
-    tcfg.set(section, 'dbtype', dbeng)
-    tcfg.set(section, 'dbname', DBITest.testdb)
-    tcfg.set(section, 'tbl_prefix', 'test')
-
-
-# -----------------------------------------------------------------------------
-def make_tcfg(dbeng):
-    pdb.set_trace()
-    func = getattr(sys.modules[__name__], "make_%s_tcfg" % dbeng)
-    return func(dbeng)
+    rval = func(dbtype)
+    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -1888,7 +1836,6 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sockname)
         tcfg = make_tcfg(self.dbtype)
-        # tcfg.set('dbi', 'dbname', sockname)
         tcfg.set(CrawlDBI.CRWL_SECTION, 'dbname', sockname)
         try:
             db = CrawlDBI.DBI(cfg=tcfg, dbtype=self.dbctype)
