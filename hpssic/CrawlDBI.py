@@ -24,8 +24,8 @@ except ImportError:
     mysql_available = False
 
 
-HPSS_SECTION = 'db2'
-CRWL_SECTION = 'dbi'
+HPSS_SECTION = 'dbi-hpss'
+CRWL_SECTION = 'dbi-crawler'
 
 
 # -----------------------------------------------------------------------------

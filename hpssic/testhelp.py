@@ -131,7 +131,7 @@ def all_tests(name, filter=None):
 # -----------------------------------------------------------------------------
 def db_config(tdir, tname):
     cfname = '%s/%s.cfg' % (tdir, tname)
-    cfgfile(cfname, {'dbi': {'dbtype': 'sqlite',
+    cfgfile(cfname, {'dbi-crawler': {'dbtype': 'sqlite',
                              'dbname': '%s/test.db' % tdir,
                              'tbl_prefix': 'test'},
                      'crawler': {'logpath': '%s/%s.log' % (tdir, tname)}
