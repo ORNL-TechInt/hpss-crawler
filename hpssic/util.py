@@ -588,6 +588,16 @@ def setup_logging(logfile='',
 
 
 # -----------------------------------------------------------------------------
+def squash(string):
+    """
+    Squeeze all occurrences of whitespace down to a single space and strip any
+    whitespace off the beginning and end.
+    """
+    rval = re.sub("\s\s+", " ", string)
+    return rval.strip()
+
+
+# -----------------------------------------------------------------------------
 def date_parse(data, idx):
     """
     Compile and cache the regexp for parsing dates from log files.

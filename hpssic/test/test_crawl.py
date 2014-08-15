@@ -6,6 +6,7 @@ from hpssic import CrawlConfig
 from hpssic import crawl
 import copy
 import glob
+from hpssic import messages as MSG
 import os
 import pdb
 import pexpect
@@ -157,9 +158,10 @@ class CrawlTest(testhelp.HelpedTestCase):
         util.conditional_rm(cfname)
         cmd = '%s cfgdump -c %s' % (self.crawl_cmd(), cfname)
         result = pexpect.run(cmd)
-        self.vassert_in("Traceback", result)
-        self.vassert_in("%s does not exist" % cfname,
-                        result)
+        self.assertEqual(util.squash(MSG.no_cfg_found), util.squash(result),
+                         "Expected %s,     got %s" %
+                         (util.line_quote(MSG.no_cfg_found),
+                          util.line_quote(result)))
 
     # --------------------------------------------------------------------------
     def test_crawl_cfgdump_read(self):
@@ -510,16 +512,10 @@ class CrawlTest(testhelp.HelpedTestCase):
         if os.getenv('CRAWL_CONF') is not None:
             del os.environ['CRAWL_CONF']
         where = tempfile.mkdtemp(dir=self.testdir)
-        exp = re.sub("\s\s+", " ",
-                     """No configuration found. Please do one of the following:
-                     - cd to a directory with an appropriate crawl.cfg file,
-                     - create crawl.cfg in the current working directory,
-                     - set $CRAWL_CONF to the path of a valid crawler configuration, or
-                     - use --cfg to specify a configuration file on the command line.
-                     """).strip()
+        exp = util.squash(MSG.no_cfg_found)
+        cmd = "%s start" % util.abspath(self.crawl_cmd())
         with util.Chdir(where):
-            result = pexpect.run("crawl start")
-            result = re.sub("\s\s+", " ", result).strip()
+            result = util.squash(pexpect.run(cmd))
             self.assertEqual(exp, result,
                              "Expected %s\n      got %s" %
                              (util.line_quote(exp),

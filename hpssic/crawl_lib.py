@@ -10,6 +10,24 @@ import time
 
 
 # -----------------------------------------------------------------------------
+def drop_table(table_prefix, table_name):
+    """
+    This wraps the table dropping operation.
+    !@!TODO: this could use a test
+    """
+    db = CrawlDBI.DBI(dbtype="crawler")
+    db.drop(table=table_name)
+    if db.table_exists(table=table_name):
+        rval = ("Attempt to drop table '%s_%s' failed" %
+                (table_prefix, table_name))
+    else:
+        rval = ("Attempt to drop table '%s_%s' was successful" %
+                (table_prefix, table_name))
+    db.close()
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def simplug(plugin, args):
     """
     Common plugin simulator. May be used by the interactive tools to simulate

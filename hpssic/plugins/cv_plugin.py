@@ -142,26 +142,9 @@ def get_stats():
     checksum = 1. This avoids discrepancies where the checksum count in cvstats
     might get out of synch with the records in checkables.
     """
-    db = CrawlDBI.DBI()
-    if db.table_exists(table="checkables"):
-        rows = db.select(table='checkables',
-                         fields=["count(path)"],
-                         where="checksum = 1")
-        checksums = rows[0][0]
-    else:
-        checksums = 0
-
-    if db.table_exists(table=stats_table):
-        rows = db.select(table=stats_table,
-                         fields=["matches", "failures"],
-                         where="rowid = 1")
-        (matches, failures) = rval = rows[0]
-    else:
-        (matches, failures) = (0, 0)
-
-    db.close()
-    return (checksums, matches, failures)
-
+    checksums = cv_lib.get_checksum_count()
+    (matches, failures) = cv_lib.get_match_fail_count()
+    return(checksums, matches, failures)
 
 # -----------------------------------------------------------------------------
 def update_stats(cmf):
