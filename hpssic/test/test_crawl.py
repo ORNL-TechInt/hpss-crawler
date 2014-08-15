@@ -9,10 +9,12 @@ import glob
 import os
 import pdb
 import pexpect
+import re
 import shutil
 import sys
 from hpssic import testhelp
 import time
+import tempfile
 from hpssic import toolframe
 from hpssic import util
 
@@ -499,6 +501,29 @@ class CrawlTest(testhelp.HelpedTestCase):
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_start_nocfg(self):
+        """
+        'crawl start' with no configuration available should throw an exception
+        """
+        if os.getenv('CRAWL_CONF') is not None:
+            del os.environ['CRAWL_CONF']
+        where = tempfile.mkdtemp(dir=self.testdir)
+        exp = re.sub("\s\s+", " ",
+                     """No configuration found. Please do one of the following:
+                     - cd to a directory with an appropriate crawl.cfg file,
+                     - create crawl.cfg in the current working directory,
+                     - set $CRAWL_CONF to the path of a valid crawler configuration, or
+                     - use --cfg to specify a configuration file on the command line.
+                     """).strip()
+        with util.Chdir(where):
+            result = pexpect.run("crawl start")
+            result = re.sub("\s\s+", " ", result).strip()
+            self.assertEqual(exp, result,
+                             "Expected %s\n      got %s" %
+                             (util.line_quote(exp),
+                              util.line_quote(result)))
 
     # --------------------------------------------------------------------------
     @attr(slow=True)

@@ -73,6 +73,10 @@ frequency     = 1 hour
 # max number of operations in a single run
 operations    = 20
 
+# which db fields to use for dimensions
+dimensions = ttypes, cos
+
+# section where alerts are defined
 alerts = alert_targets
 
 # -------------------------------------------------------

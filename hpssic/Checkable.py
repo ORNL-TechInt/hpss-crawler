@@ -104,9 +104,21 @@ class Checkable(object):
         for attr in ['checksum', 'fails', 'reported']:
             if getattr(self, attr) is None:
                 setattr(self, attr, 0)
+
+        # Set up dimensions based on configuration. If no dimensions option is
+        # set in the configuration, we just leave the dimensions dict emtpy.
+        # Since this class is only used by the cv_plugin, it makes no sense for
+        # this code to be running if there is no cv section in the
+        # configuration, so we'll let that exception get thrown up the stack.
+        cfg = CrawlConfig.get_config()
         self.dim = {}
-        self.dim['cos'] = Dimension.get_dim('cos')
-        self.dim['cart'] = Dimension.get_dim('cart')
+        try:
+            dim_l = util.csv_list(cfg.get('cv', 'dimensions'))
+            for dname in dim_l:
+                self.dim[dname] = Dimension.get_dim(dname)
+        except CrawlConfig.NoOptionError:
+            pass
+
         super(Checkable, self).__init__()
 
     # -------------------------------------------------------------------------
@@ -624,8 +636,8 @@ class Checkable(object):
                                  self.path)])
             self.dirty = False
 
-        self.dim['cos'].load()
-        self.dim['cart'].load()
+        for d in self.dim:
+            d.load()
         db.close()
 
     # -------------------------------------------------------------------------
