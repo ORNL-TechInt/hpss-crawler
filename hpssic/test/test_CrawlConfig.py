@@ -77,6 +77,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
               'sounds': {'duck': 'quack',
                          'dog':  'bark',
                          'hen':  'cluck'}}
+    nocfg_exp = """
+            No configuration found. Please do one of the following:
+             - cd to a directory with an appropriate crawl.cfg file,
+             - create crawl.cfg in the current working directory,
+             - set $CRAWL_CONF to the path of a valid crawler configuration, or
+             - use --cfg to specify a configuration file on the command line.
+            """
 
     # -------------------------------------------------------------------------
     def test_changed(self):
@@ -185,12 +192,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.clear_env()
             util.conditional_rm(self.default_cfname)
 
-            expmsg = "%s does not exist" % self.default_cfname
             # test with no argument
-            self.assertRaisesMsg(StandardError, expmsg, CrawlConfig.get_config)
+            self.assertRaisesMsg(SystemExit, self.nocfg_exp,
+                                 CrawlConfig.get_config)
 
             # test with empty string argument
-            self.assertRaisesMsg(StandardError, expmsg,
+            self.assertRaisesMsg(SystemExit, self.nocfg_exp,
                                  CrawlConfig.get_config, '')
 
     # --------------------------------------------------------------------------
@@ -265,25 +272,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             os.environ['CRAWL_CONF'] = self.env_cfname
             util.conditional_rm(self.env_cfname)
 
-            got_exception = False
-            try:
-                cfg = CrawlConfig.get_config()
-            except StandardError as e:
-                got_exception = True
-                self.assertEqual(str(e),
-                                 '%s does not exist' %
-                                 self.env_cfname)
-            self.assertEqual(got_exception, True)
+            self.assertRaisesMsg(SystemExit,
+                                 self.nocfg_exp,
+                                 CrawlConfig.get_config)
 
-            got_exception = False
-            try:
-                cfg = CrawlConfig.get_config('')
-            except StandardError as e:
-                got_exception = True
-                self.assertEqual(str(e),
-                                 '%s does not exist' %
-                                 self.env_cfname)
-            self.assertEqual(got_exception, True)
+            self.assertRaisesMsg(SystemExit,
+                                 self.nocfg_exp,
+                                 CrawlConfig.get_config,
+                                 '')
 
     # --------------------------------------------------------------------------
     def test_get_config_env_ok(self):
@@ -359,8 +355,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             util.conditional_rm(self.exp_cfname)
 
-            self.assertRaisesMsg(StandardError,
-                                 "%s does not exist" % self.exp_cfname,
+            self.assertRaisesMsg(SystemExit,
+                                 self.nocfg_exp,
                                  CrawlConfig.get_config,
                                  self.exp_cfname)
 

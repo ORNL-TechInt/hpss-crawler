@@ -4,6 +4,41 @@ import util as U
 
 
 # -----------------------------------------------------------------------------
+def get_checksum_count():
+    """
+    Return the count of checksums in the crawler database
+    """
+    db = CrawlDBI.DBI(dbtype="crawler")
+    if db.table_exists(table="checkables"):
+        rows = db.select(table='checkables',
+                         fields=["count(path)"],
+                         where="checksum = 1")
+        checksums = rows[0][0]
+    else:
+        checksums = 0
+    db.close()
+    return checksums
+
+
+# -----------------------------------------------------------------------------
+def get_match_fail_count():
+    """
+    Return the match and fail counts in the crawler database
+    """
+    db = CrawlDBI.DBI(dbtype="crawler")
+    if db.table_exists(table=stats_table):
+        rows = db.select(table=stats_table,
+                         fields=["matches", "failures"],
+                         where="rowid = 1")
+        (matches, failures) = rval = rows[0]
+    else:
+        (matches, failures) = (0, 0)
+
+    db.close()
+    return (matches, failures)
+
+
+# -----------------------------------------------------------------------------
 def ttype_lookup(pathname):
     """
     Use hsi to get the name of the cart where this file lives.

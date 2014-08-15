@@ -119,13 +119,8 @@ def crl_dbdrop(argv):
     if answer[0].lower() != "y":
         sys.exit()
 
-    db = CrawlDBI.DBI()
-    db.drop(table=tname)
-    if db.table_exists(table=tname):
-        print("Attempt to drop table '%s_%s' failed" % (tbpfx, tname))
-    else:
-        print("Attempt to drop table '%s_%s' was successful" % (tbpfx, tname))
-    db.close()
+    result = crawl_lib.drop_table(tbpfx, tname)
+    print(result)
 
 
 # ------------------------------------------------------------------------------
