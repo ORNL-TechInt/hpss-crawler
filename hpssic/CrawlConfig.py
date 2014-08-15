@@ -65,7 +65,13 @@ def get_config(cfname='', reset=False, soft=False):
             cfname = 'crawl.cfg'
 
         if not os.path.exists(cfname):
-            raise StandardError("%s does not exist" % cfname)
+            raise SystemExit("""
+            No configuration found. Please do one of the following:
+             - cd to a directory with an appropriate crawl.cfg file,
+             - create crawl.cfg in the current working directory,
+             - set $CRAWL_CONF to the path of a valid crawler configuration, or
+             - use --cfg to specify a configuration file on the command line.
+            """)
         elif not os.access(cfname, os.R_OK):
             raise StandardError("%s is not readable" % cfname)
         rval = CrawlConfig({'fire': 'no',

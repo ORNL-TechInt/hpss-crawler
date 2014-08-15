@@ -496,7 +496,8 @@ def cvv_ttype_populate(argv):
         if lcheck == 0:
             lcheck_s = "unchecked"
         else:
-            lcheck_s = time.strftime("%Y.%m%d %H:%M:%S", time.localtime(lcheck))
+            lcheck_s = time.strftime("%Y.%m%d %H:%M:%S",
+                                     time.localtime(lcheck))
         print("%-30s %s %s %s" % (path, cart, ttype, lcheck_s))
 
     # -------------------------------------------------------------------------

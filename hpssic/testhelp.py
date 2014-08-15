@@ -134,7 +134,8 @@ def db_config(tdir, tname):
     cfgfile(cfname, {'dbi-crawler': {'dbtype': 'sqlite',
                                      'dbname': '%s/test.db' % tdir,
                                      'tbl_prefix': 'test'},
-                     'crawler': {'logpath': '%s/%s.log' % (tdir, tname)}
+                     'crawler': {'logpath': '%s/%s.log' % (tdir, tname)},
+                     'cv': {'fire': 'no'}
                      })
     os.environ['CRAWL_CONF'] = cfname
     CrawlConfig.get_config(reset=True, soft=True)
