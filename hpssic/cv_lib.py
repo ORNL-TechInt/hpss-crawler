@@ -21,7 +21,7 @@ def ttype_lookup(pathname):
     H.quit()
 
     (type, name, cart, cos) = U.lsp_parse(r)
-    if cart is None:
+    if not cart:
         return None
 
     cartlist = cart.split(',')

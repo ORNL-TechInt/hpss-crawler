@@ -463,13 +463,78 @@ def cvv_ttype_lookup(argv):
 def cvv_ttype_populate(argv):
     """ttype_populate - populate the ttype field in checkables
 
-    usage: cv ttype_populate [-d] [-a] [path ...]
+    usage: cv ttype_populate [-d] [-n] [-l N] [path ... | -a]
 
     If one or more paths are specified, those records will be looked up in
     checkables and populated with media type information if present. If no
     paths are specified and -a/--all is, all records in checkables will be
     updated with media type info.
     """
+    # -------------------------------------------------------------------------
+    def select_all(db):
+        rval = db.select(table="checkables",
+                         fields=["path", "type", "ttypes", "cart"],
+                         where="type = 'f' and " +
+                               "(ttypes is NULL or cart is NULL)")
+        return rval
+
+    # -------------------------------------------------------------------------
+    def select_by_paths(db, path_l):
+        rval = []
+        for path in path_l:
+            rows = db.select(table="checkables",
+                             fields=["path", "type", "ttypes", "cart"],
+                             where="path like ? and type = 'f' and " +
+                             "(ttypes is NULL or cart is NULL)",
+                             data=(path,))
+            rval.extend(rows)
+        return rval
+
+    # -------------------------------------------------------------------------
+    def report_row(row):
+        (path, cart, ttype, lcheck) = row
+        if lcheck == 0:
+            lcheck_s = "unchecked"
+        else:
+            lcheck_s = time.strftime("%Y.%m%d %H:%M:%S", time.localtime(lcheck))
+        print("%-30s %s %s %s" % (path, cart, ttype, lcheck_s))
+
+    # -------------------------------------------------------------------------
+    def report_updated_row_list(row_l):
+        if 1 < len(row_l):
+            print("Duplicate rows for path %s:" % row_l[0][0])
+            for row in row_l:
+                report_row(row)
+        else:
+            report_row(row_l[0])
+
+    # -------------------------------------------------------------------------
+    def show_would_do(fields, data):
+        ddx = 0
+        zs = "\nwould set "
+        sep = ""
+        for f in fields:
+            zs += sep + "%s = %s" % (f, data[ddx])
+            ddx += 1
+            sep = ", "
+        zs += "\n   for path %s" % data[ddx]
+        print(zs)
+
+    # -------------------------------------------------------------------------
+    def update_by_path(fields, data):
+        db.update(table="checkables",
+                  fields=fields,
+                  where="path = ?",
+                  data=[data])
+
+    # -------------------------------------------------------------------------
+    def verify_update(path):
+        rows = db.select(table="checkables",
+                         fields=["path", "cart", "ttypes", "last_check"],
+                         where="path = ?",
+                         data=(path,))
+        report_updated_row_list(rows)
+
     p = optparse.OptionParser()
     p.add_option('-a', '--all',
                  action='store_true', default=False, dest='all',
@@ -477,6 +542,12 @@ def cvv_ttype_populate(argv):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-l', '--limit',
+                 action='store', default=-1, dest='limit', type=int,
+                 help='max records to process')
+    p.add_option('-n', '--dryrun',
+                 action='store_true', default=False, dest='dryrun',
+                 help='see what would happen')
     try:
         (o, a) = p.parse_args(argv)
     except SystemExit:
@@ -486,39 +557,65 @@ def cvv_ttype_populate(argv):
         pdb.set_trace()
 
     db = CrawlDBI.DBI(dbtype="crawler")
-    for path in a:
-        rows = db.select(table="checkables",
-                         fields=["path", "type", "ttypes", "cart"],
-                         where="path = ?",
-                         data=(path,))
-        if len(rows) < 1:
-            print("path '%s' not found in crawler database" % path)
-            continue
+
+    # o.all (-a) => consider all paths
+    # pathlist   => consider just the paths specified
+    # both is an error
+    # neither is an error
+    if o.all and a:
+        raise SystemExit("You can give -a or a list of paths but not both")
+    elif o.all:
+        candlist = select_all(db)
+    elif a:
+        candlist = select_by_paths(db, a)
+    else:
+        raise SystemExit("Either -a or a list of paths is required")
+
+    # if no paths matched the criteria, tell the user and bail
+    if len(candlist) == 0:
+        raise SystemExit("No rows found to be populated")
+
+    # okay, we have a list of candidates to work on. Take them one at a time. A
+    # single file can be spread across multiple tapes so cv_lib.ttype_lookup
+    # will return a list of cart, media type tuples.
+    scount = pcount = 0
+    for row in candlist:
+        (path, type, ttype, cart) = row
 
         # get a list of cartnames and media type descriptions
         cml = cv_lib.ttype_lookup(path)
+        if cml is None:
+            print("No cart/media type found for %s" % path)
+            scount += 1
+            continue
+
         # make a comma-separated list of cart names from cml
         cartnames = ",".join([x[0] for x in cml])
+
         # make a comma-separated list of media descriptions from cml
         mdescs = ",".join([x[1] for x in cml])
 
-        if rows[0][3] is None:
+        # decide what we're going to update -- either just ttypes if cart is
+        # already set or both ttypes and cart if cart is empty
+        if cart is None:
             fields = ["ttypes", "cart"]
             data = (mdescs, cartnames, path)
         else:
             fields = ["ttypes"]
             data = (mdescs, path)
 
-        db.update(table="checkables",
-                  fields=fields,
-                  where="path = ?",
-                  data=[data])
+        if o.dryrun:
+            show_would_do(fields, data)
+        else:
+            update_by_path(fields, data)
+            verify_update(path)
 
-        rows = db.select(table="checkables",
-                         fields=["path", "cart", "ttypes", "last_check"],
-                         where="path = ?",
-                         data=(path,))
-        print rows
+        pcount += 1
+        o.limit -= 1
+        if o.limit == 0:
+            break
+
+    print("%d records processed, %d records skipped" % (pcount, scount))
 
 
 # -----------------------------------------------------------------------------
