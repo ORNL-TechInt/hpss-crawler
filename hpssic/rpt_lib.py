@@ -95,8 +95,10 @@ def get_cv_report(db, last_rpt_time):
 
 
 # -----------------------------------------------------------------------------
-def get_mpra_report(db, last_rpt_time):
-    # db = CrawlDBI.DBI()
+def get_mpra_report(db=None, last_rpt_time=0):
+    if db is None:
+        db = CrawlDBI.DBI(dbtype="crawler")
+        close = True
     rval = ("\n----------------------------------------------------------\n" +
             "Migration/Purge Record Checks\n" +
             "\n")
@@ -132,6 +134,8 @@ def get_mpra_report(db, last_rpt_time):
 
     rval += body + "\n"
 
+    if close:
+        db.close()
     return rval
 
 

@@ -3,6 +3,7 @@ This file provides common code that the various interactive tools may use.
 """
 
 import CrawlConfig
+import messages as MSG
 import optparse
 import pdb
 import sys
@@ -10,19 +11,26 @@ import time
 
 
 # -----------------------------------------------------------------------------
-def drop_table(table_prefix, table_name):
+def drop_table(cfg=None, prefix=None, table=None):
     """
     This wraps the table dropping operation.
     !@!TODO: this could use a test
     """
+    if table is None:
+        return(MSG.nothing_to_drop)
+
+    if prefix is None:
+        if cfg is None:
+            cfg = CrawlConfig.get_config()
+        prefix = cfg.get('dbi-crawler', 'tbl_prefix')
+
     db = CrawlDBI.DBI(dbtype="crawler")
-    db.drop(table=table_name)
-    if db.table_exists(table=table_name):
-        rval = ("Attempt to drop table '%s_%s' failed" %
-                (table_prefix, table_name))
+    db.drop(table=table)
+    if db.table_exists(table=table):
+        rval = ("Attempt to drop table '%s_%s' failed" % (prefix, table))
     else:
         rval = ("Attempt to drop table '%s_%s' was successful" %
-                (table_prefix, table_name))
+                (prefix, table))
     db.close()
     return rval
 

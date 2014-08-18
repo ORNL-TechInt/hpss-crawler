@@ -112,7 +112,7 @@ def main(cfg):
     p_checksums = t_checksums
     t_matches += matches
     t_failures += failures
-    update_stats((t_matches, t_failures))
+    cv_lib.update_stats((t_matches, t_failures))
 
     (t_checksums, t_matches, t_failures) = get_stats()
     CrawlConfig.log("files checksummed: %d; " % (t_checksums - p_checksums) +
@@ -146,29 +146,6 @@ def get_stats():
     (matches, failures) = cv_lib.get_match_fail_count()
     return(checksums, matches, failures)
 
-
-# -----------------------------------------------------------------------------
-def update_stats(cmf):
-    """
-    Record the values in tuple cmf in table cvstats in the database. If the
-    table does not exist, create it.
-    """
-    db = CrawlDBI.DBI()
-    if not db.table_exists(table=stats_table):
-        db.create(table=stats_table,
-                  fields=["rowid int",
-                          "matches int",
-                          "failures int",
-                          ])
-        db.insert(table=stats_table,
-                  fields=["rowid", "matches", "failures"],
-                  data=[(1, 0, 0)])
-
-    db.update(table=stats_table,
-              fields=["matches", "failures"],
-              data=[cmf],
-              where="rowid = 1")
-    db.close()
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

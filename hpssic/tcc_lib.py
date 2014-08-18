@@ -111,6 +111,36 @@ def get_cos_info():
 
 
 # -----------------------------------------------------------------------------
+def get_next_nsobj_id(cfg):
+    """
+    Read the TCC table in the HPSSIC database to get the next nsobject id. If
+    the table does not exist, we create it and return 1 for the next object id
+    to check. If the table exists but is empty, we return 1 for the next object
+    id to check.
+    """
+    tabname = cfg.get(sectname(), 'table_name')
+    db = CrawlDBI.DBI()
+    if not db.table_exists(table=tabname):
+        rval = 1
+    else:
+        rows = db.select(table=tabname,
+                         fields=['max(check_time)'])
+        max_time = rows[0][0]
+        if max_time is None:
+            rval = 1
+        else:
+            rows = db.select(table=tabname,
+                             fields=['high_nsobj_id'],
+                             where='check_time = ?',
+                             data=(max_time,))
+            rval = int(rows[0][0]) + 1
+            if highest_nsobject_id() < rval:
+                rval = 1
+    db.close()
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def hexstr(bfid):
     """
     Convert a raw bitfile id into a hexadecimal string as presented by DB2.
@@ -130,8 +160,49 @@ def hexstr_uq(bfid):
 
 
 # -----------------------------------------------------------------------------
+def record_checked_ids(cfg, low, high, correct, error):
+    """
+    Save checked NSOBJECT ids in the HPSSIC database.
+
+    If we check a range and get no hits (i.e., no NSOBJECT ids exist in the
+    range), we'll store
+
+       (<time>, <low-id>, <high-id>, 0, 0)
+
+    If we get a hit with the right copy count, we store it by itself as
+
+       (<time>, <hit-id>, <hit-id>, 1, 0)
+
+    If we get a hit with the wrong copy count, we store it by itself as
+
+       (<time>, <hit-id>, <hit-id>, 0, 1)
+    """
+    tabname = cfg.get(sectname(), 'table_name')
+    db = CrawlDBI.DBI()
+
+    if not db.table_exists(table=tabname):
+        db.create(table=tabname,
+                  fields=['check_time    integer',
+                          'low_nsobj_id  integer',
+                          'high_nsobj_id integer',
+                          'correct       integer',
+                          'error         integer'])
+
+    ts = int(time.time())
+    CrawlConfig.log("recording checked ids %d to %d at %d" % (low, high, ts))
+    db.insert(table=tabname,
+              fields=['check_time',
+                      'low_nsobj_id',
+                      'high_nsobj_id',
+                      'correct',
+                      'error'],
+              data=[(ts, low, high, correct, error)])
+    db.close()
+
+
+# -----------------------------------------------------------------------------
 def sectname():
-    return 'tape-copy-checker'
+    return 'tcc'
 
 
 # -----------------------------------------------------------------------------

@@ -39,6 +39,37 @@ def get_match_fail_count():
 
 
 # -----------------------------------------------------------------------------
+def lookup_checksum_by_path(path):
+    """
+    Retrieve a row by path and return the checksum value
+    """
+
+    db = CrawlDBI.DBI(dbtype="crawler")
+    rows = db.select(table="checkables",
+                     fields=["checksum"],
+                     where="path = '%s'" % path)
+    if 0 == len(rows):
+        rval = -1
+    elif 1 == len(rows):
+        rval = rows[0][0]
+    else:
+        raise SystemExit("Too many records found for path %s" % path)
+    db.close()
+
+
+# -----------------------------------------------------------------------------
+def lookup_nulls():
+    """
+    Return records that contain NULL values
+    """
+    db = CrawlDBI.DBI(dbtype="crawler")
+    rval = db.select(table="checkables",
+                     where="cos is NULL or cart is NULL or ttypes is NULL")
+    db.close()
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def ttype_lookup(pathname):
     """
     Use hsi to get the name of the cart where this file lives.
@@ -101,3 +132,27 @@ def ttype_map_desc(type, subtype):
                      data=(type, subtype,))
     db.close()
     return rows[0][0]
+
+
+# -----------------------------------------------------------------------------
+def update_stats(cmf):
+    """
+    Record the values in tuple cmf in table cvstats in the database. If the
+    table does not exist, create it.
+    """
+    db = CrawlDBI.DBI()
+    if not db.table_exists(table=stats_table):
+        db.create(table=stats_table,
+                  fields=["rowid int",
+                          "matches int",
+                          "failures int",
+                          ])
+        db.insert(table=stats_table,
+                  fields=["rowid", "matches", "failures"],
+                  data=[(1, 0, 0)])
+
+    db.update(table=stats_table,
+              fields=["matches", "failures"],
+              data=[cmf],
+              where="rowid = 1")
+    db.close()
