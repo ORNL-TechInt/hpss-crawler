@@ -159,8 +159,7 @@ class Test_RPT(ScriptBase):
     # -------------------------------------------------------------------------
     def test_rpt_help(self):
         super(Test_RPT, self).script_help("rpt",
-                                          ["insert - ",
-                                           "report - ",
+                                          ["report - ",
                                            "simplug - ",
                                            "testmail - ",
                                            ])

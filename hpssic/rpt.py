@@ -13,28 +13,6 @@ import util
 
 
 # -----------------------------------------------------------------------------
-def rptx_insert(args):
-    """insert - test inserting a value into the report table
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(args)
-
-    if o.debug:
-        pdb.set_trace()
-
-    db = CrawlDBI.DBI()
-    db.create(table='insert_test',
-              fields=['ifield int'])
-    db.insert(table='insert_test',
-              fields=['ifield'],
-              data=[(93,), (97,)])
-    db.close()
-
-
-# -----------------------------------------------------------------------------
 def rptx_report(args):
     """report - write a sample report to stdout
     """

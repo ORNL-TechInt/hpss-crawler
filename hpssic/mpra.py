@@ -2,6 +2,7 @@
 import crawl_lib
 import CrawlConfig
 import CrawlDBI
+import messages as MSG
 import mpra_lib
 import optparse
 import pdb
@@ -163,8 +164,7 @@ def mprf_history(args):
 
     n_since = util.epoch(o.since) if o.since else 0
 
-    db = CrawlDBI.DBI()
-    report = rpt_lib.get_mpra_report(db, n_since)
+    report = rpt_lib.get_mpra_report(last_rpt_time=n_since)
     print(report)
 
 
@@ -366,10 +366,13 @@ def mprf_reset(args):
     if o.debug:
         pdb.set_trace()
 
-    cfg = CrawlConfig.get_config()
-    db = CrawlDBI.DBI()
-    db.drop(table='mpra')
+    answer = raw_input(MSG.all_mpra_data_lost)
+    if answer[0].lower() != "y":
+        raise SystemExit()
 
+    crawl_lib.drop_table(table='mpra')
+
+    cfg = CrawlConfig.get_config()
     filename = cfg.get('mpra', 'report_file')
     util.conditional_rm(filename)
 

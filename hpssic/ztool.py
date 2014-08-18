@@ -71,8 +71,14 @@ def c_cscount(argv):
     if o.debug:
         pdb.set_trace()
 
+    if o.filename:
+        filename = o.filename
+    else:
+        cfg = CrawlConfig.get_config()
+        filename = cfg.get('crawler', 'logpath')
+
     result = []
-    with open(o.filename, "r") as f:
+    with open(filename, "r") as f:
         for line in f.readlines():
             if line.strip().endswith("checksummed"):
                 z = line.strip().split(":")
@@ -80,12 +86,9 @@ def c_cscount(argv):
                     (path, x) = z[-1].split()
                     result.append(path)
 
-    db = CrawlDBI.DBI()
     for path in result:
-        rows = db.select(table="checkables",
-                         fields=["checksum"],
-                         where="path = '%s'" % path)
-        print("%d %s" % (rows[0][0], path))
+        cs = cv_lib.lookup_checksum_by_path(path)
+        print("%d %s" % (cs, path))
 
 
 # -----------------------------------------------------------------------------
@@ -113,9 +116,5 @@ def c_failtest(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI()
-
-    rows = db.select(table='checkables',
-                     where="rowid < 10")
+    rows = cv_lib.lookup_nulls()
     print rows
-    db.close()
