@@ -146,6 +146,7 @@ def get_stats():
     (matches, failures) = cv_lib.get_match_fail_count()
     return(checksums, matches, failures)
 
+
 # -----------------------------------------------------------------------------
 def update_stats(cmf):
     """
