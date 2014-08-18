@@ -556,30 +556,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertTrue(os.path.exists(lfname),
                         "%s should exist but does not" % lfname)
 
-    # --------------------------------------------------------------------------
-    def test_get_logger_default(self):
-        """
-        TEST: Call get_logger() with no argument
-
-        EXP: Attempts to log to '/var/log/crawl.log', falls back to
-        '/tmp/crawl.log' if we can't access the protected file
-        """
-        with util.Chdir(self.testdir):
-            util.conditional_rm('crawl.cfg')
-            CrawlConfig.get_config(reset=True, soft=True)
-            CrawlConfig.get_logger(reset=True, soft=True)
-            lobj = CrawlConfig.get_logger()
-
-            # if I'm root, I should be looking at /var/log/crawl.log
-            if os.getuid() == 0:
-                self.expected('/var/log/crawl.log',
-                              lobj.handlers[0].stream.name)
-
-            # otherwise, I should be looking at /tmp/crawl.log
-            else:
-                self.expected('/tmp/crawl.log',
-                              lobj.handlers[0].stream.name)
-
     # -------------------------------------------------------------------------
     def test_get_logger_def_cfg(self):
         """
@@ -611,12 +587,38 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.expected(5000000, l.handlers[0].maxBytes)
             self.expected(5, l.handlers[0].backupCount)
 
+    # --------------------------------------------------------------------------
+    def test_get_logger_default(self):
+        """
+        TEST: Call get_logger() with no argument
+
+        EXP: Attempts to log to '/var/log/crawl.log', falls back to
+        '/tmp/crawl.log' if we can't access the protected file
+        """
+        self.clear_env()
+        with util.Chdir(self.testdir):
+            util.conditional_rm('crawl.cfg')
+            CrawlConfig.get_config(reset=True, soft=True)
+            CrawlConfig.get_logger(reset=True, soft=True)
+            lobj = CrawlConfig.get_logger()
+
+            # if I'm root, I should be looking at /var/log/crawl.log
+            if os.getuid() == 0:
+                self.expected('/var/log/crawl.log',
+                              lobj.handlers[0].stream.name)
+
+            # otherwise, I should be looking at /tmp/crawl.log
+            else:
+                self.expected('/tmp/crawl.log',
+                              lobj.handlers[0].stream.name)
+
     # -------------------------------------------------------------------------
     def test_get_logger_nocfg(self):
         """
         Call get_logger with no cmdline or cfg arguments and make sure the
         resulting logger has the correct parameters.
         """
+        self.clear_env()
         with util.Chdir(self.testdir):
             # reset any logger and config that has been initialized
             CrawlConfig.get_config(reset=True, soft=True)

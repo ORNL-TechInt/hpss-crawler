@@ -513,7 +513,7 @@ class CrawlTest(testhelp.HelpedTestCase):
             del os.environ['CRAWL_CONF']
         where = tempfile.mkdtemp(dir=self.testdir)
         exp = util.squash(MSG.no_cfg_found)
-        cmd = "%s start" % util.abspath(self.crawl_cmd())
+        cmd = "%s start" % self.crawl_cmd()
         with util.Chdir(where):
             result = util.squash(pexpect.run(cmd))
             self.assertEqual(exp, result,
@@ -1415,7 +1415,12 @@ class CrawlTest(testhelp.HelpedTestCase):
     # --------------------------------------------------------------------------
     @util.memoize
     def crawl_cmd(self):
-        return "crawl" if pexpect.which("crawl") else "bin/crawl"
+        if pexpect.which("crawl"):
+            return "crawl"
+        elif os.path.exists("bin/crawl"):
+            return util.abspath("bin/crawl")
+        else:
+            raise HpssicError("crawl command not found")
 
     # --------------------------------------------------------------------------
     def vassert_in(self, expected, actual):
