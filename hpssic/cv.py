@@ -37,11 +37,7 @@ def cvv_addcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-    table = db._dbobj.prefix("checkables")
-    cmd = "alter table %s add column cart text after cos" % table
-    db.sql(cmd)
-    db.close()
+    cv_lib.dbalter(table="checkables", addcol="cart text", pos="after cos")
 
 
 # -----------------------------------------------------------------------------
@@ -62,11 +58,7 @@ def cvv_dropcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-    table = db._dbobj.prefix("checkables")
-    cmd = "alter table %s drop column cart" % table
-    db.sql(cmd)  # !@! this needs to be db.alter(table=table,...)
-    db.close()
+    cv_lib.dbalter(table="checkables", dropcol="cart")
 
 
 # -----------------------------------------------------------------------------
@@ -86,8 +78,8 @@ def cvv_popcart(argv):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-m', '--max',
-                 action='store', default="0", dest='max',
+    p.add_option('-l', '--limit',
+                 action='store', default=0, dest='limit', type=int,
                  help='stop after doing this many records')
     p.add_option('-n', '--dry-run',
                  action='store_true', default=False, dest='dryrun',
@@ -103,58 +95,53 @@ def cvv_popcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
+    where = "type = 'f' and last_check <> 0"
     if o.skip:
-        where = "type = 'f' and last_check <> 0 and cart is null"
-    else:
-        where = "type = 'f' and last_check <> 0"
+        where += " and cart is null"
 
-    path_l = db.select(table="checkables",
-                       fields=["path", "cart"],
-                       where=where)
+    # get the list of paths and carts from the database
+    pc_l = cv_lib.prep_popcart(where)
 
-    h = hpss.HSI(verbose=True)
-    if len(a) <= 0:
-        for (path, cart) in path_l:
-            if populate_cart_field(db, h, path, cart,
-                                   int(o.max), o.dryrun):
-                break
+    # generate an updated list from hsi
+    upc_l = populate_cart_field(pc_l, limit, dryrun)
+
+    if o.dryrun:
+        # report what would have been changed
+        for (p, d, h) in upc_l:
+            print("would change '%s' to '%s' for path %s" % (d, h, p))
     else:
-        path_d = dict(path_l)
-        for path in a:
-            if path in path_d:
-                if populate_cart_field(db, h, path, path_d[path],
-                                       int(o.max), o.dryrun):
-                    break
-            else:
-                print("NOTINDB %-8s %s" % (" ", path))
-    h.quit()
-    db.close()
+        # now update the database with the collected info
+        cv_lib.popcart(upc_l)
 
 
 # -----------------------------------------------------------------------------
-def populate_cart_field(db, h, path, dbcart, max, dryrun):
-    info = h.lsP(path)
-    cartname = info.split("\t")[5].strip()
-    if dbcart != cartname:
-        if 0 < max:
-            try:
-                populate_cart_field._count += 1
-            except AttributeError:
-                populate_cart_field._count = 1
-            if max < populate_cart_field._count:
-                return True
-        if dryrun:
-            print("would set %s %s" % (cartname, path))
-        else:
-            print("setting %s %s" % (cartname, path))
-            db.update(table="checkables",
-                      fields=['cart'],
-                      where="path = ?",
-                      data=[(cartname, path)])
-    else:
-        print("ALREADY %s %s" % (dbcart, path))
-    return False
+def populate_cart_field(pc_l, limit, dryrun):
+    """
+    We get a list of paths and carts. The cart values may be empty or None. We
+    talk to hsi to collect cart info for each of the paths, building a return
+    list. If 0 < limit, the list returned is limit elements long. If dryrun, we
+    just report what would happen without actually doing anything.
+
+    In the array of tuples returned, the cart value comes first so we can pass
+    the list to a db.update() call that is going to match on path.
+    """
+    h = hpss.HSI(verbose=True)
+    rval = []
+    for path, dcart in pc_l:
+        info = h.lsP(path)
+        hcart = info.split("\t")[5].strip()
+        if dcart != hcart:
+            if 0 < max:
+                try:
+                    populate_cart_field._count += 1
+                except AttributeError:
+                    populate_cart_field._count = 1
+                if limit < populate_cart_field._count:
+                    return True
+            rval.append((hcart, path))
+
+    h.quit()
+    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -227,14 +214,11 @@ def cvv_nulltest(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-
-    rows = db.select(table='checkables',
-                     where="fails is null or reported is null or cart is null")
-    hfmt = "%5s %-45s %4s %-4s %-8s %3s %11s %3s %3s"
-    rfmt = "%5d %-47.47s %-2s %4s %-8s %2d  %11d %2d  %2d"
-    headers = ("Rowid", "Path", "Type", "COS", "Cart", "Chk", "Last Check",
-               "Fls", "Rpt")
+    rows = cv_lib.nulls_from_checkables()
+    hfmt = "%5s %-45s %4s %-4s %-8s %20s %3s %11s %3s %3s"
+    rfmt = "%5d %-47.47s %-2s %4s %-8s %20s  %2d  %11d %2d  %2d"
+    headers = ("Rowid", "Path", "Type", "COS", "Cart", "TType", "Chk",
+               "Last Check", "Fls", "Rpt")
     print(hfmt % headers)
     rcount = 0
     for r in rows:
@@ -243,8 +227,6 @@ def cvv_nulltest(argv):
         if 50 < rcount:
             print(hfmt % headers)
             rcount = 0
-
-    db.close()
 
 
 # -----------------------------------------------------------------------------
@@ -277,14 +259,7 @@ def cvv_fail_reset(argv):
         print("pathname is required")
         return
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-
-    db.update(table='checkables',
-              fields=['fails', 'reported'],
-              where="path = ?",
-              data=[(0, 0, o.pathname)])
-
-    db.close()
+    cv_lib.reset_path(o.pathname)
 
 
 # -----------------------------------------------------------------------------
@@ -399,11 +374,7 @@ def cvv_ttype_add(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-    db.alter(table="checkables",
-             addcol="ttypes text",
-             pos="after cart")
-    db.close()
+    cv_lib.dbalter(table="checkables", addcol="ttypes text", pos="after cart")
 
 
 # -----------------------------------------------------------------------------
@@ -424,10 +395,7 @@ def cvv_ttype_drop(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-    db.alter(table="checkables",
-             dropcol="ttypes")
-    db.close()
+    cv_lib.dbalter(table="checkables", dropcol="ttypes")
 
 
 # -----------------------------------------------------------------------------
@@ -471,36 +439,6 @@ def cvv_ttype_populate(argv):
     updated with media type info.
     """
     # -------------------------------------------------------------------------
-    def select_all(db):
-        rval = db.select(table="checkables",
-                         fields=["path", "type", "ttypes", "cart"],
-                         where="type = 'f' and " +
-                               "(ttypes is NULL or cart is NULL)")
-        return rval
-
-    # -------------------------------------------------------------------------
-    def select_by_paths(db, path_l):
-        rval = []
-        for path in path_l:
-            rows = db.select(table="checkables",
-                             fields=["path", "type", "ttypes", "cart"],
-                             where="path like ? and type = 'f' and " +
-                             "(ttypes is NULL or cart is NULL)",
-                             data=(path,))
-            rval.extend(rows)
-        return rval
-
-    # -------------------------------------------------------------------------
-    def report_row(row):
-        (path, cart, ttype, lcheck) = row
-        if lcheck == 0:
-            lcheck_s = "unchecked"
-        else:
-            lcheck_s = time.strftime("%Y.%m%d %H:%M:%S",
-                                     time.localtime(lcheck))
-        print("%-30s %s %s %s" % (path, cart, ttype, lcheck_s))
-
-    # -------------------------------------------------------------------------
     def report_updated_row_list(row_l):
         if 1 < len(row_l):
             print("Duplicate rows for path %s:" % row_l[0][0])
@@ -520,13 +458,6 @@ def cvv_ttype_populate(argv):
             sep = ", "
         zs += "\n   for path %s" % data[ddx]
         print(zs)
-
-    # -------------------------------------------------------------------------
-    def update_by_path(fields, data):
-        db.update(table="checkables",
-                  fields=fields,
-                  where="path = ?",
-                  data=[data])
 
     # -------------------------------------------------------------------------
     def verify_update(path):
@@ -557,8 +488,6 @@ def cvv_ttype_populate(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
-
     # o.all (-a) => consider all paths
     # pathlist   => consider just the paths specified
     # both is an error
@@ -566,9 +495,9 @@ def cvv_ttype_populate(argv):
     if o.all and a:
         raise SystemExit("You can give -a or a list of paths but not both")
     elif o.all:
-        candlist = select_all(db)
+        candlist = cv_lib.tpop_select_all()
     elif a:
-        candlist = select_by_paths(db, a)
+        candlist = cv_lib.tpop_select_by_paths(a)
     else:
         raise SystemExit("Either -a or a list of paths is required")
 
@@ -580,6 +509,7 @@ def cvv_ttype_populate(argv):
     # single file can be spread across multiple tapes so cv_lib.ttype_lookup
     # will return a list of cart, media type tuples.
     scount = pcount = 0
+    data = []
     for row in candlist:
         (path, type, ttype, cart) = row
 
@@ -596,26 +526,19 @@ def cvv_ttype_populate(argv):
         # make a comma-separated list of media descriptions from cml
         mdescs = ",".join([x[1] for x in cml])
 
-        # decide what we're going to update -- either just ttypes if cart is
-        # already set or both ttypes and cart if cart is empty
-        if cart is None:
-            fields = ["ttypes", "cart"]
-            data = (mdescs, cartnames, path)
-        else:
-            fields = ["ttypes"]
-            data = (mdescs, path)
-
-        if o.dryrun:
-            show_would_do(fields, data)
-        else:
-            update_by_path(fields, data)
-            verify_update(path)
+        # collect the update info
+        data.append((mdescs, cartnames, path))
 
         pcount += 1
         o.limit -= 1
         if o.limit == 0:
             break
 
+    if o.dryrun:
+        show_would_do(data)
+    else:
+        cv_lib.tpop_update_by_path(data)
+        cv_lib.tpop_report_updates(data)
     print("%d records processed, %d records skipped" % (pcount, scount))
 
 
@@ -649,16 +572,11 @@ def cvv_ttype_table(argv):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype="crawler")
     # lookup and report tape type for each pathname specified
     if o.drop:
-        db.drop(table="tape_types")
+        crawl_lib.drop_table(table="tape_types")
     else:
-        if not db.table_exists(table="tape_types"):
-            db.create(table="tape_types",
-                      fields=["type int",
-                              "subtype int",
-                              "name text"])
+        dbschem.make_table("tape_types")
 
         hpssroot = o.hpssroot
         if hpssroot == '':
