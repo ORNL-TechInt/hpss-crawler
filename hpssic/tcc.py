@@ -32,10 +32,12 @@ def tccp_bfid(args):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
-    rows = db.select(table='bitfile',
-                     fields=['bfid', 'bfattr_cos_id', 'bfattr_create_time'],
-                     limit=10)
+    dbargs = {
+        'table': "bitfile",
+        'fields': ["bfid", "bfattr_cos_id", "bfattr_create_time"],
+        'limit': 10
+        }
+    rows = tcc_lib.db_select(**dbargs)
     for row in rows:
         ct = time.strftime("%Y.%m%d %H:%M:%S",
                            time.localtime(row['BFATTR_CREATE_TIME']))
@@ -87,10 +89,12 @@ def tccp_bfts(args):
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
-    rows = db.select(table='bftapeseg',
-                     fields=['bfid', 'storage_class'],
-                     limit=20)
+    dbargs = {
+        'table': "bftapeseg",
+        'fields': ["bfid", "storage_class"],
+        'limit': 20
+        }
+    rows = tcc_lib.db_select(**dbargs)
     for row in rows:
         print("%s %s" % (tcc_lib.hexstr(row['BFID']),
                          row['STORAGE_CLASS']))
@@ -192,9 +196,63 @@ def tccp_selbf(args):
         pdb.set_trace()
 
     record = 0
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
-    rows = db.select(table='bitfile',
-                     fields=[])
+    dbargs = {'table': 'bitfile',
+              'fields': ["BFID",
+                         "BFATTR_DATA_LEN",
+                         "BFATTR_READ_COUNT",
+                         "BFATTR_WRITE_COUNT",
+                         "BFATTR_LINK_COUNT",
+                         "BFATTR_CREATE_TIME",
+                         "BFATTR_MODIFY_TIME",
+                         "BFATTR_WRITE_TIME",
+                         "BFATTR_READ_TIME",
+                         "BFATTR_COS_ID",
+                         "BFATTR_NEW_COS_ID",
+                         "BFATTR_ACCT",
+                         "BFATTR_FLAGS",
+                         "BFATTR_STORAGE_SEG_MULT",
+                         "BFATTR_CELL_ID",
+                         "LEVEL_STATS0_FLAGS",
+                         "LEVEL_STATS0_READ_TIME",
+                         "LEVEL_STATS0_WRITE_TIME",
+                         "LEVEL_STATS0_MIGRATE_TIME",
+                         "LEVEL_STATS0_CACHE_TIME",
+                         "LEVEL_STATS0_READ_COUNT",
+                         "LEVEL_STATS0_WRITE_COUNT",
+                         "LEVEL_STATS1_FLAGS",
+                         "LEVEL_STATS1_READ_TIME",
+                         "LEVEL_STATS1_WRITE_TIME",
+                         "LEVEL_STATS1_MIGRATE_TIME",
+                         "LEVEL_STATS1_CACHE_TIME",
+                         "LEVEL_STATS1_READ_COUNT",
+                         "LEVEL_STATS1_WRITE_COUNT",
+                         "LEVEL_STATS2_FLAGS",
+                         "LEVEL_STATS2_READ_TIME",
+                         "LEVEL_STATS2_WRITE_TIME",
+                         "LEVEL_STATS2_MIGRATE_TIME",
+                         "LEVEL_STATS2_CACHE_TIME",
+                         "LEVEL_STATS2_READ_COUNT",
+                         "LEVEL_STATS2_WRITE_COUNT",
+                         "LEVEL_STATS3_FLAGS",
+                         "LEVEL_STATS3_READ_TIME",
+                         "LEVEL_STATS3_WRITE_TIME",
+                         "LEVEL_STATS3_MIGRATE_TIME",
+                         "LEVEL_STATS3_CACHE_TIME",
+                         "LEVEL_STATS3_READ_COUNT",
+                         "LEVEL_STATS3_WRITE_COUNT",
+                         "LEVEL_STATS4_FLAGS",
+                         "LEVEL_STATS4_READ_TIME",
+                         "LEVEL_STATS4_WRITE_TIME",
+                         "LEVEL_STATS4_MIGRATE_TIME",
+                         "LEVEL_STATS4_CACHE_TIME",
+                         "LEVEL_STATS4_READ_COUNT",
+                         "LEVEL_STATS4_WRITE_COUNT",
+                         "FAMILY_ID",
+                         "ALLOC_METHOD",
+                         "MIN_SEG_SIZE",
+                         ]
+              }
+    rows = tcc_lib.db_select(**dbargs)
     for row in rows:
         print("--- record %d ---" % record)
         record += 1
@@ -231,22 +289,12 @@ def tccp_tables(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-D', '--db',
-                 action='store', default='', dest='dbsect',
-                 help='use an alternate database')
     (o, a) = p.parse_args(args)
 
     if o.debug:
         pdb.set_trace()
 
-    db = CrawlDBI.DBI(dbtype='db2',
-                      dbname=CrawlDBI.db2name('subsys'))
-    db._dbobj.tbl_prefix = 'syscat.'
-    rows = db.select(table='tables',
-                     fields=["substr(tabname, 1, 30) as \"Table\"",
-                             "substr(tabschema, 1, 30) as \"Schema\"",
-                             "type"],
-                     where="tabschema = 'HPSS'")
+    rows = tcc_lib.table_list()
     print("Table                          Schema                         Type")
     for r in rows:
         print("%s %s %s" % (r['Table'], r['Schema'], r['TYPE']))
@@ -309,18 +357,17 @@ def copies_by_file(limit=10):
     on the quantity of data in those tables, this request may take a while to
     run and may use significant temp space in DB2.
     """
-    raise DBIerror("May need a raw sql call to support this")
-    # db = CrawlDBI.DBI(dbtype='db2', CrawlDBI.db2name('subsys'))
-    # result = db.select(table
-    # result = query("""select A.bfid, A.bfattr_cos_id, A.bfattr_create_time,
-    #                   count(B.storage_class) as sc_count
-    #                   from hpss.bitfile A left outer join hpss.bftapeseg B
-    #                   on A.bfid = B.bfid
-    #                   where A.bfattr_data_len > 0 and B.bf_offset = 0
-    #                   group by A.bfid, A.bfattr_cos_id, A.bfattr_create_time
-    #                   fetch first %d rows only""" % limit,
-    #                dbsect="subsys")
-    # return result
+    dbargs = {
+        'table':
+            "bitfile A left outer join hpss.bftapeseg B on A.bfid = B.bfid",
+        'fields': ["A.bfid", "A.bfattr_cos_id", "A.bfattr_create_time",
+                   "count(B.storage_class) as sc_count"],
+        'where': "A.bfattr_data_len > 0 and B.bf_offset = 0",
+        'groupby': "A.bfid, A.bfattr_cos_id, A.bfattr_create_time",
+        'limit': limit
+        }
+    result = tcc_lib.db_select(**dbargs)
+    return result
 
 
 # -----------------------------------------------------------------------------

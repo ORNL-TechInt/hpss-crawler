@@ -226,8 +226,6 @@ def mprf_migr_recs(args):
 
     cfg = CrawlConfig.get_config()
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
-
     dbargs = {'table': 'bfmigrrec'}
 
     if o.limit == '' and o.before == '' and o.after == '':
@@ -268,7 +266,7 @@ def mprf_migr_recs(args):
 
     dbargs['orderby'] = 'record_create_time'
 
-    rows = db.select(**dbargs)
+    rows = mpra_lib.lookup_migr_recs(**dbargs)
     for row in rows:
         if o.count:
             print("Records found: %d" % row['1'])
@@ -310,10 +308,10 @@ def mprf_times(args):
     else:
         fields = ['record_create_time']
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
-    rows = db.select(table='bfmigrrec',
-                     fields=fields,
-                     orderby='record_create_time')
+    dbargs = {'table': 'bfmigrrec',
+              'fields': fields,
+              'orderby': 'record_creaet_time'}
+    rows = mpra_lib.lookup_migr_recs(**dbargs)
 
     last = ''
     count = 0

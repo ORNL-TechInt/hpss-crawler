@@ -6,12 +6,23 @@ import util
 
 
 # -----------------------------------------------------------------------------
+def db_select(dbtype='hpss', dbname='sub', **dbargs):
+    """
+    Issue a select based on arguments passed in. Return the result.
+    """
+    db = CrawlDBI.DBI(dbtype=dbtype, dbname=dbname)
+    result = db.select(**dbargs)
+    db.close()
+    return result
+
+
+# -----------------------------------------------------------------------------
 def get_bitfile_path(bitfile):
     """
     Given a bitfile id, walk back up the tree in HPSS to generate the bitfile's
     path
     """
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
 
     if bitfile.startswith("x'") or bitfile.startswith('x"'):
         bfarg = bitfile
@@ -71,7 +82,7 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
           fetch first %d rows only" % limit
     """
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
     rval = db.select(table=['nsobject A',
                             'bitfile B',
                             'bftapeseg C'],
@@ -97,7 +108,7 @@ def get_cos_info():
     """
     Read COS info from tables COS and HIER in the DB2 database
     """
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('cfg'))
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='cfg')
     rows = db.select(table=['cos A', 'hier B'],
                      fields=['A.cos_id',
                              'A.hier_id',
@@ -119,7 +130,7 @@ def get_next_nsobj_id(cfg):
     id to check.
     """
     tabname = cfg.get(sectname(), 'table_name')
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     if not db.table_exists(table=tabname):
         rval = 1
     else:
@@ -160,6 +171,18 @@ def hexstr_uq(bfid):
 
 
 # -----------------------------------------------------------------------------
+def max_nsobj_id():
+    """
+    Return the value of the largest NS object id in the nsobject table
+    """
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+    result = db.select(table='nsobject',
+                       fields=['max(object_id) as max_obj_id'])
+    db.close()
+    rval = int(result[0]['MAX_OBJ_ID'])
+
+
+# -----------------------------------------------------------------------------
 def record_checked_ids(cfg, low, high, correct, error):
     """
     Save checked NSOBJECT ids in the HPSSIC database.
@@ -178,7 +201,7 @@ def record_checked_ids(cfg, low, high, correct, error):
        (<time>, <hit-id>, <hit-id>, 0, 1)
     """
     tabname = cfg.get(sectname(), 'table_name')
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
 
     if not db.table_exists(table=tabname):
         db.create(table=tabname,
@@ -203,6 +226,18 @@ def record_checked_ids(cfg, low, high, correct, error):
 # -----------------------------------------------------------------------------
 def sectname():
     return 'tcc'
+
+
+# -----------------------------------------------------------------------------
+def table_list():
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+    db._dbobj.tbl_prefix = 'syscat.'
+    rows = db.select(table='tables',
+                     fields=["substr(tabname, 1, 30) as \"Table\"",
+                             "substr(tabschema, 1, 30) as \"Schema\"",
+                             "type"],
+                     where="tabschema = 'HPSS'")
+    return rows
 
 
 # -----------------------------------------------------------------------------
