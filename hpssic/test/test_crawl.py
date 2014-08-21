@@ -2,8 +2,10 @@
 """
 Tests for code in crawl.py
 """
-from hpssic import CrawlConfig
 from hpssic import crawl
+from hpssic import crawl_lib
+from hpssic import CrawlConfig
+from hpssic import CrawlDBI
 import copy
 import glob
 from hpssic import messages as MSG
@@ -90,6 +92,134 @@ class CrawlTest(testhelp.HelpedTestCase):
         'prepstop': 'Preparing to stop TEST crawler. Proceed\? > ',
         'ldaemon': 'leaving daemonize',
         }
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_000(self):
+        """
+        TEST: crawl_lib.drop_table()
+        EXP: MSG.nothing_to_drop returned
+        """
+        rsp = crawl_lib.drop_table()
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_001(self):
+        """
+        TEST: crawl_lib.drop_table(table=NAME)
+        EXP: table NAME is dropped
+        """
+        tname = util.my_name()
+        cfg = CrawlConfig.get_config()
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid int'])
+        actual = crawl_lib.drop_table(table=tname)
+        exp = ("Attempt to drop table '%s_%s' was successful" %
+               (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_010(self):
+        """
+        TEST: crawl_lib.drop_table(prefix=PFX)
+        EXP: MSG.nothing_to_drop returned
+        """
+        rsp = crawl_lib.drop_table(prefix="BORF")
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_011(self):
+        """
+        TEST: crawl_lib.drop_table(prefix=PFX, table=NAME)
+        EXP: table PFX.NAME already does not exist, fails because PFX does not
+        match cfg
+        """
+        tname = util.my_name()
+        pfx = "nosuch"
+        cfg = CrawlConfig.get_config()
+        cfg.set('dbi-crawler', 'tbl_prefix', 'test')
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid int'])
+        actual = crawl_lib.drop_table(prefix=pfx, table=tname)
+        exp = ("Table '%s_%s' does not exist" % (pfx, tname))
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+        db.drop(table=tname)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_100(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG)
+        EXP: MSG.nothing_to_drop returned
+        """
+        t = CrawlConfig.CrawlConfig()
+        t.load_dict(self.cdict)
+        rsp = crawl_lib.drop_table(cfg=t)
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_101(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG, table=NAME)
+        EXP: table NAME is dropped
+        """
+        tname = util.my_name()
+        cfg = CrawlConfig.get_config()
+        cfg.set('dbi-crawler', 'tbl_prefix', 'DTST')
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid int'])
+        actual = crawl_lib.drop_table(cfg=cfg, table=tname)
+        exp = ("Attempt to drop table '%s_%s' was successful" %
+               (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_110(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG, prefix=PFX)
+        EXP: MSG.nothing_to_drop returned
+        """
+        t = CrawlConfig.CrawlConfig()
+        t.load_dict(self.cdict)
+        rsp = crawl_lib.drop_table(cfg=t, prefix="SEVEN")
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_111(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG, prefix=PFX, table=NAME)
+        EXP: table named PFX_NAME is dropped if PFX matches cfg
+        """
+        tname = util.my_name()
+        pfx = 'DTST'
+        cfg = CrawlConfig.get_config()
+        cfg.set('dbi-crawler', 'tbl_prefix', pfx)
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid int'])
+
+        actual = crawl_lib.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
+        exp = ("Table '%s_%s' does not exist" % (pfx+'x', tname))
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
+
+        actual = crawl_lib.drop_table(cfg=cfg, prefix=pfx, table=tname)
+        exp = ("Attempt to drop table '%s_%s' was successful" %
+               (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
+        self.assertEqual(exp, actual,
+                         "Expected '%s', got '%s'" % (exp, actual))
 
     # --------------------------------------------------------------------------
     @attr(slow=True)
