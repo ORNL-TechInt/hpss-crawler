@@ -241,20 +241,13 @@ class DimensionTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_repr(self):
         """
-        Method __repr__ should return <Dimension(name='foo')> if the dbname is
-        the default. If the dbname is something else, __repr__ should show it.
-        Like so: <Dimension(name='baz', dbname='./test.d/test.db')>
+        Method __repr__ should return <Dimension(name='foo')>.
         """
 
         testhelp.db_config(self.testdir, util.my_name())
-        Checkable.Checkable.ex_nihilo()
         exp = "Dimension(name='foo')"
         a = eval(exp)
         self.expected(exp, a.__repr__())
-
-        exp = "Dimension(name='baz')"
-        b = eval(exp)
-        self.expected(exp, b.__repr__())
 
     # -------------------------------------------------------------------------
     def test_sum_total(self):
