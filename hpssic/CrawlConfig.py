@@ -346,6 +346,23 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return rval
 
     # -------------------------------------------------------------------------
+    @classmethod
+    def dictor(cls, dict, defaults=None):
+        """
+        Constructor initialized from a dict. If one of the keys in dict is
+        'defaults' or 'DEFAULTS', that sub-dict will be used to initialize the
+        _defaults member
+        """
+        rval = CrawlConfig(defaults=defaults)
+
+        # Now fill the config with the material from the dict
+        for s in sorted(dict.keys()):
+            rval.add_section(s)
+            for o in sorted(dict[s].keys()):
+                rval.set(s, o, dict[s][o])
+        return rval
+
+    # -------------------------------------------------------------------------
     def load_dict(self, dict, defaults=None):
         """
         Initialize the config from dict. If one of the keys in dict is
@@ -655,5 +672,6 @@ class CrawlConfig(ConfigParser.ConfigParser):
         for section in section_l:
             fp.write("[%s]\n" % section)
             for item in self.options(section):
-                fp.write("%s = %s\n" % (item, self.get(section, item)))
+                val = self.get(section, item).replace("\n", "")
+                fp.write("%s = %s\n" % (item, val))
             fp.write("\n")

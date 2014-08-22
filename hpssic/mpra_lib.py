@@ -152,7 +152,8 @@ def mpra_record_recent(type, start, end, hits):
     if not db.table_exists(table='mpra'):
         CrawlConfig.log("Creating mpra table")
         db.create(table='mpra',
-                  fields=['type          text',
+                  fields=['rowid         integer primary key autoincrement',
+                          'type          text',
                           'scan_time     integer',
                           'start_time    integer',
                           'end_time      integer',

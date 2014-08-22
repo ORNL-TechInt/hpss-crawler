@@ -25,7 +25,7 @@
   Clearly, we need to ensure that all our calls to DBI.select() specify a
   field list. Optionally, we could also update DBI.select() to throw a
   DBIerror when it gets an empty fields list.
-  
+
 
 #### 2014-08-13
 
@@ -59,3 +59,29 @@
 
 * A lot of the routines currently in the system are missing doc strings. It
   would be helpful to have a test that hunts for such and reports them.
+
+
+#### 2014.0822
+
+Modes of testing:
+
+ - Full install:
+
+       $ sudo pip install {$TARBALL|$GIT_REPO}
+
+   This will put command line entry points (CLEPs) in $PATH (/usr/bin)
+
+ - Virtual environment install:
+
+       $ . $VENV/<env>/activate
+       $ pip install {$TARBALL|$GIT_REPO}
+
+   This will put CLEPs in $PATH (~/venv/<environment>/bin)
+
+ - Not installed:
+
+       $ . env-setup
+           $ export PATH=$GIT_REPO/bin:$PATH
+           $ export PYTHONPATH=$GIT_REPO
+
+   Puts CLEPs in $PATH ($GIT_REPO/bin)
