@@ -469,15 +469,12 @@ class DBI_in_Base(object):
         tname = util.my_name().replace('test_', '')
         db = self.setup_select(tname)
 
-        rows = db.select(table=tname, fields=[])
-        self.assertEqual(len(rows[0]), 4,
-                         "Expected four fields in each row, got %d" %
-                         len(rows[0]))
-        no_key_rows = [x[1:] for x in rows]
-        for tup in self.testdata:
-            self.assertTrue(tup in no_key_rows,
-                            "Expected %s in %s but it's not there" %
-                            (str(tup), util.line_quote(rows)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Wildcard selects are not supported." +
+                             " Please supply a list of fields.",
+                             db.select,
+                             table=tname,
+                             fields=[])
 
     # -------------------------------------------------------------------------
     def test_select_mto(self):
@@ -968,7 +965,7 @@ class DBI_out_Base(object):
         """
         (db, td) = self.delete_setup()
         db.delete(table=td['tabname'], where="name='sam'")
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         for r in td['rows'][0:1] + td['rows'][2:]:
@@ -990,7 +987,7 @@ class DBI_out_Base(object):
                              table=td['tabname'],
                              where='name=?')
 
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         # no data should have been deleted
@@ -1013,7 +1010,7 @@ class DBI_out_Base(object):
                              where='name=foo',
                              data=('meg',))
 
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         # no data should have been deleted
@@ -1029,7 +1026,7 @@ class DBI_out_Base(object):
         """
         (db, td) = self.delete_setup()
         db.delete(table=td['tabname'], where='name=?', data=('gertrude',))
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         for r in td['rows'][0:-1]:
@@ -1051,7 +1048,8 @@ class DBI_out_Base(object):
                              where='name=?',
                              data=('meg',))
 
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'],
+                         fields=td['ifields'])
         db.close()
 
         # no data should have been deleted
@@ -1066,7 +1064,7 @@ class DBI_out_Base(object):
         """
         (db, td) = self.delete_setup()
         db.delete(table=td['tabname'])
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         self.expected(0, len(rows))
@@ -1084,7 +1082,7 @@ class DBI_out_Base(object):
                              where='name=?',
                              data='meg')
 
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         # no data should have been deleted
@@ -1105,7 +1103,7 @@ class DBI_out_Base(object):
                              where='name=?',
                              data='meg')
 
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         # no data should have been deleted
@@ -1125,7 +1123,7 @@ class DBI_out_Base(object):
                              table=td['tabname'],
                              where=[])
 
-        rows = db.select(table=td['tabname'])
+        rows = db.select(table=td['tabname'], fields=td['ifields'])
         db.close()
 
         # no data should have been deleted
@@ -1539,8 +1537,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         mysql
         """
-        if not testhelp.keepfiles():
-            dbschem.drop_tables_matching("test_%")
+        dbschem.drop_tables_matching("test_%")
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -2119,6 +2116,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              "On select(), limit must be an int",
                              db.select,
                              table="authzacl",
+                             fields=['server_id',
+                                     'entry_entity_id',
+                                     'entry_realm_id'],
                              limit='not an int')
 
     # -------------------------------------------------------------------------
@@ -2129,6 +2129,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                           dbtype=self.dbctype, dbname="cfg")
         rlim = 3
         rows = db.select(table='hpss.server',
+                         fields=["server_id",
+                                 "desc_name",
+                                 "executable_pathname"],
                          limit=rlim)
         self.expected(rlim, len(rows))
 
@@ -2140,6 +2143,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                           dbtype=self.dbctype, dbname="cfg")
         rlim = 4.5
         rows = db.select(table='hpss.server',
+                         fields=["server_id",
+                                 "desc_name",
+                                 "executable_pathname"],
                          limit=rlim)
         self.expected(int(rlim), len(rows))
 
@@ -2151,32 +2157,26 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype),
                           dbtype=self.dbctype, dbname="cfg")
-        rows = db.select(table='hpss.gatekeeper',
-                         fields=[])
-        self.expected(3, len(rows[0].keys()))
-        for exp in ['GKID',
-                    'DEFAULT_WAIT_TIME',
-                    'SITE_POLICY_PATHNAME']:
-            self.assertTrue(exp in rows[0].keys(),
-                            "Expected key '%s' in each row, not found" %
-                            exp)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Wildcard selects are not supported. " +
+                             "Please supply a list of fields",
+                             db.select,
+                             table="hpss.gatekeeper",
+                             fields=[])
 
     # -------------------------------------------------------------------------
     def test_select_nf(self):
         """
         Calling select() with no field list should get all the data -- fields
         should default to the empty list, indicating the wildcard option
-
-        !@! Or, we could say that the user is supposed to specify a fields list
-         and throw an exception if no field list is provided.
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype,
                           dbname="cfg")
-        mtf_rows = db.select(table='hpss.logclient', fields=[])
-        nf_rows = db.select(table='hpss.logclient')
-
-        self.expected(len(mtf_rows[0].keys()), len(nf_rows[0].keys()))
-        self.expected(mtf_rows[0].keys(), nf_rows[0].keys())
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Wildcard selects are not supported. " +
+                             "Please supply a list of fields",
+                             db.select,
+                             table='hpss.logclient')
 
     # -------------------------------------------------------------------------
     def test_select_mto(self):
@@ -2186,8 +2186,11 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype,
                           dbname="cfg")
-        ordered_rows = db.select(table='hpss.logclient', orderby='')
-        unordered_rows = db.select(table='hpss.logclient')
+        ordered_rows = db.select(table='hpss.logclient',
+                                 fields=['LOGC_SERVER_ID'],
+                                 orderby='')
+        unordered_rows = db.select(table='hpss.logclient',
+                                   fields=['LOGC_SERVER_ID'])
         okl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
                for x in ordered_rows]
         ukl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
@@ -2218,8 +2221,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype,
                           dbname="cfg")
-        w_rows = db.select(table='hpss.logpolicy', where='')
-        x_rows = db.select(table='hpss.logpolicy')
+        flist = ['desc_name', 'log_record_type_mask', 'ssm_record_type_mask']
+        w_rows = db.select(table='hpss.logpolicy', fields=flist, where='')
+        x_rows = db.select(table='hpss.logpolicy', fields=flist)
         self.expected(len(x_rows), len(w_rows))
         for exp, actual in zip(x_rows, w_rows):
             self.expected(actual, exp)
@@ -2302,6 +2306,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              "On select(), orderby clause must be a string",
                              db.select,
                              table="hpss.logpolicy",
+                             fields=['desc_name'],
                              orderby=22)
 
     # -------------------------------------------------------------------------
@@ -2316,6 +2321,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              "On select(), table name must be a string",
                              db.select,
                              table=47,
+                             fields=['desc_name'],
                              orderby=22)
 
     # -------------------------------------------------------------------------
@@ -2330,6 +2336,9 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              "On select(), where clause must be a string",
                              db.select,
                              table="hpss.server",
+                             fields=['desc_name',
+                                     'rpc_prog_num',
+                                     'server_type'],
                              where=[])
 
     # -------------------------------------------------------------------------
@@ -2341,6 +2350,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype),
                           dbtype=self.dbctype, dbname="cfg")
         ordered_rows = db.select(table='hpss.logclient',
+                                 fields=['logc_server_id'],
                                  orderby='logc_server_id')
 
         ford = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
@@ -2381,6 +2391,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                              "0 params bound not matching 1 required",
                              db.select,
                              table="hpss.logpolicy",
+                             fields=['log_record_type_mask'],
                              data=(),
                              where="DESC_NAME = ?")
 

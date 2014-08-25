@@ -264,6 +264,10 @@ def mprf_migr_recs(args):
 
     if o.count:
         dbargs['fields'] = ['count(*)']
+    else:
+        dbargs['fields'] = ['bfid',
+                            'record_create_time',
+                            'migration_failure_count']
 
     dbargs['orderby'] = 'record_create_time'
 
