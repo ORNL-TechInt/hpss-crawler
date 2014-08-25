@@ -11,6 +11,8 @@ import tempfile
 from hpssic import testhelp as th
 from hpssic import util as U
 
+# These lines look to see whether we're being run by py.test or nosetests so we
+# can set things up in a way that will make the test runner happy.
 M = sys.modules['__main__']
 if 'py.test' in M.__file__:
     import pytest
@@ -61,7 +63,7 @@ class MpraResetTest(th.HelpedTestCase):
         """
         if not th.keepfiles():
             shutil.rmtree(cls.testdir)
-            th.drop_test_tables()
+            dbschem.drop_tables_matching("test_mpra")
 
     # -------------------------------------------------------------------------
     def test_mpra_reset_force(self):

@@ -6,6 +6,7 @@ import base64
 import CrawlConfig
 import pdb
 import sqlite3
+import sys
 import util
 import warnings
 
@@ -708,7 +709,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 self.err_handler(e)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def __repr__(self):
             """
             mysql: See DBI.__repr__()
@@ -916,7 +917,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 self.err_handler(e)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def insert(self, table='', fields=[], data=[]):
             """
             Insert into a mysql database
@@ -955,7 +956,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 self.err_handler(e)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def select(self,
                    table='',
                    fields=[],
@@ -1026,7 +1027,7 @@ if mysql_available:
                 except mysql_exc.Error, e:
                     self.err_handler(e)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def table_exists(self, table=''):
             """
             Check whether a table exists in a mysql database
@@ -1141,7 +1142,7 @@ if db2_available:
             except ibm_db_dbi.Error, e:
                 raise DBIerror("%s" % str(e))
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def __repr__(self):
             """
             See DBI.__repr__()
@@ -1149,7 +1150,7 @@ if db2_available:
             rv = "DBIdb2(dbname='%s')" % self.dbname
             return rv
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def __recognized_exception__(self, exc):
             """
             Return True if exc is recognized as a DB2 error. Otherwise False.
@@ -1167,14 +1168,14 @@ if db2_available:
                     break
             return rval
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def alter(self, table='', addcol=None, dropcol=None, pos=None):
             """
             See DBI.alter()
             """
             raise DBIerror("ALTER not supported for DB2")
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def close(self):
             """
             See DBI.close()
@@ -1190,14 +1191,14 @@ if db2_available:
             except ibm_db_dbi.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
             """
             See DBI.create()
             """
             raise DBIerror("CREATE not supported for DB2")
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def cursor(self):
             """
             See DBI.cursor()
@@ -1208,32 +1209,32 @@ if db2_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def delete(self, **kwargs):
             """
             See DBI.delete()
             """
             raise DBIerror("DELETE not supported for DB2")
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def describe(self, **kwargs):
             """
             Return a table description
             """
             pass   # yagni
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def drop(self, table=''):
             raise DBIerror("DROP not supported for DB2")
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def insert(self, table='', fields=[], data=[]):
             """
             Insert not supported for DB2
             """
             raise DBIerror("INSERT not supported for DB2")
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def select(self,
                    table='',
                    fields=[],
@@ -1325,7 +1326,7 @@ if db2_available:
                 else:
                     raise
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def table_exists(self, table=''):
             """
             Check whether a table exists in a db2 database
@@ -1341,14 +1342,14 @@ if db2_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def update(self, table='', where='', fields=[], data=[]):
             """
             See DBI.update()
             """
             raise DBIerror("UPDATE not supported for DB2")
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         @classmethod
         def hexstr(cls, bfid):
             """
@@ -1359,7 +1360,7 @@ if db2_available:
             return rval
 
         @classmethod
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def hexstr_uq(cls, bfid):
             """
             Convert a raw bitfile id into an unquoted hexadecimal string as

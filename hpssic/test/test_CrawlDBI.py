@@ -10,6 +10,7 @@ database. Also the db2 interface doesn't use table prefixes.
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
+from hpssic import dbschem
 import os
 import pdb
 import socket
@@ -20,7 +21,8 @@ import traceback as tb
 from hpssic import util
 import warnings
 
-
+# These lines look to see whether we're being run by py.test or nosetests so we
+# can set things up in a way that will make the test runner happy.
 M = sys.modules['__main__']
 if 'py.test' in M.__file__:
     import pytest
@@ -1531,8 +1533,11 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     @classmethod
     def setUpClass(cls):
-        # testhelp.module_test_setup(DBITest.testdir)
-        pass
+        """
+        mysql
+        """
+        if not testhelp.keepfiles():
+            dbschem.drop_tables_matching("test_%")
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -1540,19 +1545,8 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         mysql
         """
-        testhelp.drop_test_tables()
-        # if not testhelp.keepfiles():
-        #     tcfg = make_tcfg('mysql')
-        #     tcfg.set('dbi-crawler', 'tbl_prefix', '')
-        #     db = CrawlDBI.DBI(cfg=tcfg, dbtype=cls.dbctype)
-        #     with warnings.catch_warnings():
-        #         warnings.filterwarnings("ignore",
-        #                                 "Can't read dir of .*")
-        #         tlist = db.select(table="information_schema.tables",
-        #                           fields=['table_name'],
-        #                           where='table_name like "test_%"')
-        #     for (tname,) in tlist:
-        #         db.drop(table=tname)
+        if not testhelp.keepfiles():
+            dbschem.drop_tables_matching("test_%")
 
     # -------------------------------------------------------------------------
     def test_alter_add_after(self):

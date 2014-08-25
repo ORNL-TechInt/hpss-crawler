@@ -9,15 +9,11 @@ export TESTDIR=$GIT_REPO/hpssic/test
 
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 cd $HOME/prj/hpssic/dev
-/usr/bin/nosetests -c $TESTDIR/nosecron.cfg $TESTDIR >> $CRONOUT 2>&1
+/usr/bin/py.test --all >> $CRONOUT 2>&1
 STATUS=$?
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 
-if [[ "$STATUS" == "0" ]]; then
-    SUMMARY=$(grep "^Ran" $CRONOUT)
-else
-    SUMMARY=$(grep "^FAILED" $CRONOUT)
-fi
+SUMMARY=$(grep "seconds ===" $CRONOUT | sed -e "s/==*/===/g")
 
 SUBJECT="HPSSIC tests: $SUMMARY"
 /bin/mail -s "$SUBJECT" tbarron@ornl.gov tusculum@gmail.com < $CRONOUT
