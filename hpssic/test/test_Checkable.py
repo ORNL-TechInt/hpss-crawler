@@ -252,7 +252,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
 
         # there should be one row
-        rows = db.select(table='checkables', fields=[])
+        rows = db.select(table='checkables', fields=['rowid',
+                                                     'path',
+                                                     'type',
+                                                     'cos',
+                                                     'cart',
+                                                     'checksum',
+                                                     'last_check',
+                                                     'fails',
+                                                     ])
         self.expected(1, len(rows))
 
         # the one row should reference the root directory
@@ -362,7 +370,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
 
         # there should be one row
-        rows = db.select(table='checkables', fields=[])
+        rows = db.select(table='checkables', fields=['rowid',
+                                                     'path',
+                                                     'type',
+                                                     'cos',
+                                                     'cart',
+                                                     'checksum',
+                                                     'last_check',
+                                                     'fails',
+                                                     ])
         self.expected(1, len(rows))
 
         # the one row should reference the root directory
@@ -398,7 +414,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
 
         # there should be two rows, one for each item in the dataroot list
-        rows = db.select(table='checkables', fields=[])
+        rows = db.select(table='checkables', fields=['rowid',
+                                                     'path',
+                                                     'type',
+                                                     'cos',
+                                                     'cart',
+                                                     'checksum',
+                                                     'last_check',
+                                                     'fails',
+                                                     ])
         self.expected(2, len(rows))
 
         self.expected('abc', rows[0][1])

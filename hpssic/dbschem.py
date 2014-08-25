@@ -1,4 +1,9 @@
+"""
+This file defines the crawler database layout.
+"""
+import CrawlConfig
 import CrawlDBI
+import warnings
 
 tdefs = {
     'checkables': {'fields': ['rowid       integer primary key autoincrement',
@@ -6,6 +11,7 @@ tdefs = {
                               'type        text',
                               'cos         text',
                               'cart        text',
+                              'ttypes      text',
                               'checksum    int',
                               'last_check  int',
                               'fails       int',
@@ -82,3 +88,26 @@ def drop_table(cfg=None, prefix=None, table=None):
 
     db.close()
     return rval
+
+
+# -----------------------------------------------------------------------------
+def drop_tables_matching(tablike):
+    """
+    Drop tables with names matching the *tablike* expression. At the time of
+    writing, this is only used for drop test tables ('test_%')
+    """
+    if CrawlDBI.mysql_available:
+        tcfg = CrawlConfig.get_config()
+        tcfg.set('dbi-crawler', 'tbl_prefix', '')
+
+        db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",
+                                    "Can't read dir of .*")
+            tlist = db.select(table="information_schema.tables",
+                              fields=['table_name'],
+                              where="table_name like '%s'" % tablike)
+            for (tname,) in tlist:
+                if db.table_exists(table=tname):
+                    db.drop(table=tname)
+        db.close()
