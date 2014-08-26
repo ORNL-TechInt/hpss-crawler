@@ -5,12 +5,12 @@ Tests for hpss.py
 # from nose.plugins.attrib import attr
 from hpssic import CrawlConfig
 from hpssic import hpss
+from nose.plugins.skip import SkipTest
 import sys
 from hpssic import testhelp
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
-
 
 M = sys.modules['__main__']
 if 'py.test' in M.__file__:
@@ -69,65 +69,81 @@ class hpssTest(testhelp.HelpedTestCase):
         """
         Change dir in HPSS to a non directory
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.chdir()
-            self.fail("Expected an exception, got nothing")
-        except TypeError, e:
-            self.assertTrue("chdir() takes exactly 2 arguments" in str(e),
-                            "Got the wrong TypeError: %s" %
-                            util.line_quote(tb.format_exc()))
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(TypeError,
+                                 "chdir() takes exactly 2 arguments",
+                                 h.chdir)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_chdir_notdir(self):
         """
         Change dir in HPSS to a non directory
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.chdir("hic_test/crawler.tar")
-        h.quit()
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.chdir("hic_test/crawler.tar")
+            h.quit()
 
-        exp = "Not a directory"
-        self.assertTrue(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
+            exp = "Not a directory"
+            self.assertTrue(exp in result,
+                            "Expected '%s' in %s" %
+                            (exp, util.line_quote(result)))
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_chdir_ok(self):
         """
         Successful change dir in HPSS
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.chdir("hic_test")
-        h.quit()
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.chdir("hic_test")
+            h.quit()
 
-        exp = "/home/tpb/hic_test"
-        self.expected_in(exp, result)
+            exp = "/home/tpb/hic_test"
+            self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_chdir_perm(self):
         """
         Change dir in HPSS to a non-accessible directory
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.chdir("cli_test/unreadable")
-        h.quit()
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.chdir("cli_test/unreadable")
+            h.quit()
 
-        exp = "hpss_Chdir: Access denied"
-        self.assertTrue(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
+            exp = "hpss_Chdir: Access denied"
+            self.assertTrue(exp in result,
+                            "Expected '%s' in %s" %
+                            (exp, util.line_quote(result)))
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_chdir_unicode(self):
         """
         Unicode argument to chdir should work
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        ucdir = unicode("hic_test")
-        result = h.chdir(ucdir)
-        exp = "/home/tpb/hic_test"
-        self.expected_in(exp, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            ucdir = unicode("hic_test")
+            result = h.chdir(ucdir)
+            exp = "/home/tpb/hic_test"
+            self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashcreate_argbad(self):
@@ -135,32 +151,31 @@ class hpssTest(testhelp.HelpedTestCase):
         If hashcreate gets an invalid argument (not a str or list), it should
         throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashcreate(32)
-            self.fail("Expected an exception, got nothing")
-        except hpss.HSIerror, e:
-            self.assertTrue("hashcreate: Invalid argument" in str(e),
-                            "Got the wrong HSIerror: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(hpss.HSIerror,
+                                 "hashcreate: Invalid argument",
+                                 h.hashcreate,
+                                 32)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashcreate_argnone(self):
         """
         If hashcreate gets no argument, it should throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashcreate()
-            self.fail("Expected an exception, got nothing")
-        except TypeError, e:
-            self.assertTrue("hashcreate() takes exactly 2 arguments" in str(e),
-                            "Got the wrong TypeError: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(TypeError,
+                                 "hashcreate() takes exactly 2 arguments",
+                                 h.hashcreate)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashcreate_ok_glob(self):
@@ -169,39 +184,51 @@ class hpssTest(testhelp.HelpedTestCase):
         """
         glop = "%s/%s*" % (self.hdir, self.stem)
 
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.hashcreate(glop)
-        h.quit()
-        self.expected_in("hashcreate", result)
-        for path in self.paths.split():
-            exp = "\(?md5\)? %s" % path
-            self.expected_in(exp, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.hashcreate(glop)
+            h.quit()
+            self.expected_in("hashcreate", result)
+            for path in self.paths.split():
+                exp = "\(?md5\)? %s" % path
+                self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashcreate_ok_list(self):
         """
         Issue "hashcreate" in hsi with a list argument, return results
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.hashcreate(self.plist)
-        h.quit()
-        self.expected_in("hashcreate", result)
-        for path in self.plist:
-            exp = "\(?md5\)? %s" % path
-            self.expected_in(exp, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.hashcreate(self.plist)
+            h.quit()
+            self.expected_in("hashcreate", result)
+            for path in self.plist:
+                exp = "\(?md5\)? %s" % path
+                self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashcreate_ok_str(self):
         """
         Issue "hashcreate" in hsi with a string argument, return results
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.hashcreate(self.paths)
-        h.quit()
-        self.expected_in("hashcreate", result)
-        for path in self.paths.split():
-            exp = "\(?md5\)? %s" % path
-            self.expected_in(exp, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.hashcreate(self.paths)
+            h.quit()
+            self.expected_in("hashcreate", result)
+            for path in self.paths.split():
+                exp = "\(?md5\)? %s" % path
+                self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashdelete_argbad(self):
@@ -209,108 +236,125 @@ class hpssTest(testhelp.HelpedTestCase):
         If hashdelete gets an invalid argument (not a str or list), it should
         throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashdelete(32)
-            self.fail("Expected an exception, got nothing")
-        except hpss.HSIerror, e:
-            self.expected_in("hashdelete: Invalid argument", str(e))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(hpss.HSIerror,
+                                 "hashdelete: Invalid argument",
+                                 h.hashdelete,
+                                 32)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashdelete_argnone(self):
         """
         If hashdelete gets no argument, it should throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashdelete()
-            self.fail("Expected an exception, got nothing")
-        except TypeError, e:
-            self.expected_in("hashdelete\(\) takes exactly 2 arguments",
-                             str(e))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(TypeError,
+                                 "hashdelete() takes exactly 2 arguments" +
+                                 " (1 given)",
+                                 h.hashdelete)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashdelete_ok_glob(self):
         """
         If hashdelete gets a wildcard argument, it should work
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if util.rgxin("\(?none\)?  %s" % path, x):
-                h.hashcreate(path)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if util.rgxin("\(?none\)?  %s" % path, x):
+                    h.hashcreate(path)
 
-        # run hashdelete on the glob path
-        result = h.hashdelete("%s/hash*" % self.hdir)
-        h.quit()
+            # run hashdelete on the glob path
+            result = h.hashdelete("%s/hash*" % self.hdir)
+            h.quit()
 
-        # verify the results
-        self.expected_in("hashdelete", result)
-        for path in self.plist:
-            self.expected_in("hash deleted: \(?md5\)? %s" % path, result)
+            # verify the results
+            self.expected_in("hashdelete", result)
+            for path in self.plist:
+                self.expected_in("hash deleted: \(?md5\)? %s" % path, result)
 
-        exp = "\(?none\)?  %s/hashnot" % self.hdir
-        self.assertTrue(exp not in result,
-                        "'%s' not expected in %s" % (exp,
-                                                     util.line_quote(result)))
+            exp = "\(?none\)?  %s/hashnot" % self.hdir
+            self.assertTrue(exp not in result,
+                            "'%s' not expected in %s" %
+                            (exp,
+                             util.line_quote(result)))
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashdelete_ok_list(self):
         """
         If hashdelete get a list argument, it should work
         """
-        plist = self.plist + [self.hdir + "/hashnot"]
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if util.rgxin("\(?none\)?  %s" % path, x):
-                h.hashcreate(path)
+        try:
+            plist = self.plist + [self.hdir + "/hashnot"]
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if util.rgxin("\(?none\)?  %s" % path, x):
+                    h.hashcreate(path)
 
-        # run hashdelete on the list
-        result = h.hashdelete(plist)
-        h.quit()
+            # run hashdelete on the list
+            result = h.hashdelete(plist)
+            h.quit()
 
-        # verify the results
-        self.expected_in("hashdelete", result)
-        for path in self.plist:
-            self.expected_in("hash deleted: md5 %s" % path, result)
-        exp = "\(?none\)?  %s/hashnot" % self.hdir
-        self.assertTrue(exp not in result,
-                        "'%s' not expected in %s" % (exp,
-                                                     util.line_quote(result)))
+            # verify the results
+            self.expected_in("hashdelete", result)
+            for path in self.plist:
+                self.expected_in("hash deleted: md5 %s" % path, result)
+            exp = "\(?none\)?  %s/hashnot" % self.hdir
+            self.assertTrue(exp not in result,
+                            "'%s' not expected in %s" %
+                            (exp,
+                             util.line_quote(result)))
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashdelete_ok_str(self):
         """
         If hashdelete gets a string argument, it should work
         """
-        paths = self.paths + " %s/hashnot" % self.hdir
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if util.rgxin("\(?none\)?  %s" % path, x):
-                h.hashcreate(path)
+        try:
+            paths = self.paths + " %s/hashnot" % self.hdir
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if util.rgxin("\(?none\)?  %s" % path, x):
+                    h.hashcreate(path)
 
-        # run hashdelete on the string
-        result = h.hashdelete(paths)
-        h.quit()
+            # run hashdelete on the string
+            result = h.hashdelete(paths)
+            h.quit()
 
-        # verify the results
-        self.expected_in("hashdelete", result)
-        for path in self.paths.split():
-            exp = "hash deleted: \(?md5\)? %s" % path
-            self.expected_in(exp, result)
-        exp = "hash deleted: \(?md5\)? %s/hashnot" % self.hdir
-        self.assertFalse(util.rgxin(exp, result),
-                         "'%s' not expected in %s" %
-                         (exp, util.line_quote(result)))
+            # verify the results
+            self.expected_in("hashdelete", result)
+            for path in self.paths.split():
+                exp = "hash deleted: \(?md5\)? %s" % path
+                self.expected_in(exp, result)
+            exp = "hash deleted: \(?md5\)? %s/hashnot" % self.hdir
+            self.assertFalse(util.rgxin(exp, result),
+                             "'%s' not expected in %s" %
+                             (exp, util.line_quote(result)))
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashlist_argbad(self):
@@ -318,101 +362,112 @@ class hpssTest(testhelp.HelpedTestCase):
         If hashlist gets an invalid argument (not a str or list), it should
         throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashlist(32)
-            self.fail("Expected an exception, got nothing")
-        except hpss.HSIerror, e:
-            self.assertTrue("hashlist: Invalid argument" in str(e),
-                            "Got the wrong HSIerror: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(hpss.HSIerror,
+                                 "hashlist: Invalid argument",
+                                 h.hashlist,
+                                 32)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashlist_argnone(self):
         """
         If hashlist gets no argument, it should throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashlist()
-            self.fail("Expected an exception, got nothing")
-        except TypeError, e:
-            self.assertTrue("hashlist() takes exactly 2 arguments" in str(e),
-                            "Got the wrong TypeError: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(TypeError,
+                                 "hashlist() takes exactly 2 arguments",
+                                 h.hashlist)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashlist_ok_glob(self):
         """
         If hashlist gets a wildcard argument, it should work
         """
-        vbval = ("verbose" in testhelp.testargs())
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if util.rgxin("\(?none\)?  %s" % path, x):
-                h.hashcreate(path)
+        try:
+            vbval = ("verbose" in testhelp.testargs())
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if util.rgxin("\(?none\)?  %s" % path, x):
+                    h.hashcreate(path)
 
-        # run the test payload
-        result = h.hashlist("%s/hash*" % self.hdir)
-        h.quit()
-        self.expected_in("hashlist", result)
-        for path in self.plist:
-            exp = "\(?md5\)? %s" % path
+            # run the test payload
+            result = h.hashlist("%s/hash*" % self.hdir)
+            h.quit()
+            self.expected_in("hashlist", result)
+            for path in self.plist:
+                exp = "\(?md5\)? %s" % path
+                self.expected_in(exp, result)
+            exp = "\(?none\)?  %s/hashnot" % self.hdir
             self.expected_in(exp, result)
-        exp = "\(?none\)?  %s/hashnot" % self.hdir
-        self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashlist_ok_list(self):
         """
         If hashlist get a list argument, it should work
         """
-        plist = self.plist + [self.hdir + "/hashnot"]
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if util.rgxin("\(?none\)?  %s" % path, x):
-                h.hashcreate(path)
+        try:
+            plist = self.plist + [self.hdir + "/hashnot"]
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if util.rgxin("\(?none\)?  %s" % path, x):
+                    h.hashcreate(path)
 
-        # run the test payload
-        result = h.hashlist(plist)
-        h.quit()
-        self.expected_in("hashlist", result)
-        for path in self.plist:
-            exp = "\(?md5\)? %s" % path
+            # run the test payload
+            result = h.hashlist(plist)
+            h.quit()
+            self.expected_in("hashlist", result)
+            for path in self.plist:
+                exp = "\(?md5\)? %s" % path
+                self.expected_in(exp, result)
+            exp = "\(?none\)?  %s/hashnot" % self.hdir
             self.expected_in(exp, result)
-        exp = "\(?none\)?  %s/hashnot" % self.hdir
-        self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashlist_ok_str(self):
         """
         If hashlist gets a string argument, it should work
         """
-        paths = self.paths + " %s/hashnot" % self.hdir
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if util.rgxin("\(?none\)?  %s" % path, x):
-                h.hashcreate(path)
+        try:
+            paths = self.paths + " %s/hashnot" % self.hdir
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if util.rgxin("\(?none\)?  %s" % path, x):
+                    h.hashcreate(path)
 
-        # run the test payload
-        result = h.hashlist(paths)
-        h.quit()
-        self.expected_in("hashlist", result)
-        for path in self.paths.split():
-            exp = "\(?md5\)? %s" % path
+            # run the test payload
+            result = h.hashlist(paths)
+            h.quit()
+            self.expected_in("hashlist", result)
+            for path in self.paths.split():
+                exp = "\(?md5\)? %s" % path
+                self.expected_in(exp, result)
+            exp = "\(?none\)?  %s/hashnot" % self.hdir
             self.expected_in(exp, result)
-        exp = "\(?none\)?  %s/hashnot" % self.hdir
-        self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashverify_argbad(self):
@@ -420,188 +475,223 @@ class hpssTest(testhelp.HelpedTestCase):
         If hashverify gets an invalid argument (not a str or list), it should
         throw an exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashverify(32)
-            self.fail("Expected an exception, got nothing")
-        except hpss.HSIerror, e:
-            self.assertTrue("hashverify: Invalid argument" in str(e),
-                            "Got the wrong HSIerror: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(hpss.HSIerror,
+                                 "hashverify: Invalid argument",
+                                 h.hashverify,
+                                 32)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashverify_argnone(self):
         """
         Issue "hashverify" in hsi, return results
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.hashverify()
-            self.fail("Expected an exception, got nothing")
-        except TypeError, e:
-            self.assertTrue("hashverify() takes exactly 2 arguments" in str(e),
-                            "Got the wrong TypeError: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(TypeError,
+                                 "hashverify() takes exactly 2 arguments",
+                                 h.hashverify)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_glob(self):
         """
         Issue "hashverify" in hsi on a wildcard, return results
         """
-        glop = "/home/tpb/hic_test/hash*"
+        try:
+            glop = "/home/tpb/hic_test/hash*"
 
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if "\(?none\)?  %s" % path in x:
-                h.hashcreate(path)
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if "\(?none\)?  %s" % path in x:
+                    h.hashcreate(path)
 
-        # run hashverify on the glob path
-        result = h.hashverify(glop)
-        h.quit()
+            # run hashverify on the glob path
+            result = h.hashverify(glop)
+            h.quit()
 
-        # verify the results: we should see "OK" for the hashables and an error
-        # for hashnot
-        self.expected_in("hashverify", result)
-        for path in self.plist:
-            exp = "%s: \(?md5\)? OK" % path
+            # verify the results: we should see "OK" for the hashables and an
+            # error for hashnot
+            self.expected_in("hashverify", result)
+            for path in self.plist:
+                exp = "%s: \(?md5\)? OK" % path
+                self.expected_in(exp, result)
+            exp = "hashnot failed: no valid checksum found"
             self.expected_in(exp, result)
-        exp = "hashnot failed: no valid checksum found"
-        self.expected_in(exp, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_list(self):
         """
         Issue "hashverify" in hsi, return results
         """
-        plist = self.plist + ["%s/hashnot" % self.hdir]
+        try:
+            plist = self.plist + ["%s/hashnot" % self.hdir]
 
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
 
-        # make sure the hashables all have a checksum stored
-        x = h.hashlist(self.plist)
-        for path in self.plist:
-            if "\(?none\)?  %s" % path in x:
-                h.hashcreate(path)
+            # make sure the hashables all have a checksum stored
+            x = h.hashlist(self.plist)
+            for path in self.plist:
+                if "\(?none\)?  %s" % path in x:
+                    h.hashcreate(path)
 
-        # run hashverify on the list
-        result = h.hashverify(plist)
-        h.quit()
+            # run hashverify on the list
+            result = h.hashverify(plist)
+            h.quit()
 
-        # verify the results: we should see "OK" for the hashables and an error
-        # for hashnot
-        self.expected_in("hashverify", result)
-        for path in self.plist:
-            self.expected_in("%s: \(?md5\)? OK" % path, result)
-        self.expected_in("hashnot failed: no valid checksum found",
-                         result)
+            # verify the results: we should see "OK" for the hashables and an
+            # error for hashnot
+            self.expected_in("hashverify", result)
+            for path in self.plist:
+                self.expected_in("%s: \(?md5\)? OK" % path, result)
+            self.expected_in("hashnot failed: no valid checksum found",
+                             result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_str(self):
         """
         Issue "hashverify" in hsi, return results
         """
-        paths = self.paths + " %s/hashnot" % self.hdir
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.hashverify(paths)
-        h.quit()
-        self.expected_in("hashverify", result)
-        for path in self.plist:
-            self.expected_in("%s: \(?md5\)? OK" % path, result)
-        self.expected_in("hashnot failed: no valid checksum found",
-                         result)
+        try:
+            paths = self.paths + " %s/hashnot" % self.hdir
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.hashverify(paths)
+            h.quit()
+            self.expected_in("hashverify", result)
+            for path in self.plist:
+                self.expected_in("%s: \(?md5\)? OK" % path, result)
+            self.expected_in("hashnot failed: no valid checksum found",
+                             result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_unicode(self):
         """
         Issue "hashverify" in hsi with a unicode arg, return results
         """
-        paths = unicode(self.paths + " %s/hashnot" % self.hdir)
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.hashverify(paths)
-        h.quit()
-        self.expected_in("hashverify", result)
-        for path in self.plist:
-            self.expected_in("%s: \(?md5\)? OK" % path, result)
-        self.expected_in("hashnot failed: no valid checksum found",
-                         result)
+        try:
+            paths = unicode(self.paths + " %s/hashnot" % self.hdir)
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.hashverify(paths)
+            h.quit()
+            self.expected_in("hashverify", result)
+            for path in self.plist:
+                self.expected_in("%s: \(?md5\)? OK" % path, result)
+            self.expected_in("hashnot failed: no valid checksum found",
+                             result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_lscos(self):
         """
         Issue "lscos", check result
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.lscos()
-        h.quit()
-        self.expected_in("3003 Disk Big Backups", result)
-        self.expected_in("5081 Disk X-Small", result)
-        self.expected_in("6001 Disk Small", result)
-        self.expected_in("6054 Disk Large_T", result)
-        self.expected_in("6057 Disk X-Large_T 2-Copy", result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.lscos()
+            h.quit()
+            self.expected_in("3003 Disk Big Backups", result)
+            self.expected_in("5081 Disk X-Small", result)
+            self.expected_in("6001 Disk Small", result)
+            self.expected_in("6054 Disk Large_T", result)
+            self.expected_in("6057 Disk X-Large_T 2-Copy", result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_lsP_argbad(self):
         """
         Issue "ls -P" with non-string, non-list arg, expect exception
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
         try:
-            result = h.lsP(19)
-            self.fail("Expected an exception, got nothing")
-        except hpss.HSIerror, e:
-            self.assertTrue("lsP: Invalid argument" in str(e),
-                            "Got the wrong HSIerror: %s" %
-                            util.line_quote(tb.format_exc()))
-        finally:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            self.assertRaisesMsg(hpss.HSIerror,
+                                 "lsP: Invalid argument",
+                                 h.lsP,
+                                 19)
             h.quit()
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_lsP_argnone(self):
         """
         Issue "ls -P" in /home/tpb/hic_test with no arg, validate result
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        h.chdir("/home/tpb/hic_test")
-        result = h.lsP()
-        for path in self.plist:
-            self.expected_in("FILE\s+%s" % path, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            h.chdir("/home/tpb/hic_test")
+            result = h.lsP()
+            for path in self.plist:
+                self.expected_in("FILE\s+%s" % path, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_lsP_glob(self):
         """
         Issue "ls -P hash*" in hic_test, validate results
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        h.chdir("/home/tpb/hic_test")
-        result = h.lsP()
-        for path in self.plist:
-            self.expected_in("FILE\s+%s" % path, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            h.chdir("/home/tpb/hic_test")
+            result = h.lsP()
+            for path in self.plist:
+                self.expected_in("FILE\s+%s" % path, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_lsP_list(self):
         """
         Issue "ls -P [foo, bar]" in hic_test, validate results
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.lsP(self.plist)
-        for path in self.plist:
-            self.expected_in("FILE\s+%s" % path, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.lsP(self.plist)
+            for path in self.plist:
+                self.expected_in("FILE\s+%s" % path, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_lsP_str(self):
         """
         Issue "ls -P foo bar" in hic_test, validate results
         """
-        h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
-        result = h.lsP(self.paths)
-        for path in self.plist:
-            self.expected_in("FILE\s+%s" % path, result)
+        try:
+            h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
+            result = h.lsP(self.paths)
+            for path in self.plist:
+                self.expected_in("FILE\s+%s" % path, result)
+        except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_unavailable(self):
@@ -611,13 +701,9 @@ class hpssTest(testhelp.HelpedTestCase):
         got completed.
         """
         h = hpss.HSI(connect=False, unavailable=True)
-        try:
-            h.connect()
-            self.fail("Expected HSIerror not thrown")
-        except hpss.HSIerror, e:
-            self.assertTrue("HPSS Unavailable" in str(e),
-                            "Got unexpected HSIerror: %s" %
-                            util.line_quote(str(e)))
+        self.assertRaisesMsg(hpss.HSIerror,
+                             "HPSS Unavailable",
+                             h.connect)
 
 # -----------------------------------------------------------------------------
 # if __name__ == '__main__':
