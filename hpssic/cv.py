@@ -4,6 +4,7 @@ import crawl_lib
 import CrawlConfig
 import CrawlDBI
 import cv_lib
+import dbschem
 import Dimension
 import hpss
 import optparse
@@ -37,7 +38,10 @@ def cvv_addcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    cv_lib.dbalter(table="checkables", addcol="cart text", pos="after cos")
+    result = dbschem.alter_table(table="checkables",
+                                 addcol="cart text",
+                                 pos="after cos")
+    print(result)
 
 
 # -----------------------------------------------------------------------------
@@ -58,7 +62,8 @@ def cvv_dropcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    cv_lib.dbalter(table="checkables", dropcol="cart")
+    result = dbschem.alter_table(table="checkables", dropcol="cart")
+    print(result)
 
 
 # -----------------------------------------------------------------------------
@@ -374,7 +379,10 @@ def cvv_ttype_add(argv):
     if o.debug:
         pdb.set_trace()
 
-    cv_lib.dbalter(table="checkables", addcol="ttypes text", pos="after cart")
+    result = dbschem.alter_table(table="checkables",
+                                 addcol="ttypes text",
+                                 pos="after cart")
+    print(result)
 
 
 # -----------------------------------------------------------------------------
@@ -395,7 +403,8 @@ def cvv_ttype_drop(argv):
     if o.debug:
         pdb.set_trace()
 
-    cv_lib.dbalter(table="checkables", dropcol="ttypes")
+    result = dbschem.alter_table(table="checkables", dropcol="ttypes")
+    print(result)
 
 
 # -----------------------------------------------------------------------------

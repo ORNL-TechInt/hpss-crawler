@@ -3,6 +3,7 @@ This file defines the crawler database layout.
 """
 import CrawlConfig
 import CrawlDBI
+import re
 import warnings
 
 tdefs = {
@@ -48,15 +49,38 @@ tdefs = {
 
 
 # -----------------------------------------------------------------------------
-def make_table(tabname, cfg=None):
+def alter_table(table=None, addcol=None, dropcol=None, pos=None):
     """
-    Make the indicated table if it does not exist
-    !@! test this
+    Alter a table, either adding a column (*addcol*) in position *pos*, or
+    dropping a column (*dropcol*). This function should be idempotent, so we
+    need to check for the column before adding it.
     """
-    db = CrawlDBI.DBI(dbtype='crawler', cfg=cfg)
-    if not db.table_exists(table=tabname):
-        db.create(table=tabname, fields=tdefs[tabname]['fields'])
+    db = CrawlDBI.DBI(dbtype="crawler")
+
+    if addcol:
+        fieldname = addcol.split()[0]
+    elif dropcol:
+        fieldname = dropcol
+
+    try:
+        db.alter(table=table, addcol=addcol, dropcol=dropcol, pos=pos)
+        rval = "Successful"
+    except CrawlDBI.DBIerror, e:
+        if (dropcol and
+            "Can't DROP '%s'; check that column/key exists" % fieldname
+                in str(e)):
+            # edit the error number off the front of the message
+            rval = re.sub("\s*\d+:\s*", "", e.value)
+        elif (addcol and
+              "Duplicate column name '%s'" % fieldname
+              in str(e)):
+            # edit the error number off the front of the message
+            rval = re.sub("\s*\d+:\s*", "", e.value)
+        else:
+            raise
+
     db.close()
+    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -111,3 +135,15 @@ def drop_tables_matching(tablike):
                 if db.table_exists(table=tname):
                     db.drop(table=tname)
         db.close()
+
+
+# -----------------------------------------------------------------------------
+def make_table(tabname, cfg=None):
+    """
+    Make the indicated table if it does not exist
+    !@! test this
+    """
+    db = CrawlDBI.DBI(dbtype='crawler', cfg=cfg)
+    if not db.table_exists(table=tabname):
+        db.create(table=tabname, fields=tdefs[tabname]['fields'])
+    db.close()
