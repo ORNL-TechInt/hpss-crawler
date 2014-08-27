@@ -201,18 +201,11 @@ def record_checked_ids(cfg, low, high, correct, error):
        (<time>, <hit-id>, <hit-id>, 0, 1)
     """
     tabname = cfg.get(sectname(), 'table_name')
-    db = CrawlDBI.DBI(dbtype="crawler")
 
-    if not db.table_exists(table=tabname):
-        db.create(table=tabname,
-                  fields=['check_time    integer',
-                          'low_nsobj_id  integer',
-                          'high_nsobj_id integer',
-                          'correct       integer',
-                          'error         integer'])
-
+    result = dbschem.make_table(table=tabname)
     ts = int(time.time())
     CrawlConfig.log("recording checked ids %d to %d at %d" % (low, high, ts))
+    db = CrawlDBI.DBI(dbtype="crawler")
     db.insert(table=tabname,
               fields=['check_time',
                       'low_nsobj_id',

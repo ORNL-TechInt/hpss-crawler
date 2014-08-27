@@ -151,18 +151,8 @@ def mpra_record_recent(type, start, end, hits):
     repeatedly. However, if recent is not later than the time already stored,
     we don't want to update it.
     """
-    # !@! dbschem.make_table(table='mpra')
+    dbschem.make_table(table='mpra')
     db = CrawlDBI.DBI(dbtype="crawler")
-    if not db.table_exists(table='mpra'):
-        CrawlConfig.log("Creating mpra table")
-        db.create(table='mpra',
-                  fields=['rowid         integer primary key autoincrement',
-                          'type          text',
-                          'scan_time     integer',
-                          'start_time    integer',
-                          'end_time      integer',
-                          'hits          integer'])
-
     db.insert(table='mpra',
               fields=['type', 'scan_time', 'start_time', 'end_time', 'hits'],
               data=[(type, int(time.time()), int(start), int(end), hits)])

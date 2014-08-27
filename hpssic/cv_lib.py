@@ -2,6 +2,8 @@ import CrawlDBI
 import hpss
 import util as U
 
+stats_table = 'cvstats'
+
 
 # -----------------------------------------------------------------------------
 def get_checksum_count():
@@ -283,13 +285,9 @@ def update_stats(cmf):
     Record the values in tuple cmf in table cvstats in the database. If the
     table does not exist, create it.
     """
+    result = dbschem.make_table(table=stats_table)
     db = CrawlDBI.DBI(dbtype="crawler")
-    if not db.table_exists(table=stats_table):
-        db.create(table=stats_table,
-                  fields=["rowid int",
-                          "matches int",
-                          "failures int",
-                          ])
+    if result == "Created":
         db.insert(table=stats_table,
                   fields=["rowid", "matches", "failures"],
                   data=[(1, 0, 0)])

@@ -128,8 +128,6 @@ def main(cfg):
     CrawlConfig.log(d.report())
     CrawlConfig.log(t.report())
 
-stats_table = 'cvstats'
-
 
 # -----------------------------------------------------------------------------
 def get_stats():

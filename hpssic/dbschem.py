@@ -144,6 +144,10 @@ def make_table(tabname, cfg=None):
     !@! test this
     """
     db = CrawlDBI.DBI(dbtype='crawler', cfg=cfg)
-    if not db.table_exists(table=tabname):
+    if db.table_exists(table=tabname):
+        rval = "Already"
+    else:
         db.create(table=tabname, fields=tdefs[tabname]['fields'])
+        rval = "Created"
     db.close()
+    return rval

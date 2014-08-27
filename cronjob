@@ -5,8 +5,6 @@ export PYTHONPATH=$GIT_REPO
 export CRONOUT=/tmp/cronjob.$$.out
 export TESTDIR=$GIT_REPO/hpssic/test
 
-/bin/echo "--------------------------------------------" > $CRONOUT
-
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 cd $HOME/prj/hpssic/dev
 /usr/bin/py.test --all >> $CRONOUT 2>&1
