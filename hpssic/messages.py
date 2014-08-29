@@ -4,6 +4,10 @@ all_mpra_data_lost = """
 
    Are you sure? > """
 
+db_closed = "Cannot operate on a closed database"
+
+dbname_not_allowed = "dbname may not be specified here"
+
 no_cfg_found = """
             No configuration found. Please do one of the following:
              - cd to a directory with an appropriate crawl.cfg file,
@@ -13,3 +17,5 @@ no_cfg_found = """
             """
 
 nothing_to_drop = "table is None, nothing to drop"
+
+valid_dbtype = "dbtype must be 'hpss' or 'crawler'"

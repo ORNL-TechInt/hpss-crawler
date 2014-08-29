@@ -4,6 +4,7 @@ Database interface classes
 """
 import base64
 import CrawlConfig
+import messages as MSG
 import pdb
 import sqlite3
 import sys
@@ -111,7 +112,7 @@ class DBI(object):
         dbname = ''
         tbl_pfx = ''
         if 'dbtype' not in kwargs:
-            raise DBIerror("dbtype must be 'hpss' or 'crawler'")
+            raise DBIerror(MSG.valid_dbtype)
         elif kwargs['dbtype'] == 'db2' or kwargs['dbtype'] == 'hpss':
             dbtype = cfg.get(HPSS_SECTION, 'dbtype')
             tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
@@ -132,12 +133,15 @@ class DBI(object):
             except CrawlConfig.NoOptionError, e:
                 raise DBIerror(e)
             tbl_pfx = cfg.get(CRWL_SECTION, 'tbl_prefix')
+        else:
+            raise DBIerror(MSG.valid_dbtype)
 
         okw = {}
         okw['cfg'] = cfg
         okw['dbname'] = dbname
         okw['tbl_prefix'] = tbl_pfx
 
+        self.closed = False
         if dbtype == 'sqlite':
             self._dbobj = DBIsqlite(*args, **okw)
         elif dbtype == 'mysql':
@@ -155,7 +159,10 @@ class DBI(object):
         Human readable representation for the object provided by the
         database-specific class.
         """
-        return self._dbobj.__repr__()
+        rv = self._dbobj.__repr__()
+        if self.closed:
+            rv = "[closed]" + rv
+        return rv
 
     # -------------------------------------------------------------------------
     def alter(self, **kwargs):
@@ -165,6 +172,8 @@ class DBI(object):
           db.alter(table=<tabname>, addcol=<col desc>, pos='first|after <col>')
           db.alter(table=<tabname>, dropcol=<col name>)
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.alter(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -173,6 +182,8 @@ class DBI(object):
         Return True if the table argument is not empty and the named table
         exists (even if the table itself is empty). Otherwise, return False.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.table_exists(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -181,7 +192,11 @@ class DBI(object):
         Close the connection to the database. After a call to close(),
         operations are not allowed on the database.
         """
-        return self._dbobj.close()
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
+        rv = self._dbobj.close()
+        self.closed = True
+        return rv
 
     # -------------------------------------------------------------------------
     def create(self, **kwargs):
@@ -191,6 +206,8 @@ class DBI(object):
 
             ['id int primary key', 'name text', 'category xtext', ... ]
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.create(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -198,6 +215,8 @@ class DBI(object):
         """
         Return a database cursor
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.cursor(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -206,6 +225,8 @@ class DBI(object):
         Delete data from the table. table is a table name (string). where is a
         where clause (string). data is a tuple of fields.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.delete(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -213,6 +234,8 @@ class DBI(object):
         """
         Return a table description.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.describe(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -220,6 +243,8 @@ class DBI(object):
         """
         Drop the named table.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.drop(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -228,6 +253,8 @@ class DBI(object):
         Insert data into the table. Fields is a list of field names. Data is a
         list of tuples.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.insert(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -246,6 +273,8 @@ class DBI(object):
         retrieved from the database. If orderby contains an field name, the
         rows are returned in that order.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.select(**kwargs)
 
     # -------------------------------------------------------------------------
@@ -254,6 +283,8 @@ class DBI(object):
         Update data in the table. Where indicates which records are to be
         updated. Fields is a list of field names. Data is a list of tuples.
         """
+        if self.closed:
+            raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
         return self._dbobj.update(**kwargs)
 
 
@@ -360,7 +391,7 @@ class DBIsqlite(DBI_abstract):
         """
         sqlite: See DBI.create()
         """
-        # Handle bad arguments
+
         if type(fields) != list:
             raise DBIerror("On create(), fields must be a list",
                            dbname=self.dbname)
@@ -675,7 +706,6 @@ if mysql_available:
                                          passwd=password,
                                          db=self.dbname)
                 self.dbh.autocommit(True)
-                self.closed = False
             except mysql_exc.Error, e:
                 self.err_handler(e)
 
@@ -706,9 +736,6 @@ if mysql_available:
             """
             mysql: Alter the table as indicated.
             """
-            if self.closed:
-                raise DBIerror("Cannot operate on a closed database",
-                               dbname=self.dbname)
             cmd = ''
             if type(table) != str:
                 raise DBIerror("On alter(), table name must be a string",
@@ -751,11 +778,8 @@ if mysql_available:
             mysql: See DBI.close()
             """
             # Close the database connection
-            if self.closed:
-                raise DBIerror("Cannot operate on a closed database.")
             try:
                 self.dbh.close()
-                self.closed = True
             # Convert any mysql error into a DBIerror
             except mysql_exc.Error, e:
                 self.err_handler(e)
@@ -1003,8 +1027,6 @@ if mysql_available:
             """
             Check whether a table exists in a mysql database
             """
-            if self.closed:
-                raise DBIerror("Cannot operate on a closed database.")
             try:
                 dbc = self.dbh.cursor()
                 with warnings.catch_warnings():
@@ -1110,7 +1132,6 @@ if db2_available:
                           "uid=%s;" % username +
                           "pwd=%s;" % password)
                 self.dbh = db2.connect(cxnstr, "", "")
-                self.closed = False
             except ibm_db_dbi.Error, e:
                 raise DBIerror("%s" % str(e))
 
@@ -1153,12 +1174,8 @@ if db2_available:
             See DBI.close()
             """
             # Close the database connection
-            if self.closed:
-                raise DBIerror("Cannot operate on a closed database.")
             try:
                 db2.close(self.dbh)
-                # self.dbh.close()
-                self.closed = True
             # Convert any mysql error into a DBIerror
             except ibm_db_dbi.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
@@ -1304,8 +1321,6 @@ if db2_available:
             """
             Check whether a table exists in a db2 database
             """
-            if self.closed:
-                raise DBIerror("Cannot operate on a closed database.")
             try:
                 rows = self.select(table="@syscat.tables",
                                    fields=['tabname'],

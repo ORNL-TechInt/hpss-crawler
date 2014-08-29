@@ -3,6 +3,7 @@ This file defines the crawler database layout.
 """
 import CrawlConfig
 import CrawlDBI
+import messages as MSG
 import re
 import warnings
 

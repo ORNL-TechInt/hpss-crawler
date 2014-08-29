@@ -583,7 +583,8 @@ def cvv_ttype_table(argv):
 
     # lookup and report tape type for each pathname specified
     if o.drop:
-        crawl_lib.drop_table(table="tape_types")
+        result = dbschem.drop_table(table="tape_types")
+        print result
     else:
         dbschem.make_table("tape_types")
 

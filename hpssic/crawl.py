@@ -8,6 +8,7 @@ import CrawlConfig
 import CrawlDBI
 import CrawlPlugin
 import daemon
+import dbschem
 import getpass
 import glob
 import optparse
@@ -119,7 +120,7 @@ def crl_dbdrop(argv):
     if answer[0].lower() != "y":
         sys.exit()
 
-    result = crawl_lib.drop_table(tbpfx, tname)
+    result = dbschem.drop_table(cfg, tname)
     print(result)
 
 
