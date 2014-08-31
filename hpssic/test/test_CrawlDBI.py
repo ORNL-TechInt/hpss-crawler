@@ -267,23 +267,6 @@ class DBI_in_Base(object):
                              CrawlDBI.DBI)
 
     # -------------------------------------------------------------------------
-    # def test_ctor_dbtype_hpss_no_dbname(self):
-    #     """!@!
-    #     With dbtype value 'hpss', no dbname, constructor should throw
-    #     exception
-    #     """
-    # -------------------------------------------------------------------------
-    # def test_ctor_dbtype_hpss_bad_dbname(self):
-    #     """!@!
-    #     With dbtype value 'hpss', bad dbname, constructor should throw
-    #     exception
-    #     """
-    # -------------------------------------------------------------------------
-    # def test_ctor_dbtype_hpss_dbname_sub_ok(self):
-    #     """!@!
-    #     With dbtype value 'hpss', good dbname, constructor should be okay
-    #     """
-    # -------------------------------------------------------------------------
     def test_select_f(self):
         """
         Calling select() specifying fields should get only the fields requested
@@ -2056,6 +2039,51 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     @classmethod
     def tearDownClass(cls):
         testhelp.module_test_teardown(DBITest.testdir)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbtype_hpss_no_dbname(self):
+        """
+        With dbtype value 'hpss', no dbname, constructor should throw
+        exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "With dbtype=hpss, dbname must be specified",
+                             CrawlDBI.DBI,
+                             dbtype='hpss')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbtype_hpss_bad_dbname(self):
+        """
+        With dbtype value 'hpss', bad dbname, constructor should throw
+        exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "dbname frobble not defined in the configuration",
+                             CrawlDBI.DBI,
+                             dbtype='hpss',
+                             dbname='frobble')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbtype_hpss_dbname_sub_ok(self):
+        """
+        With dbtype value 'hpss', good dbname, constructor should be okay
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype),
+                          dbtype="hpss",
+                          dbname="sub")
+        self.assertTrue(hasattr(db, "_dbobj"),
+                        "%s: Expected attribute '_dbobj', not present" %
+                        self.dbtype)
+        self.assertTrue(hasattr(db, 'closed'),
+                        "%s: Expected attribute 'closed', not present" %
+                        self.dbtype)
+        self.assertFalse(db.closed,
+                         "%s: Expected db.closed to be False" %
+                         self.dbtype)
+        self.assertTrue(hasattr(db._dbobj, 'dbh'),
+                        "%s: Expected attribute 'dbh', not present" %
+                        self.dbtype)
+        db.close()
 
     # -------------------------------------------------------------------------
     def test_select_f(self):

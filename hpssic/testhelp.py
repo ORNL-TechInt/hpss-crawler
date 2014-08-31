@@ -428,7 +428,8 @@ class HelpedTestCase(unittest.TestCase):
         except exception, e:
             if type(message) == str:
                 self.assertTrue(message in str(e),
-                                "Expected '%s', got '%s'" % (message, str(e)))
+                                "\nExpected '%s', \n     got '%s'" %
+                                (message, str(e)))
             elif type(message) == list:
                 self.assertTrue(any(t in str(e) for t in message),
                                 "Expected one of '%s', got '%s'" % (message,

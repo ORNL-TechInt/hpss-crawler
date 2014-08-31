@@ -149,7 +149,7 @@ class DBI(object):
             tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
             if 'dbname' not in kwargs:
                 raise DBIerror("With dbtype=%s, dbname must be specified" %
-                               dbtype)
+                               kwargs['dbtype'])
             elif kwargs['dbname'] not in cfg.options(HPSS_SECTION):
                 raise DBIerror("dbname %s not defined in the configuration" %
                                kwargs['dbname'])
