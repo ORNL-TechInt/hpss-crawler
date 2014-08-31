@@ -480,7 +480,7 @@ def crl_stop(argv):
                                ctx_l[0])
             if answer.strip().lower().startswith('y'):
                 print("Stopping the crawler...")
-                testhelp.touch(rpid_l[0][2])
+                util.touch(rpid_l[0][2])
             else:
                 print("No action taken")
         else:  # more than one entry in rpid_l
@@ -489,7 +489,7 @@ def crl_stop(argv):
     else:
         idx = ctx_l.index(o.context)
         print("Stopping the %s crawler..." % ctx_l[idx])
-        testhelp.touch(rpid_l[idx][2])
+        util.touch(rpid_l[idx][2])
 
 
 # ------------------------------------------------------------------------------

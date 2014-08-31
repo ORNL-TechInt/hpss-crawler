@@ -606,7 +606,32 @@ def touch(pathname, amtime=None):
     if not os.path.exists(pathname):
         open(pathname, 'a').close()
 
-    os.utime(pathname, amtime)
+    ztime = amtime_tuple(base=amtime)
+    os.utime(pathname, ztime)
+
+
+# -----------------------------------------------------------------------------
+def amtime_tuple(base=None):
+    """
+    *base* can be None, (), (None, <int>), (<int>, None), or (<int>,<int>)
+
+    This is called from util.touch() to replace (None, <time>), or (<time>,
+    None) with a tuple suitable to be passed to os.utime(). os.utime() can
+    handle None or (<time>, <time>) but not a tuple containing Nones, which
+    seems reasonable if we only want to specify one time or the other.
+    """
+    now = int(time.time())
+
+    if base is None:
+        rval = (now, now)
+    elif base[0] is None and base[1] is not None:
+        rval = (now, base[1])
+    elif base[0] is not None and base[1] is None:
+        rval = (base[0], now)
+    else:
+        rval = (base[0], base[1])
+
+    return rval
 
 
 # -----------------------------------------------------------------------------
