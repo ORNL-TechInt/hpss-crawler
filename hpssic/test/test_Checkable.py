@@ -294,7 +294,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         testhelp.db_config(self.testdir, util.my_name())
 
         # create a dummy .db file and set its mtime back by 500 seconds
-        testhelp.touch(self.testdb)
+        util.touch(self.testdb)
         s = os.stat(self.testdb)
         newtime = s[stat.ST_MTIME] - 500
         os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
@@ -332,7 +332,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         testhelp.db_config(self.testdir, util.my_name())
 
         # create a dummy .db file and set its mtime back by 500 seconds
-        testhelp.touch(self.testdb)
+        util.touch(self.testdb)
         s = os.stat(self.testdb)
         newtime = s[stat.ST_MTIME] - 500
         os.utime(self.testdb, (s[stat.ST_ATIME], newtime))

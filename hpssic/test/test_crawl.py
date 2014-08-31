@@ -56,7 +56,7 @@ def tearDownModule():
     if crawl.is_running(context=CrawlTest.ctx):
         rpl = crawl.running_pid()
         for c in rpl:
-            testhelp.touch(c[2])
+            util.touch(c[2])
 
 
 # -----------------------------------------------------------------------------
@@ -436,7 +436,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertTrue(self.cstr['pfctx'] in result,
                         "Expected '%s' but didn't see it" % self.cstr['pfctx'])
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
 
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
@@ -490,7 +490,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          "Expected 'simple: check for this' " +
                          "in log file not found")
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
 
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
@@ -533,7 +533,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual(self.cstr['ldaemon'] in util.contents(logpath), True)
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
 
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
@@ -572,7 +572,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual(self.cstr['ldaemon'] in util.contents(logpath), True)
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
 
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
@@ -629,7 +629,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                          util.contents('%s/fired' % self.testdir),
                          "Contents of %s/fired is not right" % self.testdir)
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
 
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
@@ -709,7 +709,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         up_l = glob.glob(self.pidglob)
         pidfile = (set(up_l) - set(pre_l)).pop()
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
         time.sleep(2)
         self.vassert_nin("Traceback", util.contents(logpath))
         self.assertEqual(crawl.is_running(context=self.ctx), False,
@@ -748,7 +748,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(logpath), True)
         self.assertEqual(self.cstr['ldaemon'] in util.contents(logpath), True)
 
-        testhelp.touch(exitpath)
+        util.touch(exitpath)
 
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
@@ -1599,7 +1599,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         if crawl.is_running(context='TEST'):
             rpl = crawl.running_pid()
             for c in rpl:
-                testhelp.touch(c[2])
+                util.touch(c[2])
             time.sleep(1.0)
 
         if crawl.is_running(context='TEST'):

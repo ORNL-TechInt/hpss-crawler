@@ -1843,7 +1843,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         File dbname exists and is empty -- we will use it as a database.
         """
         util.conditional_rm(self.testdb)
-        testhelp.touch(self.testdb)
+        util.touch(self.testdb)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.create(table='testtab',
                   fields=['rowid integer primary key autoincrement'])
@@ -1925,7 +1925,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         # the symlink points at a directory
         util.conditional_rm(self.testdb)
         util.conditional_rm(self.testdb + '_xyz')
-        testhelp.touch(self.testdb + '_xyz')
+        util.touch(self.testdb + '_xyz')
         os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
         db.create(table='testtab',

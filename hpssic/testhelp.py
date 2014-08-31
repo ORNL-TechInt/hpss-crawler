@@ -556,14 +556,6 @@ def skip_check(skipfunc):
 
 
 # -----------------------------------------------------------------------------
-def touch(pathname):
-    """
-    Like touch(1). This one is deprecated in favor of the one in util.py.
-    """
-    open(pathname, 'a').close()
-
-
-# -----------------------------------------------------------------------------
 def write_file(filename, mode=0644, content=None):
     """
     Write a file, optionally setting its permission bits. This should be in

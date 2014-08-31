@@ -8,8 +8,10 @@ import logging
 import os
 import pdb
 import re
+import stat
 import sys
 from hpssic import testhelp
+import time
 from hpssic import toolframe
 from hpssic import util
 
@@ -81,7 +83,7 @@ class UtilTest(testhelp.HelpedTestCase):
                         "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
                         (expected, x))
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_date_end(self):
         """
         Given a file containing several log records, return the timestamp on
@@ -102,7 +104,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         self.expected("2014.0501", util.date_end(tfilename))
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_date_start(self):
         """
         Given a file containing several log records (with some irrelevant
@@ -118,7 +120,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         self.expected("2014.0412", util.date_start(tfilename))
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_add_folded_none(self):
         """
         TEST: add to an undefined environment variable from a folded [env]
@@ -148,7 +150,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         # raise testhelp.UnderConstructionError()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_add_folded_pre(self):
         """
         TEST: add to a preset environment variable from a folded [env]
@@ -178,7 +180,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         # raise testhelp.UnderConstructionError()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_add_none(self):
         """
         TEST: add to an undefined environment variable from [env] entry
@@ -207,7 +209,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         # raise testhelp.UnderConstructionError()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_add_pre(self):
         """
         TEST: add to a predefined environment variable from [env] entry
@@ -237,7 +239,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         # raise testhelp.UnderConstructionError()
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_set_folded_none(self):
         """
         TEST: set undefined environment variable from a folded [env] entry
@@ -265,7 +267,7 @@ class UtilTest(testhelp.HelpedTestCase):
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_set_pre_folded(self):
         """
         TEST: set predefined environment variable from a folded [env] entry
@@ -297,7 +299,7 @@ class UtilTest(testhelp.HelpedTestCase):
                         "The old value should be gone but still seems to be " +
                         " hanging around")
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_set_none(self):
         """
         TEST: set undefined environment variable from [env] entry
@@ -324,7 +326,7 @@ class UtilTest(testhelp.HelpedTestCase):
         # verify that the variable was set to the expected value
         self.expected(exp, os.environ[evname])
 
-    # --------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     def test_env_set_pre(self):
         """
         TEST: set predefined environment variable from [env] entry
@@ -548,3 +550,164 @@ class UtilTest(testhelp.HelpedTestCase):
                         "'%s' should match '%s'" % (rgx, tstring2))
         self.assertFalse(util.rgxin(rgx, fstring),
                          "'%s' should NOT match '%s'" % (rgx, fstring))
+
+    # -------------------------------------------------------------------------
+    def test_touch_newpath_default(self):
+        """
+        Call touch on a path that does not exist with no amtime tuple
+
+        This test code assumes that file system operations truncate atime and
+        mtime rather than rounding them.
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(), new=True)
+
+    # -------------------------------------------------------------------------
+    def test_touch_newpath_atime(self):
+        """
+        Call touch on a path that does not exist with atime, no mtime
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(-75, None), new=True)
+
+    # -------------------------------------------------------------------------
+    def test_touch_newpath_mtime(self):
+        """
+        Call touch on a path that does not exist with mtime, no atime
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(None, -32), new=True)
+
+    # -------------------------------------------------------------------------
+    def test_touch_newpath_both(self):
+        """
+        Call touch on a path that does not exist with both atime and mtime
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(-175, -3423), new=True)
+
+    # -------------------------------------------------------------------------
+    def test_touch_oldpath_default(self):
+        """
+        Call touch on a path that does exist with no amtime tuple
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=())
+
+    # -------------------------------------------------------------------------
+    def test_touch_oldpath_atime(self):
+        """
+        Call touch on a path that does exist with atime, no mtime
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(-75, None))
+
+    # -------------------------------------------------------------------------
+    def test_touch_oldpath_mtime(self):
+        """
+        Call touch on a path that does exist with mtime, no atime
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(None, -32))
+
+    # -------------------------------------------------------------------------
+    def test_touch_oldpath_both(self):
+        """
+        Call touch on a path that does exist with both atime and mtime
+        """
+        testpath = util.pathjoin(self.testdir, util.my_name())
+        self.touch_payload(testpath, offs=(-175, -3423))
+
+    # -------------------------------------------------------------------------
+    def touch_payload(self, testpath, offs=(), new=False):
+        """
+        Testing util.touch.
+
+        *testpath* is the path of the file to be touched.
+
+        *vtup* is a tuple of two integers, (), or None. () and None are
+        converted to (0, 0). These values are used as offsets from the current
+        time.
+
+        *ctup* is a tuple of two integers, (), or None. If it contains two
+        integers, they are applied as offsets from the current time. If it is
+        None, None is passed to util.touch(). If it is (), no argument is
+        passed to util.touch in that position.
+
+        *new* indicates whether we are touching a new (non-existent) file or a
+         file that already exists.
+        """
+        if new:
+            # testing new file -- make sure it does not exist
+            util.conditional_rm(testpath)
+        else:
+            # testing old file -- make sure it DOES exist
+            open(testpath, 'a').close()
+
+        # make sure we're early in the current second to avoid boundary issues
+        now = self.early_second()
+
+        # run the test
+        args = [testpath]
+        if offs != ():
+            args.append(self.touch_tuple(now, offs))
+        util.touch(*args)
+
+        # verify that the file exists
+        self.assertTrue(os.path.exists(testpath),
+                        "Expected file %s to be created" % testpath)
+
+        # verify that both atime and mtime are close to the correct time
+        s = os.stat(testpath)
+        (atime, mtime) = self.verify_tuple(now=now, offset=offs)
+        self.assertAlmostEquals(atime, s[stat.ST_ATIME],
+                                places=0,
+                                msg="Expected %d and %d to be close" %
+                                (atime, s[stat.ST_ATIME]))
+        self.assertAlmostEquals(mtime, s[stat.ST_MTIME],
+                                places=0,
+                                msg="Expected %d and %d to be close" %
+                                (mtime, s[stat.ST_MTIME]))
+
+    # -------------------------------------------------------------------------
+    def touch_tuple(self, now, offset):
+        """
+        Return tuple offset with offset values added to the base time. None
+        values are left in place. This tuple is passed as an argument to
+        touch().
+        """
+        if offset is None:
+            rval = None
+        elif offset[0] is None and offset[1] is not None:
+            rval = (None, now + offset[1])
+        elif offset[0] is not None and offset[1] is None:
+            rval = (now + offset[0], None)
+        else:
+            rval = (now + offset[0], now + offset[1])
+        return rval
+
+    # -------------------------------------------------------------------------
+    def verify_tuple(self, now, offset):
+        """
+        Return (<time>, <time>) for verification
+        """
+        if offset is None or offset == ():
+            rval = (now, now)
+        elif offset[0] is None and offset[1] is not None:
+            rval = (now, now + offset[1])
+        elif offset[0] is not None and offset[1] is None:
+            rval = (now + offset[0], now)
+        elif offset[0] is not None and offset[1] is not None:
+            rval = (now + offset[0], now + offset[1])
+        return rval
+
+    # -------------------------------------------------------------------------
+    def early_second(self):
+        """
+        Make sure we're early in the current second to avoid boundary issues
+        """
+        now = time.time()
+        while now - int(now) > 0.99:
+            time.sleep(0.01)
+            now = time.time()
+        return int(now)
