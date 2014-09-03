@@ -1,5 +1,6 @@
 """
-This file defines the crawler database layout.
+This file defines the crawler database layout and contains routines that create
+tables, drop tables, and alter tables.
 """
 import CrawlConfig
 import CrawlDBI
@@ -50,15 +51,20 @@ tdefs = {
 
 
 # -----------------------------------------------------------------------------
-def alter_table(table=None, addcol=None, dropcol=None, pos=None):
+def alter_table(table=None, addcol=None, dropcol=None, pos=None, cfg=None):
     """
     Alter a table, either adding a column (*addcol*) in position *pos*, or
     dropping a column (*dropcol*). This function should be idempotent, so we
     need to check for the column before adding it.
     """
-    db = CrawlDBI.DBI(dbtype="crawler")
+    if cfg:
+        db = CrawlDBI.DBI(dbtype="crawler", cfg=cfg)
+    else:
+        db = CrawlDBI.DBI(dbtype="crawler")
 
-    if addcol:
+    if addcol and dropcol:
+        raise CrawlDBI.DBIerror("addcol and dropcol are mutually exclusive")
+    elif addcol:
         fieldname = addcol.split()[0]
     elif dropcol:
         fieldname = dropcol
@@ -142,7 +148,6 @@ def drop_tables_matching(tablike):
 def make_table(tabname, cfg=None):
     """
     Make the indicated table if it does not exist
-    !@! test this
     """
     db = CrawlDBI.DBI(dbtype='crawler', cfg=cfg)
     if db.table_exists(table=tabname):

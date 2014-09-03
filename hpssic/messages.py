@@ -19,3 +19,6 @@ no_cfg_found = """
 nothing_to_drop = "table is None, nothing to drop"
 
 valid_dbtype = "dbtype must be 'hpss' or 'crawler'"
+
+wildcard_selects = ("Wildcard selects are not supported. " +
+                    "Please supply a list of fields.")

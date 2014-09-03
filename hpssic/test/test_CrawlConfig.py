@@ -113,6 +113,17 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(changeable.filename, cfgfile)
 
     # -------------------------------------------------------------------------
+    def test_dictor(self):
+        """
+        Test loading a config object from a dict with CrawlConfig.dictor()
+        """
+        cfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
+        for sect in self.cdict:
+            for opt in self.cdict[sect]:
+                self.assertEqual(self.cdict[sect][opt],
+                                 cfg.get(sect, opt))
+
+    # -------------------------------------------------------------------------
     def test_dump_nodef(self):
         """
         Routines exercised: __init__(), load_dict(), dump().
