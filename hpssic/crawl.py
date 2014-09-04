@@ -535,8 +535,13 @@ def pidcmd():
         bname = util.basename(proc)
         if not bname.isdigit():
             continue
-        rval += "%s %s\n" % (bname,
-                             util.contents(util.pathjoin(proc, "cmdline")))
+        try:
+            cmdline = util.contents(util.pathjoin(proc, "cmdline"))
+            if 0 == len(cmdline):
+                continue
+        except IOError:
+            continue
+        rval += "%s %s\n" % (bname, cmdline.replace("\x00", " "))
     return rval
 
 

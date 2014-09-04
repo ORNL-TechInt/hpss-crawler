@@ -66,6 +66,8 @@ class Checkable(object):
         self.cos = ''
         # which tape cartridge(s) the file is stored on
         self.cart = None
+        # the type of tape cartridge(s)
+        self.ttypes = None
         # 1 if we have a checksum stored, else 0
         self.checksum = 0
         # how many times we've tried and failed to retrieve the file content
@@ -92,6 +94,7 @@ class Checkable(object):
                          'checksum',
                          'cos',
                          'cart',
+                         'ttypes',
                          'dim',
                          'fails',
                          'reported',
@@ -432,9 +435,16 @@ class Checkable(object):
         rval = []
         db = CrawlDBI.DBI(dbtype='crawler')
         rows = db.select(table='checkables',
-                         fields=['rowid', 'path', 'type',
-                                 'cos', 'cart', 'checksum', 'last_check',
-                                 'fails', 'reported'],
+                         fields=['rowid',
+                                 'path',
+                                 'type',
+                                 'cos',
+                                 'cart',
+                                 'ttypes',
+                                 'checksum',
+                                 'last_check',
+                                 'fails',
+                                 'reported'],
                          orderby='last_check')
 
         # check whether any roots from rootlist are missing and if so, add them
@@ -450,21 +460,30 @@ class Checkable(object):
 
         if reselect:
             rows = db.select(table='checkables',
-                             fields=['rowid', 'path', 'type',
-                                     'cos', 'cart', 'checksum', 'last_check',
-                                     'fails', 'reported'],
+                             fields=['rowid',
+                                     'path',
+                                     'type',
+                                     'cos',
+                                     'cart',
+                                     'ttypes',
+                                     'checksum',
+                                     'last_check',
+                                     'fails',
+                                     'reported'],
                              orderby='last_check')
 
         for row in rows:
-            new = Checkable(rowid=row[0],
-                            path=row[1],
-                            type=row[2],
-                            cos=row[3],
-                            cart=row[4],
-                            checksum=row[5],
-                            last_check=row[6],
-                            fails=row[7],
-                            reported=row[8],
+            tmp = list(row)
+            new = Checkable(rowid=tmp.pop(0),
+                            path=tmp.pop(0),
+                            type=tmp.pop(0),
+                            cos=tmp.pop(0),
+                            cart=tmp.pop(0),
+                            ttypes=tmp.pop(0),
+                            checksum=tmp.pop(0),
+                            last_check=tmp.pop(0),
+                            fails=tmp.pop(0),
+                            reported=tmp.pop(0),
                             probability=prob,
                             in_db=True,
                             dirty=False)
@@ -503,15 +522,29 @@ class Checkable(object):
         db = CrawlDBI.DBI(dbtype='crawler')
         if self.rowid is not None:
             rows = db.select(table='checkables',
-                             fields=['rowid', 'path', 'type', 'cos', 'cart',
-                                     'checksum', 'last_check', 'fails',
+                             fields=['rowid',
+                                     'path',
+                                     'type',
+                                     'cos',
+                                     'cart',
+                                     'ttypes',
+                                     'checksum',
+                                     'last_check',
+                                     'fails',
                                      'reported'],
                              where="rowid = ?",
                              data=(self.rowid,))
         else:
             rows = db.select(table='checkables',
-                             fields=['rowid', 'path', 'type', 'cos', 'cart',
-                                     'checksum', 'last_check', 'fails',
+                             fields=['rowid',
+                                     'path',
+                                     'type',
+                                     'cos',
+                                     'cart',
+                                     'ttypes',
+                                     'checksum',
+                                     'last_check',
+                                     'fails',
                                      'reported'],
                              where="path = ?",
                              data=(self.path,))
@@ -525,6 +558,7 @@ class Checkable(object):
             self.type = rz.pop(0)
             self.cos = rz.pop(0)
             self.cart = rz.pop(0)
+            self.ttypes = rz.pop(0)
             self.checksum = rz.pop(0)
             self.last_check = rz.pop(0)
             try:
@@ -580,6 +614,7 @@ class Checkable(object):
                               'type',
                               'cos',
                               'cart',
+                              'ttypes',
                               'checksum',
                               'last_check',
                               'fails',
@@ -588,6 +623,7 @@ class Checkable(object):
                              self.type,
                              self.cos,
                              self.cart,
+                             self.ttypes,
                              self.checksum,
                              self.last_check,
                              self.fails,
@@ -601,6 +637,7 @@ class Checkable(object):
                                   'type',
                                   'cos',
                                   'cart',
+                                  'ttypes',
                                   'checksum',
                                   'last_check',
                                   'fails',
@@ -610,6 +647,7 @@ class Checkable(object):
                                  self.type,
                                  self.cos,
                                  self.cart,
+                                 self.ttypes,
                                  self.checksum,
                                  self.last_check,
                                  self.fails,
@@ -620,6 +658,7 @@ class Checkable(object):
                           fields=['type',
                                   'cos',
                                   'cart',
+                                  'ttypes',
                                   'checksum',
                                   'last_check',
                                   'fails',
@@ -628,6 +667,7 @@ class Checkable(object):
                           data=[(self.type,
                                  self.cos,
                                  self.cart,
+                                 self.ttypes,
                                  self.checksum,
                                  self.last_check,
                                  self.fails,
@@ -636,7 +676,7 @@ class Checkable(object):
             self.dirty = False
 
         for d in self.dim:
-            d.load()
+            self.dim[d].load()
         db.close()
 
     # -------------------------------------------------------------------------

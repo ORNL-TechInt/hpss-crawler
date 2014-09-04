@@ -44,7 +44,7 @@ def main(cfg):
 
     if len(bfl) == 0:
         for oid in range(next_nsobj_id, next_nsobj_id+how_many):
-            record_checked_ids(cfg, oid, oid, 1, 0)
+            tcc_lib.record_checked_ids(cfg, oid, oid, 1, 0)
             if cfg.getboolean(tcc_lib.sectname(), 'verbose'):
                 CrawlConfig.log("Object %d is not complete" % oid)
     else:
@@ -70,29 +70,14 @@ def main(cfg):
                                  cosinfo[bf['BFATTR_COS_ID']]))
 
             last_obj_id = int(bf['OBJECT_ID'])
-            record_checked_ids(cfg, last_obj_id, last_obj_id, correct, error)
+            tcc_lib.record_checked_ids(cfg,
+                                       last_obj_id,
+                                       last_obj_id,
+                                       correct,
+                                       error)
 
         CrawlConfig.log("last nsobject in range: %d" % last_obj_id)
 
-
-# -----------------------------------------------------------------------------
-def highest_nsobject_id():
-    """
-    Cache and return the largest NSOBJECT id in the DB2 database. The variables
-    highest_nsobject_id._max_obj_id and highest_nsobject_id._when are local to
-    this function but do not lose their values between invocations.
-    """
-    if any([not hasattr(highest_nsobject_id, '_max_obj_id'),
-            60 < time.time() - highest_nsobject_id._when]):
-
-        highest_nsobject_id._max_obj_id = tcc_lib.max_nsobj_id()
-        highest_nsobject_id._when = time.time()
-        CrawlConfig.log("max object id = %d at %s" %
-                        (highest_nsobject_id._max_obj_id,
-                         util.ymdhms(highest_nsobject_id._when)))
-
-    rval = highest_nsobject_id._max_obj_id
-    return rval
 
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':

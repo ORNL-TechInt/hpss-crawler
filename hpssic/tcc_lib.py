@@ -1,7 +1,9 @@
 import base64
 import CrawlDBI
 import CrawlConfig
+import dbschem
 import os
+import time
 import util
 
 
@@ -171,6 +173,26 @@ def hexstr_uq(bfid):
 
 
 # -----------------------------------------------------------------------------
+def highest_nsobject_id():
+    """
+    Cache and return the largest NSOBJECT id in the DB2 database. The variables
+    highest_nsobject_id._max_obj_id and highest_nsobject_id._when are local to
+    this function but do not lose their values between invocations.
+    """
+    if (not hasattr(highest_nsobject_id, '_max_obj_id') or
+            not hasattr(highest_nsobject_id, '_when') or
+            60 < time.time() - highest_nsobject_id._when):
+        highest_nsobject_id._max_obj_id = max_nsobj_id()
+        highest_nsobject_id._when = time.time()
+        CrawlConfig.log("max object id = %d at %s" %
+                        (highest_nsobject_id._max_obj_id,
+                         util.ymdhms(highest_nsobject_id._when)))
+
+    rval = highest_nsobject_id._max_obj_id
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def max_nsobj_id():
     """
     Return the value of the largest NS object id in the nsobject table
@@ -180,6 +202,7 @@ def max_nsobj_id():
                        fields=['max(object_id) as max_obj_id'])
     db.close()
     rval = int(result[0]['MAX_OBJ_ID'])
+    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -202,7 +225,7 @@ def record_checked_ids(cfg, low, high, correct, error):
     """
     tabname = cfg.get(sectname(), 'table_name')
 
-    result = dbschem.make_table(table=tabname)
+    result = dbschem.make_table(tabname)
     ts = int(time.time())
     CrawlConfig.log("recording checked ids %d to %d at %d" % (low, high, ts))
     db = CrawlDBI.DBI(dbtype="crawler")
