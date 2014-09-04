@@ -866,8 +866,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         cmd = '%s status' % self.crawl_cmd()
         result = pexpect.run(cmd)
-        self.assertEqual(self.cstr['crun'] in result,
-                         True)
+        self.vassert_in(self.cstr['crun'], result)
         self.assertEqual('context=%s' % ctx_a in result, True)
         self.assertEqual('context=%s' % ctx_b in result, True)
 
@@ -875,7 +874,6 @@ class CrawlTest(testhelp.HelpedTestCase):
                                                  logpath, ctx_a)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        time.sleep(1.5)
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, ctx_b)

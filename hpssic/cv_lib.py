@@ -1,4 +1,5 @@
 import CrawlDBI
+import dbschem
 import hpss
 import util as U
 
@@ -285,7 +286,7 @@ def update_stats(cmf):
     Record the values in tuple cmf in table cvstats in the database. If the
     table does not exist, create it.
     """
-    result = dbschem.make_table(table=stats_table)
+    result = dbschem.make_table(stats_table)
     db = CrawlDBI.DBI(dbtype="crawler")
     if result == "Created":
         db.insert(table=stats_table,
