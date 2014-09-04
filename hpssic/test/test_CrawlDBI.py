@@ -9,9 +9,9 @@ database. Also the db2 interface doesn't use table prefixes.
 
 NOTE: Some of these tests depend on having access to a default config file with
 valid entries in the [dbi-crawler] and [dbi-hpss] sections. This means that the
-host, port, username, and password fields of the [dbi-hpss] section must point
-to a functional DB2 server. The [dbi-crawler] section must point either to an
-sqlite database or a functional mysql server.
+hostname, port, username, and password fields of the [dbi-hpss] section must
+point to a functional DB2 server. The [dbi-crawler] section must point either
+to an sqlite database or a functional mysql server.
 """
 import base64
 from hpssic import CrawlConfig
@@ -67,7 +67,7 @@ def make_mysql_tcfg(dbeng):
     tcfg.set(section, 'dbtype', dbeng)
     tcfg.set(section, 'dbname', DBITest.testdb)
     tcfg.set(section, 'tbl_prefix', 'test')
-    for dbparm in ['dbname', 'host', 'username', 'password']:
+    for dbparm in ['dbname', 'hostname', 'username', 'password']:
         tcfg.set(section, dbparm, xcfg.get(section, dbparm))
     return tcfg
 
@@ -2584,13 +2584,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     def test_select_mtf(self):
         """
-        DBIdb2Test: Calling select() with an empty field list should get all
-        the data -- an empty field list indicates the wildcard option
+        DBIdb2Test: Calling select() with an empty field list should get an
+        exception -- an empty field list indicates the wildcard option
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "Wildcard selects are not supported. " +
-                             "Please supply a list of fields",
+                             MSG.wildcard_selects,
                              db.select,
                              table="hpss.gatekeeper",
                              fields=[])
@@ -2599,14 +2598,13 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     def test_select_nf(self):
         """
-        DBIdb2Test: Calling select() with no field list should get all the data
+        DBIdb2Test: Calling select() with no field list should get an exception
         -- fields should default to the empty list, indicating the wildcard
-        option
+        option, which is not supported
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "Wildcard selects are not supported. " +
-                             "Please supply a list of fields",
+                             MSG.wildcard_selects,
                              db.select,
                              table='hpss.logclient')
         db.close()

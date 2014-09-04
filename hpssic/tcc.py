@@ -7,7 +7,6 @@ import CrawlDBI
 import optparse
 import os
 import pdb
-import pexpect
 import pprint
 import re
 import sys
@@ -385,29 +384,4 @@ def cos_parse(line):
 
 
 # -----------------------------------------------------------------------------
-def hpss_password():
-    """
-    Retrieve the password from /var/hpss/etc/mm.keytab.
-    """
-    filename = "/var/hpss/etc/mm.keytab"
-    # os.setgid(9900)
-    S = pexpect.spawn("/opt/hpss/config/hpss_mm_keytab -c -f %s" % filename)
-    S.expect(pexpect.EOF)
-    [q] = re.findall('USER \S+ USING "([^"]+)"', S.before)
-    return q
-
-
-# -----------------------------------------------------------------------------
-def hpss_userpass():
-    """
-    Retrieve the username and password from /var/hpss/etc/mm.keytab.
-    """
-    filename = "/var/hpss/etc/mm.keytab"
-    # os.setgid(9900)
-    S = pexpect.spawn("/opt/hpss/config/hpss_mm_keytab -c -f %s" % filename)
-    S.expect(pexpect.EOF)
-    [(username, password)] = re.findall('USER (\S+) USING "([^"]+)"', S.before)
-    return (username, password)
-
-# -----------------------------------------------------------------------------
-# toolframe.tf_launch('tccp', __name__)
+toolframe.tf_launch('tccp', __name__)

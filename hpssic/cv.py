@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import Checkable
 import crawl_lib
 import CrawlConfig
@@ -15,6 +14,7 @@ from pprint import pprint
 import re
 import time
 import toolframe
+import util as U
 
 prefix = "cvv"
 H = None
@@ -301,7 +301,7 @@ def cvv_show_next(argv):
                                   c.type,
                                   c.path))
         else:
-            print("%s %s %s" % (ymdhms(c.last_check),
+            print("%s %s %s" % (U.ymdhms(c.last_check),
                                 c.type,
                                 c.path))
 
@@ -688,12 +688,3 @@ def tape_types_populate(hpssroot):
                     TT[k][kk]['label'] = label
                     break
     msg.close()
-
-
-# -----------------------------------------------------------------------------
-def ymdhms(epoch):
-    return time.strftime("%Y.%m%d %H:%M:%S",
-                         time.localtime(epoch))
-
-# -----------------------------------------------------------------------------
-# toolframe.tf_launch(prefix, __name__)

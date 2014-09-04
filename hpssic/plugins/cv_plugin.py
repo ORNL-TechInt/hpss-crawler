@@ -2,6 +2,7 @@ from hpssic import Alert
 from hpssic import Checkable
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
+from hpssic import cv_lib
 from hpssic import Dimension
 import os
 import pdb

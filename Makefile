@@ -47,6 +47,13 @@ alltests:
 	py.test --all $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
+coverage:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	export PYTHONPATH=/usr/lib/python2.6/site-packages; \
+        py.test --cov hpssic --all 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
 cron:
 	echo cronjob | at now
 

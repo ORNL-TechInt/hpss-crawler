@@ -14,7 +14,7 @@ import glob
 import optparse
 import os
 import pdb
-import pexpect
+# import pexpect
 import shutil
 import sys
 import testhelp
@@ -419,6 +419,25 @@ def crl_stop(argv):
 
 
 # ------------------------------------------------------------------------------
+def crl_syspath(argv):
+    """syspath - dump python's sys.path array
+
+    usage: crawl syspath
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    for item in sys.path:
+        print("    " + item)
+
+
+# ------------------------------------------------------------------------------
 def crl_version(argv):
     """version - report the crawler software version
     """
@@ -507,13 +526,29 @@ def make_pidfile(pid, context, exitpath, just_check=False):
 
 
 # ------------------------------------------------------------------------------
+def pidcmd():
+    """
+    Collect a list of running processes and their command lines
+    """
+    rval = ""
+    for proc in glob.glob("/proc/*"):
+        bname = util.basename(proc)
+        if not bname.isdigit():
+            continue
+        rval += "%s %s\n" % (bname,
+                             util.contents(util.pathjoin(proc, "cmdline")))
+    return rval
+
+
+# ------------------------------------------------------------------------------
 def running_pid(proc_required=True):
     """
     Return a list of pids if the crawler is running (per ps(1)) or [] otherwise
     """
     rval = []
     if proc_required:
-        result = pexpect.run("ps -ewwo pid,cmd")
+        # result = pexpect.run("ps -ewwo pid,cmd")
+        result = pidcmd()
         for line in result.split("\n"):
             if 'crawl start' in line:
                 pid = int(line.split()[0])
