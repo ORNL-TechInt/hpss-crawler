@@ -8,6 +8,7 @@ from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 import copy
 from hpssic import dbschem
+from hpssic import fakesmtp
 import glob
 from hpssic import messages as MSG
 import os
@@ -94,6 +95,12 @@ class CrawlTest(testhelp.HelpedTestCase):
         'ldaemon': 'leaving daemonize',
         }
 
+
+# -----------------------------------------------------------------------------
+class CrawlMiscTest(CrawlTest):
+    """
+    Tests for the code in crawl.py
+    """
     # --------------------------------------------------------------------------
     def test_crawl_lib_drop_table_000(self):
         """
@@ -984,107 +991,6 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
-    def test_give_up_yet_identical(self):
-        """
-        CrawlDaemon.give_up_yet() should return True if it gets a configured
-        number of identical traceback strings. Otherwise, it should return
-        False.
-        """
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
-        t.set('crawler', 'xlim_time', "2.0")
-        t.set('crawler', 'xlim_count', "7")
-        t.set('crawler', 'xlim_ident', "3")
-        t.set('crawler', 'xlim_total', "10")
-
-        D = crawl.CrawlDaemon("fake_pidfile",
-                              logger=CrawlConfig.get_logger(logpath,
-                                                            reset=True))
-        D.cfg = t
-
-        tbstr1 = "abc"
-        tbstr2 = "xyz"
-
-        self.assertEqual(False, D.give_up_yet(tbstr1))
-        self.assertEqual(False, D.give_up_yet(tbstr2))
-        self.assertEqual(False, D.give_up_yet(tbstr1))
-        self.assertEqual(False, D.give_up_yet(tbstr2))
-        self.assertEqual(True, D.give_up_yet(tbstr1))
-        self.assertEqual(True, D.give_up_yet(tbstr2))
-
-        self.assertTrue("shutting down because we got 3 identical errors"
-                        in util.contents(logpath))
-
-    # --------------------------------------------------------------------------
-    def test_give_up_yet_total(self):
-        """
-        CrawlDaemon.give_up_yet() should return True if it gets a configured
-        number total number of non-identical traceback strings. Otherwise, it
-        should return False.
-        """
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
-        t.set('crawler', 'xlim_time', "2.0")
-        t.set('crawler', 'xlim_count', "7")
-        t.set('crawler', 'xlim_ident', "3")
-        t.set('crawler', 'xlim_total', "6")
-
-        D = crawl.CrawlDaemon("fake_pidfile",
-                              logger=CrawlConfig.get_logger(logpath,
-                                                            reset=True))
-        D.cfg = t
-
-        tbstr1 = "abc"
-        tbstr2 = "xyz"
-
-        self.assertEqual(False, D.give_up_yet('abc'))
-        self.assertEqual(False, D.give_up_yet('def'))
-        self.assertEqual(False, D.give_up_yet('ghi'))
-        self.assertEqual(False, D.give_up_yet('jkl'))
-        self.assertEqual(False, D.give_up_yet('mno'))
-        self.assertEqual(True, D.give_up_yet('pqr'))
-
-        self.assertTrue("shutting down because we got 6 total errors"
-                        in util.contents(logpath))
-
-    # --------------------------------------------------------------------------
-    @attr(slow=True)
-    def test_give_up_yet_window(self):
-        """
-        CrawlDaemon.give_up_yet() should return True if it gets a configured
-        number of traceback strings within a specified time window.
-        """
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
-        t.set('crawler', 'xlim_time', "2.0")
-        t.set('crawler', 'xlim_count', "4")
-        t.set('crawler', 'xlim_ident', "8")
-        t.set('crawler', 'xlim_total', "6")
-
-        D = crawl.CrawlDaemon("fake_pidfile",
-                              logger=CrawlConfig.get_logger(logpath,
-                                                            reset=True))
-        D.cfg = t
-
-        tbstr1 = "abc"
-        tbstr2 = "xyz"
-
-        self.assertEqual(False, D.give_up_yet('abc'))
-        time.sleep(0.7)
-        self.assertEqual(False, D.give_up_yet('def'))
-        time.sleep(0.7)
-        self.assertEqual(False, D.give_up_yet('ghi'))
-        time.sleep(0.7)
-        self.assertEqual(False, D.give_up_yet('jkl'))
-        self.assertEqual(True, D.give_up_yet('aardvark'))
-
-        self.assertTrue("shutting down because we got 4 exceptions in "
-                        in util.contents(logpath))
-
-    # --------------------------------------------------------------------------
     def test_make_pidfile_nodir(self):
         """
         Preconditions:
@@ -1608,6 +1514,107 @@ class CrawlTest(testhelp.HelpedTestCase):
                     # print("pid = %s <- kill this" % pid)
 
         util.conditional_rm(self.piddir, tree=True)
+
+
+# ------------------------------------------------------------------------------
+class CrawlGiveUpYetTest(CrawlTest):
+    # --------------------------------------------------------------------------
+    def setUp(self):
+        fakesmtp.inbox = []
+        self.logpath = '%s/%s.log' % (self.testdir, self._testMethodName)
+        self.email_targets = 'tbarron@ornl.gov, tusculum@gmail.com'
+        t = CrawlConfig.CrawlConfig()
+        t.load_dict(self.cdict)
+        t.set('crawler', 'xlim_time', "2.0")
+        t.set('crawler', 'xlim_count', "7")
+        t.set('crawler', 'xlim_ident', "3")
+        t.set('crawler', 'xlim_total', "10")
+        t.add_section('alerts')
+        t.set('alerts', 'email', self.email_targets)
+
+        self.D = crawl.CrawlDaemon("fake_pidfile",
+                                   logger=CrawlConfig.get_logger(self.logpath,
+                                                                 reset=True))
+        self.D.cfg = t
+        self.sender = 'HIC@%s' % util.hostname(long=True)
+        self.tbstr = ["abc", 'def', 'ghi', 'jkl', 'mno', 'pqr', "xyz"]
+
+    # --------------------------------------------------------------------------
+    def test_give_up_yet_identical(self):
+        """
+        CrawlDaemon.give_up_yet() should return True if it gets a configured
+        number of identical traceback strings. Otherwise, it should return
+        False.
+        """
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[0]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[1]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[0]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[1]))
+        self.assertEqual(True, self.D.give_up_yet(self.tbstr[0]))
+        self.assertEqual(True, self.D.give_up_yet(self.tbstr[1]))
+
+        shutdown_msg = "shutting down because we got 3 identical errors"
+        self.expected_in(shutdown_msg, util.contents(self.logpath))
+        self.expected_in("sent mail to ", util.contents(self.logpath))
+
+        for m in fakesmtp.inbox:
+            self.expected(self.email_targets, ', '.join(m.to_address))
+            self.expected(self.sender, m.from_address)
+            self.expected_in("crawl: %s" % shutdown_msg, m.fullmessage)
+
+    # --------------------------------------------------------------------------
+    def test_give_up_yet_total(self):
+        """
+        CrawlDaemon.give_up_yet() should return True if it gets a configured
+        number total number of non-identical traceback strings. Otherwise, it
+        should return False.
+        """
+        self.D.cfg.set('crawler', 'xlim_total', "6")
+
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[0]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[1]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[2]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[3]))
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[4]))
+        self.assertEqual(True, self.D.give_up_yet(self.tbstr[5]))
+
+        shutdown_msg = "shutting down because we got 6 total errors"
+        self.expected_in(shutdown_msg, util.contents(self.logpath))
+        self.expected_in("sent mail to ", util.contents(self.logpath))
+
+        for m in fakesmtp.inbox:
+            self.expected(self.email_targets, ', '.join(m.to_address))
+            self.expected(self.sender, m.from_address)
+            self.expected_in("crawl: %s" % shutdown_msg, m.fullmessage)
+
+    # --------------------------------------------------------------------------
+    @attr(slow=True)
+    def test_give_up_yet_window(self):
+        """
+        CrawlDaemon.give_up_yet() should return True if it gets a configured
+        number of traceback strings within a specified time window.
+        """
+        self.D.cfg.set('crawler', 'xlim_time', "2.0")
+        self.D.cfg.set('crawler', 'xlim_count', "4")
+
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[0]))
+        time.sleep(0.7)
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[1]))
+        time.sleep(0.7)
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[2]))
+        time.sleep(0.7)
+        self.assertEqual(False, self.D.give_up_yet(self.tbstr[3]))
+        self.assertEqual(True, self.D.give_up_yet(self.tbstr[4]))
+
+        shutdown_msg = "shutting down because we got 4 exceptions in "
+        self.expected_in(shutdown_msg, util.contents(self.logpath))
+        self.expected_in("sent mail to ", util.contents(self.logpath))
+
+        for m in fakesmtp.inbox:
+            self.expected(self.email_targets, ', '.join(m.to_address))
+            self.expected(self.sender, m.from_address)
+            self.expected_in("crawl: %s" % shutdown_msg, m.fullmessage)
+
 
 # ------------------------------------------------------------------------------
 toolframe.ez_launch(test='CrawlTest', logfile=testhelp.testlog(__name__))

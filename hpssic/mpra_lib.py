@@ -42,16 +42,27 @@ def age(table,
         raise StandardError("output type must be 'str' or 'file' ")
 
     db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+
+    # Here we set selection constraints for the select to retrieve the records
+    # of interest, and we also set the time delta into the past, stored in age.
+    # Arguments *start* and *end* provide boundaries delimiting a time segment.
+    # We store in *age* the distance from the current time back to *end*. If
+    # *end* is not set, it is presumed to be the same as the present, so age is
+    # 0. *age* is passed to age_report in the count branch below.
     if start is not None and end is not None:
         dbargs = {'where': '? < record_create_time and record_create_time < ?',
                   'data': (start, end)}
+        age = int(time.time()) - end
     elif start is None and end is not None:
         dbargs = {'where': 'record_create_time < ?',
                   'data': (end, )}
+        age = int(time.time()) - end
     elif start is not None and end is None:
         dbargs = {'where': '? < record_create_time',
                   'data': (start, )}
-    # if both start and end are None, we leave the select unconstrained
+        age = 0
+    else:
+        age = 0
 
     if count:
         dbargs['fields'] = ['count(*)']
@@ -71,7 +82,7 @@ def age(table,
     recent = 0
     rval = len(rows)
     if count:
-        age_report(table, int(time.time()) - end, count, rows, f, path)
+        age_report(table, age, count, rows, f, path)
     elif 0 < len(rows):
         for row in rows:
             if recent < row['RECORD_CREATE_TIME']:

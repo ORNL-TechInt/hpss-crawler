@@ -9,12 +9,12 @@ import CrawlDBI
 import CrawlPlugin
 import daemon
 import dbschem
+import CrawlMail
 import getpass
 import glob
 import optparse
 import os
 import pdb
-# import pexpect
 import shutil
 import sys
 import testhelp
@@ -618,23 +618,48 @@ class CrawlDaemon(daemon.Daemon):
 
         # give up because we got enough identical errors
         if self.ilimit <= self.xseen[tbstr]:
-            self.dlog("crawl: shutting down because we got " +
+            reason = ("crawl: shutting down because we got " +
                       "%d identical errors" % self.ilimit)
+            self.dlog(reason)
+            CrawlMail.send(cfg=self.cfg,
+                           to="alerts.email",
+                           subj="HPSS Integrity Crawler shutdown",
+                           msg="""
+                           HPSS Integrity Crawler shutting down.
+                           %s
+                           """ % reason)
             rval = True
 
         # give up because we got enough total errors
         if self.zlimit <= self.xtotal:
-            self.dlog("crawl: shutting down because we got " +
+            reason = ("crawl: shutting down because we got " +
                       "%d total errors" % self.zlimit)
+            self.dlog(reason)
+            CrawlMail.send(cfg=self.cfg,
+                           to="alerts.email",
+                           subj="HPSS Integrity Crawler shutdown",
+                           msg="""
+                           HPSS Integrity Crawler shutting down.
+                           %s
+                           """ % reason)
             rval = True
 
         # give up if we got enough errors in the time window
         dt = now - self.ewhen
         if self.climit <= self.ecount and dt < self.tlimit:
-            self.dlog("crawl: shutting down because we got " +
+            reason = ("crawl: shutting down because we got " +
                       "%d exceptions in %f seconds" %
                       (self.ecount, dt))
+            self.dlog(reason)
+            CrawlMail.send(cfg=self.cfg,
+                           to="alerts.email",
+                           subj="HPSS Integrity Crawler shutdown",
+                           msg="""
+                           HPSS Integrity Crawler shutting down.
+                           %s
+                           """ % reason)
             rval = True
+
         elif self.tlimit <= dt:
             self.ecount = len(self.whenq)
             if 0 < self.ecount:

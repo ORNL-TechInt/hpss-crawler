@@ -31,6 +31,7 @@ unit-testing/
 
 """
 import CrawlConfig
+import CrawlMail
 import email.mime.text
 import os
 import smtplib
@@ -93,19 +94,10 @@ class Alert(object):
                     done = True
 
                 elif opt == 'email':
-                    # send mail
-                    hostname = util.hostname(long=True)
-                    addrs = cfg.get(section, 'email')
-                    addrlist = [x.strip() for x in addrs.split(',')]
-                    sender = 'HIC@%s' % hostname
-                    payload = email.mime.text.MIMEText(self.msg)
-                    payload['Subject'] = 'HPSS Integrity Crawler ALERT'
-                    payload['From'] = sender
-                    payload['To'] = addrs
-                    s = smtplib.SMTP('localhost')
-                    s.sendmail(sender, addrlist, payload.as_string())
-                    s.quit()
-                    CrawlConfig.log("sent mail to %s", addrlist)
+                    CrawlMail.send(cfg=cfg,
+                                   to="%s.email" % section,
+                                   subj="HPSS Integrity Crawler ALERT",
+                                   msg=self.msg)
                     done = True
 
                 elif opt == 'use':
