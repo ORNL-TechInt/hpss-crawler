@@ -6,7 +6,7 @@ import util
 
 
 # -----------------------------------------------------------------------------
-def send(to='', subj='', msg='', cfg=None):
+def send(to='', subj='', msg='', sender='', cfg=None):
     """
     Send e-mail as indicated
     """
@@ -21,10 +21,15 @@ def send(to='', subj='', msg='', cfg=None):
         cfg = CrawlConfig.get_config()
 
     if to:
-        (section, option) = to.split('.')
+        if ',' in to:
+            addrs = to
+        elif '.' in to:
+            (section, option) = to.split('.')
+            addrs = cfg.get(section, option)
     else:
         (section, option) = ('crawler', 'notify-e-mail')
-    addrs = cfg.get(section, option)
+        addrs = cfg.get(section, option)
+
     addrlist = [x.strip() for x in addrs.split(',')]
     payload['To'] = addrs
 
@@ -35,7 +40,12 @@ def send(to='', subj='', msg='', cfg=None):
         payload['Subject'] = 'HPSS Integrity Crawler ALERT'
 
     # Set the from address
-    sender = 'HIC@%s' % util.hostname(long=True)
+    default_sender = 'hpssic@%s' % util.hostname(long=True)
+    if sender == '':
+        if cfg is not None:
+            sender = cfg.get_d('rpt', 'sender', default_sender)
+        else:
+            sender = default_sender
     payload['From'] = sender
 
     # Send the message

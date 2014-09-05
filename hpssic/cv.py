@@ -187,10 +187,12 @@ def cvv_report(argv):
 
     dim = {}
     dim['cos'] = Dimension.get_dim('cos')
-    dim['cart'] = Dimension.get_dim('cart')
+    # dim['cart'] = Dimension.get_dim('cart')
+    dim['ttypes'] = Dimension.get_dim('ttypes')
 
     print dim['cos'].report()
-    print dim['cart'].report()
+    # print dim['cart'].report()
+    print dim['ttypes'].report()
 
 
 # -----------------------------------------------------------------------------
@@ -489,6 +491,9 @@ def cvv_ttype_populate(argv):
     p.add_option('-n', '--dryrun',
                  action='store_true', default=False, dest='dryrun',
                  help='see what would happen')
+    p.add_option('-v', '--verbose',
+                 action='store_true', default=False, dest='verbose',
+                 help='more details')
     try:
         (o, a) = p.parse_args(argv)
     except SystemExit:
@@ -520,10 +525,12 @@ def cvv_ttype_populate(argv):
     scount = pcount = 0
     data = []
     for row in candlist:
-        (path, type, ttype, cart) = row
+        (path, type, ttype, cart, last_check) = row
+        if o.verbose:
+            print("%-60s %s %-5s %-10s %d" % row)
 
         # get a list of cartnames and media type descriptions
-        cml = cv_lib.ttype_lookup(path)
+        cml = cv_lib.ttype_lookup(path, cart)
         if cml is None:
             print("No cart/media type found for %s" % path)
             scount += 1
@@ -536,7 +543,7 @@ def cvv_ttype_populate(argv):
         mdescs = ",".join([x[1] for x in cml])
 
         # collect the update info
-        data.append((mdescs, cartnames, path))
+        data.append((mdescs, cartnames, path, last_check))
 
         pcount += 1
         o.limit -= 1

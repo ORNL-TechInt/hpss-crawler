@@ -38,7 +38,7 @@ def get_cv_report(db, last_rpt_time):
                  "%d items added to population, " % (c_pop_size) +
                  "%d items added to sample" % (c_sample_size))
 
-        c = Dimension.Dimension(name='cart')
+        c = Dimension.Dimension(name='ttypes')
         rval += c.report()
         rval += "\n"
 
@@ -46,39 +46,14 @@ def get_cv_report(db, last_rpt_time):
         rows = db.select(table="checkables",
                          fields=["count(path)"],
                          where='type = "f" and ' +
-                               'cart is not null and ' +
+                               'ttypes is not null and ' +
                                '? < last_check',
                          data=(last_rpt_time,))
         (c_pop_size) = rows[0]
 
         rows = db.select(table="checkables",
                          fields=["count(path)"],
-                         where='type = "f" and cart is not null and ' +
-                               'checksum = 1 and ? < last_check',
-                         data=(last_rpt_time,))
-        (c_sample_size) = rows[0]
-
-        # report the deltas
-        rval += ("Since last report, " +
-                 "%d items added to population, " % (c_pop_size) +
-                 "%d items added to sample" % (c_sample_size))
-
-        c = Dimension.Dimension(name='cart')
-        rval += c.report()
-        rval += "\n"
-
-        # get the population and sample entries added since the last report
-        rows = db.select(table="checkables",
-                         fields=["count(path)"],
-                         where='type = "f" and ' +
-                               'cart is not null and ' +
-                               '? < last_check',
-                         data=(last_rpt_time,))
-        (c_pop_size) = rows[0]
-
-        rows = db.select(table="checkables",
-                         fields=["count(path)"],
-                         where='type = "f" and cart is not null and ' +
+                         where='type = "f" and ttypes is not null and ' +
                                'checksum = 1 and ? < last_check',
                          data=(last_rpt_time,))
         (c_sample_size) = rows[0]
@@ -218,36 +193,3 @@ def get_last_rpt_time(db):
 
     CrawlConfig.log("time of last report: %d" % rval)
     return rval
-
-
-# -----------------------------------------------------------------------------
-def sendmail(sender='',
-             to='',
-             subject='',
-             body=''):
-    """
-    Send an e-mail to the addresses listed in to.
-    """
-    if to.strip() == '':
-        raise StandardError("Can't send mail without at least one recipient")
-    if '@' not in to:
-        raise StandardError("'%s' does not look like an e-mail address" % to)
-
-    if sender.strip() == '':
-        raise StandardError("Can't send mail without a sender")
-
-    if subject.strip() == '':
-        subject = "<empty subject>"
-
-    if body.strip() == '':
-        body = "<empty body>"
-
-    hostname = util.hostname()
-    payload = email.mime.text.MIMEText(body)
-    payload['Subject'] = subject
-    payload['From'] = sender
-    payload['To'] = to
-    CrawlConfig.log("Sending mail from %s to %s." % (sender, to))
-    s = smtplib.SMTP('localhost')
-    s.sendmail(sender, to, payload.as_string())
-    s.quit()

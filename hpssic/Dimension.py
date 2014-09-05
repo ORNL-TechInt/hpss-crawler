@@ -152,20 +152,20 @@ class Dimension(object):
         """
         Generate a string reflecting the current contents of the dimension
         """
-        rval = ("\n   %-20s     %17s   %17s" % (self.name,
+        rval = ("\n   %-30s     %17s   %17s" % (self.name,
                                                 "Population",
                                                 "Sample"))
 
-        rval += ("\n   %20s     %17s   %17s" % (20 * '-',
+        rval += ("\n   %30s     %17s   %17s" % (30 * '-',
                                                 17 * '-',
                                                 17 * '-'))
         for cval in self.p_sum:
-            rval += ("\n   %-20s  " % cval +
+            rval += ("\n   %-30.30s  " % cval +
                      "   %8d" % self.p_sum[cval]['count'] +
                      "   %6.2f" % self.p_sum[cval]['pct'] +
                      "   %8d" % self.s_sum[cval]['count'] +
                      "   %6.2f" % self.s_sum[cval]['pct'])
-        rval += ("\n   %-20s     %8d   %6.2f   %8d   %6.2f" %
+        rval += ("\n   %-30.30s     %8d   %6.2f   %8d   %6.2f" %
                  ("Total",
                   self.sum_total(which='p'),
                   sum(map(lambda x: x['pct'], self.p_sum.values())),

@@ -162,7 +162,7 @@ class AlertTest(testhelp.HelpedTestCase):
         logfile = '%s/alert_email.log' % self.testdir
         targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
         payload = 'this is an e-mail alert'
-        sender = 'HIC@' + util.hostname(long=True)
+        sender = 'hpssic@' + util.hostname(long=True)
 
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
