@@ -7,6 +7,7 @@ export TESTDIR=$GIT_REPO/hpssic/test
 
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 cd $HOME/prj/hpssic/dev
+. $HOME/venv/hpssic/bin/activate
 /usr/bin/py.test --cov hpssic --all >> $CRONOUT 2>&1
 STATUS=$?
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT

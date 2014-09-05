@@ -6,6 +6,8 @@ This technique was taken from this blog post:
 http://www.psychicorigami.com/2007/09/20/monkey-patching-pythons-smtp-lib-for-
 unit-testing/
 
+Importing this module will redirect SMTP output to a fake in-memory 'inbox' so
+it can be examined rather than sending it off the machine.
 """
 smtp = None
 inbox = []

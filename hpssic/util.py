@@ -322,7 +322,7 @@ def dispatch_help(mod, prefix, cmd=None):
         print("")
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def env_update(cfg):
     """
     Update the environment based on the contents of the 'env' section of the
@@ -544,7 +544,12 @@ def setup_logging(logfile='',
                   bumper=True,
                   archdir=''):
     """
-    Create a new logger and return the object
+    Create a new logger and return the object.
+
+    If the caller does not specify a *logfile*, we try to use the
+    default_logfile_name set above. However, this path is only writable by
+    root, so if the call to ArchiveLogfileHandler below fails, we fall back
+    /tmp/crawl.log that anyone should be able to create and write.
     """
     if logfile == '':
         logfile = default_logfile_name
