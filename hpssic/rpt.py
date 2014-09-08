@@ -16,6 +16,15 @@ import util
 def rptx_report(args):
     """report - write a sample report to stdout
     """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    if o.debug:
+        pdb.set_trace()
+
     print rpt_lib.get_report()
 
 

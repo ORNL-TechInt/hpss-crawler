@@ -12,7 +12,7 @@ import util
 # -----------------------------------------------------------------------------
 def get_cv_report(db, last_rpt_time):
     # get the body of the report from a Dimension object
-    rval = "----------------------------------------------------------\n"
+    rval = "\n" + ("-" * 79) + "\n"
     rval += "Checksum Verifier Population vs. Sample\n"
     if db.table_exists(table="checkables"):
         d = Dimension.Dimension(name="cos")
@@ -37,6 +37,7 @@ def get_cv_report(db, last_rpt_time):
         rval += ("Since last report, " +
                  "%d items added to population, " % (c_pop_size) +
                  "%d items added to sample" % (c_sample_size))
+        rval += "\n"
 
         c = Dimension.Dimension(name='ttypes')
         rval += c.report()
@@ -76,12 +77,13 @@ def get_mpra_report(db=None, last_rpt_time=0):
     if db is None:
         db = CrawlDBI.DBI(dbtype="crawler")
         close = True
-    rval = ("\n----------------------------------------------------------\n" +
-            "Migration/Purge Record Checks\n" +
-            "\n")
+    rval = "\n" + ("-" * 79) + "\n"
+    rval += "Migration/Purge Record Checks\n\n"
     hfmt = "   %-5s  %-20s  %-20s  %-20s  %8s\n"
     bfmt = "   %-5s  %-20s  %-20s  %-20s  %8d\n"
     body = ''
+    mdelta = 0
+    pdelta = 0
     if db.table_exists(table='mpra'):
         rows = db.select(table="mpra",
                          fields=['type',
@@ -97,6 +99,7 @@ def get_mpra_report(db=None, last_rpt_time=0):
             if r[0] == 'migr':
                 start = "beginning of time" if r[2] == 0 else util.ymdhms(r[2])
                 end = util.ymdhms(r[3])
+                mdelta += int(r[4])
             else:
                 start = '...'
                 end = '...'
@@ -112,6 +115,19 @@ def get_mpra_report(db=None, last_rpt_time=0):
         else:
             body = "   No records found to report"
 
+        delta = sum([x[4] for x in rows])
+        rows = db.select(table="mpra",
+                         fields=["type", "sum(hits)"],
+                         groupby="type")
+        total = {}
+        for r in rows:
+            total[r[0]] = int(r[1])
+        body += "\n\n         %s Migration            Purge\n" % (" " * 20)
+        body += ("    Since %-18s %10d       %10d\n" %
+                 (util.ymdhms(last_rpt_time), mdelta, pdelta))
+        body += ("    Total                    %10d       %10d\n" %
+                 (total['migr'], total['purge']))
+
     else:
         body = "   No MPRA result to report at this time."
 
@@ -124,8 +140,8 @@ def get_mpra_report(db=None, last_rpt_time=0):
 
 # -----------------------------------------------------------------------------
 def get_tcc_report(db, last_rpt_time):
-    rval = ("\n----------------------------------------------------------\n" +
-            "Tape Copy Checker:\n")
+    rval = "\n" + ("-" * 79) + "\n"
+    rval += "Tape Copy Checker:\n\n"
 
     # db = CrawlDBI.DBI(dbtype="crawler")
     if db.table_exists(table='tcc_data'):
@@ -145,10 +161,31 @@ def get_tcc_report(db, last_rpt_time):
             correct += c
             error += e
 
-        rval += ("   Since %-18s, files checked: %7d\n" %
-                 (util.ymdhms(last_rpt_time), checks) +
-                 "%-34s correct: %7d\n" % (' ', correct) +
-                 "%-34s  errors: %7d\n" % (' ', error))
+        rows = db.select(table="tcc_data",
+                         fields=["distinct(low_nsobj_id)", ])
+        t_check = len(rows)
+
+        rows = db.select(table="tcc_data",
+                         fields=["distinct(low_nsobj_id)", "correct"],
+                         where="correct = 1")
+        t_correct = len(rows)
+        c_obj_id_l = [x[0] for x in rows]
+
+        t_error = 0
+        erows = db.select(table="tcc_data",
+                          fields=["distinct(low_nsobj_id)", "correct"],
+                          where="correct <> 1")
+        for r in erows:
+            if r[0] not in c_obj_id_l:
+                t_error += 1
+
+        rval += " %s Checked   Correct  Errors\n" % (" " * 29)
+        rval += ("   Since %-18s:    %6d   %6d   %6d\n" %
+                 (util.ymdhms(last_rpt_time), checks, correct, error))
+        rval += ("   Total: %s %6d   %6d   %6d\n" % (" " * 21,
+                                                     t_check,
+                                                     t_correct,
+                                                     t_error))
     else:
         rval += ("   No Tape Copy Checker results to report")
 
