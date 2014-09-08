@@ -70,7 +70,7 @@ def cvv_dropcart(argv):
 def cvv_popcart(argv):
     """popcart - Populate field cart in checkable table
 
-    usage: cv popcart [-d] [path ...]
+    usage: cv popcart [-d] [-n] [-s] [-l N] [path ...]
 
     For each file path in the mysql database that doesn't already have a cart
     name, issue an 'ls -P <path>' in hsi to retrieve the name of the cartridge
@@ -80,6 +80,9 @@ def cvv_popcart(argv):
     those paths will be updated with a cart name.
     """
     p = optparse.OptionParser()
+    p.add_option('-c', '--check',
+                 action='store_true', default=False, dest='check',
+                 help='only records that have been checked')
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
@@ -92,6 +95,9 @@ def cvv_popcart(argv):
     p.add_option('-s', '--skip',
                  action='store_true', default=False, dest='skip',
                  help='skip rows with non-null cart')
+    p.add_option('-v', '--verbose',
+                 action='store_true', default=False, dest='verbose',
+                 help='more info')
     try:
         (o, a) = p.parse_args(argv)
     except SystemExit:
@@ -100,15 +106,22 @@ def cvv_popcart(argv):
     if o.debug:
         pdb.set_trace()
 
-    where = "type = 'f' and last_check <> 0"
+    if 0 < len(a):
+        b = ["'%s'" % x for x in a]
+        where = "path in (" + ','.join(b) + ")"
+    else:
+        where = "type = 'f'"
+
+    if o.check:
+        where += " and last_check <> 0"
     if o.skip:
         where += " and cart is null"
 
     # get the list of paths and carts from the database
-    pc_l = cv_lib.prep_popcart(where)
+    pc_l = cv_lib.prep_popcart(where, o.limit)
 
     # generate an updated list from hsi
-    upc_l = populate_cart_field(pc_l, limit, dryrun)
+    upc_l = populate_cart_field(pc_l, o.limit, o.dryrun, o.verbose)
 
     if o.dryrun:
         # report what would have been changed
@@ -120,7 +133,7 @@ def cvv_popcart(argv):
 
 
 # -----------------------------------------------------------------------------
-def populate_cart_field(pc_l, limit, dryrun):
+def populate_cart_field(pc_l, limit, dryrun, verbose):
     """
     We get a list of paths and carts. The cart values may be empty or None. We
     talk to hsi to collect cart info for each of the paths, building a return
@@ -136,14 +149,21 @@ def populate_cart_field(pc_l, limit, dryrun):
         info = h.lsP(path)
         hcart = info.split("\t")[5].strip()
         if dcart != hcart:
-            if 0 < max:
+            if 0 < limit:
                 try:
                     populate_cart_field._count += 1
                 except AttributeError:
                     populate_cart_field._count = 1
-                if limit < populate_cart_field._count:
+                if 0 < limit and limit < populate_cart_field._count:
                     return True
-            rval.append((hcart, path))
+            rval.append((path, dcart, hcart))
+        if verbose:
+            if 60 < len(path):
+                dpath = '...' + path[-57:]
+            else:
+                dpath = path
+
+            print("%-60s %-8s %-10s" % (dpath, dcart, hcart))
 
     h.quit()
     return rval

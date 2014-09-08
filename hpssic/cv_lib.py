@@ -94,25 +94,31 @@ def nulls_from_checkables():
 # -----------------------------------------------------------------------------
 def popcart(pc_l):
     """
-    *pc_l* contains tuples of (hsi cart val, path)
+    *pc_l* contains tuples of (path, db val, hsi cart val)
     """
+    hp_l = [(x[2], x[0]) for x in pc_l]
     db = CrawlDBI.DBI(dbtype="crawler")
     db.update(table="checkables",
               fields=["cart"],
               where="path = ?",
-              data=pc_l)
+              data=hp_l)
     db.close()
 
 
 # -----------------------------------------------------------------------------
-def prep_popcart(where):
+def prep_popcart(where, limit):
     """
-    Get a list of paths and carts from database based on where
+    Get a list of paths and carts from database based on where. If 0 < limit,
+    no more than limit records will be retrieved.
     """
     db = CrawlDBI.DBI(dbtype="crawler")
+    kw = {}
+    if 0 < limit:
+        kw['limit'] = limit
     rows = db.select(table="checkables",
                      fields=["path", "cart"],
-                     where=where)
+                     where=where,
+                     **kw)
     db.close()
     return rows
 
