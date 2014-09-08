@@ -1,2 +1,2 @@
-unset PYTHONPATH
-export PATH=${PATH}:$HOME/prj/hpss/crawler
+export PYTHONPATH=`pwd`
+export PATH=`pwd`/bin:$PATH

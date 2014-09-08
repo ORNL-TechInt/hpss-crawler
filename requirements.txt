@@ -1,0 +1,9 @@
+# MySQL must already be installed on the target machine
+MySQL-python==1.2.3c1
+# IBM_DB_HOME must point to a DB2 installation, eg., /opt/ibm/db2/V10.5
+ibm-db==2.0.4.1
+mock==1.0.1
+nose==1.3.1
+nose-ignore-docstring==0.2
+pep8==1.5.7
+pexpect==3.3

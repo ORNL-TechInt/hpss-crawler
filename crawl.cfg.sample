@@ -1,11 +1,27 @@
+[DEFAULT]
+
+# The directory where the crawler is running from. This will be used later in
+# the file. Customize this for your installation.
+root = ${CRAWL:-.}
+hpssdb = /var/hpss/hpssdb
+
 # ------------------------------------------------------------
 [crawler]
 
 # where the plugins live
-plugin-dir = ./plugins
+plugin-dir = %(root)s/plugins
+
+# plugin list
+plugins = cv, tcc, mpra, rpt
+
+# context of this instance (a short name for this instance)
+context = SAMPLE
+
+# path of file to watch for and exit on
+exitpath = /tmp/crawler/SAMPLE.exit
 
 # where to write log information
-logpath    = /var/log/hpss_crawl.log
+logpath    = %(root)s/work/hpss_crawl.log
 
 # max size of a log file before rotating it
 logsize    = 5mb
@@ -17,7 +33,7 @@ logmax     = 5
 notify-e-mail = tbarron@ornl.gov, tusculum@gmail.com
 
 # program to run on significant events
-notify-program = command line
+# notify-program = command line
 
 # The heartbeat option tells the crawler how often it must
 # write something to the log file to prove it's still running
@@ -26,8 +42,8 @@ heartbeat = 10s
 # Exception limits
 # xlim_time and xlim_count work together. If the crawler sees more
 # than xlim_count exceptions within xlim_time seconds, it will shut
-# down.
-xlim_time = 8.0
+# down. The xlim_* values listed here are the defaults.
+xlim_time = 7.0
 xlim_count = 3
 
 # If the crawler sees this many identical exceptions, no matter how
@@ -40,10 +56,13 @@ xlim_total = 10
 
 # ------------------------------------------------------------
 # the section name matches the name of a plugin module
-[plugin-A]
+[cv]
 # The default value of fire is 'no'. For a plugin to fire, it must
 # have a 'fire' option with the value 'yes', 'true', or 1
 fire = no
+
+# The .py file to load for this plugin (from the plugin-dir)
+module = cv_plugin
 
 # how long to sleep between runs of this plugin (1 hour)
 # other interval names: second, minute, day, week, month, year
@@ -51,23 +70,97 @@ fire = no
 # mutually exclusive with schedule
 frequency     = 1 hour
 
-# crontab-style schedule: minute hour month-day month week-day
-# mutually exclusive with frequency
-schedule      = * 2,3,4 1 * *
-
 # max number of operations in a single run
 operations    = 20
 
-# read filename and include any configuration information found there
-include       = filename
+# which db fields to use for dimensions
+dimensions = ttypes, cos
 
-# This plugin can decide to pass file paths along to downstream
-# plugins for further operations
-downstream    = plugin-name
+# section where alerts are defined
+alerts = alert_targets
 
-# Arbitrary config items can be added to a plugin's section to support any needs
-# it has
-unique_option = foobar
+# -------------------------------------------------------
+[rpt]
+fire = no
+frequency = 15min
+module = rpt_plugin
+recipients = someone@somewhere.com, another@anotherplace.org
+sender = hpssic@domain.net
+subject = HPSSIC Example Status Report
+alerts = alert_targets
+
+# -------------------------------------------------------
+[tcc]
+
+fire = no
+
+module = tcc_plugin
+
+frequency = 900s
+
+# name of table where tcc keeps its next nsobject id
+table_name = tcc_data
+
+# number of bitfiles to check on each iteration
+operations = 5
+
+# where to write the report
+# report_file = /var/opt/hpssic/output/tcc_report.txt
+report_file = %(root)s/tcc_report.txt
+verbose = true
+alerts = alert_targets
+
+# -------------------------------------------------------
+[mpra]
+
+module = mpra_plugin
+fire = no
+frequency = 170s
+age = 875d
+lock_duration = 0
+report_file = %(root)s/mpra_report.txt
+alerts = alert_targets
+
+# ------------------------------------------------------------
+[alert_targets]
+# where to send alerts
+# - the log file
+log = Alert generated: msg = '%s'
+
+# - e-mail (comma-separated list of one or more addresses)
+email = addr1@domain.gov, addr2@domain.gov
+
+# - shell program -- could send pager message, etc.
+shell = echo "%s" > alert.out
+
+# ------------------------------------------------------------
+[env]
+DB2INSTANCE: hpssdb
+DB2_HOME: %(hpssdb)s/sqllib
+DB2LIB: %(hpssdb)s/sqllib/lib
+IBM_DB_DIR: $(hpssdb)s/sqllib
+IBM_DB_LIB: %(hpssdb)s/sqllib/lib
+IBM_DB_INCLUDE: %(hpssdb)s/sqllib/include
+LD_LIBRARY_PATH: %(hpssdb)s/sqllib/lib64:%(hpssdb)s/sqllib/lib32
+CLASSPATH: %(hpssdb)s/sqllib/java/db2java.zip:
+   %(hpssdb)s/sqllib/java/sqlj.zip:
+   %(hpssdb)s/sqllib/function:
+   %(hpssdb)s/sqllib/java/db2jcc_license_cu.jar:
+   %(hpssdb)s/sqllib/tools/clpplus.jar:
+   %(hpssdb)s/sqllib/tools/jline-0.9.93.jar:
+   %(hpssdb)s/sqllib/java/db2jcc.jar:.
+PATH: +%(hpssdb)s/sqllib/bin:
+   %(hpssdb)s/sqllib/adm:
+   %(hpssdb)s/sqllib/misc
+
+# ------------------------------------------------------------
+[db2]
+# db_cfg_name = cfg
+# db_sub_name = subsys
+# hostname = localhost
+# port = 50000
+# username = hpss
+# password = <base64-encoded password> ('crawl pw_encode')
 
 # ------------------------------------------------------------
 [dbi]
@@ -78,22 +171,49 @@ unique_option = foobar
 ## dbtype == 'sqlite'  ==> dbname is a file name
 ## dbtype == 'mysql'   ==> dbname is a database name
 ## dbtype == 'db2'     ==> dbname is a database name
-# dbname = ./crawl.db
 
 # table name prefix. E.g., 'dev_', 'demo', 'prod'
 ## The trailing underscore is optional and will be added if not
 ## present so table names will look like, e.g., 'dev_checkables',
 ## 'prod_dimension', etc.
-# tbl_prefix = dev
+
+dbtype = sqlite
+dbname = ./crawl.db
+tbl_prefix = dev
 
 # dbtype = mysql
 # host = localhost
 # dbname = crawl
 # username = soandso
 # password = whatever
+# tbl_prefix = dev
 
 # dbtype = db2
 # host = localhost
 # dbname = crawl
 # username = soandso
 # password = whatever
+
+# ------------------------------------------------------------
+# Other configuration elements available
+#
+# This will pull an external file into the configuration. If 'filename' does
+# not exist, a warning will be raised.
+#
+#    include = filename
+# 
+# 
+# ------------------------------------------------------------
+# Other configuration elements planned (not yet implemented)
+#
+# crontab-style schedule: minute hour month-day month week-day
+# mutually exclusive with frequency
+#
+#    schedule      = * 2,3,4 1 * *
+#
+# A plugin might decide to pass file paths along to downstream
+# plugins for further operations
+#
+#    downstream    = plugin-name
+
+

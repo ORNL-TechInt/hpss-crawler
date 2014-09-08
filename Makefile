@@ -1,23 +1,66 @@
 WWW = $(HOME)/www/hpssic
+PYFILES = $(shell find . -name "*.py")
+help:
+	@echo ""
+	@echo "Targets in this Makefile"
+	@echo "    clean        Remove *.pyc, *~, test.d, MANIFEST, README"
+	@echo "    cron         run tests in a cronjob"
+	@echo "    doc          Generate the documentation"
+	@echo "    install      Install the package locally"
+	@echo "    precommit    tests to run just before committing"
+	@echo "    pristine     clean + rm dist/*"
+	@echo "    readme       Generate the readme in HTML"
+	@echo "    refman       Generate the Reference Manual in HTML"
+	@echo "    sdist        Generate the source distribution"
+	@echo "    TAGS         Navigation tags for emacs"
+	@echo "    tests        Run and log the fast tests"
+	@echo "    alltests     Run and log all the tests"
+	@echo "    uguide       Generate the User Guide in HTML"
+	@echo "    uninstall    Remove hpssic from the current environment"
+	@echo "    upgrade      Re-install hpssic with the --upgrade flag"
+	@echo ""
 
 doc: readme refman uguide
 
+pristine: clean
+	rm dist/*
+
 clean:
-	find . -name "*.pyc" | xargs rm
-	find . -name "*~" | xargs rm
-	rm -rf test.d
+	find . -name "*.pyc" | xargs rm -f
+	find . -name "*~" | xargs rm -f
+	rm -rf $(TEST_D)/test.d MANIFEST README
 
-TAGS: *.py tests/*.py
-	etags *.py
+TAGS: hpssic/*.py hpssic/plugins/*.py hpssic/test/*.py
+	find . -name "*.py" | xargs etags
 
-TESTLOG=tests/nosetests.log
-NOSE_WHICH=
-test:
+TEST_OPTS=-x
+TESTLOG="hpssic_test.log"
+tests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -c tests/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	py.test $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
+alltests:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	py.test --all $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+coverage:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	export PYTHONPATH=/usr/lib/python2.6/site-packages; \
+        py.test --cov hpssic --all 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+cron:
+	echo cronjob | at now
+
+pep8:
+	py.test -k pep8
+
+precommit: alltests
 
 readme: $(WWW)/README.html
 
@@ -33,3 +76,33 @@ $(WWW)/ReferenceManual.html: RefMan.md
 
 $(WWW)/UserGuide.html: UGuide.md
 	Markdown.pl $< > $@
+
+sdist: $(PYFILES)
+	python setup.py sdist
+
+install:
+	@if [[ `whoami` == "root" ]]; then \
+        pip install .; \
+    elif [[ `which python` == "/usr/bin/python" ]]; then \
+		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
+	else \
+		pip install .; \
+	fi
+
+upgrade:
+	@if [[ `whoami` == "root" ]]; then \
+        pip install --upgrade .; \
+    elif [[ `which python` == "/usr/bin/python" ]]; then \
+		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
+	else \
+		pip install --upgrade .; \
+	fi
+
+uninstall:
+	@if [[ `whoami` == "root" ]]; then \
+        pip uninstall hpssic; \
+    elif [[ `which python` == "/usr/bin/python" ]]; then \
+		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
+	else \
+		pip uninstall hpssic; \
+	fi
