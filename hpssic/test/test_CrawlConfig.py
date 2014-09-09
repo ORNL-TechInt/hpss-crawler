@@ -1610,6 +1610,18 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                     self.expected(D[section][option], obj.get(section, option))
 
     # --------------------------------------------------------------------------
+    def test_root_absolute(self):
+        """
+        Verify that root gets absolutized when the CrawlConfig is initialized
+        """
+        new = CrawlConfig.CrawlConfig({'root': '.'})
+        self.expected(os.getcwd(), new.get('DEFAULT', 'root'))
+        new.add_section('crawler')
+        new.set('crawler', 'logpath', '%(root)s/xyzzy.log')
+        self.expected("%s/xyzzy.log" % os.getcwd(),
+                      new.get('crawler', 'logpath'))
+
+    # --------------------------------------------------------------------------
     def clear_env(self):
         """
         Remove $CRAWL_CFG from the environment.

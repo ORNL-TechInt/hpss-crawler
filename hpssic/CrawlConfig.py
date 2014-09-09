@@ -214,7 +214,11 @@ class CrawlConfig(ConfigParser.ConfigParser):
         m = sys.modules[__name__]
         m.NoOptionError = m.ConfigParser.NoOptionError
         ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
-        pass
+
+        if self.has_option('DEFAULT', 'root'):
+            root = self.get('DEFAULT', 'root')
+            if not root.startswith('/'):
+                self.set('DEFAULT', 'root', os.path.abspath(root))
 
     # -------------------------------------------------------------------------
     def changed(self):
