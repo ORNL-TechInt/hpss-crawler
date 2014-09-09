@@ -14,6 +14,7 @@ from hpssic import testhelp
 import time
 from hpssic import toolframe
 from hpssic import util
+from hpssic import util as U
 
 
 M = sys.modules['__main__']
@@ -446,6 +447,24 @@ class UtilTest(testhelp.HelpedTestCase):
                          "Expected '%s', got '%s'" % (exp, actual))
 
         del os.environ[vname]
+
+    # -------------------------------------------------------------------------
+    def test_git_repo(self):
+        """
+        Make sure git_repo() works on relative paths
+        """
+        tdir = U.dirname(__file__)
+        hdir = U.dirname(tdir)
+        gdir = U.dirname(hdir)
+        odir = U.dirname(gdir)
+        exp = gdir
+        self.expected(exp, util.git_repo('.'))
+        self.expected(exp, util.git_repo(__file__))
+        self.expected(exp, util.git_repo(tdir))
+        self.expected(exp, util.git_repo(hdir))
+        self.expected(exp, util.git_repo(gdir))
+        self.expected('', util.git_repo(odir))
+        self.expected('', util.git_repo(U.dirname(odir)))
 
     # -------------------------------------------------------------------------
     def test_hostname_default(self):

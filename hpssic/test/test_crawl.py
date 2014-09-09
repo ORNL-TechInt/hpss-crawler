@@ -37,6 +37,9 @@ def setUpModule():
     """
     Setup for running the tests.
     """
+    grepo = util.git_repo('.')
+    if grepo != '' and grepo != os.getcwd():
+        os.chdir(grepo)
     cfgl = glob.glob("*.cfg")
     if 0 == len(cfgl):
         print("You need to create a configuration before you can run tests.")

@@ -402,6 +402,8 @@ def git_repo(path):
     If path is inside a git repo (including the root), return the root of the
     git repo. Otherwise, return ''
     """
+    if not os.path.isabs(path):
+        path = abspath(path)
     dotgit = pathjoin(path, ".git")
     while not os.path.exists(dotgit) and path != "/":
         path = dirname(path)
