@@ -715,3 +715,5 @@ def tape_types_populate(hpssroot):
                     TT[k][kk]['label'] = label
                     break
     msg.close()
+
+    cv_lib.ttype_map_insert(TT)

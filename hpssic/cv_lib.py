@@ -296,6 +296,28 @@ def ttype_map_desc(type, subtype):
 
 
 # -----------------------------------------------------------------------------
+def ttype_map_insert(TT):
+    """
+    Populate the table PFX_tape_types with the contents of *data*.
+    """
+    tt_tups = []
+    for k in TT:
+        if k.isdigit():
+            mtype = TT[k]['label']
+            for l in TT[k]:
+                if l.isdigit():
+                    mstype = TT[k][l]['label']
+
+                    tt_tups.append((k, l, '%s/%s' % (mtype, mstype)))
+
+    db = CrawlDBI.DBI("crawler")
+    db.insert(table='tape_types',
+              fields=['type', 'subtype', 'name'],
+              data=tt_tups)
+    db.close()
+
+
+# -----------------------------------------------------------------------------
 def update_stats(cmf):
     """
     Record the values in tuple cmf in table cvstats in the database. If the
