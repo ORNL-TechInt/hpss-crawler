@@ -1,6 +1,7 @@
 import CrawlDBI
 import dbschem
 import hpss
+import pdb
 import time
 import util as U
 
@@ -302,15 +303,21 @@ def ttype_map_insert(TT):
     """
     tt_tups = []
     for k in TT:
-        if k.isdigit():
-            mtype = TT[k]['label']
+        if type(k) == int:
+            try:
+                mtype = TT[k]['label']
+            except KeyError:
+                mtype = TT[k]['name']
             for l in TT[k]:
-                if l.isdigit():
-                    mstype = TT[k][l]['label']
+                if type(l) == int:
+                    try:
+                        mstype = TT[k][l]['label']
+                    except KeyError:
+                        mstype = TT[k][l]['list'][0]
 
                     tt_tups.append((k, l, '%s/%s' % (mtype, mstype)))
 
-    db = CrawlDBI.DBI("crawler")
+    db = CrawlDBI.DBI(dbtype="crawler")
     db.insert(table='tape_types',
               fields=['type', 'subtype', 'name'],
               data=tt_tups)
