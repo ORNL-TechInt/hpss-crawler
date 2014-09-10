@@ -303,7 +303,7 @@ class Test_MISC(th.HelpedTestCase):
                 path = os.path.join(r, fname)
                 if "CrawlDBI" in path:
                     continue
-                if path.endswith(".py") and not path.startswith(".#"):
+                if path.endswith(".py") and not fname.startswith(".#"):
                     result = check_for_duplicates(path)
                     if result != '':
                         dupl[path] = result
