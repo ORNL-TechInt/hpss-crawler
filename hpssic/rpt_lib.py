@@ -80,6 +80,11 @@ def get_mpra_report(db, last_rpt_time):
     body = ''
     if db.table_exists(table='mpra'):
         rows = db.select(table="mpra",
+                         fields=['type',
+                                 'scan_time',
+                                 'start_time',
+                                 'end_time',
+                                 'hits'],
                          where="? < scan_time",
                          data=(last_rpt_time,),
                          orderby="type")
@@ -119,6 +124,11 @@ def get_tcc_report(db, last_rpt_time):
     if db.table_exists(table='tcc_data'):
         checks = correct = error = 0
         rows = db.select(table="tcc_data",
+                         fields=['check_time',
+                                 'low_nsobj_id',
+                                 'high_nsobj_id',
+                                 'correct',
+                                 'error'],
                          where="? < check_time",
                          data=(last_rpt_time,))
 
