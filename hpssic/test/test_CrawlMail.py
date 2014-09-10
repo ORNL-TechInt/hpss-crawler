@@ -1,3 +1,4 @@
+from hpssic import CrawlMail
 from hpssic import fakesmtp
 from nose.plugins.skip import SkipTest
 from hpssic import testhelp as th
@@ -11,7 +12,21 @@ class CrawlMailTest(th.HelpedTestCase):
         The *to* arg to CrawlMail.send() is a comma separated list of
         addresses. Should work.
         """
-        raise SkipTest
+        fakesmtp.inbox = []
+        sender = 'from@here.now'
+        tolist = ['a@b.c', 'd@e.f']
+        subject = 'Topic'
+        body = 'Message body'
+        CrawlMail.send(sender=sender,
+                       to=','.join(tolist),
+                       subj=subject,
+                       msg=body)
+        m = fakesmtp.inbox[0]
+        self.expected(sender, m.from_address)
+        self.expected(tolist, m.to_address)
+        self.expected_in(subject, m.fullmessage)
+        self.expected_in(body, m.fullmessage)
+        # raise SkipTest
 
     # -------------------------------------------------------------------------
     def test_to_sectopt(self):
