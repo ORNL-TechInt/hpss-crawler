@@ -111,7 +111,8 @@ class DBITest(DBITestRoot):
         dbname from the config.
         """
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "dbname may only be specified if dbtype = 'db2'",
+                             "dbtype must be 'hpss' or 'crawler' " +
+                             "(dbname=None)",
                              CrawlDBI.DBI,
                              dbname='foobar')
 

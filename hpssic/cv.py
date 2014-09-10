@@ -441,9 +441,15 @@ def cvv_ttype_lookup(argv):
     if o.debug:
         pdb.set_trace()
 
-    path = a[0]
-    media = cv_lib.ttype_lookup(path)
-    print("%s is stored on %s" % (path, media))
+    rpt = {}
+    for path in a:
+        media = cv_lib.ttype_lookup(path)
+        rpt[path] = media
+
+    pwid = max([len(x) for x in rpt.keys()])
+    for path in rpt.keys():
+        for (c, m) in rpt[path]:
+            print("%*s %s %s" % (-pwid, path, c, m))
 
 # -----------------------------------------------------------------------------
 def cvv_ttype_populate(argv):

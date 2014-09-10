@@ -24,6 +24,10 @@ except ImportError:
     mysql_available = False
 
 
+HPSS_SECTION = 'db2'
+CRWL_SECTION = 'dbi'
+
+
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
     """
@@ -126,16 +130,43 @@ class DBI(object):
                 dbname = cfg.get('dbi', 'dbname')
                 kwargs['cfg'] = cfg
             else:
-                raise StandardError("'%s not in kwargs(%s)" %
-                                    ("'dbtype' and 'cfg' both in and",
-                                     str(kwargs)))
-        except CrawlConfig.NoSectionError, e:
-            raise DBIerror("A 'dbi' section is required in the configuration")
-        except CrawlConfig.NoOptionError, e:
-            raise DBIerror(str(e))
+                cfg = args[0]
+        elif 'cfg' in kwargs:
+            cfg = kwargs['cfg']
+        else:
+            cfg = CrawlConfig.get_config()
 
-        kwargs['dbname'] = dbname
-        kwargs['tbl_prefix'] = tbl_pfx
+        # pdb.set_trace()
+        dbtype = ''
+        dbname = ''
+        tbl_pfx = ''
+        if 'dbtype' not in kwargs:
+            raise DBIerror("dbtype must be 'hpss' or 'crawler'")
+        elif kwargs['dbtype'] == 'db2' or kwargs['dbtype'] == 'hpss':
+            dbtype = cfg.get(HPSS_SECTION, 'dbtype')
+            tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
+            if 'dbname' not in kwargs:
+                raise DBIerror("With dbtype=%s, dbname must be specified" %
+                               dbtype)
+            elif kwargs['dbname'] not in cfg.options(HPSS_SECTION):
+                raise DBIerror("dbname %s not defined in the configuration" %
+                               kwargs['dbname'])
+            else:
+                dbname = cfg.get(HPSS_SECTION, kwargs['dbname'])
+        elif kwargs['dbtype'] == 'dbi' or kwargs['dbtype'] == 'crawler':
+            if 'dbname' in kwargs:
+                raise DBIerror("dbname may not be specified here")
+            dbtype = cfg.get(CRWL_SECTION, 'dbtype')
+            try:
+                dbname = cfg.get(CRWL_SECTION, 'dbname')
+            except CrawlConfig.NoOptionError, e:
+                raise DBIerror(e)
+            tbl_pfx = cfg.get(CRWL_SECTION, 'tbl_prefix')
+
+        okw = {}
+        okw['cfg'] = cfg
+        okw['dbname'] = dbname
+        okw['tbl_prefix'] = tbl_pfx
         if dbtype == 'sqlite':
             self._dbobj = DBIsqlite(*args, **kwargs)
         elif dbtype == 'mysql':

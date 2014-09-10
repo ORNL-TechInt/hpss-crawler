@@ -1,3 +1,4 @@
+import CrawlDBI
 import hpss
 import util as U
 
@@ -12,6 +13,7 @@ def ttype_lookup(pathname):
     Look up the type/subtype combination in the *_tape_types table and return
     the corresponding string.
     """
+    rval = []
 
     # Get the cart name from hsi
     H = hpss.HSI()
@@ -22,14 +24,16 @@ def ttype_lookup(pathname):
     if cart is None:
         return None
 
-    # Get the type/subtype from PVLPV
-    (type, subtype) = ttype_cart_lookup(cart)
+    cartlist = cart.split(',')
 
-    # Get the human readable string from *_tape_types
-    desc = ttype_map_desc(type, subtype)
+    # Get the type/subtype from PVLPV
+    for cart in cartlist:
+        (type, subtype) = ttype_cart_lookup(cart)
+        desc = ttype_map_desc(type, subtype)
+        rval.append((cart, desc))
 
     # Return the media description
-    return desc
+    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -41,11 +45,12 @@ def ttype_cart_lookup(cartname):
     db = CrawlDBI.DBI(dbtype='hpss', dbname='cfg')
     rows = db.select(table="pvlpv",
                      fields=["phys_vol_type_type",
-                             "phys_vol_type_subtype",],
-                     where="cartridge_id = ?",
+                             "phys_vol_type_subtype",
+                             ],
+                     where="phys_vol_id = ?",
                      data=(cartname,))
     db.close()
-    return rows[0]
+    return (rows[0]['PHYS_VOL_TYPE_TYPE'], rows[0]['PHYS_VOL_TYPE_SUBTYPE'])
 
 
 # -----------------------------------------------------------------------------
@@ -60,4 +65,4 @@ def ttype_map_desc(type, subtype):
                      where="type = ? and subtype = ?",
                      data=(type, subtype,))
     db.close()
-    return rows[0]
+    return rows[0][0]
