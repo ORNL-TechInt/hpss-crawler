@@ -187,6 +187,16 @@ class DBI(object):
         return self._dbobj.__repr__()
 
     # -------------------------------------------------------------------------
+    def alter(self, **kwargs):
+        """
+        Alter a table as indicated by the arguments.
+        Syntax:
+          db.alter(table=<tabname>, addcol=<col desc>, pos='first|after <col>')
+          db.alter(table=<tabname>, dropcol=<col name>)
+        """
+        return self._dbobj.alter(**kwargs)
+
+    # -------------------------------------------------------------------------
     def table_exists(self, **kwargs):
         """
         Return True if the table argument is not empty and the named table
@@ -228,6 +238,13 @@ class DBI(object):
         return self._dbobj.delete(**kwargs)
 
     # -------------------------------------------------------------------------
+    def describe(self, **kwargs):
+        """
+        Return a table description.
+        """
+        return self._dbobj.describe(**kwargs)
+
+    # -------------------------------------------------------------------------
     def drop(self, **kwargs):
         """
         Drop the named table.
@@ -259,10 +276,6 @@ class DBI(object):
         rows are returned in that order.
         """
         return self._dbobj.select(**kwargs)
-
-    # -------------------------------------------------------------------------
-    def sql(self, *args, **kwargs):
-        return self._dbobj.sql(*args, **kwargs)
 
     # -------------------------------------------------------------------------
     def update(self, **kwargs):
@@ -299,7 +312,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
-        See DBI.__init__()
+        sqlite: See DBI.__init__()
         """
         for attr in kwargs:
             if attr in self.settable_attrl:
@@ -325,15 +338,44 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
-        See DBI.__repr__()
+        sqlite: See DBI.__repr__()
         """
         rv = "DBIsqlite(dbname='%s')" % self.dbname
         return rv
 
     # -------------------------------------------------------------------------
+    def alter(self, table='', addcol=None, dropcol=None, pos=None):
+        """
+        Sqlite ignores pos if it's set and does not support dropcol.
+        """
+        if type(table) != str:
+            raise DBIerror("On alter(), table name must be a string",
+                           dbname=self.dbname)
+        elif table == '':
+            raise DBIerror("On alter(), table name must not be empty",
+                           dbname=self.dbname)
+        elif dropcol is not None:
+            raise DBIerror("SQLite does not support dropping columns",
+                           dbname=self.dbname)
+        elif addcol is None:
+            raise DBIerror("ALTER requires an action")
+        elif addcol.strip() == "":
+            raise DBIerror("On alter(), addcol must not be empty")
+        elif any([x in addcol for x in ['"', "'", ';', '=']]):
+            raise DBIerror("Invalid addcol argument")
+
+        try:
+            cmd = ("alter table %s add column %s" %
+                   (self.prefix(table), addcol))
+            c = self.dbh.cursor()
+            c.execute(cmd)
+        except sqlite3.Error, e:
+            raise DBIerror(''.join(e.args), dbname=self.dbname)
+
+    # -------------------------------------------------------------------------
     def close(self):
         """
-        See DBI.close()
+        sqlite: See DBI.close()
         """
         # Close the database connection
         try:
@@ -345,7 +387,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
-        See DBI.create()
+        sqlite: See DBI.create()
         """
         # Handle bad arguments
         if type(fields) != list:
@@ -375,7 +417,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def cursor(self):
         """
-        See DBI.cursor()
+        sqlite: See DBI.cursor()
         """
         try:
             rval = self.dbh.cursor()
@@ -386,7 +428,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def delete(self, table='', where='', data=()):
         """
-        See DBI.delete()
+        sqlite: See DBI.delete()
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -425,9 +467,20 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror(cmd + ': ' + ''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
+    def describe(self, table=''):
+        """
+        sqlite: Return the description of a table.
+        """
+        cmd = "pragma table_info(%s)" % self.prefix(table)
+        c = self.dbh.cursor()
+        c.execute(cmd)
+        rows = c.fetchall()
+        return rows
+
+    # -------------------------------------------------------------------------
     def drop(self, table=''):
         """
-        See DBI.create()
+        sqlite: See DBI.create()
         """
         # Handle bad arguments
         if type(table) != str:
@@ -449,7 +502,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
         """
-        See DBI.insert()
+        sqlite: See DBI.insert()
         """
         # Handle any bad arguments
         if type(table) != str:
@@ -495,7 +548,7 @@ class DBIsqlite(DBI_abstract):
                orderby='',
                limit=None):
         """
-        See DBI.select()
+        sqlite: See DBI.select()
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -558,7 +611,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def table_exists(self, table=''):
         """
-        See DBI.table_exists()
+        sqlite: See DBI.table_exists()
         """
         try:
             dbc = self.dbh.cursor()
@@ -576,7 +629,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def update(self, table='', where='', fields=[], data=[]):
         """
-        See DBI.update()
+        sqlite: See DBI.update()
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -625,7 +678,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def __init__(self, *args, **kwargs):
             """
-            See DBI.__init__()
+            mysql: See DBI.__init__()
             """
             for attr in kwargs:
                 if attr in self.settable_attrl:
@@ -657,12 +710,53 @@ if mysql_available:
         # -------------------------------------------------------------------------
         def __repr__(self):
             """
-            See DBI.__repr__()
+            mysql: See DBI.__repr__()
             """
             rv = "DBImysql(dbname='%s')" % self.dbname
             return rv
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        def alter(self, table='', addcol=None, dropcol=None, pos=None):
+            """
+            mysql: Alter the table as indicated.
+            """
+            cmd = ''
+            if type(table) != str:
+                raise DBIerror("On alter(), table name must be a string",
+                               dbname=self.dbname)
+            elif table == '':
+                raise DBIerror("On alter(), table name must not be empty",
+                               dbname=self.dbname)
+            elif addcol is not None:
+                if addcol.strip() == '':
+                    raise DBIerror("On alter(), addcol must not be empty",
+                                   dbname=self.dbname)
+                if any([x in addcol for x in ['"', "'", ';', '=']]):
+                    raise DBIerror("Invalid addcol argument")
+                if pos:
+                    cmd = ("alter table %s add column %s %s" %
+                           (self.prefix(table), addcol, pos))
+                else:
+                    cmd = ("alter table %s add column %s" %
+                           (self.prefix(table), addcol))
+            elif dropcol is not None:
+                if dropcol.strip() == '':
+                    raise DBIerror("On alter, dropcol must not be empty",
+                                   dbname=self.dbname)
+                if any([x in dropcol for x in ['"', "'", ';', '=']]):
+                    raise DBIerror("Invalid dropcol argument")
+                cmd = ("alter table %s drop column %s" %
+                       (self.prefix(table), dropcol))
+            if cmd == '':
+                raise DBIerror("ALTER requires an action")
+
+            try:
+                c = self.dbh.cursor()
+                c.execute(cmd)
+            except mysql_exc.Error, e:
+                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+
+        # ---------------------------------------------------------------------
         def close(self):
             """
             See DBI.close()
@@ -677,7 +771,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
             """
             See DBI.create()
@@ -710,7 +804,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def cursor(self):
             """
             See DBI.cursor()
@@ -721,7 +815,7 @@ if mysql_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         def delete(self, table='', where='', data=()):
             """
             See DBI.delete()
@@ -762,7 +856,20 @@ if mysql_available:
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
-        # -------------------------------------------------------------------------
+        # ---------------------------------------------------------------------
+        def describe(self, table=''):
+            """
+            mysql: Return a table description
+            """
+            cmd = """select column_name, ordinal_position, data_type
+                         from information_schema.columns
+                         where table_name = %s"""
+            c = self.dbh.cursor()
+            c.execute(cmd, (self.prefix(table),))
+            r = c.fetchall()
+            return r
+
+        # ---------------------------------------------------------------------
         def drop(self, table=''):
             # Handle bad arguments
             if type(table) != str:
@@ -890,20 +997,6 @@ if mysql_available:
                 c.close()
                 return rv
             # Translate any sqlite3 errors to DBIerror
-            except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
-
-        # -------------------------------------------------------------------------
-        def sql(self, command):
-            """
-            Run a string of SQL against the database
-            """
-            if self.closed:
-                raise DBIerror("Cannot operate on a closed database.")
-            try:
-                c = self.dbh.cursor()
-                c.execute(command)
-                c.close()
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
@@ -1049,6 +1142,13 @@ if db2_available:
             return rval
 
         # -------------------------------------------------------------------------
+        def alter(self, table='', addcol=None, dropcol=None, pos=None):
+            """
+            See DBI.alter()
+            """
+            raise DBIerror("ALTER not supported for DB2")
+
+        # -------------------------------------------------------------------------
         def close(self):
             """
             See DBI.close()
@@ -1083,11 +1183,18 @@ if db2_available:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
         # -------------------------------------------------------------------------
-        def delete(self, **kwarsg):
+        def delete(self, **kwargs):
             """
             See DBI.delete()
             """
             raise DBIerror("DELETE not supported for DB2")
+
+        # -------------------------------------------------------------------------
+        def describe(self, **kwargs):
+            """
+            Return a table description
+            """
+            pass   # yagni
 
         # -------------------------------------------------------------------------
         def drop(self, table=''):
@@ -1195,7 +1302,7 @@ if db2_available:
         # -------------------------------------------------------------------------
         def table_exists(self, table=''):
             """
-            Check whether a table exists in a mysql database
+            Check whether a table exists in a db2 database
             """
             if self.closed:
                 raise DBIerror("Cannot operate on a closed database.")
