@@ -256,17 +256,25 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
     # -------------------------------------------------------------------------
     def get_d(self, section, option, default=None):
+        """
+        Return the section/option value from the config. If the section or
+        option is not defined, return the default value. If the default value
+        is None, pass the exception up the stack, but add the config filename
+        to it first.
+        """
         try:
             value = self.get(section, option)
-        except ConfigParser.NoSectionError:
+        except ConfigParser.NoSectionError as e:
             if default is not None:
                 value = default
             else:
+                e.message += " in %s" % self.filename
                 raise
-        except ConfigParser.NoOptionError:
+        except ConfigParser.NoOptionError as e:
             if default is not None:
                 value = default
             else:
+                e.message += " in %s" % self.filename
                 raise
         return value
 
@@ -290,10 +298,17 @@ class CrawlConfig(ConfigParser.ConfigParser):
             [(mag, unit)] = re.findall("(\d+)\s*(\w*)", spec)
             mult = self.map_size_unit(unit)
             rval = int(mag) * mult
-        except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
+        except ConfigParser.NoOptionError as e:
             if default is not None:
                 rval = default
             else:
+                e.message += " in %s" % self.filename
+                raise
+        except ConfigParser.NoSectionError as e:
+            if default is not None:
+                rval = default
+            else:
+                e.message += " in %s" % self.filename
                 raise
 
         return rval
@@ -303,6 +318,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         """
         Retrieve the value of section/option. It is assumed to be a duration
         specification, like -- '10 seconds', '2hr', '7 minutes', or the like.
+
         We will call map_time_unit to convert the unit into a number of
         seconds, then multiply by the magnitude, and return an int number of
         seconds. If the caller specifies a default and we get a NoSectionError
@@ -317,12 +333,14 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 rval = default
                 log(str(e) + '; using default value %d' % default)
             else:
+                e.message += " in %s" % self.filename
                 raise
         except ConfigParser.NoSectionError as e:
             if default is not None:
                 rval = default
                 log(str(e) + '; using default value %d' % default)
             else:
+                e.message += " in %s" % self.filename
                 raise
 
         return rval
@@ -345,8 +363,14 @@ class CrawlConfig(ConfigParser.ConfigParser):
             rval = ConfigParser.ConfigParser.getboolean(self, name, option)
         except ValueError:
             rval = False
-        except ConfigParser.NoOptionError:
+        except ConfigParser.NoOptionError as e:
             rval = False
+            # e.message += " in %s" % self.filename
+            # raise
+        except ConfigParser.NoSectionError as e:
+            rval = False
+            # e.message += " in %s" % self.filename
+            # raise
         return rval
 
     # -------------------------------------------------------------------------

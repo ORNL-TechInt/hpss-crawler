@@ -416,7 +416,30 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected('buck', obj.get_d('malename', 'deer', 'buck'))
 
     # -------------------------------------------------------------------------
-    def test_get_d_without(self):
+    def test_get_d_without_opt(self):
+        """
+        Calling get_d() without a default value should
+
+          1) return the option value if it's defined
+          2) otherwise throw a NoOptionError when the option is missing
+        """
+        obj = CrawlConfig.CrawlConfig()
+        fname = util.my_name()
+        obj.load_dict(self.sample)
+        obj.filename = fname
+        # section and option are in the config object
+        self.expected('quack', obj.get_d('sounds', 'duck'))
+
+        # section is defined, option is not, should get exception
+        self.assertRaisesMsg(CrawlConfig.NoOptionError,
+                             "No option '%s' in section: '%s' in %s" %
+                             ("dolphin", "sounds", fname),
+                             obj.get_d,
+                             'sounds',
+                             'dolphin')
+
+    # -------------------------------------------------------------------------
+    def test_get_d_without_sect(self):
         """
         Calling get_d() without a default value should
 
@@ -428,19 +451,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # section and option are in the config object
         self.expected('quack', obj.get_d('sounds', 'duck'))
 
-        # section is defined, option is not, should get exception
-        try:
-            self.expected('whistle', obj.get_d('sounds', 'dolphin'))
-            self.fail("Expected exception not thrown")
-        except CrawlConfig.NoOptionError:
-            pass
-
-        # section not defined, should get the default
-        try:
-            self.expected('buck', obj.get_d('malename', 'deer'))
-            self.fail("Expected exception not thrown")
-        except CrawlConfig.NoSectionError:
-            pass
+        # section not defined, should get NoSectionError
+        self.assertRaisesMsg(CrawlConfig.NoSectionError,
+                             "No section: 'malename' in <???>",
+                             obj.get_d,
+                             'malename',
+                             'deer')
 
     # -------------------------------------------------------------------------
     def test_get_logger_00(self):
@@ -678,6 +694,39 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected(30*1024*1024, obj.get_size(section, 'thirtymib'))
 
     # -------------------------------------------------------------------------
+    def test_get_size_opt(self):
+        """
+        Call get_size() in such a way that it throws a NoOptionError so we can
+        see that it adds the filename to the error message
+        """
+        section = util.my_name()
+        fpath = __file__
+        obj = CrawlConfig.CrawlConfig()
+        obj.add_section(section)
+        obj.filename = fpath
+        self.assertRaisesMsg(CrawlConfig.NoOptionError,
+                             "No option 'foobar' in section: '%s' in %s" %
+                             (section, fpath),
+                             obj.get_size,
+                             section,
+                             "foobar")
+
+    # -------------------------------------------------------------------------
+    def test_get_size_sect(self):
+        """
+        Call get_size() in such a way that it throws a NoSectionError so we can
+        see that it adds the filename to the error message
+        """
+        section = util.my_name()
+        obj = CrawlConfig.CrawlConfig()
+        self.assertRaisesMsg(CrawlConfig.NoSectionError,
+                             "No section: '%s' in <???>" %
+                             section,
+                             obj.get_size,
+                             section,
+                             "foobar")
+
+    # -------------------------------------------------------------------------
     def test_get_time(self):
         """
         Routines exercised: __init__(), load_dict(), get_time().
@@ -686,6 +735,37 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj.load_dict(self.sample)
         self.assertEqual(obj.get_time('crawler', 'heartbeat'), 3600)
         self.assertEqual(obj.get_time('crawler', 'frequency'), 300)
+
+    # -------------------------------------------------------------------------
+    def test_get_time_opt(self):
+        """
+        Call get_time() in such a way that it throws a NoOptionError so we can
+        see that it adds the filename to the error message
+        """
+        section = util.my_name()
+        obj = CrawlConfig.CrawlConfig()
+        obj.add_section(section)
+        self.assertRaisesMsg(CrawlConfig.NoOptionError,
+                             "No option 'foobar' in section: '%s' in <???>" %
+                             section,
+                             obj.get_time,
+                             section,
+                             "foobar")
+
+    # -------------------------------------------------------------------------
+    def test_get_time_sect(self):
+        """
+        Call get_time() in such a way that it throws a NoSectionError so we can
+        see that it adds the filename to the error message
+        """
+        section = util.my_name()
+        obj = CrawlConfig.CrawlConfig()
+        self.assertRaisesMsg(CrawlConfig.NoSectionError,
+                             "No section: '%s' in <???>" %
+                             section,
+                             obj.get_time,
+                             section,
+                             "foobar")
 
     # -------------------------------------------------------------------------
     def test_getboolean(self):
