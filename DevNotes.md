@@ -85,3 +85,20 @@ Modes of testing:
            $ export PYTHONPATH=$GIT_REPO
 
    Puts CLEPs in $PATH ($GIT_REPO/bin)
+
+
+#### 2014.0903
+
+Decided how to handle strings defined in messages.py that involve
+formatter expressions. For example,
+
+
+    more_than_one_ss = "More than one record found in %s for table %s"
+
+The "_ss" at the end of the name indicates that the string contains
+two occurrences of "%s" that need matching data to follow. A variable
+name like
+
+    my_special_string_dfs
+
+would indicate a string with "%d", "%f", and "%s" embedded.

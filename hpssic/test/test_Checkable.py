@@ -309,8 +309,8 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # verify that the file's mtime is unchanged and its size is unchanged
         post = os.stat(self.testdb)
-        self.expected(self.ymdhms(pre[stat.ST_MTIME]),
-                      self.ymdhms(post[stat.ST_MTIME]))
+        self.expected(util.ymdhms(pre[stat.ST_MTIME]),
+                      util.ymdhms(post[stat.ST_MTIME]))
         self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
 
     # -------------------------------------------------------------------------
@@ -855,7 +855,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
         c = Checkable(path='/home', type='d')
         self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
-        self.expected(self.ymdhms(t1), self.ymdhms(x[1].last_check))
+        self.expected(util.ymdhms(t1), util.ymdhms(x[1].last_check))
 
     # -------------------------------------------------------------------------
     def test_persist_dir_update(self):
@@ -1042,7 +1042,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         x = Checkable.get_list()
         self.expected(2, len(x))
-        self.expected(self.ymdhms(now), self.ymdhms(x[1].last_check))
+        self.expected(util.ymdhms(now), util.ymdhms(x[1].last_check))
 
     # -------------------------------------------------------------------------
     def test_repr(self):
@@ -1089,11 +1089,3 @@ class CheckableTest(testhelp.HelpedTestCase):
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', 0)])
         db.close()
-
-    # -------------------------------------------------------------------------
-    def ymdhms(self, dt):
-        """
-        Given a tm tuple, return a formatted data/time string
-        ("YYYY.mmdd.HHMMSS")
-        """
-        return time.strftime("%Y.%m%d.%H%M%S", time.localtime(dt))

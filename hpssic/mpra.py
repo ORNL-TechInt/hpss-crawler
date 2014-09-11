@@ -399,6 +399,25 @@ def mprf_simplug(args):
     crawl_lib.simplug('mpra', args)
 
 
+# ------------------------------------------------------------------------------
+def mprf_syspath(argv):
+    """syspath - dump python's sys.path array
+
+    usage: mpra syspath
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    for item in sys.path:
+        print("    " + item)
+
+
 # -----------------------------------------------------------------------------
 def mprf_xplocks(args):
     """xplocks - run the xpired lock query against bfpurgerec

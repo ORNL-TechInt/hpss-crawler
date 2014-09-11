@@ -1,5 +1,6 @@
 import CrawlConfig
 import CrawlDBI
+import dbschem
 import Dimension
 import email.mime.text
 import pdb
@@ -71,6 +72,7 @@ def get_cv_report(db, last_rpt_time):
 
 # -----------------------------------------------------------------------------
 def get_mpra_report(db=None, last_rpt_time=0):
+    close = False
     if db is None:
         db = CrawlDBI.DBI(dbtype="crawler")
         close = True
@@ -179,7 +181,7 @@ def get_last_rpt_time(db):
     exist before make_table ('Created' in result), the table is empty so we
     just return 0 to indicate no last report time.
     """
-    result = dbschem.make_table(table="report")
+    result = dbschem.make_table("report")
     if "Created" in result:
         rval = 0
     else:

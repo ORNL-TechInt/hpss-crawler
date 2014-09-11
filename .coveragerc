@@ -1,0 +1,12 @@
+[run]
+# source = hpssic
+
+# include =
+#     hpssic/*.py
+
+omit = 
+    hpssic/test/*
+    *__init__.py
+    *example.py
+    *hsi-demo.py
+    *ztool.py

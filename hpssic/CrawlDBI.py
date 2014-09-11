@@ -33,14 +33,20 @@ CRWL_SECTION = 'dbi-crawler'
 # -----------------------------------------------------------------------------
 class DBI_abstract(object):
     """
-    Each of the specific database interface classes (DBIsqlite, DBImysql, etc.)
-    inherit from this one
+    DBI_abstract: Each of the specific database interface classes (DBIsqlite,
+    DBImysql, etc.) inherit from this one
     """
     settable_attrl = ['cfg', 'dbname', 'host', 'username', 'password',
                       'tbl_prefix']
 
     # -------------------------------------------------------------------------
     def prefix(self, tabname):
+        """
+        DBI_abstract: Handle prefixing a table name with the prefix for this
+        database connection unless it's already there. If the table name comes
+        in with '@' on the front, that's a signal to not prefix, so we just
+        strip off the '@' and return the table name.
+        """
         if self.tbl_prefix == '':
             return tabname
 
@@ -68,8 +74,8 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
-        Here we look for configuration information indicating which kind of
-        database to use. In the cfg argument, the caller can pass us 1) the
+        DBI: Here we look for configuration information indicating which kind
+        of database to use. In the cfg argument, the caller can pass us 1) the
         name of a configuration file, or 2) a CrawlConfig object. If the cfg
         argument is not present, we try to check 'crawl.cfg' as the default
         configuration file. Anything else in the cfg argument (i.e., not a
@@ -187,7 +193,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
-        Human readable representation for the object provided by the
+        DBI: Human readable representation for the object provided by the
         database-specific class.
         """
         rv = self._dbobj.__repr__()
@@ -198,7 +204,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def alter(self, **kwargs):
         """
-        Alter a table as indicated by the arguments.
+        DBI: Alter a table as indicated by the arguments.
         Syntax:
           db.alter(table=<tabname>, addcol=<col desc>, pos='first|after <col>')
           db.alter(table=<tabname>, dropcol=<col name>)
@@ -210,7 +216,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def table_exists(self, **kwargs):
         """
-        Return True if the table argument is not empty and the named table
+        DBI: Return True if the table argument is not empty and the named table
         exists (even if the table itself is empty). Otherwise, return False.
         """
         if self.closed:
@@ -220,7 +226,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def close(self):
         """
-        Close the connection to the database. After a call to close(),
+        DBI: Close the connection to the database. After a call to close(),
         operations are not allowed on the database.
         """
         if self.closed:
@@ -232,7 +238,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def create(self, **kwargs):
         """
-        Create the named table containing the fields listed. The fields
+        DBI: Create the named table containing the fields listed. The fields
         list contains column specifications, for example:
 
             ['id int primary key', 'name text', 'category xtext', ... ]
@@ -244,7 +250,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def cursor(self, **kwargs):
         """
-        Return a database cursor
+        DBI: Return a database cursor
         """
         if self.closed:
             raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
@@ -253,8 +259,8 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def delete(self, **kwargs):
         """
-        Delete data from the table. table is a table name (string). where is a
-        where clause (string). data is a tuple of fields.
+        DBI: Delete data from the table. table is a table name (string). where
+        is a where clause (string). data is a tuple of fields.
         """
         if self.closed:
             raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
@@ -263,7 +269,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def describe(self, **kwargs):
         """
-        Return a table description.
+        DBI: Return a table description.
         """
         if self.closed:
             raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
@@ -272,7 +278,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def drop(self, **kwargs):
         """
-        Drop the named table.
+        DBI: Drop the named table.
         """
         if self.closed:
             raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
@@ -281,8 +287,8 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def insert(self, **kwargs):
         """
-        Insert data into the table. Fields is a list of field names. Data is a
-        list of tuples.
+        DBI: Insert data into the table. Fields is a list of field names. Data
+        is a list of tuples.
         """
         if self.closed:
             raise DBIerror(MSG.db_closed, dbname=self._dbobj.dbname)
@@ -291,8 +297,8 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def select(self, **kwargs):
         """
-        Retrieve data from the table. Table name must be present. If fields is
-        empty, all fields are selected.
+        DBI: Retrieve data from the table. Table name must be present. If
+        fields is empty, all fields are selected.
 
         If the where argument is empty, all rows are selected and returned. If
         it contains an expression like 'id < 5', only the matching rows are
@@ -311,7 +317,7 @@ class DBI(object):
     # -------------------------------------------------------------------------
     def update(self, **kwargs):
         """
-        Update data in the table. Where indicates which records are to be
+        DBI: Update data in the table. Where indicates which records are to be
         updated. Fields is a list of field names. Data is a list of tuples.
         """
         if self.closed:
@@ -328,14 +334,14 @@ class DBIerror(Exception):
     """
     def __init__(self, value, dbname=None):
         """
-        Set the value for the exception. It should be a string.
+        DBIerror: Set the value for the exception. It should be a string.
         """
         self.value = str(value)
         self.dbname = dbname
 
     def __str__(self):
         """
-        Report the exception value (should be a string).
+        DBIerror: Report the exception value (should be a string).
         """
         return "%s (dbname=%s)" % (str(self.value), self.dbname)
 
@@ -345,7 +351,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """
-        sqlite: See DBI.__init__()
+        DBIsqlite: See DBI.__init__()
         """
         for attr in kwargs:
             if attr in self.settable_attrl:
@@ -371,7 +377,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
-        sqlite: See DBI.__repr__()
+        DBIsqlite: See DBI.__repr__()
         """
         rv = "DBIsqlite(dbname='%s')" % self.dbname
         return rv
@@ -379,7 +385,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def alter(self, table='', addcol=None, dropcol=None, pos=None):
         """
-        Sqlite ignores pos if it's set and does not support dropcol.
+        DBIsqlite: Sqlite ignores pos if it's set and does not support dropcol.
         """
         if type(table) != str:
             raise DBIerror("On alter(), table name must be a string",
@@ -408,7 +414,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def close(self):
         """
-        sqlite: See DBI.close()
+        DBIsqlite: See DBI.close()
         """
         # Close the database connection
         try:
@@ -420,7 +426,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def create(self, table='', fields=[]):
         """
-        sqlite: See DBI.create()
+        DBIsqlite: See DBI.create()
         """
 
         if type(fields) != list:
@@ -450,7 +456,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def cursor(self):
         """
-        sqlite: See DBI.cursor()
+        DBIsqlite: See DBI.cursor()
         """
         try:
             rval = self.dbh.cursor()
@@ -461,7 +467,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def delete(self, table='', where='', data=()):
         """
-        sqlite: See DBI.delete()
+        DBIsqlite: See DBI.delete()
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -502,7 +508,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def describe(self, table=''):
         """
-        sqlite: Return the description of a table.
+        DBIsqlite: Return the description of a table.
         """
         cmd = "pragma table_info(%s)" % self.prefix(table)
         c = self.dbh.cursor()
@@ -513,7 +519,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def drop(self, table=''):
         """
-        sqlite: See DBI.create()
+        DBIsqlite: See DBI.create()
         """
         # Handle bad arguments
         if type(table) != str:
@@ -535,7 +541,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def insert(self, table='', fields=[], data=[]):
         """
-        sqlite: See DBI.insert()
+        DBIsqlite: See DBI.insert()
         """
         # Handle any bad arguments
         if type(table) != str:
@@ -581,7 +587,7 @@ class DBIsqlite(DBI_abstract):
                orderby='',
                limit=None):
         """
-        sqlite: See DBI.select()
+        DBIsqlite: See DBI.select()
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -645,7 +651,7 @@ class DBIsqlite(DBI_abstract):
     # -------------------------------------------------------------------------
     def table_exists(self, table=''):
         """
-        sqlite: See DBI.table_exists()
+        DBIsqlite: See DBI.table_exists()
         """
         try:
             dbc = self.dbh.cursor()
@@ -656,14 +662,19 @@ class DBIsqlite(DBI_abstract):
                         """, (self.prefix(table),))
             rows = dbc.fetchall()
             dbc.close()
-            return 0 < len(rows)
+            if 0 == len(rows):
+                return False
+            elif 1 == len(rows):
+                return True
+            else:
+                raise DBIerror(MSG.more_than_one_ss % ('sqlite_master', table))
         except sqlite3.Error, e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def update(self, table='', where='', fields=[], data=[]):
         """
-        sqlite: See DBI.update()
+        DBIsqlite: See DBI.update()
         """
         # Handle invalid arguments
         if type(table) != str:
@@ -712,7 +723,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def __init__(self, *args, **kwargs):
             """
-            mysql: See DBI.__init__()
+            DBImysql: See DBI.__init__()
             """
             for attr in kwargs:
                 if attr in self.settable_attrl:
@@ -728,9 +739,9 @@ if mysql_available:
             if self.tbl_prefix != '':
                 self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
             cfg = kwargs['cfg']
-            host = cfg.get('dbi', 'host')
-            username = cfg.get('dbi', 'username')
-            password = base64.b64decode(cfg.get('dbi', 'password'))
+            host = cfg.get(CRWL_SECTION, 'hostname')
+            username = cfg.get(CRWL_SECTION, 'username')
+            password = base64.b64decode(cfg.get(CRWL_SECTION, 'password'))
             try:
                 self.dbh = mysql.connect(host=host,
                                          user=username,
@@ -743,7 +754,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def __repr__(self):
             """
-            mysql: See DBI.__repr__()
+            DBImysql: See DBI.__repr__()
             """
             rv = "DBImysql(dbname='%s')" % self.dbname
             return rv
@@ -751,7 +762,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def err_handler(self, err):
             """
-            mysql: Error handler
+            DBImysql: Error handler
             """
             if isinstance(err, mysql_exc.ProgrammingError):
                 raise DBIerror(str(err), dbname=self.dbname)
@@ -765,7 +776,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def alter(self, table='', addcol=None, dropcol=None, pos=None):
             """
-            mysql: Alter the table as indicated.
+            DBImysql: Alter the table as indicated.
             """
             cmd = ''
             if type(table) != str:
@@ -806,7 +817,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def close(self):
             """
-            mysql: See DBI.close()
+            DBImysql: See DBI.close()
             """
             # Close the database connection
             try:
@@ -818,7 +829,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
             """
-            mysql: See DBI.create()
+            DBImysql: See DBI.create()
             """
             # Handle bad arguments
             if type(fields) != list:
@@ -851,7 +862,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def cursor(self):
             """
-            mysql: get a cursor
+            DBImysql: get a cursor
             """
             try:
                 rval = self.dbh.cursor()
@@ -862,7 +873,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def delete(self, table='', where='', data=()):
             """
-            mysql: delete records
+            DBImysql: delete records
             """
             # Handle invalid arguments
             if type(table) != str:
@@ -903,7 +914,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def describe(self, table=''):
             """
-            mysql: Return a table description
+            DBImysql: Return a table description
             """
             try:
                 cmd = """select column_name, ordinal_position, data_type
@@ -919,7 +930,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def drop(self, table=''):
             """
-            Drop a mysql table
+            DBImysql: Drop a mysql table
             """
             # Handle bad arguments
             if type(table) != str:
@@ -945,7 +956,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def insert(self, table='', fields=[], data=[]):
             """
-            Insert into a mysql database
+            DBImysql: Insert into a mysql database
             """
             # Handle any bad arguments
             if type(table) != str:
@@ -991,7 +1002,7 @@ if mysql_available:
                    orderby='',
                    limit=None):
             """
-            Select from a mysql database.
+            DBImysql: Select from a mysql database.
             """
             # Handle invalid arguments
             if type(table) != str:
@@ -1056,7 +1067,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def table_exists(self, table=''):
             """
-            Check whether a table exists in a mysql database
+            DBImysql: Check whether a table exists in a mysql database
             """
             try:
                 dbc = self.dbh.cursor()
@@ -1070,14 +1081,20 @@ if mysql_available:
                                 """, (self.prefix(table),))
                 rows = dbc.fetchall()
                 dbc.close()
-                return 0 < len(rows)
+                if 0 == len(rows):
+                    return False
+                elif 1 == len(rows):
+                    return True
+                else:
+                    raise DBIerror(MSG.more_than_one_ss %
+                                   ('information_schema.tables', table))
             except mysql_exc.Error, e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def update(self, table='', where='', fields=[], data=[]):
             """
-            See DBI.update()
+            DBImysql: See DBI.update()
             """
             # Handle invalid arguments
             if type(table) != str:
@@ -1125,7 +1142,7 @@ if db2_available:
         # -------------------------------------------------------------------------
         def __init__(self, *args, **kwargs):
             """
-            See DBI.__init__()
+            DBIdb2: See DBI.__init__()
             """
             for attr in kwargs:
                 if attr in self.settable_attrl:
@@ -1168,7 +1185,7 @@ if db2_available:
         # ---------------------------------------------------------------------
         def __repr__(self):
             """
-            See DBI.__repr__()
+            DBIdb2: See DBI.__repr__()
             """
             rv = "DBIdb2(dbname='%s')" % self.dbname
             return rv
@@ -1176,7 +1193,8 @@ if db2_available:
         # ---------------------------------------------------------------------
         def __recognized_exception__(self, exc):
             """
-            Return True if exc is recognized as a DB2 error. Otherwise False.
+            DBIdb2: Return True if exc is recognized as a DB2 error. Otherwise
+            False.
             """
             try:
                 q = self.db2_exc_list
@@ -1194,14 +1212,14 @@ if db2_available:
         # ---------------------------------------------------------------------
         def alter(self, table='', addcol=None, dropcol=None, pos=None):
             """
-            See DBI.alter()
+            DBIdb2: See DBI.alter()
             """
             raise DBIerror("ALTER not supported for DB2")
 
         # ---------------------------------------------------------------------
         def close(self):
             """
-            See DBI.close()
+            DBIdb2: See DBI.close()
             """
             # Close the database connection
             try:
@@ -1213,14 +1231,14 @@ if db2_available:
         # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
             """
-            See DBI.create()
+            DBIdb2: See DBI.create()
             """
             raise DBIerror("CREATE not supported for DB2")
 
         # ---------------------------------------------------------------------
         def cursor(self):
             """
-            See DBI.cursor()
+            DBIdb2: See DBI.cursor()
             """
             try:
                 rval = self.dbh.cursor()
@@ -1231,25 +1249,28 @@ if db2_available:
         # ---------------------------------------------------------------------
         def delete(self, **kwargs):
             """
-            See DBI.delete()
+            DBIdb2: See DBI.delete()
             """
             raise DBIerror("DELETE not supported for DB2")
 
         # ---------------------------------------------------------------------
         def describe(self, **kwargs):
             """
-            Return a table description
+            DBIdb2: Return a table description
             """
             pass   # yagni
 
         # ---------------------------------------------------------------------
         def drop(self, table=''):
+            """
+            DBIdb2:
+            """
             raise DBIerror("DROP not supported for DB2")
 
         # ---------------------------------------------------------------------
         def insert(self, table='', fields=[], data=[]):
             """
-            Insert not supported for DB2
+            DBIdb2: Insert not supported for DB2
             """
             raise DBIerror("INSERT not supported for DB2")
 
@@ -1263,7 +1284,7 @@ if db2_available:
                    orderby='',
                    limit=None):
             """
-            Select from a DB2 database.
+            DBIdb2: Select from a DB2 database.
             """
             # Handle invalid arguments
             if type(table) != str and type(table) != list:
@@ -1319,19 +1340,15 @@ if db2_available:
                     cmd += " fetch first %d rows only" % int(limit)
 
                 rval = []
+                stmt = db2.prepare(self.dbh, cmd)
+                args = [stmt]
                 if '?' in cmd:
-                    stmt = db2.prepare(self.dbh, cmd)
-                    r = db2.execute(stmt, data)
+                    args.append(data)
+                r = db2.execute(*args)
+                x = db2.fetch_assoc(stmt)
+                while (x):
+                    rval.append(x)
                     x = db2.fetch_assoc(stmt)
-                    while (x):
-                        rval.append(x)
-                        x = db2.fetch_assoc(stmt)
-                else:
-                    r = db2.exec_immediate(self.dbh, cmd)
-                    x = db2.fetch_assoc(r)
-                    while (x):
-                        rval.append(x)
-                        x = db2.fetch_assoc(r)
 
                 return rval
 
@@ -1349,21 +1366,27 @@ if db2_available:
         # ---------------------------------------------------------------------
         def table_exists(self, table=''):
             """
-            Check whether a table exists in a db2 database
+            DBIdb2: Check whether a table exists in a db2 database
             """
             try:
                 rows = self.select(table="@syscat.tables",
                                    fields=['tabname'],
                                    where="tabschema = 'HPSS' and " +
                                    "tabname = '%s'" % table.upper())
-                return 0 < len(rows)
+                if 0 == len(rows):
+                    return False
+                elif 1 == len(rows):
+                    return True
+                else:
+                    raise DBIerror(MSG.more_than_one_ss %
+                                   ('@syscat.tables', table))
             except mysql_exc.Error, e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
         # ---------------------------------------------------------------------
         def update(self, table='', where='', fields=[], data=[]):
             """
-            See DBI.update()
+            DBIdb2: See DBI.update()
             """
             raise DBIerror("UPDATE not supported for DB2")
 
@@ -1371,8 +1394,8 @@ if db2_available:
         @classmethod
         def hexstr(cls, bfid):
             """
-            Convert a raw bitfile id into a hexadecimal string as presented by
-            DB2.
+            DBIdb2: Convert a raw bitfile id into a hexadecimal string as
+            presented by DB2.
             """
             rval = "x'" + DBIdb2.hexstr_uq(bfid) + "'"
             return rval
@@ -1381,8 +1404,8 @@ if db2_available:
         # ---------------------------------------------------------------------
         def hexstr_uq(cls, bfid):
             """
-            Convert a raw bitfile id into an unquoted hexadecimal string as
-            presented by DB2.
+            DBIdb2: Convert a raw bitfile id into an unquoted hexadecimal
+            string as presented by DB2.
             """
             rval = "".join(["%02x" % ord(c) for c in list(bfid)])
             return rval.upper()
