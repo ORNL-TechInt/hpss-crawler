@@ -2329,9 +2329,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         type, calling __repr__ on a DBI object should produce a representation
         that looks like a DBIsqlite object.
         """
-        exp = ("DBIsqlite(dbname='%s%s')" %
-               ("/autofs/na4_home2/tpb/prj/hpssic/dev",
-                "/hpssic/test/test.d/test.db"))
+        exp = "DBIsqlite(dbname='%s')" % self.testdb
         a = self.DBI()
         self.expected(exp, repr(a))
         a.close()
