@@ -3,6 +3,7 @@ import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import hpss
+import ibm_db as db2
 import os
 import pdb
 import pprint

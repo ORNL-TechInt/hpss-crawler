@@ -35,7 +35,7 @@ def tearDownModule():
 # -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):
     testdir = testhelp.testdata(__name__)
-    
+
     # -------------------------------------------------------------------------
     def test_init(self):
         """
@@ -49,7 +49,7 @@ class AlertTest(testhelp.HelpedTestCase):
         self.assertEqual('dispatch' in dir(x), True,
                          "'dispatch' should be an attribute of the Alert" +
                          " object, but is not")
-
+    
     # -------------------------------------------------------------------------
     def test_alert_log(self):
         """

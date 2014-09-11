@@ -91,7 +91,7 @@ class CrawlPlugin(object):
             util.conditional_rm(filename)
 
             del sys.modules[self.modname]
-
+            
         try:
             self.plugin = __import__(self.modname)
         except ImportError:

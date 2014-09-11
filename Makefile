@@ -9,7 +9,7 @@ pristine: clean
 clean:
 	find . -name "*.pyc" | xargs rm -f
 	find . -name "*~" | xargs rm -f
-	rm -rf test/test.d MANIFEST
+	rm -rf test/test.d MANIFEST README
 
 TAGS: 
 	find . -name "*.py" | xargs etags
