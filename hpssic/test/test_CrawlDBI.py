@@ -1563,20 +1563,10 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 
 
 # -----------------------------------------------------------------------------
-@attr(slow=True, heavy=True)
+@attr(slow=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def setUpClass(cls):
-        testhelp.module_test_setup(DBITest.testdir)
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def tearDownClass(cls):
-        testhelp.module_test_teardown(DBITest.testdir)
-
+    
     # -------------------------------------------------------------------------
     def test_select_f(self):
         """

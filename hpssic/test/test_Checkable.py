@@ -41,7 +41,7 @@ class CheckableTest(testhelp.HelpedTestCase):
     testpath = '/home/tpb/TODO'
 
     # -------------------------------------------------------------------------
-    @attr(slow=True, heavy=True)
+    @attr(slow=True)
     def test_check_dir(self):
         """
         Calling .check() on a directory should give us back a list of Checkable
@@ -83,7 +83,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                 self.expected(0, c.checksum)
 
     # -------------------------------------------------------------------------
-    @attr(slow=True, heavy=True)
+    @attr(slow=True)
     def test_check_file(self):
         """
         Calling .check() on a file should execute the check actions for that
@@ -112,7 +112,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertNotEqual(0, item.last_check,
                                 "Expected last_check to be updated but " +
                                 "it was not")
-
+    
     # -------------------------------------------------------------------------
     def test_ctor(self):
         """
@@ -297,7 +297,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.ymdhms(pre[stat.ST_MTIME]),
                       self.ymdhms(post[stat.ST_MTIME]))
         self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
-
+    
     # -------------------------------------------------------------------------
     def test_ex_nihilo_notable(self):
         """

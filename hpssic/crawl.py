@@ -88,7 +88,6 @@ def crl_cleanup(argv):
         else:
             shutil.rmtree(td)
 
-
 # ------------------------------------------------------------------------------
 def crl_dbdrop(argv):
     """dbdrop - drop a database table

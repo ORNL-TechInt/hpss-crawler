@@ -6,7 +6,6 @@ import sys
 from hpssic import testhelp as th
 from hpssic import util as U
 
-
 # -----------------------------------------------------------------------------
 class ScriptBase(th.HelpedTestCase):
     # -------------------------------------------------------------------------
@@ -53,7 +52,6 @@ class ScriptBase(th.HelpedTestCase):
         for item in helplist:
             self.assertTrue(item in result,
                             "Expected '%s' in '%s'" % (item, result))
-
 
 # -----------------------------------------------------------------------------
 class Test_CRAWL(ScriptBase):
@@ -206,21 +204,6 @@ class Test_TCC(ScriptBase):
     # -------------------------------------------------------------------------
     def test_tcc_which_plugin(self):
         super(Test_TCC, self).script_which_module("hpssic.plugins.tcc_plugin")
-
-
-# -----------------------------------------------------------------------------
-@attr(slow=True)
-class Test_PEP8(th.HelpedTestCase):
-    # -------------------------------------------------------------------------
-    def test_pep8(self):
-        for r, d, f in os.walk('hpssic'):
-            if any([r == "./test", ".git" in r, ".attic" in r]):
-                continue
-            pylist = [os.path.join(r, fn) for fn in f if fn.endswith('.py')]
-            inputs = " ".join(pylist)
-            result = pexpect.run("pep8 %s" % inputs)
-            self.assertEqual("", result, "\n" + result)
-
 
 # -----------------------------------------------------------------------------
 def improot(path, modpath):

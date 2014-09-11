@@ -187,7 +187,7 @@ class CrawlTest(testhelp.HelpedTestCase):
                                 (item, self.cdict[section][item]), result)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @attr('slow')
     def test_crawl_fire_log_path(self):
         """
         TEST: crawl fire --plugin <plugmod>
@@ -331,7 +331,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
-
+    
     # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_start_cfgctx(self):
@@ -374,7 +374,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
-
+    
     # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_start_cmdctx(self):
@@ -413,7 +413,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         time.sleep(2)
         self.assertEqual(crawl.is_running(context=self.ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
-
+    
     # --------------------------------------------------------------------------
     # def test_crawl_start_defctx(self):
     #     """
@@ -495,7 +495,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(crawl.is_running(context=self.ctx),
                          False,
                          "Crawler should not have started")
-
+    
     # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_start_nonplugin_sections(self):
@@ -536,7 +536,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(pidfile), False,
                          "%s is hanging around after it should be gone" %
                          pidfile)
-
+    
     # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_start_x(self):
@@ -574,7 +574,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         down_l = glob.glob(self.pidglob)
         self.assertEqual(len(pre_l), len(down_l),
                          "Expected pid file to be removed")
-
+    
     # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_status(self):
@@ -712,7 +712,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cmd = '%s status' % self.crawl_cmd()
         result = pexpect.run(cmd)
         self.assertEqual(result.strip(), self.cstr['cdown'])
-
+    
     # --------------------------------------------------------------------------
     @attr(slow=True)
     def test_crawl_stop_confirm(self):
@@ -803,7 +803,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         self.assertEqual(crawl.is_running(context=self.ctx), False)
         self.assertEqual(os.path.exists(pidfile), False)
-
+    
     # --------------------------------------------------------------------------
     def test_give_up_yet_identical(self):
         """
@@ -904,7 +904,7 @@ class CrawlTest(testhelp.HelpedTestCase):
 
         self.assertTrue("shutting down because we got 4 exceptions in "
                         in util.contents(logpath))
-
+    
     # --------------------------------------------------------------------------
     def test_make_pidfile_nodir(self):
         """
