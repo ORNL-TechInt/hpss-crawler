@@ -205,6 +205,20 @@ class Test_TCC(ScriptBase):
     def test_tcc_which_plugin(self):
         super(Test_TCC, self).script_which_module("hpssic.plugins.tcc_plugin")
 
+
+# -----------------------------------------------------------------------------
+class Test_PEP8(th.HelpedTestCase):
+    # -------------------------------------------------------------------------
+    def test_pep8(self):
+        for r,d,f in os.walk('.'):
+            if any([r == "./test", ".git" in r]):
+                continue
+            pylist = [os.path.join(r,fn) for fn in f if fn.endswith('.py')]
+            if pylist:
+                inputs = " ".join(pylist)
+                result = pexpect.run("pep8 %s" % inputs)
+                self.assertEqual("", result, "\n" + result)
+
 # -----------------------------------------------------------------------------
 def improot(path, modpath):
     rval = path

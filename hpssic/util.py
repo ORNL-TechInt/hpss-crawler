@@ -165,30 +165,6 @@ class RRfile(object):
 
 
 # -----------------------------------------------------------------------------
-def abspath(relpath):
-    """
-    Convenience wrapper for os.path.abspath()
-    """
-    return os.path.abspath(relpath)
-
-
-# -----------------------------------------------------------------------------
-def basename(relpath):
-    """
-    Convenience wrapper for os.path.basename()
-    """
-    return os.path.basename(relpath)
-
-
-# -----------------------------------------------------------------------------
-def pathjoin(a, *p):
-    """
-    Convenience wrapper for os.path.join()
-    """
-    return os.path.join(a, *p)
-
-
-# -----------------------------------------------------------------------------
 def conditional_rm(filepath, tree=False):
     """
     We want to delete filepath but we don't want to generate an error if it
@@ -251,44 +227,7 @@ def daybase(epoch):
                         tm.tm_wday, tm.tm_yday, tm.tm_isdst])
 
 
-# -----------------------------------------------------------------------------
-def dispatch(modname, prefix, args):
-    """
-    Look in module *modname* for routine *prefix*_*args*[1]. Call it with
-    *args*[2:].
-    """
-    mod = sys.modules[modname]
-    if len(args) < 2:
-        dispatch_help(mod, prefix)
-    elif len(args) < 3 and args[1] == 'help':
-        dispatch_help(mod, prefix)
-    elif args[1] == 'help':
-        dispatch_help(mod, prefix, args[2])
-    else:
-        fname = "_".join([prefix, args[1]])
-        func = getattr(mod, fname)
-        func(args[2:])
-
-
-# -----------------------------------------------------------------------------
-def dispatch_help(mod, prefix, cmd=None):
-    if cmd is not None:
-        func = getattr(mod, "_".join(prefix, cmd))
-        print func.__doc__
-    else:
-        print("")
-        for fname in [x for x in dir(mod) if x.startswith(prefix)]:
-            func = getattr(mod, fname)
-            try:
-                hstr = func.__doc__.split("\n")[0]
-            except AttributeError:
-                raise HpssicError(
-                    "Function '%s' seems to be missing a docstring" % fname)
-            print "    " + hstr
-        print("")
-
-
-# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 def dispatch(modname, prefix, args):
     """
     Look in module *modname* for routine *prefix*_*args*[1]. Call it with
@@ -325,42 +264,6 @@ def dispatch_help(mod, prefix, cmd=None):
         print("")
 
 
-# ------------------------------------------------------------------------------
-def dispatch(modname, prefix, args):
-    """
-    Look in module *modname* for routine *prefix*_*args*[1]. Call it with
-    *args*[2:].
-    """
-    mod = sys.modules[modname]
-    if len(args) < 2:
-        dispatch_help(mod, prefix)
-    elif len(args) < 3 and args[1] == 'help':
-        dispatch_help(mod, prefix)
-    elif args[1] == 'help':
-        dispatch_help(mod, prefix, args[2])
-    else:
-        fname = "_".join([prefix, args[1]])
-        func = getattr(mod, fname)
-        func(args[2:])
-
-# ------------------------------------------------------------------------------
-def dispatch_help(mod, prefix, cmd=None):
-    if cmd is not None:
-        func = getattr(mod, "_".join(prefix, cmd))
-        print func.__doc__
-    else:
-        print("")
-        for fname in [x for x in dir(mod) if x.startswith(prefix)]:
-            func = getattr(mod, fname)
-            try:
-                hstr = func.__doc__.split("\n")[0]
-            except AttributeError:
-                raise HpssicError(
-                    "Function '%s' seems to be missing a docstring" % fname)
-            print "    " + hstr
-        print("")
-        
-    
 # ------------------------------------------------------------------------------
 def env_update(cfg):
     """
@@ -436,20 +339,6 @@ def hostname(long=False):
 
 
 # -----------------------------------------------------------------------------
-def git_repo(path):
-    """
-    If path is inside a git repo (including the root), return the root of the
-    git repo. Otherwise, return ''
-    """
-    dotgit = pathjoin(path, ".git")
-    while not os.path.exists(dotgit) and path != "/":
-        path = dirname(path)
-        dotgit = pathjoin(path, ".git")
-
-    return path.rstrip('/')
-
-
-# -----------------------------------------------------------------------------
 def line_quote(value):
     """
     Wrap a set of lines with line-oriented quotes (three double quotes in a
@@ -488,31 +377,6 @@ def memoize(f):
 
 
 # -----------------------------------------------------------------------------
-def memoize(f):
-    cache = {}
-
-    # -------------------------------------------------------------------------
-    def helper(x):
-        try:
-            return cache[x]
-        except KeyError:
-            cache[x] = f(x)
-            return cache[x]
-    return helper
-
-
-# -----------------------------------------------------------------------------
-def memoize(f):
-    cache = {}
-    def helper(x):
-        try:
-            return cache[x]
-        except KeyError:
-            cache[x] = f(x)
-            return cache[x]
-    return helper
-
-# -----------------------------------------------------------------------------
 def my_name():
     """
     Return the caller's name
@@ -530,37 +394,12 @@ def pop0(list):
 
 
 # -----------------------------------------------------------------------------
-def pop0(list):
-    try:
-        rval = list.pop(0)
-    except IndexError:
-        rval = None
-    return rval
-
-
-# -----------------------------------------------------------------------------
-def pop0(list):
-    try:
-        rval = list.pop(0)
-    except IndexError:
-        rval = None
-    return rval
-
-# -----------------------------------------------------------------------------
 def raiseError(record):
     """
     This is used in the log file handler to cause errors in logging to get
     pushed up the stack so we see them.
     """
     raise
-
-
-# -----------------------------------------------------------------------------
-def realpath(fakepath):
-    """
-    Convenience wrapper for os.path.realpath()
-    """
-    return os.path.realpath(fakepath)
 
 
 # -----------------------------------------------------------------------------
@@ -687,9 +526,11 @@ def ymdhms(epoch):
     return time.strftime("%Y.%m%d %H:%M:%S",
                          time.localtime(epoch))
 
+
 # -----------------------------------------------------------------------------
 class HpssicError(Exception):
     def __init__(self, value):
         self.value = value
+
     def __str__(self):
         return repr(self.value)
