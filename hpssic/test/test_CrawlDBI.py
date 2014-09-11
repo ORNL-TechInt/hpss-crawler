@@ -30,25 +30,103 @@ else:
 
 
 # -----------------------------------------------------------------------------
-def make_tcfg(dbtype):
+def make_db2_tcfg(dbeng):
     tcfg = CrawlConfig.CrawlConfig()
-    tcfg.add_section('dbi')
-    tcfg.set('dbi', 'dbtype', dbtype)
-    tcfg.set('dbi', 'dbname', DBITest.testdb)
-    tcfg.set('dbi', 'tbl_prefix', 'test')
     xcfg = CrawlConfig.get_config(reset=True)
-    if dbtype == 'mysql':
-        for dbparm in ['dbname', 'host', 'username', 'password']:
-            tcfg.set('dbi', dbparm, xcfg.get('dbi', dbparm))
-    elif dbtype == 'db2':
-        tcfg.add_section('db2')
-        tcfg.set('dbi', 'dbname', 'hcfg')
-        tcfg.set('dbi', 'tbl_prefix', 'hpss')
-        for optname in ['cfg', 'sub', 'dbtype', 'tbl_prefix',
-                        'hostname', 'port', 'username', 'password']:
-            tcfg.set('db2', optname, xcfg.get('db2', optname))
-
+    section = 'dbi-hpss'
+    # section = 'db2'
+    tcfg.add_section(section)
+    tcfg.set(section, 'dbtype', dbeng)
+    # tcfg.set(section, 'dbname', 'hcfg')
+    tcfg.set(section, 'tbl_prefix', 'hpss')
+    for optname in ['cfg', 'sub', 'dbtype', 'tbl_prefix',
+                    'hostname', 'port', 'username', 'password']:
+        tcfg.set('db2', optname, xcfg.get('db2', optname))
     return tcfg
+
+
+# -----------------------------------------------------------------------------
+def make_mysql_tcfg(dbeng):
+    tcfg = CrawlConfig.CrawlConfig()
+    xcfg = CrawlConfig.get_config(reset=True)
+    section = 'dbi-crawler'
+    # section = 'dbi'
+    tcfg.add_section(section)
+    tcfg.set(section, 'dbtype', dbeng)
+    tcfg.set(section, 'dbname', DBITest.testdb)
+    tcfg.set(section, 'tbl_prefix', 'test')
+    for dbparm in ['dbname', 'host', 'username', 'password']:
+        tcfg.set(section, dbparm, xcfg.get(section, dbparm))
+    return tcfg
+
+
+# -----------------------------------------------------------------------------
+def make_sqlite_tcfg(dbeng):
+    tcfg = CrawlConfig.CrawlConfig()
+    xcfg = CrawlConfig.get_config(reset=True)
+    section = 'dbi-crawler'
+    # section = 'dbi'
+    tcfg.add_section(section)
+    tcfg.set(section, 'dbtype', dbeng)
+    tcfg.set(section, 'dbname', DBITest.testdb)
+    tcfg.set(section, 'tbl_prefix', 'test')
+    return tcfg
+
+
+# -----------------------------------------------------------------------------
+def make_tcfg(dbtype):
+    # pdb.set_trace()
+    func = getattr(sys.modules[__name__], 'make_%s_tcfg' % dbtype)
+    if func:
+        rval = func(dbtype)
+        return rval
+        
+
+    # tcfg = CrawlConfig.CrawlConfig()
+    # xcfg = CrawlConfig.get_config(reset=True)
+    # if dbtype == 'mysql':
+    #     for dbparm in ['dbname', 'host', 'username', 'password']:
+    #         tcfg.set('dbi', dbparm, xcfg.get('dbi', dbparm))
+    # elif dbtype == 'db2' or dbtype == 'hpss':
+    #     tcfg.add_section('db2')
+    #     tcfg.set('dbi', 'dbname', 'hcfg')
+    #     tcfg.set('dbi', 'tbl_prefix', 'hpss')
+    #     for optname in ['cfg', 'sub', 'dbtype', 'tbl_prefix',
+    #                     'hostname', 'port', 'username', 'password']:
+    #         tcfg.set('db2', optname, xcfg.get('db2', optname))
+    # 
+    # # pdb.set_trace()
+    # return tcfg
+
+
+# -----------------------------------------------------------------------------
+def make_mysql_tcfg(dbeng):
+    tcfg = CrawlConfig.CrawlConfig()
+    xcfg = CrawlConfig.get_config(reset=True)
+    section = 'dbi-crawler'
+    tcfg.add_section(section)
+    tcfg.set(section, 'dbtype', dbeng)
+    tcfg.set(section, 'tbl_prefix', 'test')
+    for dbparm in ['dbname', 'host', 'username', 'password']:
+        tcfg.set(section, dbparm, xcfg.get(section, dbparm))
+
+    
+# -----------------------------------------------------------------------------
+def make_sqlite_tcfg(dbeng):
+    tcfg = CrawlConfig.CrawlConfig()
+    xcfg = CrawlConfig.get_config(reset=True)
+    section = 'dbi-crawler'
+    tcfg.add_section(section)
+    tcfg.set(section, 'dbtype', dbeng)
+    tcfg.set(section, 'dbname', DBITest.testdb)
+    tcfg.set(section, 'tbl_prefix', 'test')
+
+
+# -----------------------------------------------------------------------------
+def make_tcfg(dbeng):
+    pdb.set_trace()
+    func = getattr(sys.modules[__name__], "make_%s_tcfg" % dbeng)
+    return func(dbeng)
 
 
 # -----------------------------------------------------------------------------
@@ -70,8 +148,8 @@ def tearDownModule():
     if not testhelp.keepfiles():
         if CrawlDBI.mysql_available:
             tcfg = make_tcfg('mysql')
-            tcfg.set('dbi', 'tbl_prefix', '')
-            db = CrawlDBI.DBI(cfg=tcfg)
+            tcfg.set(CrawlDBI.CRWL_SECTION, 'tbl_prefix', '')
+            db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore",
                                         "Can't read dir of .*")
@@ -174,7 +252,11 @@ class DBI_in_Base(object):
         Calling close() should free up the db resources and make the database
         handle unusable.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        kw = {'cfg': make_tcfg(self.dbtype),
+              'dbtype': self.dbctype}
+        if self.dbtype == 'db2':
+            kw['dbname'] = 'cfg'
+        a = CrawlDBI.DBI(**kw)
         a.close()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "Cannot operate on a closed database.",
@@ -186,7 +268,11 @@ class DBI_in_Base(object):
         Verify that a new object has the right attributes with the right
         default values
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
+        kw = {'cfg': make_tcfg(self.dbtype),
+              'dbtype': self.dbctype}
+        if self.dbtype == 'db2':
+            kw['dbname'] = 'cfg'
+        a = CrawlDBI.DBI(**kw)
         dirl = [q for q in dir(a) if not q.startswith('_')]
         xattr_req = ['alter', 'close', 'create', 'dbname', 'delete',
                      'describe', 'drop',
@@ -212,22 +298,6 @@ class DBI_in_Base(object):
                              CrawlDBI.DBI,
                              cfg=make_tcfg(self.dbtype),
                              badattr='frooble')
-
-    # -------------------------------------------------------------------------
-    def test_ctor_dbn_none(self):
-        """
-        Attempt to create an object with no dbname should get an exception
-        """
-        try:
-            tcfg = make_tcfg(self.dbtype)
-            tcfg.remove_option('dbi', 'dbname')
-            a = CrawlDBI.DBI(cfg=tcfg)
-            self.fail("Expected an exception but didn't get one")
-        except CrawlDBI.DBIerror, e:
-            exp = "No option 'dbname' in section: 'dbi'"
-            self.assertTrue(exp in str(e),
-                            "Got the wrong DBIerror: " +
-                            '"""\n%s\n"""' % str(e))
 
     # -------------------------------------------------------------------------
     def test_select_f(self):
@@ -912,6 +982,20 @@ class DBI_out_Base(object):
         self.assertTrue(db.table_exists(table='create_yes'))
 
     # -------------------------------------------------------------------------
+    def test_ctor_dbn_none(self):
+        """
+        Attempt to create an object with no dbname should get an exception
+        """
+        tcfg = make_tcfg(self.dbtype)
+        tcfg.remove_option(CrawlDBI.CRWL_SECTION, 'dbname')
+        exp = "No option 'dbname' in section: '%s'" % CrawlDBI.CRWL_SECTION
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             exp,
+                             CrawlDBI.DBI,
+                             cfg=tcfg,
+                             dbtype='crawler')
+
+    # -------------------------------------------------------------------------
     def test_delete_nq_nd(self):
         """
         A delete with no '?' in the where clause and no data tuple is
@@ -1212,7 +1296,7 @@ class DBI_out_Base(object):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              ["no such table: test_tnox",
                               "Table '%s.test_tnox' doesn't exist" %
-                              mcfg.get('dbi', 'dbname')],
+                              mcfg.get(CrawlDBI.CRWL_SECTION, 'dbname')],
                              db.insert,
                              table='tnox',
                              fields=['one', 'two'],
@@ -1489,8 +1573,8 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     def tearDownClass(cls):
         if not testhelp.keepfiles():
             tcfg = make_tcfg('mysql')
-            tcfg.set('dbi', 'tbl_prefix', '')
-            db = CrawlDBI.DBI(cfg=tcfg)
+            tcfg.set('dbi-crawler', 'tbl_prefix', '')
+            db = CrawlDBI.DBI(cfg=tcfg, dbtype=cls.dbctype)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore",
                                         "Can't read dir of .*")
@@ -1798,7 +1882,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sockname)
         tcfg = make_tcfg(self.dbtype)
-        tcfg.set('dbi', 'dbname', sockname)
+        # tcfg.set('dbi', 'dbname', sockname)
+        tcfg.set(CrawlDBI.CRWL_SECTION, 'dbname', sockname)
         try:
             db = CrawlDBI.DBI(cfg=tcfg)
             self.fail("Expected exception was not thrown")
