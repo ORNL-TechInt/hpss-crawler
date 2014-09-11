@@ -7,6 +7,7 @@ from hpssic import crawl_lib
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 import copy
+from hpssic import dbschem
 import glob
 from hpssic import messages as MSG
 import os
@@ -99,7 +100,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         TEST: crawl_lib.drop_table()
         EXP: MSG.nothing_to_drop returned
         """
-        rsp = crawl_lib.drop_table()
+        rsp = dbschem.drop_table()
         self.assertEqual(MSG.nothing_to_drop, rsp,
                          "Expected '%s', got '%s'" %
                          (MSG.nothing_to_drop, rsp))
@@ -115,7 +116,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
                   fields=['rowid integer primary key autoincrement'])
-        actual = crawl_lib.drop_table(table=tname)
+        actual = dbschem.drop_table(table=tname)
         exp = ("Attempt to drop table '%s_%s' was successful" %
                (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
         self.assertEqual(exp, actual,
@@ -127,7 +128,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         TEST: crawl_lib.drop_table(prefix=PFX)
         EXP: MSG.nothing_to_drop returned
         """
-        rsp = crawl_lib.drop_table(prefix="BORF")
+        rsp = dbschem.drop_table(prefix="BORF")
         self.assertEqual(MSG.nothing_to_drop, rsp,
                          "Expected '%s', got '%s'" %
                          (MSG.nothing_to_drop, rsp))
@@ -146,7 +147,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
                   fields=['rowid integer primary key autoincrement'])
-        actual = crawl_lib.drop_table(prefix=pfx, table=tname)
+        actual = dbschem.drop_table(prefix=pfx, table=tname)
         exp = ("Table '%s_%s' does not exist" % (pfx, tname))
         self.assertEqual(exp, actual,
                          "Expected '%s', got '%s'" % (exp, actual))
@@ -160,7 +161,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         """
         t = CrawlConfig.CrawlConfig()
         t.load_dict(self.cdict)
-        rsp = crawl_lib.drop_table(cfg=t)
+        rsp = dbschem.drop_table(cfg=t)
         self.assertEqual(MSG.nothing_to_drop, rsp,
                          "Expected '%s', got '%s'" %
                          (MSG.nothing_to_drop, rsp))
@@ -177,7 +178,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
                   fields=['rowid integer primary key autoincrement'])
-        actual = crawl_lib.drop_table(cfg=cfg, table=tname)
+        actual = dbschem.drop_table(cfg=cfg, table=tname)
         exp = ("Attempt to drop table '%s_%s' was successful" %
                (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
         self.assertEqual(exp, actual,
@@ -191,7 +192,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         """
         t = CrawlConfig.CrawlConfig()
         t.load_dict(self.cdict)
-        rsp = crawl_lib.drop_table(cfg=t, prefix="SEVEN")
+        rsp = dbschem.drop_table(cfg=t, prefix="SEVEN")
         self.assertEqual(MSG.nothing_to_drop, rsp,
                          "Expected '%s', got '%s'" %
                          (MSG.nothing_to_drop, rsp))
@@ -210,12 +211,12 @@ class CrawlTest(testhelp.HelpedTestCase):
         db.create(table=tname,
                   fields=['rowid integer primary key autoincrement'])
 
-        actual = crawl_lib.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
+        actual = dbschem.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
         exp = ("Table '%s_%s' does not exist" % (pfx+'x', tname))
         self.assertEqual(exp, actual,
                          "Expected '%s', got '%s'" % (exp, actual))
 
-        actual = crawl_lib.drop_table(cfg=cfg, prefix=pfx, table=tname)
+        actual = dbschem.drop_table(cfg=cfg, prefix=pfx, table=tname)
         exp = ("Attempt to drop table '%s_%s' was successful" %
                (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
         self.assertEqual(exp, actual,

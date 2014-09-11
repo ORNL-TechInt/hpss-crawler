@@ -6,11 +6,18 @@ We have interface classes for mysql, sqlite, and db2.
 
 The db2 interface only supports read operations, nothing that will change the
 database. Also the db2 interface doesn't use table prefixes.
+
+NOTE: Some of these tests depend on having access to a default config file with
+valid entries in the [dbi-crawler] and [dbi-hpss] sections. This means that the
+host, port, username, and password fields of the [dbi-hpss] section must point
+to a functional DB2 server. The [dbi-crawler] section must point either to an
+sqlite database or a functional mysql server.
 """
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import dbschem
+from hpssic import messages as MSG
 import os
 import pdb
 import socket
@@ -93,21 +100,7 @@ def tearDownModule():
     """
     Clean up after testing
     """
-    # pdb.set_trace()
     testhelp.module_test_teardown(DBITest.testdir)
-    # if not testhelp.keepfiles():
-    #     if CrawlDBI.mysql_available:
-    #         tcfg = make_tcfg('mysql')
-    #         tcfg.set(CrawlDBI.CRWL_SECTION, 'tbl_prefix', '')
-    #         db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
-    #         with warnings.catch_warnings():
-    #             warnings.filterwarnings("ignore",
-    #                                     "Can't read dir of .*")
-    #             tlist = db.select(table="information_schema.tables",
-    #                               fields=['table_name'],
-    #                               where='table_name like "test_%"')
-    #         for (tname,) in tlist:
-    #             db.drop(table=tname)
 
 
 # -----------------------------------------------------------------------------
@@ -213,7 +206,7 @@ class DBI_in_Base(object):
         a = CrawlDBI.DBI(**kw)
         a.close()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "Cannot operate on a closed database.",
+                             MSG.db_closed,
                              a.table_exists, table='report')
 
     # -------------------------------------------------------------------------
@@ -224,12 +217,12 @@ class DBI_in_Base(object):
         """
         kw = {'cfg': make_tcfg(self.dbtype),
               'dbtype': self.dbctype}
-        if self.dbtype == 'db2':
+        if self.dbtype == 'db2' or self.dbtype == 'hpss':
             kw['dbname'] = 'cfg'
         a = CrawlDBI.DBI(**kw)
         dirl = [q for q in dir(a) if not q.startswith('_')]
         xattr_req = ['alter', 'close', 'create', 'dbname', 'delete',
-                     'describe', 'drop',
+                     'describe', 'drop', 'closed',
                      'insert', 'select', 'table_exists', 'update', 'cursor']
         xattr_allowed = ['alter']
 
@@ -253,6 +246,43 @@ class DBI_in_Base(object):
                              cfg=make_tcfg(self.dbtype),
                              badattr='frooble')
 
+    # -------------------------------------------------------------------------
+    def test_ctor_dbtype_bad(self):
+        """
+        With dbtype value other than 'hpss' or 'crawler', constructor should
+        throw exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.valid_dbtype,
+                             CrawlDBI.DBI,
+                             dbtype='not-hpss-not-crawler')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbtype_none(self):
+        """
+        Without dbtype, constructor should throw exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.valid_dbtype,
+                             CrawlDBI.DBI)
+
+    # -------------------------------------------------------------------------
+    # def test_ctor_dbtype_hpss_no_dbname(self):
+    #     """!@!
+    #     With dbtype value 'hpss', no dbname, constructor should throw
+    #     exception
+    #     """
+    # -------------------------------------------------------------------------
+    # def test_ctor_dbtype_hpss_bad_dbname(self):
+    #     """!@!
+    #     With dbtype value 'hpss', bad dbname, constructor should throw
+    #     exception
+    #     """
+    # -------------------------------------------------------------------------
+    # def test_ctor_dbtype_hpss_dbname_sub_ok(self):
+    #     """!@!
+    #     With dbtype value 'hpss', good dbname, constructor should be okay
+    #     """
     # -------------------------------------------------------------------------
     def test_select_f(self):
         """
@@ -956,6 +986,35 @@ class DBI_out_Base(object):
                              dbtype='crawler')
 
     # -------------------------------------------------------------------------
+    def test_ctor_dbtype_crawler(self):
+        """
+        With dbtype value 'crawler', constructor should be okay
+        """
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype="crawler")
+        self.assertTrue(hasattr(db, "_dbobj"),
+                        "%s: Expected attribute '_dbobj', not present" %
+                        self.dbtype)
+        self.assertTrue(hasattr(db, 'closed'),
+                        "%s: Expected attribute 'closed', not present" %
+                        self.dbtype)
+        self.assertTrue(hasattr(db._dbobj, 'dbh'),
+                        "%s: Expected attribute 'dbh', not present" %
+                        self.dbtype)
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbtype_crawler_dbname(self):
+        """
+        With dbtype value 'crawler' and dbname constructor should throw
+        exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.dbname_not_allowed,
+                             CrawlDBI.DBI,
+                             dbtype="crawler",
+                             dbname="popeye")
+
+    # -------------------------------------------------------------------------
     def test_delete_nq_nd(self):
         """
         A delete with no '?' in the where clause and no data tuple is
@@ -1641,14 +1700,10 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         The DBImysql ctor requires 'dbname' and 'tbl_prefix' as keyword
         arguments
         """
-        try:
-            a = CrawlDBI.DBImysql(tbl_prefix='xyzzy')
-            self.fail("Expected exception not thrown")
-        except CrawlDBI.DBIerror, e:
-            exp = "A database name is required"
-            self.assertTrue(exp in str(e),
-                            "Got the wrong DBIerror: %s" +
-                            util.line_quote(str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "A database name is required",
+                             CrawlDBI.DBImysql,
+                             tbl_prefix='xyzzy')
 
     # -------------------------------------------------------------------------
     def reset_db(self, name=''):
@@ -1927,13 +1982,13 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         f.write('This is a text file, not a database file\n')
         f.close()
 
-        try:
-            db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-            self.fail("Expected exception was not thrown")
-        except CrawlDBI.DBIerror, e:
-            self.assertTrue("file is encrypted or is not a database" in str(e),
-                            "Unexpected DBIerror thrown: %s" %
-                            util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "file is encrypted or is not a database",
+                             CrawlDBI.DBI,
+                             cfg=make_tcfg(self.dbtype),
+                             dbtype='crawler')
+
+        os.unlink(self.testdb)
 
     # -------------------------------------------------------------------------
     def test_ctor_sqlite_dbnreq(self):
@@ -2431,7 +2486,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype),
                           dbtype=self.dbctype, dbname="cfg")
         db.close()
-        self.expected(True, db._dbobj.closed)
+        self.expected(True, db.closed)
 
     # -------------------------------------------------------------------------
     def test_close_closed(self):

@@ -12,37 +12,6 @@ import time
 
 
 # -----------------------------------------------------------------------------
-def drop_table(cfg=None, prefix=None, table=None):
-    """
-    This wraps the table dropping operation.
-    """
-    if table is None:
-        return(MSG.nothing_to_drop)
-
-    if cfg is None:
-        cfg = CrawlConfig.get_config()
-
-    if prefix is None:
-        prefix = cfg.get('dbi-crawler', 'tbl_prefix')
-    else:
-        cfg.set('dbi-crawler', 'tbl_prefix', prefix)
-
-    db = CrawlDBI.DBI(dbtype="crawler")
-    if not db.table_exists(table=table):
-        rval = ("Table '%s_%s' does not exist" % (prefix, table))
-    else:
-        db.drop(table=table)
-        if db.table_exists(table=table):
-            rval = ("Attempt to drop table '%s_%s' failed" % (prefix, table))
-        else:
-            rval = ("Attempt to drop table '%s_%s' was successful" %
-                    (prefix, table))
-
-    db.close()
-    return rval
-
-
-# -----------------------------------------------------------------------------
 def simplug(plugin, args):
     """
     Common plugin simulator. May be used by the interactive tools to simulate
