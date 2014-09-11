@@ -339,7 +339,7 @@ def dispatch(modname, prefix, args):
     elif args[1] == 'help':
         dispatch_help(mod, prefix, args[2])
     else:
-        fname = "_".join(prefix, args[1])
+        fname = "_".join([prefix, args[1]])
         func = getattr(mod, fname)
         func(args[2:])
 
@@ -494,6 +494,17 @@ def memoize(f):
             return cache[x]
     return helper
 
+
+# -----------------------------------------------------------------------------
+def memoize(f):
+    cache = {}
+    def helper(x):
+        try:
+            return cache[x]
+        except KeyError:
+            cache[x] = f(x)
+            return cache[x]
+    return helper
 
 # -----------------------------------------------------------------------------
 def my_name():

@@ -2,15 +2,15 @@
 """
 Tests for util.py
 """
-import CrawlConfig
+from hpssic import CrawlConfig
 import logging
 import os
 import pdb
 import re
 import sys
-import testhelp
-import toolframe
-import util
+from hpssic import testhelp
+from hpssic import toolframe
+from hpssic import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
@@ -59,7 +59,9 @@ class UtilTest(testhelp.HelpedTestCase):
         contents() is supposed to read and return the contents of a file as a
         string.
         """
-        x = util.contents('./util.py')
+        # x = util.contents('hpssic/util.py')
+        filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
+        x = util.contents(filename)
         self.assertEqual(type(x), str,
                          "Expected a string but got a %s" % type(x))
         expected = 'def contents('

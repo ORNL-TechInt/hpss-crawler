@@ -29,14 +29,8 @@ clean:
 	find . -name "*~" | xargs rm
 	rm -rf test.d MANIFEST
 
-TESTLOG=$(TEST_D)/nosetests.log
-TESTCFG=$(TEST_D)/nose.cfg
-NOSE_WHICH=test
-tests:
-	@echo "--------------------------------------------" >> $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -c $(TEST_D)/nose.cfg $(TEST_D) 2>&1 | tee -a $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+TAGS: 
+	find . -name "*.py" | xargs etags
 
 alltests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
