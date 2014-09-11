@@ -7,9 +7,9 @@ pristine: clean
 	rm dist/*
 
 clean:
-	find . -name "*.pyc" | xargs rm
-	find . -name "*~" | xargs rm
-	rm -rf test.d MANIFEST
+	find . -name "*.pyc" | xargs rm -f
+	find . -name "*~" | xargs rm -f
+	rm -rf test/test.d MANIFEST
 
 TAGS: 
 	find . -name "*.py" | xargs etags
@@ -39,8 +39,7 @@ $(WWW)/UserGuide.html: UGuide.md
 	Markdown.pl $< > $@
 
 sdist: $(PYFILES)
-	echo $(PYFILES)
-	setup.py sdist
+	python setup.py sdist
 
 install:
 	@if [[ `which python` == "/usr/bin/python" ]]; then \
