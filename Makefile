@@ -49,13 +49,6 @@ alltests:
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
 
-crontests:
-	echo "--------------------------------------------" >> $(TESTLOG)
-	date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -a slow=True -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
-	date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-
-
 readme: $(WWW)/README.html
 
 refman: $(WWW)/ReferenceManual.html
