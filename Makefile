@@ -1,6 +1,22 @@
 WWW = $(HOME)/www/hpssic
 PYFILES = $(shell find . -name "*.py")
 
+help:
+	@echo ""
+	@echo "Targets in this Makefile"
+	@echo "    clean        Remove *.pyc, *~, test.d, MANIFEST, README"
+	@echo "    doc          Generate the documentation"
+	@echo "    install      Install the package locally"
+	@echo "    pristine     clean + rm dist/*"
+	@echo "    readme       Generate the readme in HTML"
+	@echo "    refman       Generate the Reference Manual in HTML"
+	@echo "    refresh      Regenerate the dist and install/upgrade the local copy"
+	@echo "    sdist        Generate the source distribution"
+	@echo "    TAGS         Navigation tags for emacs"
+	@echo "    test         Run and log tests"
+	@echo "    uguide       Generate the User Guide in HTML"
+	@echo ""
+
 doc: readme refman uguide
 
 pristine: clean
@@ -14,10 +30,12 @@ clean:
 TAGS: 
 	find . -name "*.py" | xargs etags
 
-alltests:
+TESTLOG=test/nosetests.log
+NOSE_WHICH=test
+tests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -c $(TEST_D)/nosecron.cfg $(TEST_D) 2>&1 | tee -a $(TESTLOG)
+	nosetests -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
 
 pep8:

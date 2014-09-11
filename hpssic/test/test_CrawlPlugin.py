@@ -360,9 +360,9 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
         self.expected(self.plugdir, p.plugin_dir)
-        rgx = '%s/%s.pyc?' % (util.realpath(self.plugdir), pname)
-        self.assertTrue(re.findall(rgx,
-                                   util.realpath(sys.modules[pname].__file__)),
+        rgx = '%s/%s.pyc?' % (os.path.realpath(self.plugdir), pname)
+        self.assertTrue(re.findall(rgx, 
+                                   os.path.realpath(sys.modules[pname].__file__)),
                         "expected \n    %s\nto match \n    %s\n" %
                         (rgx, sys.modules[pname].__file__))
 
