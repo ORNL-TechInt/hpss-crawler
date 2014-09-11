@@ -155,8 +155,10 @@ def crl_fire(argv):
     cfg = CrawlConfig.get_config(o.config)
     log = CrawlConfig.get_logger(o.logpath, cfg)
 
-    if not cfg.has_section(o.plugname):
-        print("No plugin named '%s' is defined")
+    if o.plugin == '':
+        print("'-p <plugin-name' is required")
+    elif not cfg.has_section(o.plugname):
+        print("No plugin named '%s' found in configuration" % o.plugin)
     else:
         plugdir = cfg.get('crawler', 'plugin-dir')
         sys.path.append(plugdir)
@@ -192,7 +194,30 @@ def crl_log(argv):
     log.info(" ".join(a))
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+def crl_pw_decode(argv):
+    """pw_decode - accept a base64 hash and decode it
+
+    usage: crawl pw_decode hash
+
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    if len(a) < 1:
+        print("usage: crawl pw_decode B64STRING")
+        sys.exit(1)
+
+    print(base64.b64decode(a[0]))
+
+
+# -----------------------------------------------------------------------------
 def crl_pw_encode(argv):
     """pw_encode - accept a password and report its base64 encoding
 
@@ -219,29 +244,6 @@ def crl_pw_encode(argv):
         password = getpass.getpass("Password? > ")
 
     print(base64.b64encode(password))
-
-
-# ------------------------------------------------------------------------------
-def crl_pw_decode(argv):
-    """pw_decode - accept a base64 hash and decode it
-
-    usage: crawl pw_decode hash
-
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    if len(a) < 1:
-        print("usage: crawl pw_decode B64STRING")
-        sys.exit(1)
-
-    print(base64.b64decode(a[0]))
 
 
 # ------------------------------------------------------------------------------
