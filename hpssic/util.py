@@ -473,6 +473,12 @@ def lsp_parse(lspout):
 
 # -----------------------------------------------------------------------------
 def memoize(f):
+    """
+    This makes available the @util.memoize function decorator. Functions
+    decorated with memoize will actually be called the first time the code
+    references them. Whatever is returned by that first call will be cached and
+    returned on subsequent calls with the same arguments.
+    """
     cache = {}
 
     # -------------------------------------------------------------------------

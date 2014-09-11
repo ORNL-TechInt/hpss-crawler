@@ -458,6 +458,7 @@ def cvv_ttype_lookup(argv):
         for (c, m) in rpt[path]:
             print("%*s %s %s" % (-pwid, path, c, m))
 
+
 # -----------------------------------------------------------------------------
 def cvv_ttype_populate(argv):
     """ttype_populate - populate the ttype field in checkables
