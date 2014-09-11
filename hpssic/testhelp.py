@@ -319,6 +319,7 @@ def reset_directory(dirpath, make=True, force=False):
     except OSError:
         print glob.glob("%s/*" % dirpath)
 
+
 # -----------------------------------------------------------------------------
 def test_name(obj=None):
     """
@@ -330,7 +331,6 @@ def test_name(obj=None):
     rval = z[0].strip('()') + '.' + z[1]
     rval = rval.replace('__main__.', '')
     return rval
-    # return str(obj).split()[0]
 
 
 # -----------------------------------------------------------------------------
