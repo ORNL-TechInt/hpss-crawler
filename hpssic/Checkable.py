@@ -25,6 +25,7 @@ have a cos or a checksum.
 import Alert
 import CrawlConfig
 import CrawlDBI
+import dbschem
 import Dimension
 import hpss
 import pdb
@@ -326,17 +327,7 @@ class Checkable(object):
 
         Field reported is 0 or 1 indicating whether we've reported
         """
-        db = CrawlDBI.DBI()
-        db.create(table='checkables',
-                  fields=['rowid      integer primary key autoincrement',
-                          'path       text',
-                          'type       text',
-                          'cos        text',
-                          'cart       text',
-                          'checksum   int',
-                          'last_check int',
-                          'fails      int',
-                          'reported   int'])
+        dbschem.make_table("checkables")
         if type(dataroot) == str:
             dataroot = [dataroot]
 
@@ -345,8 +336,6 @@ class Checkable(object):
                 r = Checkable(path=root, type='d', in_db=False, dirty=True)
                 r.load()
                 r.persist()
-
-        db.close()
 
     # -----------------------------------------------------------------------------
     @classmethod

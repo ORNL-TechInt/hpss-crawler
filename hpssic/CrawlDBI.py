@@ -131,7 +131,7 @@ class DBI(object):
                 kwargs['cfg'] = cfg
             else:
                 cfg = args[0]
-        elif 'cfg' in kwargs:
+        elif 'cfg' in kwargs and kwargs['cfg'] is not None:
             cfg = kwargs['cfg']
         else:
             cfg = CrawlConfig.get_config()
@@ -406,7 +406,7 @@ class DBIsqlite(DBI_abstract):
 
         # Construct and run the create statement
         try:
-            cmd = ("create table if not exists %s(" % self.prefix(table) +
+            cmd = ("create table %s(" % self.prefix(table) +
                    ", ".join(fields) +
                    ")")
             c = self.dbh.cursor()
@@ -493,7 +493,7 @@ class DBIsqlite(DBI_abstract):
 
         # Construct and run the drop statement
         try:
-            cmd = ("drop table if exists %s" % self.prefix(table))
+            cmd = ("drop table %s" % self.prefix(table))
             c = self.dbh.cursor()
             c.execute(cmd)
         # Convert any sqlite3 error into a DBIerror
@@ -812,7 +812,7 @@ if mysql_available:
             mysql_f = [x.replace('autoincrement', 'auto_increment')
                        for x in fields]
             try:
-                cmd = ("create table if not exists %s(" % self.prefix(table) +
+                cmd = ("create table %s(" % self.prefix(table) +
                        ", ".join(mysql_f) +
                        ") engine = innodb")
                 c = self.dbh.cursor()
@@ -825,7 +825,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def cursor(self):
             """
-            See DBI.cursor()
+            mysql: get a cursor
             """
             try:
                 rval = self.dbh.cursor()
@@ -836,7 +836,7 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def delete(self, table='', where='', data=()):
             """
-            See DBI.delete()
+            mysql: delete records
             """
             # Handle invalid arguments
             if type(table) != str:
@@ -892,6 +892,9 @@ if mysql_available:
 
         # ---------------------------------------------------------------------
         def drop(self, table=''):
+            """
+            Drop a mysql table
+            """
             # Handle bad arguments
             if type(table) != str:
                 raise DBIerror("On drop(), table name must be a string",
@@ -905,7 +908,7 @@ if mysql_available:
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore",
                                             "Unknown table '.*'")
-                    cmd = ("drop table if exists %s" % self.prefix(table))
+                    cmd = ("drop table %s" % self.prefix(table))
                     c = self.dbh.cursor()
                     c.execute(cmd)
 

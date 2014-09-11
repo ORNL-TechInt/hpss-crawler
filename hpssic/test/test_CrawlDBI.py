@@ -1661,8 +1661,9 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 
     # -------------------------------------------------------------------------
     def reset_db(self, name=''):
-        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
-        db.drop(table=name)
+        db = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype), dbtype=self.dbctype)
+        if db.table_exists(table=name):
+            db.drop(table=name)
 
 
 # -----------------------------------------------------------------------------
