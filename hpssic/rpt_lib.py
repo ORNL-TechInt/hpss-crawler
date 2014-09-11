@@ -174,9 +174,13 @@ def set_last_rpt_time(db):
 
 # -----------------------------------------------------------------------------
 def get_last_rpt_time(db):
-    if not db.table_exists(table="report"):
-        db.create(table="report",
-                  fields=['report_time     integer'])
+    """
+    Retrieve the last report time from the report table. If the table does not
+    exist before make_table ('Created' in result), the table is empty so we
+    just return 0 to indicate no last report time.
+    """
+    result = dbschem.make_table(table="report")
+    if "Created" in result:
         rval = 0
     else:
         rows = db.select(table='report',
