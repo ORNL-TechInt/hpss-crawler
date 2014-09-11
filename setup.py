@@ -2,6 +2,12 @@
 
 from distutils.core import setup
 from distutils.file_util import copy_file
+from distutils.sysconfig import get_python_lib
+import os
+
+f = open(".hpssic_version")
+hpssic_version = f.read().strip()
+f.close()
 
 # copy_file("README.md", "README")
 setup(name='hpssic',
@@ -17,5 +23,6 @@ setup(name='hpssic',
                'bin/mpra',
                'bin/tcc',
                ],
-      packages=['hpssic', 'hpssic/plugins'],
+      packages=['hpssic', 'hpssic/plugins', 'hpssic/test'],
+      data_files=[('lib/python2.6/site-packages/hpssic', ['.hpssic_version'])]
       )

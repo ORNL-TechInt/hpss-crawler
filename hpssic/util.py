@@ -165,6 +165,38 @@ class RRfile(object):
 
 
 # -----------------------------------------------------------------------------
+def abspath(relpath):
+    """
+    Convenience wrapper for os.path.abspath()
+    """
+    return os.path.abspath(relpath)
+
+
+# -----------------------------------------------------------------------------
+def basename(path):
+    """
+    Convenience wrapper for os.path.basename()
+    """
+    return os.path.basename(path)
+
+
+# -----------------------------------------------------------------------------
+def dirname(path):
+    """
+    Convenience wrapper for os.path.dirname()
+    """
+    return os.path.dirname(path)
+
+
+# -----------------------------------------------------------------------------
+def pathjoin(a, *p):
+    """
+    Convenience wrapper for os.path.join()
+    """
+    return os.path.join(a, *p)
+
+
+# -----------------------------------------------------------------------------
 def conditional_rm(filepath, tree=False):
     """
     We want to delete filepath but we don't want to generate an error if it
@@ -336,6 +368,20 @@ def hostname(long=False):
     else:
         rval = socket.gethostname().split('.')[0]
     return rval
+
+
+# -----------------------------------------------------------------------------
+def git_repo(path):
+    """
+    If path is inside a git repo (including the root), return the root of the
+    git repo. Otherwise, return ''
+    """
+    dotgit = pathjoin(path, ".git")
+    while not os.path.exists(dotgit) and path != "/":
+        path = dirname(path)
+        dotgit = pathjoin(path, ".git")
+
+    return path.rstrip('/')
 
 
 # -----------------------------------------------------------------------------
