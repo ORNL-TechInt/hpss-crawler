@@ -194,13 +194,9 @@ class DBI_in_Base(object):
         """
         a = CrawlDBI.DBI(cfg=make_tcfg(self.dbtype))
         a.close()
-        try:
-            a.table_exists(table='dimension')
-            self.fail("Expected exception on closed database not thrown")
-        except CrawlDBI.DBIerror, e:
-            exp = "Cannot operate on a closed database."
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "Cannot operate on a closed database.",
+                             a.table_exists, table='report')
 
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
@@ -1314,6 +1310,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     @classmethod
     def tearDownClass(cls):
+        # testhelp.module_test_teardown(DBITest.testdir)
         if not testhelp.keepfiles():
             tcfg = make_tcfg('mysql')
             tcfg.set('dbi', 'tbl_prefix', '')
@@ -1593,6 +1590,16 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 @attr(slow=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbtype = 'db2'
+
+    # -------------------------------------------------------------------------
+    @classmethod
+    def setUpClass(cls):
+        testhelp.module_test_setup(DBITest.testdir)
+
+    # -------------------------------------------------------------------------
+    @classmethod
+    def tearDownClass(cls):
+        testhelp.module_test_teardown(DBITest.testdir)
 
     # -------------------------------------------------------------------------
     def test_select_f(self):
