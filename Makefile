@@ -50,8 +50,6 @@ alltests:
 pep8:
 	nosetests $(TEST_D)/test_script.py:Test_PEP8.test_pep8
 
-precommit: tests pep8
-
 readme: $(WWW)/README.html
 
 refman: $(WWW)/ReferenceManual.html

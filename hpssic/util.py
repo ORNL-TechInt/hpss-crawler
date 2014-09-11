@@ -173,19 +173,11 @@ def abspath(relpath):
 
 
 # -----------------------------------------------------------------------------
-def basename(path):
+def basename(relpath):
     """
     Convenience wrapper for os.path.basename()
     """
-    return os.path.basename(path)
-
-
-# -----------------------------------------------------------------------------
-def dirname(path):
-    """
-    Convenience wrapper for os.path.dirname()
-    """
-    return os.path.dirname(path)
+    return os.path.basename(relpath)
 
 
 # -----------------------------------------------------------------------------

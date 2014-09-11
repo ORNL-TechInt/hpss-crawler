@@ -5,11 +5,6 @@ from distutils.file_util import copy_file
 from distutils.sysconfig import get_python_lib
 import os
 
-f = open(".hpssic_version")
-hpssic_version = f.read().strip()
-f.close()
-sitelib = os.path.join(get_python_lib(), 'hpssic')
-
 copy_file("README.md", "README")
 setup(name='hpssic',
       version=hpssic_version,
@@ -25,6 +20,4 @@ setup(name='hpssic',
                'bin/tcc',
                ],
       packages=['hpssic', 'hpssic/plugins', 'hpssic/test'],
-      data_files=[(sitelib, ['.hpssic_version', 'README.md', 'crawl.cfg.sample']),
-                  ]
       )
