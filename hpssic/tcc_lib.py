@@ -4,7 +4,6 @@ import CrawlConfig
 import os
 import util
 
-
 # -----------------------------------------------------------------------------
 def get_bitfile_path(bitfile):
     """
@@ -71,26 +70,19 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
           group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
           fetch first %d rows only" % limit
     """
-    # !@! need to upgrade select semantic to support joins
-    rval = {}
-    db = db2cxn('subsys')
-    sql = """
-          select A.object_id,
-                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
-                 count(C.storage_class) as sc_count
-          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
-          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
-                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id and A.object_id < ?
-          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
-          """
-    rval = []
-    stmt = db2.prepare(db, sql)
-    r = db2.execute(stmt, (first_nsobj_id, first_nsobj_id+limit))
-    x = db2.fetch_assoc(stmt)
-    while (x):
-        rval.append(x)
-        x = db2.fetch_assoc(stmt)
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rval = db.select(table=['nsobject A',
+                            'bitfile B',
+                            'bftapeseg C'],
+                     fields=['A.object_id',
+                             'B.bfid',
+                             'B.bfattr_cos_id',
+                             'B.bfattr_create_time',
+                             'count(C.storage_class) as sc_count'],
+                     where="A.bitfile_id = B.bfid and B.bfid = C.bfid and " +
+                           "B.bfattr_data_len > 0 and C.bf_offset = 0 and " +
+                           "? <= A.object_id and A.object_id < ? ",
+                     data=(first_nsobj_id, first_nsobj_id + limit))
     return rval
 
 
@@ -99,23 +91,16 @@ def get_cos_info():
     """
     Read COS info from tables COS and HIER in the DB2 database
     """
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('cfg'))
-    rows = db.select(table=['cos A', 'hier B'],
+    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    rows = db.select(table=['cos A','hier B'],
                      fields=['A.cos_id',
                              'A.hier_id',
                              'B.slevel0_migrate_list_count'],
                      where="A.hier_id = B.hier_id")
     rval = {}
-    # !@! need to upgrade select semantics to support joins
-    db = db2cxn('cfg')
-    sql = """select a.cos_id, a.hier_id, b.slevel0_migrate_list_count
-             from hpss.cos as a, hpss.hier as b
-             where a.hier_id = b.hier_id"""
-    r = db2.exec_immediate(db, sql)
-    x = db2.fetch_assoc(r)
-    while (x):
-        rval[x['COS_ID']] = x['SLEVEL0_MIGRATE_LIST_COUNT']
-        x = db2.fetch_assoc(r)
+    for r in rows:
+        rval[r['COS_ID']] = r['SLEVEL0_MIGRATE_LIST_COUNT']
+
     return rval
 
 

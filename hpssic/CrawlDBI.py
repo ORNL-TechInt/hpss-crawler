@@ -1043,10 +1043,10 @@ class DBIdb2(DBI_abstract):
         Select from a DB2 database.
         """
         # Handle invalid arguments
-        if type(table) != str:
-            raise DBIerror("On select(), table name must be a string",
+        if type(table) != str and type(table) != list:
+            raise DBIerror("On select(), table name must be a string or a list",
                            dbname=self.dbname)
-        elif table == '':
+        elif table == '' or table == []:
             raise DBIerror("On select(), table name must not be empty",
                            dbname=self.dbname)
         elif type(fields) != list:
@@ -1077,7 +1077,12 @@ class DBIdb2(DBI_abstract):
                 cmd += ",".join(fields)
             else:
                 cmd += "*"
-            cmd += " from %s" % self.prefix(table)
+
+            if type(table) == str:
+                cmd += " from %s" % self.prefix(table)
+            elif type(table) == list:
+                cmd += " from %s" % ",".join([self.prefix(x) for x in table])
+
             if where != '':
                 cmd += " where %s" % where
             if groupby != '':
