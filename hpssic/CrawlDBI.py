@@ -1155,3 +1155,22 @@ class DBIdb2(DBI_abstract):
         rval = "".join(["%02x" % ord(c) for c in list(bfid)])
         return rval.upper()
 
+# -----------------------------------------------------------------------------
+@util.memoize
+def db2name(which):
+    if which == 'subsys':
+        if util.hostname() == 'hpss-dev01':
+            return 'subsys'
+        elif util.hostname() == 'hpss-crawler01':
+            return 'hsbusys1'
+        else:
+            raise DBIerror("Unexpected hostname: '%s'" % util.hostname())
+    elif which == 'cfg':
+        if util.hostname() == 'hpss-dev01':
+            return 'cfg'
+        elif util.hostname() == 'hpss-crawler01':
+            return 'hcfg'
+        else:
+            raise DBIerror("Unexpected hostname: '%s'" % util.hostname())
+    else:
+        raise DBIerror("Unexpected database name: '%s'" % which)
