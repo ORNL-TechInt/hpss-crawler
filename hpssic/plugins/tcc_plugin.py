@@ -78,15 +78,14 @@ def main(cfg):
 # -----------------------------------------------------------------------------
 def highest_nsobject_id():
     """
-    Cache and return the largest NSOBJECT id in the DB2 database.
+    Cache and return the largest NSOBJECT id in the DB2 database. The variables
+    highest_nsobject_id._max_obj_id and highest_nsobject_id._when are local to
+    this function but do not lose their values between invocations.
     """
     if any([not hasattr(highest_nsobject_id, '_max_obj_id'),
             60 < time.time() - highest_nsobject_id._when]):
-        H = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
-        result = H.select(table='nsobject',
-                          fields=['max(object_id) as max_obj_id'])
-        H.close()
-        highest_nsobject_id._max_obj_id = int(result[0]['MAX_OBJ_ID'])
+
+        highest_nsobject_id._max_obj_id = tcc_lib.max_nsobj_id()
         highest_nsobject_id._when = time.time()
         CrawlConfig.log("max object id = %d at %s" %
                         (highest_nsobject_id._max_obj_id,

@@ -40,7 +40,7 @@ def age(table,
     else:
         raise StandardError("output type must be 'str' or 'file' ")
 
-    db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
     if start is not None and end is not None:
         dbargs = {'where': '? < record_create_time and record_create_time < ?',
                   'data': (start, end)}
@@ -130,13 +130,25 @@ def dhms(age_s):
 
 
 # -----------------------------------------------------------------------------
+def lookup_migr_recs(**dbargs):
+    """
+    Look up and report records from table BFMIGRREC based on criteria provided
+    by the user
+    """
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+    rval = db.select(**dbargs)
+    db.close()
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def mpra_record_recent(type, start, end, hits):
     """
     Record the most recent record reported so we don't report records
     repeatedly. However, if recent is not later than the time already stored,
     we don't want to update it.
     """
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     if not db.table_exists(table='mpra'):
         CrawlConfig.log("Creating mpra table")
         db.create(table='mpra',
@@ -157,7 +169,7 @@ def mpra_fetch_recent(type):
     Retrieve and return the most recent record reported so we don't report the
     same record repeatedly
     """
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     if not db.table_exists(table='mpra'):
         CrawlConfig.log("Fetch from not existent mpra table -- return 0")
         return 0
@@ -202,7 +214,7 @@ def xplocks(output=None, mark=False):
     else:
         raise StandardError("output type must be 'str' or 'file' ")
 
-    dbs = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
+    dbs = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
 
     lock_min = cfg.getint('mpra', 'lock_duration')
 

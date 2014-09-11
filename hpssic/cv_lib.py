@@ -152,9 +152,9 @@ def tpop_report_updates(data):
     # -------------------------------------------------------------------------
     db = CrawlDBI.DBI(dbtype="crawler")
     row_l = db.select(table="checkables",
-                     fields=["path", "cart", "ttypes", "last_check"],
-                     where="path = ?",
-                     data=(path,))
+                      fields=["path", "cart", "ttypes", "last_check"],
+                      where="path = ?",
+                      data=(path,))
     db.close()
 
     if 1 < len(row_l):
@@ -291,7 +291,7 @@ def update_stats(cmf):
     Record the values in tuple cmf in table cvstats in the database. If the
     table does not exist, create it.
     """
-    db = CrawlDBI.DBI()
+    db = CrawlDBI.DBI(dbtype="crawler")
     if not db.table_exists(table=stats_table):
         db.create(table=stats_table,
                   fields=["rowid int",

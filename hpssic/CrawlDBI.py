@@ -85,9 +85,9 @@ class DBI(object):
         """
 
         # Check for invalid arguments in kwargs. Only 'cfg', 'dbtype', and
-        # 'dbname' are accepted. Other classes may need to select 'db2' for the
-        # database type and if so will need to specify the database name, but
-        # everything else should come from the configuration.
+        # 'dbname' are accepted. Other classes may need to select 'hpss' for
+        # the database type and if so will need to specify the database name,
+        # but everything else should come from the configuration.
 
         for key in kwargs:
             if key not in ['cfg', 'dbtype', 'dbname']:
@@ -1352,23 +1352,3 @@ if db2_available:
             """
             rval = "".join(["%02x" % ord(c) for c in list(bfid)])
             return rval.upper()
-
-    # -------------------------------------------------------------------------
-    @util.memoize
-    def db2name(which):
-        if which == 'subsys':
-            if util.hostname() == 'hpss-dev01':
-                return 'subsys'
-            elif util.hostname() == 'hpss-crawler01':
-                return 'hsbusys1'
-            else:
-                raise DBIerror("Unexpected hostname: '%s'" % util.hostname())
-        elif which == 'cfg':
-            if util.hostname() == 'hpss-dev01':
-                return 'cfg'
-            elif util.hostname() == 'hpss-crawler01':
-                return 'hcfg'
-            else:
-                raise DBIerror("Unexpected hostname: '%s'" % util.hostname())
-        else:
-            raise DBIerror("Unexpected database name: '%s'" % which)

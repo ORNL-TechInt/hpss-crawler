@@ -202,7 +202,7 @@ class DBI_in_Base(object):
         """
         kw = {'cfg': make_tcfg(self.dbtype),
               'dbtype': self.dbctype}
-        if self.dbtype == 'db2':
+        if self.dbctype == 'hpss':
             kw['dbname'] = 'cfg'
         a = CrawlDBI.DBI(**kw)
         a.close()
@@ -1972,7 +1972,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 # -----------------------------------------------------------------------------
 @attr(slow=True, heavy=True)
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
-    dbtype = 'db2'
+    dbctype = 'hpss'   # the function of the database
+    dbtype = 'db2'     # which database engine it uses
 
     # -------------------------------------------------------------------------
     @classmethod

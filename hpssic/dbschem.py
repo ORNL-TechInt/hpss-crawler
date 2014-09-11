@@ -7,6 +7,7 @@ tdefs = {
                    },
     }
 
+
 def make_table(tabname):
     """
     Make the indicated table if it does not exist
@@ -16,4 +17,3 @@ def make_table(tabname):
     if not db.table_exists(table=tabname):
         db.create(table=tabname, fields=tdefs[tabname]['fields'])
     db.close()
-
