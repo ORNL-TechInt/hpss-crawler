@@ -25,12 +25,9 @@ pristine: clean
 	rm dist/*
 
 clean:
-	find . -name "*.pyc" | xargs rm -f
-	find . -name "*~" | xargs rm -f
-	rm -rf $(TEST_D)/test.d MANIFEST README
-
-TAGS: 
-	find . -name "*.py" | xargs etags
+	find . -name "*.pyc" | xargs rm
+	find . -name "*~" | xargs rm
+	rm -rf test.d MANIFEST
 
 TESTLOG=$(TEST_D)/nosetests.log
 TESTCFG=$(TEST_D)/nose.cfg
@@ -65,21 +62,14 @@ $(WWW)/ReferenceManual.html: RefMan.md
 $(WWW)/UserGuide.html: UGuide.md
 	Markdown.pl $< > $@
 
-sdist: $(PYFILES)
-	python setup.py sdist
+sdist: *.py
+	setup.py sdist
 
 install:
 	@if [[ `which python` == "/usr/bin/python" ]]; then \
 		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
 	else \
 		pip install --upgrade dist/hpssic-2014.0725dev.tar.gz; \
-	fi
-
-uninstall:
-	@if [[ `which python` == "/usr/bin/python" ]]; then \
-		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
-	else \
-		pip uninstall hpssic; \
 	fi
 
 refresh: sdist install
