@@ -1547,10 +1547,8 @@ class CrawlTest(testhelp.HelpedTestCase):
     def crawl_cmd(self):
         if pexpect.which("crawl"):
             return "crawl"
-        elif os.path.exists("bin/crawl"):
-            return util.abspath("bin/crawl")
         else:
-            raise HpssicError("crawl command not found")
+            raise util.HpssicError("'crawl' is not in $PATH")
 
     # --------------------------------------------------------------------------
     def vassert_in(self, expected, actual):

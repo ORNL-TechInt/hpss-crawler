@@ -406,7 +406,17 @@ class Checkable(object):
         """
         db = CrawlDBI.DBI()
         rv = db.select(table='checkables',
-                       fields=[],
+                       fields=['rowid',
+                               'path',
+                               'type',
+                               'cos',
+                               'cart',
+                               'ttypes',
+                               'checksum',
+                               'last_check',
+                               'fails',
+                               'reported'
+                               ],
                        where='path=?',
                        data=(self.path,))
         db.close()

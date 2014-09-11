@@ -451,7 +451,7 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror("Criteria are not fully specified",
                            dbname=self.dbname)
 
-        # Build and run the select statement
+        # Build and run the statement
         try:
             cmd = "delete from %s" % self.prefix(table)
             if where != '':
@@ -562,6 +562,10 @@ class DBIsqlite(DBI_abstract):
         elif type(fields) != list:
             raise DBIerror("On select(), fields must be a list",
                            dbname=self.dbname)
+        elif fields == []:
+            raise DBIerror("Wildcard selects are not supported." +
+                           " Please supply a list of fields.",
+                           dbname=self.dbname)
         elif type(where) != str:
             raise DBIerror("On select(), where clause must be a string",
                            dbname=self.dbname)
@@ -583,10 +587,7 @@ class DBIsqlite(DBI_abstract):
         # Build and run the select statement
         try:
             cmd = "select "
-            if 0 < len(fields):
-                cmd += ",".join(fields)
-            else:
-                cmd += "*"
+            cmd += ",".join(fields)
             cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where
@@ -858,7 +859,7 @@ if mysql_available:
                 raise DBIerror("Criteria are not fully specified",
                                dbname=self.dbname)
 
-            # Build and run the select statement
+            # Build and run the statement
             try:
                 cmd = "delete from %s" % self.prefix(table)
                 if where != '':
@@ -978,6 +979,10 @@ if mysql_available:
             elif type(fields) != list:
                 raise DBIerror("On select(), fields must be a list",
                                dbname=self.dbname)
+            elif fields == []:
+                raise DBIerror("Wildcard selects are not supported." +
+                               " Please supply a list of fields.",
+                               dbname=self.dbname)
             elif type(where) != str:
                 raise DBIerror("On select(), where clause must be a string",
                                dbname=self.dbname)
@@ -998,10 +1003,7 @@ if mysql_available:
 
             # Build and run the select statement
             cmd = "select "
-            if 0 < len(fields):
-                cmd += ",".join(fields)
-            else:
-                cmd += "*"
+            cmd += ",".join(fields)
             cmd += " from %s" % self.prefix(table)
             if where != '':
                 cmd += " where %s" % where.replace('?', '%s')
@@ -1257,6 +1259,10 @@ if db2_available:
             elif type(fields) != list:
                 raise DBIerror("On select(), fields must be a list",
                                dbname=self.dbname)
+            elif fields == []:
+                raise DBIerror("Wildcard selects are not supported." +
+                               " Please supply a list of fields.",
+                               dbname=self.dbname)
             elif type(where) != str:
                 raise DBIerror("On select(), where clause must be a string",
                                dbname=self.dbname)
@@ -1278,10 +1284,7 @@ if db2_available:
             # Build and run the select statement
             try:
                 cmd = "select "
-                if 0 < len(fields):
-                    cmd += ",".join(fields)
-                else:
-                    cmd += "*"
+                cmd += ",".join(fields)
 
                 if type(table) == str:
                     cmd += " from %s" % self.prefix(table)

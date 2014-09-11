@@ -55,6 +55,9 @@ def age(table,
     if count:
         dbargs['fields'] = ['count(*)']
     else:
+        dbargs['fields'] = ['bfid',
+                            'record_create_time',
+                            'migration_failure_count']
         dbargs['orderby'] = 'record_create_time'
 
     try:
@@ -148,6 +151,7 @@ def mpra_record_recent(type, start, end, hits):
     repeatedly. However, if recent is not later than the time already stored,
     we don't want to update it.
     """
+    # !@! dbschem.make_table(table='mpra')
     db = CrawlDBI.DBI(dbtype="crawler")
     if not db.table_exists(table='mpra'):
         CrawlConfig.log("Creating mpra table")
@@ -162,6 +166,7 @@ def mpra_record_recent(type, start, end, hits):
     db.insert(table='mpra',
               fields=['type', 'scan_time', 'start_time', 'end_time', 'hits'],
               data=[(type, int(time.time()), int(start), int(end), hits)])
+    db.close()
 
 
 # -----------------------------------------------------------------------------

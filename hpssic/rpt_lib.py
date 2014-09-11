@@ -86,7 +86,8 @@ def get_mpra_report(db=None, last_rpt_time=0):
                                  'scan_time',
                                  'start_time',
                                  'end_time',
-                                 'hits'],
+                                 'hits',
+                                 ],
                          where="? < scan_time",
                          data=(last_rpt_time,),
                          orderby="type")
@@ -132,7 +133,8 @@ def get_tcc_report(db, last_rpt_time):
                                  'low_nsobj_id',
                                  'high_nsobj_id',
                                  'correct',
-                                 'error'],
+                                 'error',
+                                 ],
                          where="? < check_time",
                          data=(last_rpt_time,))
 

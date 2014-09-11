@@ -75,6 +75,9 @@ def lookup_nulls():
     """
     db = CrawlDBI.DBI(dbtype="crawler")
     rval = db.select(table="checkables",
+                     fields=["rowid", "path", "type", "cos", "cart",
+                             "ttypes", "checksum", "last_check", "fails",
+                             "reported"],
                      where="cos is NULL or cart is NULL or ttypes is NULL")
     db.close()
     return rval
