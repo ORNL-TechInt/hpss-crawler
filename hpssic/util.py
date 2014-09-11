@@ -598,6 +598,18 @@ def squash(string):
 
 
 # -----------------------------------------------------------------------------
+def touch(pathname, amtime=None):
+    """
+    If *pathname* does not exist, create it. Update the atime and mtime to the
+    current time or, optionally, the contents of the tuple *amtime*.
+    """
+    if not os.path.exists(pathname):
+        open(pathname, 'a').close()
+
+    os.utime(pathname, amtime)
+
+
+# -----------------------------------------------------------------------------
 def date_parse(data, idx):
     """
     Compile and cache the regexp for parsing dates from log files.

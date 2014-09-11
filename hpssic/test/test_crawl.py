@@ -114,7 +114,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.get_config()
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
-                  fields=['rowid int'])
+                  fields=['rowid integer primary key autoincrement'])
         actual = crawl_lib.drop_table(table=tname)
         exp = ("Attempt to drop table '%s_%s' was successful" %
                (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
@@ -145,7 +145,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cfg.set('dbi-crawler', 'tbl_prefix', 'test')
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
-                  fields=['rowid int'])
+                  fields=['rowid integer primary key autoincrement'])
         actual = crawl_lib.drop_table(prefix=pfx, table=tname)
         exp = ("Table '%s_%s' does not exist" % (pfx, tname))
         self.assertEqual(exp, actual,
@@ -176,7 +176,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cfg.set('dbi-crawler', 'tbl_prefix', 'DTST')
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
-                  fields=['rowid int'])
+                  fields=['rowid integer primary key autoincrement'])
         actual = crawl_lib.drop_table(cfg=cfg, table=tname)
         exp = ("Attempt to drop table '%s_%s' was successful" %
                (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
@@ -208,7 +208,7 @@ class CrawlTest(testhelp.HelpedTestCase):
         cfg.set('dbi-crawler', 'tbl_prefix', pfx)
         db = CrawlDBI.DBI(dbtype='crawler')
         db.create(table=tname,
-                  fields=['rowid int'])
+                  fields=['rowid integer primary key autoincrement'])
 
         actual = crawl_lib.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
         exp = ("Table '%s_%s' does not exist" % (pfx+'x', tname))

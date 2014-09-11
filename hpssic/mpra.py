@@ -2,6 +2,7 @@
 import crawl_lib
 import CrawlConfig
 import CrawlDBI
+import dbschem
 import messages as MSG
 import mpra_lib
 import optparse
@@ -356,21 +357,29 @@ def mprf_reset(args):
 
     """
     p = optparse.OptionParser()
+    p.add_option('-c', '--cfg',
+                 action='store', default='', dest='config',
+                 help='config file name')
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-f', '--force',
+                 action='store_true', default=False, dest='force',
+                 help='force the operation')
     (o, a) = p.parse_args(args)
 
     if o.debug:
         pdb.set_trace()
 
-    answer = raw_input(MSG.all_mpra_data_lost)
-    if answer[0].lower() != "y":
-        raise SystemExit()
+    if not o.force:
+        answer = raw_input(MSG.all_mpra_data_lost)
+        if answer[0].lower() != "y":
+            raise SystemExit()
 
-    crawl_lib.drop_table(table='mpra')
+    cfg = CrawlConfig.get_config(o.config)
 
-    cfg = CrawlConfig.get_config()
+    dbschem.drop_table(cfg=cfg, table='mpra')
+
     filename = cfg.get('mpra', 'report_file')
     util.conditional_rm(filename)
 

@@ -17,6 +17,7 @@ Extensions to python's standard unittest module
 
 """
 import CrawlConfig
+import CrawlDBI
 import glob
 import optparse
 import os
@@ -25,6 +26,7 @@ import shutil
 import sys
 import unittest
 import util
+import warnings
 
 tlogger = None
 
@@ -166,6 +168,27 @@ def cfgobj(data):
         rval.add_section('crawler')
         rval.set('crawler', 'verbose', 'false')
     return rval
+
+
+# -----------------------------------------------------------------------------
+def drop_test_tables(prefix='test'):
+    """
+    Clean up test tables in the mysql database if it's available and there are
+    any
+    """
+    if all([not keepfiles(), CrawlDBI.mysql_available]):
+        tcfg = CrawlConfig.get_config()
+        tcfg.set('dbi-crawler', 'tbl_prefix', '')
+
+        db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",
+                                    "Can't read dir of .*")
+            tlist = db.select(table="information_schema.tables",
+                              fields=['table_name'],
+                              where="table_name like '%s_%s'" % (prefix, '%'))
+            for (tname,) in tlist:
+                db.drop(table=tname)
 
 
 # -----------------------------------------------------------------------------
@@ -556,7 +579,7 @@ def skip_check(skipfunc):
 # -----------------------------------------------------------------------------
 def touch(pathname):
     """
-    Like touch(1). This should be in util.py.
+    Like touch(1). This one is deprecated in favor of the one in util.py.
     """
     open(pathname, 'a').close()
 

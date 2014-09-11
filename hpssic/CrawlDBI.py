@@ -706,7 +706,7 @@ if mysql_available:
                 self.dbh.autocommit(True)
                 self.closed = False
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # -------------------------------------------------------------------------
         def __repr__(self):
@@ -715,6 +715,20 @@ if mysql_available:
             """
             rv = "DBImysql(dbname='%s')" % self.dbname
             return rv
+
+        # ---------------------------------------------------------------------
+        def err_handler(self, err):
+            """
+            mysql: Error handler
+            """
+            if isinstance(err, mysql_exc.ProgrammingError):
+                raise DBIerror(str(err), dbname=self.dbname)
+            elif 1 < len(err.args) and err.args[0] in [1047, 2003]:
+                print("RETRY")
+                time.sleep(self.sleeptime)
+                self.sleeptime = min(2*self.sleeptime, 1.0)
+            else:
+                raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
 
         # ---------------------------------------------------------------------
         def alter(self, table='', addcol=None, dropcol=None, pos=None):
@@ -758,7 +772,7 @@ if mysql_available:
                 c = self.dbh.cursor()
                 c.execute(cmd)
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def close(self):
@@ -773,7 +787,7 @@ if mysql_available:
                 self.closed = True
             # Convert any mysql error into a DBIerror
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
@@ -806,7 +820,7 @@ if mysql_available:
 
             # Convert any db specific error into a DBIerror
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def cursor(self):
@@ -817,7 +831,7 @@ if mysql_available:
                 rval = self.dbh.cursor()
                 return rval
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def delete(self, table='', where='', data=()):
@@ -858,20 +872,23 @@ if mysql_available:
                 c.close()
             # Translate any db specific errors to DBIerror
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def describe(self, table=''):
             """
             mysql: Return a table description
             """
-            cmd = """select column_name, ordinal_position, data_type
-                         from information_schema.columns
-                         where table_name = %s"""
-            c = self.dbh.cursor()
-            c.execute(cmd, (self.prefix(table),))
-            r = c.fetchall()
-            return r
+            try:
+                cmd = """select column_name, ordinal_position, data_type
+                             from information_schema.columns
+                             where table_name = %s"""
+                c = self.dbh.cursor()
+                c.execute(cmd, (self.prefix(table),))
+                r = c.fetchall()
+                return r
+            except mysql_exc.Error, e:
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def drop(self, table=''):
@@ -894,7 +911,7 @@ if mysql_available:
 
             # Convert any db specific error into a DBIerror
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # -------------------------------------------------------------------------
         def insert(self, table='', fields=[], data=[]):
@@ -933,7 +950,7 @@ if mysql_available:
                 c.close()
             # Translate sqlite specific exception into a DBIerror
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # -------------------------------------------------------------------------
         def select(self,
@@ -991,7 +1008,7 @@ if mysql_available:
             if limit is not None:
                 cmd += " limit 0, %d" % int(limit)
 
-            sleeptime = 0.1
+            self.sleeptime = 0.1
             while True:
                 try:
                     c = self.dbh.cursor()
@@ -1004,12 +1021,7 @@ if mysql_available:
                     return rv
                 # Translate any sqlite3 errors to DBIerror
                 except mysql_exc.Error, e:
-                    if 1047 == e.args[0]:
-                        print("RETRY")
-                        time.sleep(sleeptime)
-                        sleeptime = min(2*sleeptime, 1.0)
-                    else:
-                        raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                    self.err_handler(e)
 
         # -------------------------------------------------------------------------
         def table_exists(self, table=''):
@@ -1032,7 +1044,7 @@ if mysql_available:
                 dbc.close()
                 return 0 < len(rows)
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
         # ---------------------------------------------------------------------
         def update(self, table='', where='', fields=[], data=[]):
@@ -1076,7 +1088,7 @@ if mysql_available:
                 c.close()
             # Translate database-specific exceptions into DBIerrors
             except mysql_exc.Error, e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
 
 
 if db2_available:
