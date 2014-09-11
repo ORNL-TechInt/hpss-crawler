@@ -351,7 +351,11 @@ def dispatch_help(mod, prefix, cmd=None):
     else:
         for fname in [x for x in dir(mod) if x.startswith(prefix)]:
             func = getattr(mod, fname)
-            hstr = func.__doc__.split("\n")[0]
+            try:
+                hstr = func.__doc__.split("\n")[0]
+            except AttributeError:
+                raise HpssicError(
+                    "Function '%s' seems to be missing a docstring" % fname)
             print hstr
         
     
@@ -673,11 +677,9 @@ def ymdhms(epoch):
     return time.strftime("%Y.%m%d %H:%M:%S",
                          time.localtime(epoch))
 
-
 # -----------------------------------------------------------------------------
 class HpssicError(Exception):
     def __init__(self, value):
         self.value = value
-
     def __str__(self):
         return repr(self.value)

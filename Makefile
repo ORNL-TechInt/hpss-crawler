@@ -1,23 +1,5 @@
 WWW = $(HOME)/www/hpssic
 PYFILES = $(shell find . -name "*.py")
-TEST_D=hpssic/test
-
-help:
-	@echo ""
-	@echo "Targets in this Makefile"
-	@echo "    clean        Remove *.pyc, *~, test.d, MANIFEST, README"
-	@echo "    doc          Generate the documentation"
-	@echo "    install      Install the package locally"
-	@echo "    pristine     clean + rm dist/*"
-	@echo "    readme       Generate the readme in HTML"
-	@echo "    refman       Generate the Reference Manual in HTML"
-	@echo "    refresh      Regenerate the dist and install/upgrade the local copy"
-	@echo "    sdist        Generate the source distribution"
-	@echo "    TAGS         Navigation tags for emacs"
-	@echo "    tests        Run and log the fast tests"
-	@echo "    alltests     Run and log all the tests"
-	@echo "    uguide       Generate the User Guide in HTML"
-	@echo ""
 
 doc: readme refman uguide
 
@@ -56,7 +38,8 @@ $(WWW)/ReferenceManual.html: RefMan.md
 $(WWW)/UserGuide.html: UGuide.md
 	Markdown.pl $< > $@
 
-sdist: *.py
+sdist: $(PYFILES)
+	echo $(PYFILES)
 	setup.py sdist
 
 install:
