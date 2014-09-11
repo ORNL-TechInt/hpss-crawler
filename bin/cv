@@ -4,4 +4,4 @@ from hpssic import cv
 from hpssic import util
 import sys
 # pdb.set_trace()
-util.dispatch(modname='hpssic.cv', prefix='cv', args=sys.argv)
+util.dispatch(modname='hpssic.cv', prefix='cvv', args=sys.argv)

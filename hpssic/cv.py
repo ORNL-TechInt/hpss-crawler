@@ -3,6 +3,7 @@ import Checkable
 import crawl_lib
 import CrawlConfig
 import CrawlDBI
+import cv_lib
 import Dimension
 import hpss
 import optparse
@@ -14,12 +15,12 @@ import re
 import time
 import toolframe
 
-prefix = "cv"
+prefix = "cvv"
 H = None
 
 
 # -----------------------------------------------------------------------------
-def cv_addcart(argv):
+def cvv_addcart(argv):
     """addcart - Add field cart to checkable table
 
     Add text field cart to table <CTX>_checkables.
@@ -44,7 +45,7 @@ def cv_addcart(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_dropcart(argv):
+def cvv_dropcart(argv):
     """dropcart - Drop field cart from checkable table
 
     Drop the field cart from the checkable table
@@ -64,12 +65,12 @@ def cv_dropcart(argv):
     db = CrawlDBI.DBI()
     table = db._dbobj.prefix("checkables")
     cmd = "alter table %s drop column cart" % table
-    db.sql(cmd)
+    db.sql(cmd)  # !@! this needs to be db.alter(table=table,...)
     db.close()
 
 
 # -----------------------------------------------------------------------------
-def cv_popcart(argv):
+def cvv_popcart(argv):
     """popcart - Populate field cart in checkable table
 
     usage: cv popcart [-d] [path ...]
@@ -157,7 +158,7 @@ def populate_cart_field(db, h, path, dbcart, max, dryrun):
 
 
 # -----------------------------------------------------------------------------
-def cv_report(argv):
+def cvv_report(argv):
     """report - show the checksum verifier database status
 
     select count(*) from checkables where type = 'f';
@@ -201,7 +202,7 @@ def cv_report(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_nulltest(argv):
+def cvv_nulltest(argv):
     """nulltest - how do NULL values show up when queried?
 
     After doing 'alter table dev_checkables add fails int', the added fields
@@ -247,7 +248,7 @@ def cv_nulltest(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_fail_reset(argv):
+def cvv_fail_reset(argv):
     """fail_reset - reset a failing path so it can be checked again
 
     After doing 'alter table dev_checkables add fails int', the added fields
@@ -287,7 +288,7 @@ def cv_fail_reset(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_show_next(argv):
+def cvv_show_next(argv):
     """show_next - Report the Checkables in the order they will be checked
 
     usage: cvtool shownext
@@ -326,7 +327,7 @@ def cv_show_next(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_simplug(argv):
+def cvv_simplug(argv):
     """simplug - Simulate running a plugin
 
     usage: cv simplug [-d] [-i <iterations>]
@@ -337,7 +338,7 @@ def cv_simplug(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_test_check(argv):
+def cvv_test_check(argv):
     """test_check - Run Checkable.check() on a specified entry
 
     usage: cvtool test_check [-p/--path PATH] [-i/--id ROWID]
@@ -381,7 +382,7 @@ def cv_test_check(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_ttype_add(argv):
+def cvv_ttype_add(argv):
     """ttype_add - Add field 'ttype' to the checkables table
 
     usage: cv ttype_add [-d]
@@ -402,7 +403,7 @@ def cv_ttype_add(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_ttype_drop(argv):
+def cvv_ttype_drop(argv):
     """ttype_drop - Drop field 'ttype' from the checkables table
 
     usage: cv ttype_drop [-d]
@@ -423,7 +424,7 @@ def cv_ttype_drop(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_ttype_lookup(argv):
+def cvv_ttype_lookup(argv):
     """ttype_lookup - Look up the tape type for a specified pathname
 
     usage: cv ttype_lookup [-d] path ...
@@ -440,11 +441,13 @@ def cv_ttype_lookup(argv):
     if o.debug:
         pdb.set_trace()
 
+    H = hpss.HSI()
+    H.lsX
     # lookup and report tape type for each pathname specified
 
 
 # -----------------------------------------------------------------------------
-def cv_ttype_populate(argv):
+def cvv_ttype_populate(argv):
     """ttype_populate - populate the ttype field in checkables
 
     usage: cv ttype_populate [-d] [-a] [path ...]
@@ -473,7 +476,7 @@ def cv_ttype_populate(argv):
 
 
 # -----------------------------------------------------------------------------
-def cv_ttype_table(argv):
+def cvv_ttype_table(argv):
     """ttype_table - create (or drop) table tape_types
 
     usage: cv ttype_table [-d] {-D|-r /opt/hpss}

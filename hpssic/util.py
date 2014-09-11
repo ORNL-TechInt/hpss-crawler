@@ -285,7 +285,7 @@ def daybase(epoch):
                         tm.tm_wday, tm.tm_yday, tm.tm_isdst])
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def dispatch(modname, prefix, args):
     """
     Look in module *modname* for routine *prefix*_*args*[1]. Call it with
@@ -304,10 +304,10 @@ def dispatch(modname, prefix, args):
         func(args[2:])
 
 
-# ------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 def dispatch_help(mod, prefix, cmd=None):
     if cmd is not None:
-        func = getattr(mod, "_".join(prefix, cmd))
+        func = getattr(mod, "_".join([prefix, cmd]))
         print func.__doc__
     else:
         print("")
