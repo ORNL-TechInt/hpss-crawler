@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import CrawlDBI
+from hpssic import CrawlDBI
 import hpss
 import optparse
 import pdb
-import pexpect
+from hpssic import pexpect
 import toolframe
 
 prefix = "c"

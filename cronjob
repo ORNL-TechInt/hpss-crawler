@@ -1,24 +1,7 @@
 #!/bin/bash
-export GIT_REPO=$HOME/prj/hpssic/dev
-export CRAWL_CONF=$GIT_REPO/hpss-dev01.crawl.cfg
-export PYTHONPATH=$GIT_REPO
-export CRONOUT=/tmp/cronjob.$$.out
-export TESTDIR=$GIT_REPO/hpssic/test
-
-/bin/echo "--------------------------------------------" > $CRONOUT
-
-/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
 cd $HOME/prj/hpssic/dev
-/usr/bin/nosetests -c $TESTDIR/nosecron.cfg $TESTDIR >> $CRONOUT 2>&1
-STATUS=$?
-/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
-
-if [[ "$STATUS" == "0" ]]; then
-    SUMMARY=$(grep "^Ran" $CRONOUT)
-else
-    SUMMARY=$(grep "^FAILED" $CRONOUT)
-fi
-
-SUBJECT="HPSSIC tests: $SUMMARY"
-/bin/mail -s "$SUBJECT" tbarron@ornl.gov tusculum@gmail.com < $CRONOUT
-/bin/rm $CRONOUT
+export CRAWL_CONF=$HOME/prj/hpssic/dev/hpss-dev01.crawl.cfg
+export PYTHONPATH=$HOME/prj/hpssic/dev
+/bin/date +"Starting at %Y.%m%d %H:%M:%S"
+/usr/bin/gmake crontests
+/bin/date +"Finished at %Y.%m%d %H:%M:%S"
