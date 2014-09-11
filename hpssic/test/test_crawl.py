@@ -1536,7 +1536,7 @@ class CrawlGiveUpYetTest(CrawlTest):
                                    logger=CrawlConfig.get_logger(self.logpath,
                                                                  reset=True))
         self.D.cfg = t
-        self.sender = 'HIC@%s' % util.hostname(long=True)
+        self.sender = 'hpssic@%s' % util.hostname(long=True)
         self.tbstr = ["abc", 'def', 'ghi', 'jkl', 'mno', 'pqr', "xyz"]
 
     # --------------------------------------------------------------------------

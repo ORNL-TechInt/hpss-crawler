@@ -1,6 +1,7 @@
 import CrawlDBI
 import dbschem
 import hpss
+import time
 import util as U
 
 stats_table = 'cvstats'
@@ -136,28 +137,16 @@ def tpop_report_updates(data):
     """
     # -------------------------------------------------------------------------
     def report_row(row):
-        (path, cart, ttype, lcheck) = row
+        (ttype, cart, path, lcheck) = row
         if lcheck == 0:
             lcheck_s = "unchecked"
         else:
             lcheck_s = time.strftime("%Y.%m%d %H:%M:%S",
                                      time.localtime(lcheck))
-        print("%-30s %s %s %s" % (path, cart, ttype, lcheck_s))
+        print("%-60s \n   %s %30s %s" % (path, cart, ttype, lcheck_s))
 
-    # -------------------------------------------------------------------------
-    db = CrawlDBI.DBI(dbtype="crawler")
-    row_l = db.select(table="checkables",
-                      fields=["path", "cart", "ttypes", "last_check"],
-                      where="path = ?",
-                      data=(path,))
-    db.close()
-
-    if 1 < len(row_l):
-        print("Duplicate rows for path %s:" % row_l[0][0])
-        for row in row_l:
-            report_row(row)
-    else:
-        report_row(row_l[0])
+    for row in data:
+        report_row(row)
 
 
 # -------------------------------------------------------------------------
@@ -171,7 +160,7 @@ def tpop_select_all(db=None):
         db = CrawlDBI.DBI(dbtype='crawler')
         close = True
     rval = db.select(table="checkables",
-                     fields=["path", "type", "ttypes", "cart"],
+                     fields=["path", "type", "ttypes", "cart", "last_check"],
                      where="type = 'f' and " +
                      "(ttypes is NULL or cart is NULL)")
     if close:
@@ -192,7 +181,11 @@ def tpop_select_by_paths(path_l, db=None):
     rval = []
     for path in path_l:
         rows = db.select(table="checkables",
-                         fields=["path", "type", "ttypes", "cart"],
+                         fields=["path",
+                                 "type",
+                                 "ttypes",
+                                 "cart",
+                                 "last_check"],
                          where="path like ? and type = 'f' and " +
                          "(ttypes is NULL or cart is NULL)",
                          data=(path,))
@@ -206,17 +199,21 @@ def tpop_select_by_paths(path_l, db=None):
 def tpop_update_by_path(data):
     """
     Update media type (ttypes) and cartridge names (cart) based on path.
+
+    Incoming *data* is a list of tuples containing ttypes, cart, path, and last
+    check.
     """
+    zdata = [(d[0], d[1], d[2]) for d in data]
     db = CrawlDBI.DBI(dbtype="crawler")
     db.update(table="checkables",
               fields=["ttypes", "cart"],
               where="path = ?",
-              data=[data])
+              data=zdata)
     db.close()
 
 
 # -----------------------------------------------------------------------------
-def ttype_lookup(pathname):
+def ttype_lookup(pathname, cart):
     """
     Use hsi to get the name of the cart where this file lives.
 
@@ -227,25 +224,37 @@ def ttype_lookup(pathname):
     """
     rval = []
 
-    # Get the cart name from hsi
-    H = hpss.HSI()
-    r = H.lsP(pathname)
-    H.quit()
+    # Get the cart name from hsi if we don't already have it
+    if cart is None or cart == '':
+        H = hpss.HSI()
+        r = H.lsP(pathname)
+        H.quit()
 
-    (type, name, cart, cos) = U.lsp_parse(r)
-    if not cart:
-        return None
+        (type, name, cart, cos) = U.lsp_parse(r)
+        if not cart:
+            return None
 
     cartlist = cart.split(',')
 
     # Get the type/subtype from PVLPV
     for cart in cartlist:
-        (type, subtype) = ttype_cart_lookup(cart)
-        desc = ttype_map_desc(type, subtype)
+        desc = ttype_cart_to_desc(cart)
         rval.append((cart, desc))
 
     # Return the media description
     return rval
+
+
+# -----------------------------------------------------------------------------
+@U.memoize
+def ttype_cart_to_desc(cart):
+    """
+    Call ttype_cart_lookup and ttype_map_desc to go from cart to media
+    description
+    """
+    (type, subtype) = ttype_cart_lookup(cart)
+    desc = ttype_map_desc(type, subtype)
+    return desc
 
 
 # -----------------------------------------------------------------------------

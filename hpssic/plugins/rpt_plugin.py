@@ -1,3 +1,4 @@
+from hpssic import CrawlMail
 from hpssic import rpt_lib
 import time
 
@@ -16,7 +17,7 @@ def main(cfg):
                          time.strftime("%Y.%m%d %H:%M:%S",
                                        time.localtime()))
 
-    rpt_lib.sendmail(sender=cfg.get('rpt', 'sender'),
-                     to=cfg.get('rpt', 'recipients'),
-                     subject=subject,
-                     body=rpt_lib.get_report())
+    CrawlMail.send(sender=cfg.get('rpt', 'sender'),
+                   to='rpt.recipients',
+                   subj=subject,
+                   msg=rpt_lib.get_report())
