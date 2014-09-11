@@ -7,7 +7,7 @@ We have interface classes for mysql, sqlite, and db2.
 The db2 interface only supports read operations, nothing that will change the
 database. Also the db2 interface doesn't use table prefixes.
 """
-from nose.plugins.attrib import attr
+# from nose.plugins.attrib import attr
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
@@ -20,6 +20,14 @@ from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 import warnings
+
+
+M = sys.modules['__main__']
+if 'py.test' in M.__file__:
+    import pytest
+    attr = pytest.mark.attr
+else:
+    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------

@@ -2,7 +2,6 @@
 """
 Tests for Checkable.py
 """
-from nose.plugins.attrib import attr
 from hpssic.Checkable import Checkable
 from hpssic import CrawlDBI
 from hpssic import Dimension
@@ -15,6 +14,14 @@ import time
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
+
+
+M = sys.modules['__main__']
+if 'py.test' in M.__file__:
+    import pytest
+    attr = pytest.mark.attr
+else:
+    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
