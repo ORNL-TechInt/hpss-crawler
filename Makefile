@@ -1,6 +1,5 @@
 WWW = $(HOME)/www/hpssic
 PYFILES = $(shell find . -name "*.py")
-
 help:
 	@echo ""
 	@echo "Targets in this Makefile"
@@ -31,13 +30,21 @@ clean:
 TAGS: hpssic/*.py hpssic/test/*.py
 	find . -name "*.py" | xargs etags
 
-TESTLOG=test/nosetests.log
-NOSE_WHICH=test
+TEST_OPTS=-x
 tests:
 	@echo "--------------------------------------------" >> $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	nosetests -c test/nose.cfg $(NOSE_WHICH) 2>&1 | tee -a $(TESTLOG)
+	py.test $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
 	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+alltests:
+	@echo "--------------------------------------------" >> $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	py.test --all $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
+	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+
+cron:
+	echo cronjob | at now
 
 pep8:
 	nosetests $(TEST_D)/test_script.py:Test_PEP8.test_pep8
@@ -66,7 +73,14 @@ install:
 	@if [[ `which python` == "/usr/bin/python" ]]; then \
 		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
 	else \
-		pip install --upgrade dist/hpssic-2014.0725dev.tar.gz; \
+		pip install .; \
+	fi
+
+upgrade:
+	@if [[ `which python` == "/usr/bin/python" ]]; then \
+		echo "Do '. ~/venv/hpssic/bin/activate' first"; \
+	else \
+		pip install --upgrade .; \
 	fi
 
 refresh: sdist install

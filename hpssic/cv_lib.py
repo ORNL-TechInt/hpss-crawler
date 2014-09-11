@@ -4,17 +4,6 @@ import util as U
 
 
 # -----------------------------------------------------------------------------
-def dbalter(table=None, addcol=None, dropcol=None, pos=None):
-    """
-    Pass arguments through to the db alter routine
-    !@! test this
-    """
-    db = CrawlDBI.DBI(dbtype="crawler")
-    db.alter(table=table, addcol=addcol, dropcol=dropcol, pos=pos)
-    db.close()
-
-
-# -----------------------------------------------------------------------------
 def get_checksum_count():
     """
     Return the count of checksums in the crawler database
