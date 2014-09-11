@@ -97,6 +97,33 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(10, a.p_sum['5081']['count'])
 
     # -------------------------------------------------------------------------
+    def test_addone(self):
+        """
+        Given a set of values in a Dimension object, verify that addone does
+        the right thing.
+        """
+        # testhelp.db_config(self.testdir, util.my_name())
+        # Checkable.Checkable.ex_nihilo()
+        a = Dimension(name='addone')
+        a.p_sum = {'6001': {'count': 10, 'pct': 50.0},
+                   '5081': {'count': 10, 'pct': 50.0}
+                   }
+        a.s_sum = {'6001': {'count': 2, 'pct': 40.0},
+                   '5081': {'count': 3, 'pct': 60.0}
+                   }
+        a.addone('6001')
+        self.expected(3, a.s_sum['6001']['count'])
+        self.expected(50.0, a.s_sum['6001']['pct'])
+
+        a.addone('6001')
+        self.expected(4, a.s_sum['6001']['count'])
+        exp = 100.0 * 4.0 / 7.0
+        self.expected(exp, a.s_sum['6001']['pct'])
+
+        self.expected(10, a.p_sum['6001']['count'])
+        self.expected(10, a.p_sum['5081']['count'])
+
+    # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
         Verify that a newly created Dimension object has the following
@@ -136,12 +163,12 @@ class DimensionTest(testhelp.HelpedTestCase):
         got_exception = False
         self.assertRaisesMsg(StandardError,
                              "Attribute 'catl' is not valid",
-                             Dimension, name=dimname, catl=[1, 2, 3])
+                             Dimension, name=dimname, catl=[1,2,3])
 
         self.assertRaisesMsg(StandardError,
                              "Attribute 'aardvark' is not valid",
                              Dimension, name=dimname, aardvark='Fanny Brice')
-
+            
     # -------------------------------------------------------------------------
     def test_ctor_defaults(self):
         """
@@ -166,6 +193,68 @@ class DimensionTest(testhelp.HelpedTestCase):
                              "Caller must set attribute 'name'",
                              Dimension)
 
+    # -------------------------------------------------------------------------
+    # def test_db_already_no_table(self):
+    #     """
+    #     Creating a Dimension object should initialize the dimension table in
+    #     the existing database if the db exists but the table does not.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     db = CrawlDBI.DBI()
+    #     self.assertFalse(db.table_exists(table='dimension'),
+    #                     'Did not expect table \'dimension\' in database')
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     a = Dimension(name='already_nt')
+    #     a.persist()
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     self.assertTrue(db.table_exists(table='dimension'),
+    #                     'Expected table \'dimension\' in database')
+    #     db.close()
+        
+    # -------------------------------------------------------------------------
+    # def test_ex_nihilo_nofile(self):
+    #     """
+    #     Creating and persisting a Dimension object should initialize the
+    #     database and table dimension if they do not exist.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    # 
+    #     a = Dimension(name='ex_nihilo')
+    #     a.persist()
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     db = CrawlDBI.DBI()
+    #     self.assertTrue(db.table_exists(table='dimension'),
+    #                     "Expected table 'dimension' in database")
+    #     db.close()
+        
+    # -------------------------------------------------------------------------
+    # def test_ex_nihilo_notable(self):
+    #     """
+    #     If the db file exists but the table does not, creating and persisting a
+    #     Dimension object should create the table 'dimension'.
+    #     """
+    #     util.conditional_rm(self.testdb)
+    #     testhelp.db_config(self.testdir, util.my_name())
+    #     testhelp.touch(self.testdb)
+    #     
+    #     a = Dimension(name='ex_nihilo')
+    #     a.persist()
+    #     self.assertTrue(os.path.exists(self.testdb),
+    #                     "Expected to find database file '%s'" % self.testdb)
+    # 
+    #     db = CrawlDBI.DBI()
+    #     self.assertTrue(db.table_exists(table='dimension'),
+    #                     "Expected table 'dimension' in database")
+    #     db.close()
+        
     # -------------------------------------------------------------------------
     def test_load_already(self):
         """
@@ -294,3 +383,9 @@ class DimensionTest(testhelp.HelpedTestCase):
         self.expected(4, a.sum_total(dict=a.p_sum))
         self.expected(5, a.sum_total(which='s'))
         self.expected(5, a.sum_total(dict=a.s_sum))
+        
+# -----------------------------------------------------------------------------
+if __name__ == '__main__':
+    toolframe.ez_launch(test='DimensionTest',
+                        logfile=logfile)
+        
