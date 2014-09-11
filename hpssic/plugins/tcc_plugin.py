@@ -153,8 +153,8 @@ def highest_nsobject_id():
     """
     Cache and return the largest NSOBJECT id in the DB2 database.
     """
-    if (not hasattr(highest_nsobject_id, '_max_obj_id') or
-        (60 < time.time() - highest_nsobject_id._when)):
+    if any([not hasattr(highest_nsobject_id, '_max_obj_id'),
+            60 < time.time() - highest_nsobject_id._when]):
         H = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
         result = H.select(table='nsobject',
                           fields=['max(object_id) as max_obj_id'])

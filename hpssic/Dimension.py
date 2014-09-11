@@ -5,6 +5,7 @@ Track stratum proportions in a sample against a population
 import CrawlDBI
 import pdb
 
+
 # -----------------------------------------------------------------------------
 def get_dim(dname, reset=False):
     """
@@ -138,7 +139,7 @@ class Dimension(object):
             self.s_sum = self._compute_dict(rows)
         except CrawlDBI.DBIerror:
             pass
-        
+
         for cval in self.p_sum:
             if cval not in self.s_sum:
                 self.s_sum[cval] = {'count': 0, 'pct': 0}
@@ -152,15 +153,15 @@ class Dimension(object):
         Generate a string reflecting the current contents of the dimension
         """
         rval = ("\n   %-20s     %17s   %17s" % (self.name,
-                                            "Population",
-                                            "Sample"))
+                                                "Population",
+                                                "Sample"))
 
         rval += ("\n   %20s     %17s   %17s" % (20 * '-',
-                                            17 * '-',
-                                            17 * '-'))
+                                                17 * '-',
+                                                17 * '-'))
         for cval in self.p_sum:
-            rval += ("\n   %-20s  "   % cval +
-                     "   %8d"   % self.p_sum[cval]['count'] +
+            rval += ("\n   %-20s  " % cval +
+                     "   %8d" % self.p_sum[cval]['count'] +
                      "   %6.2f" % self.p_sum[cval]['pct'] +
                      "   %8d" % self.s_sum[cval]['count'] +
                      "   %6.2f" % self.s_sum[cval]['pct'])

@@ -29,7 +29,8 @@ def tccp_bfid(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     rows = db.select(table='bitfile',
@@ -83,7 +84,8 @@ def tccp_bfts(args):
                  help='run the debugger')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('subsys'))
     rows = db.select(table='bftapeseg',
@@ -218,6 +220,7 @@ def tccp_simplug(args):
     """
     crawl_lib.simplug('tcc', args)
 
+
 # -----------------------------------------------------------------------------
 def tccp_tables(args):
     """tables - print a list of tables
@@ -233,8 +236,9 @@ def tccp_tables(args):
                  help='use an alternate database')
     (o, a) = p.parse_args(args)
 
-    if o.debug: pdb.set_trace()
-    
+    if o.debug:
+        pdb.set_trace()
+
     db = CrawlDBI.DBI(dbtype='db2',
                       dbname=CrawlDBI.db2name('subsys'))
     db._dbobj.tbl_prefix = 'syscat.'
@@ -247,7 +251,7 @@ def tccp_tables(args):
     for r in rows:
         print("%s %s %s" % (r['Table'], r['Schema'], r['TYPE']))
 
-    
+
 # -----------------------------------------------------------------------------
 def tccp_zreport(args):
     """zreport - show what tcc_report will do with a bitfile id
@@ -318,6 +322,7 @@ def copies_by_file(limit=10):
     #                dbsect="subsys")
     # return result
 
+
 # -----------------------------------------------------------------------------
 def cos_parse(line):
     """
@@ -358,4 +363,4 @@ def hpss_userpass():
     return (username, password)
 
 # -----------------------------------------------------------------------------
-toolframe.tf_launch('tccp', __name__)
+# toolframe.tf_launch('tccp', __name__)

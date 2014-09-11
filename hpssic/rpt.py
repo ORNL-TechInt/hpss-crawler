@@ -14,7 +14,7 @@ import util
 
 # -----------------------------------------------------------------------------
 def rptx_insert(args):
-    """insert - test inserting a value into the report table 
+    """insert - test inserting a value into the report table
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',

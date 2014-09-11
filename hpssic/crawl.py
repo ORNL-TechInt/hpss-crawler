@@ -46,9 +46,11 @@ def crl_cfgdump(argv):
                  help='specify where to send the output')
     (o, a) = p.parse_args(argv)
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
-    if o.target == '':    o.target = 'stdout'
+    if o.target == '':
+        o.target = 'stdout'
 
     cfg = CrawlConfig.get_config(o.config)
     dumpstr = cfg.dump()
@@ -87,6 +89,7 @@ def crl_cleanup(argv):
             print("would do 'shutil.rmtree(%s)'" % td)
         else:
             shutil.rmtree(td)
+
 
 # ------------------------------------------------------------------------------
 def crl_dbdrop(argv):
@@ -189,59 +192,7 @@ def crl_log(argv):
     log.info(" ".join(a))
 
 
-# -----------------------------------------------------------------------------
-def crl_pw_encode(argv):
-    """pw_encode - accept a password and report its base64 encoding
-
-    usage: crawl pw_encode [-p password]
-
-    If -p is not used, a prompt will be issued to retrieve the password without
-    echo.
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    p.add_option('-p', '--pwd',
-                 action='store', default='', dest='pwd',
-                 help='password to encode')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    if o.pwd != '':
-        password = o.pwd
-    else:
-        password = getpass.getpass("Password? > ")
-
-    print(base64.b64encode(password))
-
-
-# -----------------------------------------------------------------------------
-def crl_pw_decode(argv):
-    """pw_decode - accept a base64 hash and decode it
-
-    usage: crawl pw_decode hash
-
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    if len(a) < 1:
-        print("usage: crawl pw_decode B64STRING")
-        sys.exit(1)
-
-    print(base64.b64decode(a[0]))
-
-
-# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 def crl_pw_encode(argv):
     """pw_encode - accept a password and report its base64 encoding
 
@@ -292,96 +243,6 @@ def crl_pw_decode(argv):
 
     print(base64.b64decode(a[0]))
 
-
-# ------------------------------------------------------------------------------
-def crl_readme(argv):
-    """readme - scroll the package README to stdout
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    path = "README.md"
-    if not util.git_repo(__file__):
-        path = util.pathjoin(util.dirname(__file__), path)
-
-    print util.contents(path)
-
-
-# ------------------------------------------------------------------------------
-def crl_sample_cfg(argv):
-    """sample_cfg - scroll the sample configuration file to stdout
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    path = "crawl.cfg.sample"
-    if not util.git_repo(__file__):
-        path = util.pathjoin(util.dirname(__file__), path)
-
-    print util.contents(path)
-
-
-# ------------------------------------------------------------------------------
-def crl_pw_encode(argv):
-    """pw_encode - accept a password and report its base64 encoding
-
-    usage: crawl pw_encode [-p password]
-
-    If -p is not used, a prompt will be issued to retrieve the password without
-    echo.
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    p.add_option('-p', '--pwd',
-                 action='store', default='', dest='pwd',
-                 help='password to encode')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    if o.pwd != '':
-        password = o.pwd
-    else:
-        password = getpass.getpass("Password? > ")
-
-    print(base64.b64encode(password))
-    
-# ------------------------------------------------------------------------------
-def crl_pw_decode(argv):
-    """pw_decode - accept a base64 hash and decode it
-
-    usage: crawl pw_decode hash
-
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    if len(a) < 1:
-        print("usage: crawl pw_decode B64STRING")
-        sys.exit(1)
-        
-    print(base64.b64decode(a[0]))
 
 # ------------------------------------------------------------------------------
 def crl_start(argv):
@@ -517,28 +378,6 @@ def crl_stop(argv):
         idx = ctx_l.index(o.context)
         print("Stopping the %s crawler..." % ctx_l[idx])
         testhelp.touch(rpid_l[idx][2])
-
-
-# ------------------------------------------------------------------------------
-def crl_version(argv):
-    """version - report the crawler software version
-    """
-    p = optparse.OptionParser()
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug:
-        pdb.set_trace()
-
-    if util.git_repo(__file__):
-        path = ".hpssic_version"
-    else:
-        path = util.pathjoin(util.dirname(__file__), ".hpssic_version")
-
-    hpssic_version = util.contents(path).strip()
-    print("HPSS Integrity Crawler version %s" % hpssic_version)
 
 
 # ------------------------------------------------------------------------------

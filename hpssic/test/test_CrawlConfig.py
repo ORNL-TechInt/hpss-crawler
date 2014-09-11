@@ -705,48 +705,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                              obj.get, 'crawler', 'logpath')
 
     # -------------------------------------------------------------------------
-    def test_interpolation_ok(self):
-        d = copy.deepcopy(self.cdict)
-        d['crawler']['logpath'] = "%(root)s/fiddle.log"
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(d, {'root': '/the/root/directory'})
-        exp = "/the/root/directory/fiddle.log"
-        actual = obj.get('crawler', 'logpath')
-        self.assertEqual(exp, actual, "Expected '%s', got '%s'")
-
-    # -------------------------------------------------------------------------
-    def test_interpolation_fail(self):
-        d = copy.deepcopy(self.cdict)
-        d['crawler']['logpath'] = "%(root)s/fiddle.log"
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(d, {'xroot': '/there/is/no/root'})
-        exp = "/the/root/directory/fiddle.log"
-        self.assertRaisesMsg(CrawlConfig.InterpolationMissingOptionError,
-                             "Bad value substitution",
-                             obj.get, 'crawler', 'logpath')
-
-    # -------------------------------------------------------------------------
-    def test_interpolation_ok(self):
-        d = copy.deepcopy(self.cdict)
-        d['crawler']['logpath'] = "%(root)s/fiddle.log"
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(d, {'root': '/the/root/directory'})
-        exp = "/the/root/directory/fiddle.log"
-        actual = obj.get('crawler', 'logpath')
-        self.assertEqual(exp, actual, "Expected '%s', got '%s'")
-
-    # -------------------------------------------------------------------------
-    def test_interpolation_fail(self):
-        d = copy.deepcopy(self.cdict)
-        d['crawler']['logpath'] = "%(root)s/fiddle.log"
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(d, {'xroot': '/there/is/no/root'})
-        exp = "/the/root/directory/fiddle.log"
-        self.assertRaisesMsg(CrawlConfig.InterpolationMissingOptionError,
-                             "Bad value substitution",
-                             obj.get, 'crawler', 'logpath')
-
-    # -------------------------------------------------------------------------
     def test_load_dict(self):
         """
         Routines exercised: __init__(), load_dict().

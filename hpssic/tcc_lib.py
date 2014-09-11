@@ -4,6 +4,7 @@ import CrawlConfig
 import os
 import util
 
+
 # -----------------------------------------------------------------------------
 def get_bitfile_path(bitfile):
     """
@@ -97,7 +98,7 @@ def get_cos_info():
     Read COS info from tables COS and HIER in the DB2 database
     """
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('cfg'))
-    rows = db.select(table=['cos A','hier B'],
+    rows = db.select(table=['cos A', 'hier B'],
                      fields=['A.cos_id',
                              'A.hier_id',
                              'B.slevel0_migrate_list_count'],

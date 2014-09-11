@@ -434,7 +434,7 @@ class UtilTest(testhelp.HelpedTestCase):
         the list is empty, it should return None. After pop0() returns, the
         list should be one element shorter.
         """
-        tl = [1,2,3,4,5]
+        tl = [1, 2, 3, 4, 5]
         x = copy.copy(tl)
         e = util.pop0(x)
         self.expected(1, e)

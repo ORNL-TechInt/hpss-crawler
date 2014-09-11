@@ -5,7 +5,7 @@ from hpssic import CrawlDBI
 from hpssic import Dimension
 import os
 import pdb
-from hpssic import pexpect
+import pexpect
 import sys
 import time
 from hpssic import util

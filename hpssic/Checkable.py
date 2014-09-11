@@ -118,7 +118,8 @@ class Checkable(object):
                "path='%s', " % self.path +
                "type='%s', " % self.type +
                "cos='%s', " % self.cos +
-               "cart=%s, " % (self.cart if self.cart is None else "'%s'" % self.cart) +
+               "cart=%s, " % (self.cart if self.cart is None else "'%s'" %
+                              self.cart) +
                "checksum=%d, " % self.checksum +
                "last_check=%f)" % self.last_check)
 
@@ -180,7 +181,7 @@ class Checkable(object):
         """
         for dn in self.dim:
             cval = getattr(self, dn)
-            if self.dim[dn].vote(cval) == False:
+            if self.dim[dn].vote(cval) is False:
                 CrawlConfig.log("%s votes against %s -- skipping" %
                                 (dn, self.path))
                 return False
@@ -189,7 +190,7 @@ class Checkable(object):
                             (self.path))
             return False
         return True
-    
+
     # -------------------------------------------------------------------------
     def check(self):
         """
@@ -626,7 +627,7 @@ class Checkable(object):
         self.dim['cos'].load()
         self.dim['cart'].load()
         db.close()
-    
+
     # -------------------------------------------------------------------------
     def populate_cart(self, h):
         rsp = h.lsP(self.path)

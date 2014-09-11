@@ -179,7 +179,7 @@ def tf_dispatch(prefix, args):
             print("No such subcommand '%s'" % args[0])
         except:
             tb.print_exc()
-            
+
 
 # -----------------------------------------------------------------------------
 def tf_shell(prefix, args):

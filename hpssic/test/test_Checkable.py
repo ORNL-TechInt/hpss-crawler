@@ -112,7 +112,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.assertNotEqual(0, item.last_check,
                                 "Expected last_check to be updated but " +
                                 "it was not")
-    
+
     # -------------------------------------------------------------------------
     def test_ctor(self):
         """
@@ -297,7 +297,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(self.ymdhms(pre[stat.ST_MTIME]),
                       self.ymdhms(post[stat.ST_MTIME]))
         self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
-    
+
     # -------------------------------------------------------------------------
     def test_ex_nihilo_notable(self):
         """
@@ -504,9 +504,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         should return type='f', path=<file path>, cos.
         """
         n = Checkable(path='xyx', type='d')
-        line = ("FILE\t    /home/tpb/LoadL_admin\t   88787\t   88787\t   " +
-                "3962+411820\t     X0352700\t        5081\t    0\t       1\t       " +
-                "03/14/2003\t      07:12:43\t        03/19/2012\t       13:09:50")
+        line = ("FILE\t /home/tpb/LoadL_admin\t 88787\t   88787\t   " +
+                "3962+411820\t X0352700\t 5081\t 0\t 1\t       " +
+                "03/14/2003\t  07:12:43\t 03/19/2012\t 13:09:50")
         r = n.fdparse(line)
         self.expected('f', r.type)
         self.expected('/home/tpb/LoadL_admin', r.path)
@@ -522,12 +522,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         . fdparse() should return type='f', path=<file path>, cos.
         """
         n = Checkable(path='xyx', type='d')
-        line = ("FILE\t    /log/2007/05/15/logfile01_200705150306\t  0\t       0\t   " +
-                "         0\t        \t              6001\t    0\t       1\t  "+
-                "05/15/2007\t      03:06:39\t        02/11/2009\t       11:06:31")
-        # line = ("FILE    /home/tpb/LoadL_admin   88787   88787   " +
-        #         "3962+411820     X0352700        5081    0       1       " +
-        #         "03/14/2003      07:12:43        03/19/2012       13:09:50")
+        line = ("FILE\t/log/2007/05/15/logfile01_200705150306\t 0\t 0\t   " +
+                "0\t        \t              6001\t    0\t       1\t  " +
+                "05/15/2007\t   03:06:39\t  02/11/2009\t  11:06:31")
         r = n.fdparse(line)
         self.expected('f', r.type)
         self.expected('/log/2007/05/15/logfile01_200705150306', r.path)
