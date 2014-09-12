@@ -403,6 +403,14 @@ def raiseError(record):
 
 
 # -----------------------------------------------------------------------------
+def realpath(fakepath):
+    """
+    Convenience wrapper for os.path.realpath()
+    """
+    return os.path.realpath(fakepath)
+
+
+# -----------------------------------------------------------------------------
 def rgxin(needle, haystack):
     """
     Return True if the regexp needle matches haystack.

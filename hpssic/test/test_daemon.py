@@ -13,13 +13,15 @@ from hpssic import util
 mself = sys.modules[__name__]
 logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for testing
     """
     testhelp.module_test_setup(daemonTest.testdir)
-    
+
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
@@ -27,13 +29,14 @@ def tearDownModule():
     """
     testhelp.module_test_teardown(daemonTest.testdir)
 
+
 # -----------------------------------------------------------------------------
 class daemonTest(testhelp.HelpedTestCase):
     """
     Tests for the daemon class
     """
     testdir = '%s/test.d' % os.path.dirname(mself.__file__)
-    
+
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
@@ -49,7 +52,7 @@ class daemonTest(testhelp.HelpedTestCase):
             self.assertTrue(hasattr(a, attr),
                             "Expected %s to have attribute '%s'" %
                             (a, attr))
-        
+
     # -------------------------------------------------------------------------
     def test_get_max_fd(self):
         """
@@ -59,7 +62,7 @@ class daemonTest(testhelp.HelpedTestCase):
         exp = 4096
         val = a.get_max_fd()
         self.expected(exp, val)
-        
+
     # -------------------------------------------------------------------------
     def test_dlog(self):
         lfname = '%s/daemon.dlog.log' % self.testdir
@@ -72,9 +75,3 @@ class daemonTest(testhelp.HelpedTestCase):
                         "Expected '%s' in '%s'" %
                         (logmsg,
                          util.line_quote(util.contents(lfname))))
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='daemonTest',
-                        logfile=logfile)
-        

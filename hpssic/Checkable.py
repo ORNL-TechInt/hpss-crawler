@@ -35,6 +35,7 @@ import testhelp
 import time
 import util
 
+
 # -----------------------------------------------------------------------------
 class Checkable(object):
     """
@@ -107,7 +108,7 @@ class Checkable(object):
         self.dim['cos'] = Dimension.get_dim('cos')
         self.dim['cart'] = Dimension.get_dim('cart')
         super(Checkable, self).__init__()
-        
+
     # -------------------------------------------------------------------------
     def __repr__(self):
         """
@@ -117,7 +118,8 @@ class Checkable(object):
                "path='%s', " % self.path +
                "type='%s', " % self.type +
                "cos='%s', " % self.cos +
-               "cart=%s, " % (self.cart if self.cart is None else "'%s'" % self.cart) +
+               "cart=%s, " % (self.cart if self.cart is None else "'%s'" %
+                              self.cart) +
                "checksum=%d, " % self.checksum +
                "last_check=%f)" % self.last_check)
 
@@ -155,7 +157,7 @@ class Checkable(object):
                 return "skipped"
             elif "Access denied" in rsp:
                 CrawlConfig.log("hashcreate failed with 'access denied' on %s",
-                         self.path)
+                                self.path)
                 hsi.quit()
                 return "access denied"
             else:
@@ -179,7 +181,7 @@ class Checkable(object):
         """
         for dn in self.dim:
             cval = getattr(self, dn)
-            if self.dim[dn].vote(cval) == False:
+            if self.dim[dn].vote(cval) is False:
                 CrawlConfig.log("%s votes against %s -- skipping" %
                                 (dn, self.path))
                 return False
@@ -188,7 +190,7 @@ class Checkable(object):
                             (self.path))
             return False
         return True
-    
+
     # -------------------------------------------------------------------------
     def check(self):
         """
@@ -274,8 +276,10 @@ class Checkable(object):
         h.quit()
 
         self.set('last_check', time.time())
-        CrawlConfig.log("Persisting checkable '%s' with last_check = %f, fails = %d" %
-                 (self.path, self.last_check, self.fails))
+        CrawlConfig.log("Persisting checkable '%s' with %s = %f, %s = %d" %
+                        (self.path,
+                         'last_check', self.last_check,
+                         'fails', self.fails))
         self.persist()
         return rval
 
@@ -322,7 +326,7 @@ class Checkable(object):
                           'fails      int',
                           'reported   int'])
         if type(dataroot) == str:
-            dataroot = [ dataroot ]
+            dataroot = [dataroot]
 
         if type(dataroot) == list:
             for root in dataroot:
@@ -331,7 +335,7 @@ class Checkable(object):
                 r.persist()
 
         db.close()
-            
+
     # -----------------------------------------------------------------------------
     @classmethod
     def fdparse(cls, value):
@@ -439,7 +443,7 @@ class Checkable(object):
                                      'cos', 'cart', 'checksum', 'last_check',
                                      'fails', 'reported'],
                              orderby='last_check')
-            
+
         for row in rows:
             new = Checkable(rowid=row[0],
                             path=row[1],
@@ -466,7 +470,7 @@ class Checkable(object):
             filename = cfg.get('checksum-verifier', 'fail_report')
             self.fail_report_fh = open(filename, 'a')
             f = self.fail_report_fh
-            
+
         f.write("Failure retrieving file %s: '%s'\n" % (self.path, msg))
         self.set('reported', 1)
         f.flush()
@@ -524,9 +528,9 @@ class Checkable(object):
         else:
             raise StandardError("There appears to be more than one copy " +
                                 "of %s in the database" % self)
-            
+
         db.close()
-        
+
     # -------------------------------------------------------------------------
     def persist(self):
         """
@@ -547,7 +551,7 @@ class Checkable(object):
         update it (setting last_check to 0 if type changes). If no occurrence
         exists, insert it.
         """
-        if self.rowid == None and self.last_check != 0.0:
+        if self.rowid is None and self.last_check != 0.0:
             raise StandardError("%s has rowid == None, last_check != 0.0" %
                                 self)
         if self.path == '':
@@ -623,7 +627,7 @@ class Checkable(object):
         self.dim['cos'].load()
         self.dim['cart'].load()
         db.close()
-    
+
     # -------------------------------------------------------------------------
     def populate_cart(self, h):
         rsp = h.lsP(self.path)
@@ -645,9 +649,10 @@ class Checkable(object):
         """
         Attempt to verify the current file.
         """
-        CrawlConfig.log("hsi(%d) attempting to verify %s" % (h.pid(), self.path))
+        CrawlConfig.log("hsi(%d) attempting to verify %s" % (h.pid(),
+                                                             self.path))
         rsp = h.hashverify(self.path)
-            
+
         if "TIMEOUT" in rsp or "ERROR" in rsp:
             rval = "skipped"
             self.set('fails', self.fails + 1)
@@ -667,5 +672,5 @@ class Checkable(object):
         else:
             rval = Alert.Alert("Checksum mismatch: %s" % rsp)
             CrawlConfig.log("hashverify generated 'Checksum mismatch' " +
-                     "alert on %s" % self.path)
+                            "alert on %s" % self.path)
         return rval

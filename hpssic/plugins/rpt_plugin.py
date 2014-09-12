@@ -1,6 +1,7 @@
 from hpssic import rpt_lib
 import time
 
+
 # -----------------------------------------------------------------------------
 def main(cfg):
     """
@@ -14,7 +15,7 @@ def main(cfg):
     subject = "%s %s" % (cfg.get('rpt', 'subject'),
                          time.strftime("%Y.%m%d %H:%M:%S",
                                        time.localtime()))
-    
+
     rpt_lib.sendmail(sender=cfg.get('rpt', 'sender'),
                      to=cfg.get('rpt', 'recipients'),
                      subject=subject,

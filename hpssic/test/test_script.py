@@ -1,9 +1,11 @@
+from nose.plugins.attrib import attr
 import os
 import pdb
-from hpssic import pexpect
+import pexpect
 import sys
 from hpssic import testhelp as th
 from hpssic import util as U
+
 
 # -----------------------------------------------------------------------------
 class ScriptBase(th.HelpedTestCase):
@@ -52,6 +54,7 @@ class ScriptBase(th.HelpedTestCase):
             self.assertTrue(item in result,
                             "Expected '%s' in '%s'" % (item, result))
 
+
 # -----------------------------------------------------------------------------
 class Test_CRAWL(ScriptBase):
     # -------------------------------------------------------------------------
@@ -78,20 +81,23 @@ class Test_CRAWL(ScriptBase):
                                              "pw_encode - ",
                                              "start - ",
                                              "status - ",
-                                             "stop - ",])
-                                                
+                                             "stop - ",
+                                             ])
+
+
 # -----------------------------------------------------------------------------
 class Test_CV(ScriptBase):
     # -------------------------------------------------------------------------
     def test_cv_help(self):
         super(Test_CV, self).script_help("cv",
-                                            ["fail_reset - ",
-                                             "nulltest - ",
-                                             "report - ",
-                                             "show_next - ",
-                                             "simplug - ",
-                                             "test_check - ",
-                                             ])
+                                         ["fail_reset - ",
+                                          "nulltest - ",
+                                          "report - ",
+                                          "show_next - ",
+                                          "simplug - ",
+                                          "test_check - ",
+                                          ])
+
     # -------------------------------------------------------------------------
     def test_cv_which_command(self):
         super(Test_CV, self).script_which_command("cv")
@@ -104,24 +110,24 @@ class Test_CV(ScriptBase):
     def test_cv_which_plugin(self):
         super(Test_CV, self).script_which_module("hpssic.plugins.cv_plugin")
 
-                                                
+
 # -----------------------------------------------------------------------------
 class Test_MPRA(ScriptBase):
     # -------------------------------------------------------------------------
     def test_mpra_help(self):
         super(Test_MPRA, self).script_help("mpra",
-                                            ["age - ",
-                                             "date_age - ",
-                                             "epoch - ",
-                                             "history - ",
-                                             "migr_recs - ",
-                                             "purge_recs - ",
-                                             "reset - ",
-                                             "simplug - ",
-                                             "times - ",
-                                             "xplocks - ",
-                                             "ymd",
-                                             ])
+                                           ["age - ",
+                                            "date_age - ",
+                                            "epoch - ",
+                                            "history - ",
+                                            "migr_recs - ",
+                                            "purge_recs - ",
+                                            "reset - ",
+                                            "simplug - ",
+                                            "times - ",
+                                            "xplocks - ",
+                                            "ymd",
+                                            ])
 
     # -------------------------------------------------------------------------
     def test_mpra_which_command(self):
@@ -137,7 +143,8 @@ class Test_MPRA(ScriptBase):
 
     # -------------------------------------------------------------------------
     def test_mpra_which_plugin(self):
-        super(Test_MPRA, self).script_which_module("hpssic.plugins.mpra_plugin")
+        super(Test_MPRA, self).script_which_module(
+            "hpssic.plugins.mpra_plugin")
 
 
 # -----------------------------------------------------------------------------
@@ -145,11 +152,11 @@ class Test_RPT(ScriptBase):
     # -------------------------------------------------------------------------
     def test_rpt_help(self):
         super(Test_RPT, self).script_help("rpt",
-                                            ["insert - ",
-                                             "report - ",
-                                             "simplug - ",
-                                             "testmail - ",
-                                             ])
+                                          ["insert - ",
+                                           "report - ",
+                                           "simplug - ",
+                                           "testmail - ",
+                                           ])
 
     # -------------------------------------------------------------------------
     def test_rpt_which_command(self):
@@ -167,7 +174,7 @@ class Test_RPT(ScriptBase):
     def test_rpt_which_plugin(self):
         super(Test_RPT, self).script_which_module("hpssic.plugins.rpt_plugin")
 
-                                                
+
 # -----------------------------------------------------------------------------
 class Test_TCC(ScriptBase):
     # -------------------------------------------------------------------------
@@ -181,8 +188,9 @@ class Test_TCC(ScriptBase):
                                            "selbf - ",
                                            "simplug - ",
                                            "tables - ",
-                                           "zreport - ",])
-                                                
+                                           "zreport - ",
+                                           ])
+
     # -------------------------------------------------------------------------
     def test_tcc_which_command(self):
         super(Test_TCC, self).script_which_command("tcc")
@@ -201,17 +209,19 @@ class Test_TCC(ScriptBase):
 
 
 # -----------------------------------------------------------------------------
+@attr(slow=True)
 class Test_PEP8(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_pep8(self):
-        for r,d,f in os.walk('.'):
-            if any([r == "./test", ".git" in r]):
+        for r, d, f in os.walk('.'):
+            if any([r == "./test", ".git" in r, ".attic" in r]):
                 continue
-            pylist = [os.path.join(r,fn) for fn in f if fn.endswith('.py')]
+            pylist = [os.path.join(r, fn) for fn in f if fn.endswith('.py')]
             if pylist:
                 inputs = " ".join(pylist)
                 result = pexpect.run("pep8 %s" % inputs)
                 self.assertEqual("", result, "\n" + result)
+
 
 # -----------------------------------------------------------------------------
 def improot(path, modpath):

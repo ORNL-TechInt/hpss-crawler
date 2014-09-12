@@ -5,12 +5,14 @@ from hpssic import CrawlDBI
 from hpssic import Dimension
 import os
 import pdb
-from hpssic import pexpect
+import pexpect
 import sys
 import time
 from hpssic import util
 
 plugin_name = 'cv'
+
+
 # -----------------------------------------------------------------------------
 def main(cfg):
     # Get stuff we need -- the logger object, dataroot, etc.
@@ -81,7 +83,7 @@ def main(cfg):
                     break
                 else:
                     CrawlConfig.log("unexpected string returned " +
-                              "from Checkable: '%s'" % ilist)
+                                    "from Checkable: '%s'" % ilist)
             elif type(ilist) == list:
                 CrawlConfig.log("in %s, found:" % item)
                 for n in ilist:
@@ -90,16 +92,17 @@ def main(cfg):
                         CrawlConfig.log(".. previously checksummed")
                         # checksums += 1
             elif isinstance(ilist, Checkable.Checkable):
-                CrawlConfig.log("Checkable returned - file checksummed - %s, %s" %
-                          (ilist.path, ilist.checksum))
+                CrawlConfig.log("Checkable returned - file checksummed" +
+                                " - %s, %s" % (ilist.path, ilist.checksum))
                 # checksums += 1
             elif isinstance(ilist, Alert.Alert):
                 CrawlConfig.log("Alert generated: '%s'" %
-                          ilist.msg())
+                                ilist.msg())
                 failures += 1
             else:
                 CrawlConfig.log("unexpected return val from " +
-                          "Checkable.check: %s: %r" % (type(ilist), ilist))
+                                "Checkable.check: %s: %r" %
+                                (type(ilist), ilist))
 
     # Report the statistics in the log
     # ** For checksums, we report the current total minus the previous
@@ -113,11 +116,11 @@ def main(cfg):
 
     (t_checksums, t_matches, t_failures) = get_stats()
     CrawlConfig.log("files checksummed: %d; " % (t_checksums - p_checksums) +
-              "checksums matched: %d; " % matches +
-              "failures: %d" % failures)
+                    "checksums matched: %d; " % matches +
+                    "failures: %d" % failures)
     CrawlConfig.log("totals checksummed: %d; " % t_checksums +
-              "matches: %d; " % t_matches +
-              "failures: %d" % t_failures)
+                    "matches: %d; " % t_matches +
+                    "failures: %d" % t_failures)
 
     # Report the dimension data in the log
     d = Dimension.Dimension(name='cos')
@@ -126,6 +129,8 @@ def main(cfg):
     CrawlConfig.log(t.report())
 
 stats_table = 'cvstats'
+
+
 # -----------------------------------------------------------------------------
 def get_stats():
     """
@@ -153,9 +158,10 @@ def get_stats():
         (matches, failures) = rval = rows[0]
     else:
         (matches, failures) = (0, 0)
-    
+
     db.close()
     return (checksums, matches, failures)
+
 
 # -----------------------------------------------------------------------------
 def update_stats(cmf):
@@ -168,7 +174,8 @@ def update_stats(cmf):
         db.create(table=stats_table,
                   fields=["rowid int",
                           "matches int",
-                          "failures int",])
+                          "failures int",
+                          ])
         db.insert(table=stats_table,
                   fields=["rowid", "matches", "failures"],
                   data=[(1, 0, 0)])
@@ -178,7 +185,7 @@ def update_stats(cmf):
               data=[cmf],
               where="rowid = 1")
     db.close()
-                  
+
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     cfg = CrawlConfig.get_config()

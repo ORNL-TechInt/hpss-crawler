@@ -5,6 +5,7 @@ Track stratum proportions in a sample against a population
 import CrawlDBI
 import pdb
 
+
 # -----------------------------------------------------------------------------
 def get_dim(dname, reset=False):
     """
@@ -14,7 +15,7 @@ def get_dim(dname, reset=False):
         if hasattr(get_dim, '_dims'):
             del get_dim._dims
         return None
-    
+
     try:
         rval = get_dim._dims[dname]
     except AttributeError:
@@ -25,6 +26,7 @@ def get_dim(dname, reset=False):
         get_dim._dims[dname] = Dimension(name=dname)
         rval = get_dim._dims[dname]
     return rval
+
 
 # -----------------------------------------------------------------------------
 class Dimension(object):
@@ -53,7 +55,7 @@ class Dimension(object):
         'cos'     '5081'         1700   25.432        50   24.987
         'cos'     '6002'          900   12.785        28   11.938
         ...
-        
+
     """
     # attributes that can be set through the constructor
     settable_attrl = ['name', 'sampsize']
@@ -76,8 +78,8 @@ class Dimension(object):
             if attr in self.settable_attrl:
                 setattr(self, attr, kwargs[attr])
             else:
-                raise StandardError("Attribute '%s'" % attr+
-                                    " is not valid for Dimension" )
+                raise StandardError("Attribute '%s'" % attr +
+                                    " is not valid for Dimension")
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
         self.load()
@@ -137,31 +139,31 @@ class Dimension(object):
             self.s_sum = self._compute_dict(rows)
         except CrawlDBI.DBIerror:
             pass
-        
+
         for cval in self.p_sum:
             if cval not in self.s_sum:
                 self.s_sum[cval] = {'count': 0, 'pct': 0}
 
         if not already_open:
             self.db.close()
-            
+
     # -------------------------------------------------------------------------
     def report(self):
         """
         Generate a string reflecting the current contents of the dimension
         """
         rval = ("\n   %-20s     %17s   %17s" % (self.name,
-                                            "Population",
-                                            "Sample"))
+                                                "Population",
+                                                "Sample"))
 
         rval += ("\n   %20s     %17s   %17s" % (20 * '-',
-                                            17 * '-',
-                                            17 * '-'))
+                                                17 * '-',
+                                                17 * '-'))
         for cval in self.p_sum:
-            rval += ("\n   %-20s  "   % cval +
-                     "   %8d"   % self.p_sum[cval]['count'] +
+            rval += ("\n   %-20s  " % cval +
+                     "   %8d" % self.p_sum[cval]['count'] +
                      "   %6.2f" % self.p_sum[cval]['pct'] +
-                     "   %8d"   % self.s_sum[cval]['count'] +
+                     "   %8d" % self.s_sum[cval]['count'] +
                      "   %6.2f" % self.s_sum[cval]['pct'])
         rval += ("\n   %-20s     %8d   %6.2f   %8d   %6.2f" %
                  ("Total",
@@ -171,7 +173,7 @@ class Dimension(object):
                   sum(map(lambda x: x['pct'], self.s_sum.values()))))
         rval += "\n"
         return rval
-        
+
     # -------------------------------------------------------------------------
     def sum_total(self, dict=None, which='p'):
         """
@@ -186,7 +188,7 @@ class Dimension(object):
         else:
             rv = sum(map(lambda x: x['count'], self.p_sum.values()))
         return rv
-    
+
     # -------------------------------------------------------------------------
     def vote(self, category):
         """
@@ -208,4 +210,3 @@ class Dimension(object):
             return 1
         else:
             return 0
-

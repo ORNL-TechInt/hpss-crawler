@@ -14,9 +14,11 @@ from hpssic import toolframe
 from hpssic import util
 import warnings
 
+
 # -----------------------------------------------------------------------------
 def logErr(record):
     raise
+
 
 # -----------------------------------------------------------------------------
 def setUpModule():
@@ -25,7 +27,8 @@ def setUpModule():
     """
     testhelp.module_test_setup(CrawlConfigTest.testdir)
     CrawlConfig.get_logger(CrawlConfigTest.default_logpath, reset=True)
-    
+
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
@@ -33,7 +36,8 @@ def tearDownModule():
     """
     CrawlConfig.get_logger(reset=True, soft=True)
     testhelp.module_test_teardown(CrawlConfigTest.testdir)
-    
+
+
 # -----------------------------------------------------------------------------
 class CrawlConfigTest(testhelp.HelpedTestCase):
     """
@@ -65,7 +69,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
               'sounds': {'duck': 'quack',
                          'dog':  'bark',
                          'hen':  'cluck'}}
-    
+
     # -------------------------------------------------------------------------
     def test_changed(self):
         """
@@ -92,7 +96,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # f.close()
         self.assertEqual(changeable.changed(), True)
         self.assertEqual(changeable.filename, cfgfile)
-        
+
     # -------------------------------------------------------------------------
     def test_dump_nodef(self):
         """
@@ -118,11 +122,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Routines exercised: __init__(), load_dict(), dump().
         """
-        defaults={'goose': 'honk'}
+        defaults = {'goose': 'honk'}
         obj = CrawlConfig.CrawlConfig()
         obj.load_dict(self.sample, defaults)
         dumpstr = obj.dump(with_defaults=True)
-        
+
         self.assertEqual("[DEFAULT]" in dumpstr, True)
         self.assertEqual("goose = honk" in dumpstr, True)
         self.assertEqual("[crawler]" in dumpstr, True)
@@ -158,7 +162,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             # test get_config with empty string argument
             self.assertRaisesMsg(StandardError, expmsg,
                                  CrawlConfig.get_config, '')
-    
+
     # --------------------------------------------------------------------------
     def test_get_config_def_nosuch(self):
         """
@@ -180,7 +184,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             # test with empty string argument
             self.assertRaisesMsg(StandardError, expmsg,
                                  CrawlConfig.get_config, '')
-        
+
     # --------------------------------------------------------------------------
     def test_get_config_def_ok(self):
         """
@@ -202,7 +206,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             except:
                 got_exception = True
             self.assertEqual(got_exception, False)
-            self.assertEqual(cfg.get('crawler', 'filename'), self.default_cfname)
+            self.assertEqual(cfg.get('crawler', 'filename'),
+                             self.default_cfname)
             self.assertEqual(cfg.filename, self.default_cfname)
 
             got_exception = False
@@ -211,9 +216,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             except:
                 got_exception = True
             self.assertEqual(got_exception, False)
-            self.assertEqual(cfg.get('crawler', 'filename'), self.default_cfname)
+            self.assertEqual(cfg.get('crawler', 'filename'),
+                             self.default_cfname)
             self.assertEqual(cfg.filename, self.default_cfname)
-        
+
     # --------------------------------------------------------------------------
     def test_get_config_env_noread(self):
         """
@@ -237,12 +243,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             self.assertRaisesMsg(StandardError, expmsg,
                                  CrawlConfig.get_config, '')
-        
+
     # --------------------------------------------------------------------------
     def test_get_config_env_nosuch(self):
         """
         TEST: env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg does not exist
-        
+
         EXP: get_config(), get_config('') should throw a StandardError
         about the file not existing or not being readable
         """
@@ -331,7 +337,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         TEST: env CRAWL_CONF='envcrawl.cfg', envcrawl.cfg exists and
               is readable, explicit.cfg does not exist
-              
+
         EXP: get_config('explicit.cfg') should throw a StandardError
              about the file not existing or not being readable
         """
@@ -377,7 +383,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_get_d_with(self):
         """
-        Calling get_d() with a default value should 
+        Calling get_d() with a default value should
 
           1) return the option value if it's defined
           2) return the default value otherwise
@@ -393,7 +399,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected('whistle', obj.get_d('sounds', 'dolphin', 'whistle'))
         # section not defined, should get the default
         self.expected('buck', obj.get_d('malename', 'deer', 'buck'))
-        
+
     # -------------------------------------------------------------------------
     def test_get_d_without(self):
         """
@@ -413,14 +419,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.fail("Expected exception not thrown")
         except CrawlConfig.NoOptionError:
             pass
-        
+
         # section not defined, should get the default
         try:
             self.expected('buck', obj.get_d('malename', 'deer'))
             self.fail("Expected exception not thrown")
         except CrawlConfig.NoSectionError:
             pass
-        
+
     # -------------------------------------------------------------------------
     def test_get_logger_00(self):
         """
@@ -432,24 +438,24 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         CrawlConfig.get_logger(reset=True, soft=True)
 
         # get_logger(..., reset=False, soft=False) should create a new one
-        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir,
-                                 reset=False, soft=False)
-        self.assertTrue(isinstance(actual, logging.Logger),
-                        "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
-                      actual.handlers[0].baseFilename)
-    
-        # now ask for a logger with a different name, with reset=False,
-        # soft=False. Since one has already been created, the new name should
-        # be ignored and we should get back the one already cached.
-        CrawlConfig.get_logger(cmdline='%s/util_foobar.log' % self.testdir,
-                        reset=False, soft=False)
+        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' %
+                                        self.testdir,
+                                        reset=False, soft=False)
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
 
-        
+        # now ask for a logger with a different name, with reset=False,
+        # soft=False. Since one has already been created, the new name should
+        # be ignored and we should get back the one already cached.
+        CrawlConfig.get_logger(cmdline='%s/util_foobar.log' % self.testdir,
+                               reset=False, soft=False)
+        self.assertTrue(isinstance(actual, logging.Logger),
+                        "Expected logging.Logger, got %s" % (actual))
+        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
+                      actual.handlers[0].baseFilename)
+
     # -------------------------------------------------------------------------
     def test_get_logger_01(self):
         """
@@ -459,10 +465,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         # throw away any logger that has been set
         CrawlConfig.get_logger(reset=True, soft=True)
-        
+
         # then see what happens with reset=False, soft=True
-        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir,
-                                 reset=False, soft=True)
+        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' %
+                                        self.testdir, reset=False, soft=True)
         self.expected(None, actual)
 
         # now create a logger
@@ -470,10 +476,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # now reset=False, soft=True should return the one just created
         actual = CrawlConfig.get_logger(reset=False, soft=True)
         self.assertTrue(isinstance(actual, logging.Logger),
-                      "Expected logging.Logger, got %s" % (actual))
+                        "Expected logging.Logger, got %s" % (actual))
         self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
-
 
     # -------------------------------------------------------------------------
     def test_get_logger_10(self):
@@ -484,8 +489,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # throw away any logger that has been set and create one to be
         # overridden
         tmp = CrawlConfig.get_logger(cmdline='%s/throwaway.log' % self.testdir,
-                              reset=True)
-                              
+                                     reset=True)
+
         # verify that it's there with the expected attributes
         self.assertTrue(isinstance(tmp, logging.Logger),
                         "Expected logging.Logger, got %s" % (tmp))
@@ -494,15 +499,16 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                       tmp.handlers[0].baseFilename)
 
         # now override it
-        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir,
-                                 reset=True, soft=False)
+        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' %
+                                        self.testdir,
+                                        reset=True, soft=False)
         # and verify that it got replaced
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(1, len(actual.handlers))
         self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
-        
+
     # -------------------------------------------------------------------------
     def test_get_logger_11(self):
         """
@@ -512,7 +518,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         exp = None
         actual = CrawlConfig.get_logger(reset=True, soft=True)
         self.expected(exp, actual)
-        
+
     # -------------------------------------------------------------------------
     def test_get_logger_cfg(self):
         """
@@ -545,7 +551,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         self.assertTrue(os.path.exists(lfname),
                         "%s should exist but does not" % lfname)
-        
+
     # --------------------------------------------------------------------------
     def test_get_logger_default(self):
         """
@@ -564,12 +570,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             if os.getuid() == 0:
                 self.expected('/var/log/crawl.log',
                               lobj.handlers[0].stream.name)
-            
+
             # otherwise, I should be looking at /tmp/crawl.log
             else:
                 self.expected('/tmp/crawl.log',
                               lobj.handlers[0].stream.name)
-        
+
     # -------------------------------------------------------------------------
     def test_get_logger_def_cfg(self):
         """
@@ -639,7 +645,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         lobj = CrawlConfig.get_logger(logpath)
         self.assertEqual(os.path.exists(logpath), True,
                          '%s should exist but does not' % logpath)
-        
+
     # -------------------------------------------------------------------------
     def test_get_size(self):
         """
@@ -653,7 +659,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj.set(section, 'thirtymib', '30mib')
         self.expected(10*1000*1000, obj.get_size(section, 'tenmb'))
         self.expected(30*1024*1024, obj.get_size(section, 'thirtymib'))
-                      
+
     # -------------------------------------------------------------------------
     def test_get_time(self):
         """
@@ -676,7 +682,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(obj.getboolean('abc', 'flip'), False)
         self.assertEqual(obj.getboolean('abc', 'other'), False)
         self.assertEqual(obj.getboolean('abc', 'fire'), True)
-        
+
     # -------------------------------------------------------------------------
     def test_interpolation_ok(self):
         d = copy.deepcopy(self.cdict)
@@ -753,7 +759,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                             "Expected '%s' in %s" %
                             (exp, util.line_quote(result)))
 
-        
     # -------------------------------------------------------------------------
     def test_log_rollover_archive(self):
         """
@@ -775,7 +780,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         lcfg.load_dict(lcfg_d)
         CrawlConfig.get_logger(cfg=lcfg, reset=True)
         lmsg = "This is a test " + "-" * 35
-        for x in range(0,5):
+        for x in range(0, 5):
             CrawlConfig.log(lmsg)
 
         self.assertTrue(os.path.isdir(archdir),
@@ -804,13 +809,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         lcfg.load_dict(lcfg_d)
         CrawlConfig.get_logger(cfg=lcfg, reset=True)
         lmsg = "This is a test " + "-" * 35
-        for x in range(0,5):
+        for x in range(0, 5):
             CrawlConfig.log(lmsg)
 
         self.assertTrue(os.path.isfile(logpath),
                         "Expected file %s to exist" % logpath)
         self.assertFalse(os.path.isfile(archlogpath),
-                        "Expected file %s to not exist" % archlogpath)
+                         "Expected file %s to not exist" % archlogpath)
 
     # -------------------------------------------------------------------------
     def test_log_multfmt(self):
@@ -887,7 +892,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertTrue(exp in result,
                         "Expected '%s' in %s" %
                         (exp, util.line_quote(result)))
-                        
+
     # -------------------------------------------------------------------------
     def test_log_toomany_fmt(self):
         # """
@@ -905,7 +910,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # this allows exceptions thrown from inside the logging handler to
         # propagate up so we can catch it.
         log.handlers[0].handleError = logErr
-        
+
         # multiple % formatters in first arg
         a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f; %g"
         a2 = "zebedee"
@@ -915,17 +920,15 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         try:
             CrawlConfig.log(a1, a2, a3, a4)
             self.fail("Expected exception not thrown")
-        except TypeError,e:
+        except TypeError, e:
             self.assertEqual("not enough arguments for format string", str(e),
                              "Wrong TypeError thrown")
-    
+
         result = util.contents(fpath)
         self.assertFalse(exp in result,
-                        "Expected '%s' in %s" %
-                        (exp, util.line_quote(result)))
+                         "Expected '%s' in %s" %
+                         (exp, util.line_quote(result)))
 
-
-        
     # -------------------------------------------------------------------------
     def test_log_toomany_args(self):
         # """
@@ -943,7 +946,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # this allows exceptions thrown from inside the logging handler to
         # propagate up so we can catch it.
         log.handlers[0].handleError = logErr
-        
+
         # multiple % formatters in first arg
         a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
         a2 = "zebedee"
@@ -958,12 +961,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             exc = "not all arguments converted during string formatting"
             self.assertEqual(exc, str(e),
                              "Expected '%s', got '%s'" % (exc, str(e)))
-        
+
         result = util.contents(fpath)
         self.assertFalse(exp in result,
                          "Expected '%s' in %s" %
                          (exp, util.line_quote(result)))
-        
+
     # -------------------------------------------------------------------------
     def test_map_time_unit(self):
         """
@@ -993,7 +996,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(obj.map_time_unit('y'), 365*24*3600)
         self.assertEqual(obj.map_time_unit('year'), 365*24*3600)
         self.assertEqual(obj.map_time_unit('years'), 365*24*3600)
-        
+
     # --------------------------------------------------------------------------
     def test_quiet_time_bound_mt(self):
         """
@@ -1031,7 +1034,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # non-interval time
         self.try_qt_spec(cfg, False, "2014.0101 11:19:58")
-        
+
         # interval leading edge
         self.try_qt_spec(cfg, False, "2014.0101 13:59:59")
         self.try_qt_spec(cfg, True, "2014.0101 14:00:00")
@@ -1039,7 +1042,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # interval time
         self.try_qt_spec(cfg, True, "2014.0101 15:28:19")
-                                              
+
         # interval trailing edge
         self.try_qt_spec(cfg, True, "2014.0101 18:59:59")
         self.try_qt_spec(cfg, True, "2014.0101 19:00:00")
@@ -1062,7 +1065,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # mid quiet interval
         self.try_qt_spec(cfg, True, "2014.0101 02:19:32")
-        
+
         # interval trailing edge
         self.try_qt_spec(cfg, True, "2014.0101 02:59:59")
         self.try_qt_spec(cfg, True, "2014.0101 03:00:00")
@@ -1078,7 +1081,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # mid quiet interval
         self.try_qt_spec(cfg, True, "2014.0101 21:32:19")
-        
+
         # end of day
         self.try_qt_spec(cfg, True, "2014.0401 23:59:59")
         self.try_qt_spec(cfg, True, "2014.0402 00:00:00")
@@ -1098,7 +1101,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.try_qt_spec(cfg, False, "2013.0427 23:59:59")
         self.try_qt_spec(cfg, True, "2013.0428 00:00:00")
         self.try_qt_spec(cfg, True, "2013.0428 00:00:01")
-        
+
         # inside date
         self.try_qt_spec(cfg, True, "2013.0428 08:00:01")
 
@@ -1154,7 +1157,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # --------------------------------------------------------------------------
     def test_quiet_time_missing(self):
         """
-        When the config item is missing, quiet_time() should always return False
+        When the config item is missing, quiet_time() should always return
+        False
         """
         cfg = CrawlConfig.CrawlConfig()
         cfg.load_dict(self.cdict)
@@ -1199,7 +1203,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.try_qt_spec(cfg, True, "2014.0331 22:59:59")
         self.try_qt_spec(cfg, True, "2014.0331 23:00:00")
         self.try_qt_spec(cfg, False, "2014.0331 23:00:01")
-        
+
         # leading edge of date
         self.try_qt_spec(cfg, False, "2014.0331 23:59:59")
         self.try_qt_spec(cfg, True, "2014.0401 00:00:00")
@@ -1221,7 +1225,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # day after, before interval
         self.try_qt_spec(cfg, False, "2014.0402 16:19:11")
-        
+
         # day after, leading edge of interval
         self.try_qt_spec(cfg, False, "2014.0402 16:59:59")
         self.try_qt_spec(cfg, True, "2014.0402 17:00:00")
@@ -1229,7 +1233,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # day after, inside interval
         self.try_qt_spec(cfg, True, "2014.0402 22:58:01")
-        
+
         # day after, trailing edge of interval
         self.try_qt_spec(cfg, True, "2014.0402 22:59:59")
         self.try_qt_spec(cfg, True, "2014.0402 23:00:00")
@@ -1237,7 +1241,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # day after, after interval
         self.try_qt_spec(cfg, False, "2014.0402 23:19:20")
-        
+
     # --------------------------------------------------------------------------
     def test_quiet_time_rb_d_w(self):
         """
@@ -1276,7 +1280,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.try_qt_spec(cfg, True, "2012.0117 23:59:59")
         self.try_qt_spec(cfg, True, "2012.0118 00:00:00")
         self.try_qt_spec(cfg, True, "2012.0118 00:00:01")
-        
+
         # lunchtime on Wednesday
         self.try_qt_spec(cfg, True, "2012.0118 12:00:00")
 
@@ -1335,7 +1339,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.try_qt_spec(cfg, True, "2015.0216 08:14:59")
         self.try_qt_spec(cfg, True, "2015.0216 08:15:00")
         self.try_qt_spec(cfg, False, "2015.0216 08:15:01")
-        
+
         # outside the intervals the day before
         self.try_qt_spec(cfg, False, "2015.0216 18:30:00")
 
@@ -1356,7 +1360,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # outside interval, in date
         self.try_qt_spec(cfg, True, "2015.0217 12:13:58")
-        
+
         # leading edge of late interval in the date
         self.try_qt_spec(cfg, True, "2015.0217 18:59:59")
         self.try_qt_spec(cfg, True, "2015.0217 19:00:00")
@@ -1374,7 +1378,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # after early interval day after
         self.try_qt_spec(cfg, False, "2015.0218 11:12:13")
-        
+
     # --------------------------------------------------------------------------
     def test_quiet_time_ub_d_w(self):
         """
@@ -1422,7 +1426,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # Friday before 20:17
         self.try_qt_spec(cfg, False, "2012.0224 20:00:05")
-        
+
         # friday at 20:17
         self.try_qt_spec(cfg, False, "2012.0224 20:16:59")
         self.try_qt_spec(cfg, True, "2012.0224 20:17:00")
@@ -1476,7 +1480,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         # during day monday
         self.try_qt_spec(cfg, False, "2012.0227 20:00:19")
-        
+
     # --------------------------------------------------------------------------
     def test_quiet_time_wday(self):
         """
@@ -1519,7 +1523,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                               },
                   'newsect': {'newopt': 'newval',
                               'include': cfname_inc2}
-            }
+                  }
 
         inc2_d = {'fiddle': {'bar': 'wumpus'}}
 
@@ -1555,8 +1559,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                               'coal': 'anthracite'
                               },
                   'newsect': {'newopt': 'newval',
-                              'include': cfname_inc2}
-            }
+                              'include': cfname_inc2
+                              }
+                  }
 
         # inc2_d = {'fiddle': {'bar': 'wumpus'}}
 
@@ -1597,7 +1602,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             del os.environ['CRAWL_CONF']
         except KeyError:
             pass
-        
+
     # ------------------------------------------------------------------------
     def try_qt_spec(self, cfg, exp, tval):
         """
@@ -1607,22 +1612,18 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             qtspec = cfg.get('crawler', 'quiet_time')
         except CrawlConfig.NoOptionError:
             qtspec = "<empty>"
-            
-        self.assertEqual(exp, cfg.quiet_time(util.epoch(tval)),
-                         "With qt spec '%s', expected quiet_time(%s) to be %s" %
+
+        actual = cfg.quiet_time(util.epoch(tval))
+        self.assertEqual(exp, actual,
+                         "'%s'/%s => expected '%s', got '%s'" %
                          (qtspec,
                           tval,
-                          exp))
-        
+                          exp,
+                          actual))
+
     # ------------------------------------------------------------------------
     def tearDown(self):
         """
         Clean up after every test.
         """
         util.conditional_rm(self.env_cfname)
-        
-# -----------------------------------------------------------------------------
-launch_dir = os.path.abspath(os.path.dirname(sys.argv[0]))
-if __name__ == '__main__':
-    toolframe.ez_launch(test='CrawlConfigTest',
-                        logfile=testhelp.testlog(__name__))

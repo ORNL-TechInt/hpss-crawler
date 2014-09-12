@@ -4,6 +4,7 @@ import CrawlConfig
 import os
 import util
 
+
 # -----------------------------------------------------------------------------
 def get_bitfile_path(bitfile):
     """
@@ -40,6 +41,7 @@ def get_bitfile_path(bitfile):
                       where='object_id = ?',
                       data=(x['PARENT_ID']))
     return rval
+
 
 # -----------------------------------------------------------------------------
 def get_bitfile_set(cfg, first_nsobj_id, limit):
@@ -89,13 +91,14 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
                      limit=limit)
     return rval
 
+
 # -----------------------------------------------------------------------------
 def get_cos_info():
     """
     Read COS info from tables COS and HIER in the DB2 database
     """
     db = CrawlDBI.DBI(dbtype='db2', dbname=CrawlDBI.db2name('cfg'))
-    rows = db.select(table=['cos A','hier B'],
+    rows = db.select(table=['cos A', 'hier B'],
                      fields=['A.cos_id',
                              'A.hier_id',
                              'B.slevel0_migrate_list_count'],
@@ -106,6 +109,7 @@ def get_cos_info():
 
     return rval
 
+
 # -----------------------------------------------------------------------------
 def hexstr(bfid):
     """
@@ -113,6 +117,7 @@ def hexstr(bfid):
     """
     rval = "x'" + hexstr_uq(bfid) + "'"
     return rval
+
 
 # -----------------------------------------------------------------------------
 def hexstr_uq(bfid):
@@ -123,9 +128,11 @@ def hexstr_uq(bfid):
     rval = "".join(["%02x" % ord(c) for c in list(bfid)])
     return rval.upper()
 
+
 # -----------------------------------------------------------------------------
 def sectname():
     return 'tape-copy-checker'
+
 
 # -----------------------------------------------------------------------------
 def tcc_report(bitfile, cosinfo):
@@ -151,4 +158,3 @@ def tcc_report(bitfile, cosinfo):
         tcc_report._f.write(fmt % ("COS", "Ccopies", "Fcopies", "Filepath"))
         tcc_report._f.write(rpt)
         tcc_report._f.flush()
-

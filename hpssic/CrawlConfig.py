@@ -8,16 +8,18 @@ This class is based on python's standard ConfigParser class. It adds
 
     2) sensitivity to updates to the underlying configuration file (changed)
 
-    3) a 'time' type which shows up in the configuration file as '10 sec', '2hr',
-    '7 minutes', etc., but is presented to the caller as a number of seconds.
+    3) a 'time' type which shows up in the configuration file as '10 sec',
+    '2hr', '7 minutes', etc., but is presented to the caller as a number of
+    seconds.
 
     4) a boolean handler which returns False if the option does not exist
     (rather than throwing an exception)
 
 """
 import ConfigParser
-from ConfigParser import NoSectionError, NoOptionError, \
-     InterpolationMissingOptionError
+from ConfigParser import NoSectionError
+from ConfigParser import NoOptionError
+from ConfigParser import InterpolationMissingOptionError
 import os
 import pdb
 import re
@@ -27,6 +29,7 @@ import sys
 import time
 import util
 import warnings
+
 
 # ------------------------------------------------------------------------------
 def get_config(cfname='', reset=False, soft=False):
@@ -47,7 +50,7 @@ def get_config(cfname='', reset=False, soft=False):
             del get_config._config
         except AttributeError:
             pass
-    
+
     try:
         rval = get_config._config
     except AttributeError:
@@ -57,7 +60,7 @@ def get_config(cfname='', reset=False, soft=False):
             envval = os.getenv('CRAWL_CONF')
             if None != envval:
                 cfname = envval
-    
+
         if cfname == '':
             cfname = 'crawl.cfg'
 
@@ -73,6 +76,7 @@ def get_config(cfname='', reset=False, soft=False):
         get_config._config = rval
     return rval
 
+
 # ------------------------------------------------------------------------------
 def get_logcfg(cfg):
     """
@@ -84,7 +88,7 @@ def get_logcfg(cfg):
         kwargs['filename'] = cfg.get('crawler', 'logpath')
     except:
         pass
-    
+
     try:
         maxbytes = cfg.get_size('crawler', 'logsize')
         kwargs['maxBytes'] = maxbytes
@@ -95,13 +99,14 @@ def get_logcfg(cfg):
         kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
     except:
         pass
-    
+
     try:
         kwargs['archdir'] = cfg.get_d('crawler', 'archive_dir')
     except:
         pass
-        
+
     return kwargs
+
 
 # ------------------------------------------------------------------------------
 def get_logger(cmdline='', cfg=None, reset=False, soft=False):
@@ -138,19 +143,19 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
         dcfg = get_config()
     except:
         dcfg = None
-    
+
     # setting filename -- first, assume the default, then work down the
     # precedence stack from cmdline to cfg to environment
     filename = ''
     if cmdline != '':
         filename = cmdline
-    elif cfg != None:
+    elif cfg is not None:
         kwargs = get_logcfg(cfg)
         filename = kwargs['filename']
         del kwargs['filename']
-    elif envval != None:
+    elif envval is not None:
         filename = envval
-    elif dcfg != None:
+    elif dcfg is not None:
         kwargs = get_logcfg(dcfg)
         filename = kwargs['filename']
         del kwargs['filename']
@@ -165,6 +170,7 @@ def get_logger(cmdline='', cfg=None, reset=False, soft=False):
         rval = get_logger._logger
 
     return rval
+
 
 # -----------------------------------------------------------------------------
 def log(*args):
@@ -203,11 +209,12 @@ class CrawlConfig(ConfigParser.ConfigParser):
         m.NoOptionError = m.ConfigParser.NoOptionError
         ConfigParser.ConfigParser.__init__(self, *args, **kwargs)
         pass
-    
+
     # -------------------------------------------------------------------------
     def changed(self):
         """
-        Return True if the file we were loaded from has changed since load time.
+        Return True if the file we were loaded from has changed since load
+        time.
         """
         if self.filename != '<???>' and self.loadtime != 0.0:
             s = os.stat(self.filename)
@@ -215,12 +222,12 @@ class CrawlConfig(ConfigParser.ConfigParser):
         else:
             rval = False
         return rval
-    
+
     # -------------------------------------------------------------------------
     def dump(self, with_defaults=False):
         """
-        Write the contents of the config except for the defaults to a string and
-        return the string. If with_defaults = True, include the DEFAULTS
+        Write the contents of the config except for the defaults to a string
+        and return the string. If with_defaults = True, include the DEFAULTS
         section.
         """
         rval = ''
@@ -242,12 +249,12 @@ class CrawlConfig(ConfigParser.ConfigParser):
         try:
             value = self.get(section, option)
         except ConfigParser.NoSectionError:
-            if default != None:
+            if default is not None:
                 value = default
             else:
                 raise
         except ConfigParser.NoOptionError:
-            if default != None:
+            if default is not None:
                 value = default
             else:
                 raise
@@ -257,7 +264,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
     def get_size(self, section, option, default=None):
         """
         Unit specs are case insensitive.
-        
+
         b  -> 1
         kb -> 1000**1       kib -> 1024
         mb -> 1000**2       mib -> 1024**2
@@ -274,7 +281,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             mult = self.map_size_unit(unit)
             rval = int(mag) * mult
         except ConfigParser.NoSectionError, ConfigParser.NoOptionError:
-            if default != None:
+            if default is not None:
                 rval = default
             else:
                 raise
@@ -285,31 +292,31 @@ class CrawlConfig(ConfigParser.ConfigParser):
     def get_time(self, section, option, default=None):
         """
         Retrieve the value of section/option. It is assumed to be a duration
-        specification, like -- '10 seconds', '2hr', '7 minutes', or the like. We
-        will call map_time_unit to convert the unit into a number of seconds,
-        then multiply by the magnitude, and return an int number of seconds. If
-        the caller specifies a default and we get a NoSectionError or
-        NoOptionError, we will return the caller's default. Otherwise, we raise
-        the exception.
+        specification, like -- '10 seconds', '2hr', '7 minutes', or the like.
+        We will call map_time_unit to convert the unit into a number of
+        seconds, then multiply by the magnitude, and return an int number of
+        seconds. If the caller specifies a default and we get a NoSectionError
+        or NoOptionError, we will return the caller's default. Otherwise, we
+        raise the exception.
         """
         try:
             spec = self.get(section, option)
             rval = self.to_seconds(spec)
         except ConfigParser.NoOptionError as e:
-            if default != None:
+            if default is not None:
                 rval = default
                 log(str(e) + '; using default value %d' % default)
             else:
                 raise
         except ConfigParser.NoSectionError as e:
-            if default != None:
+            if default is not None:
                 rval = default
                 log(str(e) + '; using default value %d' % default)
             else:
                 raise
 
         return rval
-    
+
     # -------------------------------------------------------------------------
     def to_seconds(self, spec):
         [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
@@ -331,7 +338,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         except ConfigParser.NoOptionError:
             rval = False
         return rval
-    
+
     # -------------------------------------------------------------------------
     def load_dict(self, dict, defaults=None):
         """
@@ -346,7 +353,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             self.remove_section(s)
 
         # If we got defaults, set them first
-        if defaults != None:
+        if defaults is not None:
             for k in defaults.keys():
                 self._defaults[k] = defaults[k]
 
@@ -355,7 +362,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             self.add_section(s)
             for o in sorted(dict[s].keys()):
                 self.set(s, o, dict[s][o])
-    
+
     # -------------------------------------------------------------------------
     def map_size_unit(self, spec):
         """
@@ -400,7 +407,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 done = True
 
         return rval
-        
+
     # -------------------------------------------------------------------------
     def map_time_unit(self, spec):
         """
@@ -445,7 +452,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 done = True
 
         return rval
-        
+
     # -------------------------------------------------------------------------
     def qt_parse(self, spec):
         """
@@ -481,7 +488,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         hm_l = re.findall("(\d+):(\d+)", spec)
         if (2 != len(hm_l)) or (2 != len(hm_l[0])) or (2 != len(hm_l[1])):
             hm_l = []
-            
+
         if " " + spec.lower() in dow_s:
             # we have a week day
             [wd] = [x for x in wday_d.keys() if spec.lower() in x]
@@ -510,7 +517,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
         else:
             raise StandardError("qt_parse fails on '%s'" % spec)
-        
+
         return rval
 
     # -------------------------------------------------------------------------
@@ -518,7 +525,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         """
         Config setting crawler/quiet_time may contain a comma separated list of
         time interval specifications. For example:
-    
+
            17:00-19:00      (5pm to 7pm)
            20:00-03:00      (8pm to the folliwng 3am)
            sat              (00:00:00 to 23:59:59 every Saturday)
@@ -542,7 +549,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 high = x['base'] + x['hi']
                 if low <= when and when <= high:
                     rval = True
-                    
+
             elif x['iter'] == 24 * 3600.0:
                 # it's a time range
 
@@ -573,13 +580,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 tm = time.localtime(when)
                 if tm.tm_wday == x['base']:
                     rval = True
-        
+
             else:
                 # something bad happened
                 raise StandardError("Hell has frozen over")
 
         return rval
-    
+
     # -------------------------------------------------------------------------
     def read(self, filename):
         """
@@ -600,7 +607,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
                 wmsg = "Some config files not loaded: %s" % ", ".join(unparsed)
                 warnings.warn(wmsg)
             pending = self.update_include_list()   # update dict self.incl
-                
+
     # -------------------------------------------------------------------------
     def update_include_list(self):
         """

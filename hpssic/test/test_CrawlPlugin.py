@@ -17,19 +17,22 @@ from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 
+
 # -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for testing
     """
     testhelp.module_test_setup(CrawlPluginTest.testdir)
-    
+
+
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
     Clean up after testing
     """
     testhelp.module_test_teardown(CrawlPluginTest.testdir)
+
 
 # -----------------------------------------------------------------------------
 class CrawlPluginTest(testhelp.HelpedTestCase):
@@ -38,7 +41,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     """
     testdir = testhelp.testdata(__name__)
     plugdir = '%s/test_plugins' % testdir
-    
+
     # -------------------------------------------------------------------------
     def test_fire(self):
         """
@@ -48,7 +51,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
         c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
-            
+
         p.fire()
         filename = "%s/%s" % (self.plugdir, pname)
         self.assertEqual(os.path.exists(filename), True,
@@ -65,14 +68,14 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
-            
+
         self.assertEqual(p.firable, False,
                          "p.firable should be False, is True")
         p.fire()
         filename = "%s/%s" % (self.plugdir, pname)
         self.assertEqual(os.path.exists(filename), False,
                          "'%s' should not exist, but does" % (filename))
-        
+
     # -------------------------------------------------------------------------
     def test_init_fire_true(self):
         """
@@ -83,14 +86,14 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
         c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
-            
+
         self.assertEqual(p.firable, True,
                          "p.firable should be True, is False")
         p.fire()
         filename = "%s/%s" % (self.plugdir, pname)
         self.assertEqual(os.path.exists(filename), True,
                          "'%s' should exist but does not" % (filename))
-        
+
     # -------------------------------------------------------------------------
     def test_init_fire_unset(self):
         """
@@ -113,7 +116,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # plugin
         self.assertEqual(p.firable, True,
                          "p.firable should be True but is not")
-        
+
     # -------------------------------------------------------------------------
     def test_init_freq_set(self):
         """
@@ -126,7 +129,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
         self.expected(False, p.firable)
         self.expected(19, p.frequency)
-        
+
     # -------------------------------------------------------------------------
     def test_init_freq_unset(self):
         """
@@ -136,7 +139,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.make_plugin(pname)
         c = self.make_cfg(pname, freq=None)
         p = CrawlPlugin.CrawlPlugin(pname, c)
-            
+
         # make sure 'frequency' was not set in the config
         try:
             x = c.get(pname, 'frequency')
@@ -166,7 +169,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_init_plugdir_ninspath(self):
         """
-        If plugin_dir set in config and not in sys.path, should be added to sys.path
+        If plugin_dir set in config and not in sys.path, should be added to
+        sys.path
         """
         if self.plugdir in sys.path:
             sys.path.remove(self.plugdir)
@@ -178,8 +182,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.assertNotEqual(pre, sys.path,
                             "pre and sys.path should not be equal, but are")
         self.assertTrue(self.plugdir in sys.path,
-                      "sys.path should contain '%s' but does not" %
-                      self.plugdir)
+                        "sys.path should contain '%s' but does not" %
+                        self.plugdir)
 
     # -------------------------------------------------------------------------
     def test_init_plugdir_unset(self):
@@ -306,7 +310,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         p.reload(c)
         self.assertEqual(p.firable, True,
                          "Expected p.firables() to be true")
-    
+
     # -------------------------------------------------------------------------
     def test_reload_freq(self):
         """
@@ -333,7 +337,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # re-init the plugin object
         p.reload(c)
         self.expected(19, p.frequency)
-        
+
     # -------------------------------------------------------------------------
     def test_reload_plugdir(self):
         """
@@ -356,18 +360,18 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
         self.expected(self.plugdir, p.plugin_dir)
-        rgx = '%s/%s.pyc?' % (os.path.realpath(self.plugdir), pname)
-        self.assertTrue(re.findall(rgx, 
-                                   os.path.realpath(sys.modules[pname].__file__)),
+        rgx = '%s/%s.pyc?' % (util.realpath(self.plugdir), pname)
+        self.assertTrue(re.findall(rgx,
+                                   util.realpath(sys.modules[pname].__file__)),
                         "expected \n    %s\nto match \n    %s\n" %
                         (rgx, sys.modules[pname].__file__))
-        
+
         # alternate plugin in alternate directory
         apdir = self.plugdir + "_alt"
         if apdir not in sys.path:
             sys.path.insert(0, apdir)
         self.make_plugin(pname, pdir=apdir)
-        
+
         # change the config
         c.set('crawler', 'plugin-dir', apdir)
 
@@ -378,11 +382,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.assertTrue(re.findall(rgx, sys.modules[pname].__file__),
                         "expected '%s' to match sys.modules[%s].__file__" %
                         (rgx, pname))
-    
+
     # -------------------------------------------------------------------------
     def test_time_to_fire_false(self):
         """
-        If time.time() - last_fired <= freq, time_to_fire() should return False 
+        If time.time() - last_fired <= freq, time_to_fire() should return False
         """
         # set up the plugin
         if self.plugdir not in sys.path:
@@ -393,10 +397,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
         # create the config
         c = self.make_cfg(pname)
-        
+
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
-        
+
         # time_to_fire() should return False
         p.last_fired = time.time()
         self.assertFalse(p.time_to_fire(),
@@ -406,7 +410,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_time_to_fire_true(self):
         """
-        If freq < time.time() - last_fired, time_to_fire() should return True 
+        If freq < time.time() - last_fired, time_to_fire() should return True
         """
         # set up the plugin
         if self.plugdir not in sys.path:
@@ -457,7 +461,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
                 rval.set(pname, 'fire', 'false')
         rval.set(pname, 'module', pname)
         return rval
-        
+
     # -------------------------------------------------------------------------
     def make_plugin(self, pname, pdir=None):
         """
@@ -477,10 +481,4 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         f.write("    f = open('%s/%s', 'w')\n" % (pdir, pname))
         f.write("    f.write('my name is %s\\n')\n" % (pname))
         f.write("    f.close()\n")
-        
         f.close()
-        
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='CrawlPluginTest',
-                        logfile=testhelp.testlog(__name__))
