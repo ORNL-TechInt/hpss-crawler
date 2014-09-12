@@ -6,6 +6,7 @@ import atexit
 import base64
 import CrawlConfig
 import CrawlDBI
+import CrawlMail
 import CrawlPlugin
 import daemon
 import getpass
@@ -90,80 +91,6 @@ def crl_cleanup(argv):
             shutil.rmtree(td)
 
 
-    select count(*) from checkables where type = 'f';
-    select count(*) from checkables where checksum <> 0;
-    select sum(p_count), sum(s_count) from dimension;
-    select checksum from cvstats;
-    """
-    p = optparse.OptionParser()
-    p.add_option('-c', '--cfg',
-                 action='store', default='', dest='config',
-                 help='config file name')
-    p.add_option('-d', '--debug',
-                 action='store_true', default=False, dest='debug',
-                 help='run the debugger')
-    p.add_option('-p', '--prefix',
-                 action='store', default='', dest='prefix',
-                 help='table name prefix')
-    (o, a) = p.parse_args(argv)
-
-    if o.debug: pdb.set_trace()
-
-    print("This routine is deprecated. Please use cvtool instead.")
-
-    cfg = CrawlConfig.get_config('crawl.cfg')
-    if o.prefix != '':
-        cfg.set('dbi', 'tbl_prefix', o.prefix)
-        
-    db = CrawlDBI.DBI(cfg=cfg)
-    rows = db.select(table="checkables",
-                     fields=["count(*)"],
-                     where="type = 'f'")
-    (files_in_pop) = rows[0][0]
-
-    rows = db.select(table="checkables",
-                     fields=["count(*)"],
-                     where="checksum <> 0")
-    (files_in_sample) = rows[0][0]
-
-    rows = db.select(table="dimension",
-                     fields=["sum(p_count)", "sum(s_count)"])
-    (dim_p_count, dim_s_count) = rows[0]
-
-    rows = db.select(table="cvstats",
-                     fields=['rowid', 'checksums', 'matches', 'failures'])
-    (total_checksums) = rows[0][1]
-
-    pflag = sflag = cflag = ""
-    if files_in_pop != dim_p_count:
-        pflag = "!"
-    if files_in_sample != dim_s_count:
-        sflag = "!"
-    if total_checksums != files_in_sample:
-        cflag = "!"
-        
-    print("%15s %10s  %10s" % (" ", "Population", "Sample"))
-    print("%15s %10d  %10d" % ("checkables", files_in_pop, files_in_sample))
-    print("%15s %10d%1s %10d%1s" % ("dimension", dim_p_count, pflag, dim_s_count, sflag))
-    print("%15s %10s  %10d%1s" % ("cvstats", " ", total_checksums, cflag))
-
-    print("-----")
-
-    rows = db.select(table="dimension",
-                     fields=[])
-    print("%8s %8s %15s %15s" % ("Name",
-                                 "Category",
-                                 "==Population===",
-                                 "====Sample====="))
-    psum = ssum = 0
-    for r in rows:
-        print("%8s %8s %7d %7.2f %7d %7.2f" % r[1:])
-        psum += r[3]
-        ssum += r[5]
-    print("%8s %8s %7d %7s %7d" % (" ", "Total", psum, " ", ssum))
-          
-    db.close()
-    
 # ------------------------------------------------------------------------------
 def crl_dbdrop(argv):
     """dbdrop - drop a database table
@@ -223,10 +150,10 @@ def crl_fire(argv):
     cfg = CrawlConfig.get_config(o.config)
     log = CrawlConfig.get_logger(o.logpath, cfg)
 
-    if o.plugin == '':
+    if o.plugname == '':
         print("'-p <plugin-name>' is required")
     elif not cfg.has_section(o.plugname):
-        print("No plugin named '%s' found in configuration" % o.plugin)
+        print("No plugin named '%s' found in configuration" % o.plugname)
     else:
         plugdir = cfg.get('crawler', 'plugin-dir')
         sys.path.append(plugdir)
@@ -260,6 +187,7 @@ def crl_log(argv):
         log = CrawlConfig.get_logger(cfg=cfg)
 
     log.info(" ".join(a))
+
 
 # -----------------------------------------------------------------------------
 def crl_pw_encode(argv):
