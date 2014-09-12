@@ -407,7 +407,7 @@ class Checkable(object):
         Look up the current item in the database based on path, returning the
         database row(s).
         """
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         rv = db.select(table='checkables',
                        fields=['rowid',
                                'path',
@@ -433,7 +433,7 @@ class Checkable(object):
         """
         # Checkable.dbname = filename
         rval = []
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         rows = db.select(table='checkables',
                          fields=['rowid',
                                  'path',
@@ -519,7 +519,7 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def load(self):
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         if self.rowid is not None:
             rows = db.select(table='checkables',
                              fields=['rowid',
@@ -606,7 +606,7 @@ class Checkable(object):
         if self.type != 'f' and self.type != 'd':
             raise StandardError("%s has invalid type" % self)
 
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         if not self.in_db:
             # insert it
             db.insert(table='checkables',

@@ -179,7 +179,7 @@ class DBITest(DBITestRoot):
         that if the configuration says to get us an sqlite database connection,
         DBI doesn't hand us back a mysql connection.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'))
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
         self.assertTrue(hasattr(a, '_dbobj'),
                         "Expected to find a _dbobj attribute on %s" % a)
         self.assertTrue(isinstance(a._dbobj, CrawlDBI.DBIsqlite),
@@ -1779,6 +1779,7 @@ class DBI_out_Base(object):
 @attr(heavy=True)
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
+    dbctype = 'crawler'
     pass
 
     # -------------------------------------------------------------------------
@@ -1966,6 +1967,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 # -----------------------------------------------------------------------------
 class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'sqlite'
+    dbctype = 'crawler'
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -2104,7 +2106,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype))
+                             cfg=make_tcfg(self.dbtype),
+                             dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_empty(self):
@@ -2135,7 +2138,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "disk I/O error",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype))
+                             cfg=make_tcfg(self.dbtype),
+                             dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_nosuch(self):

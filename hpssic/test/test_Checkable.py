@@ -249,7 +249,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
 
         # there should be one row
         rows = db.select(table='checkables', fields=['rowid',
@@ -343,7 +343,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         # verify that the file exists and the table does also
         self.assertTrue(os.path.exists(self.testdb),
                         "Expected %s to exist" % self.testdb)
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         self.assertTrue(db.table_exists(table='checkables'),
                         "Expected table 'checkables' to exist in db")
 
@@ -367,7 +367,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
 
         # there should be one row
         rows = db.select(table='checkables', fields=['rowid',
@@ -411,7 +411,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
 
         # there should be two rows, one for each item in the dataroot list
         rows = db.select(table='checkables', fields=['rowid',
@@ -605,7 +605,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo()
 
         # put the test data into the database
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=testdata[1:])
@@ -657,7 +657,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo()
 
         # put the test data into the database (but not newroot)
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=testdata[1:])
@@ -1070,7 +1070,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Add one record to the database. All arguments except self are optional.
         """
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[(path, type, cos, last_check)])
@@ -1081,7 +1081,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Store a duplicate entry in the file table.
         """
-        db = CrawlDBI.DBI()
+        db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', 0)])
