@@ -1,4 +1,5 @@
 WWW = $(HOME)/www/hpssic
+PYFILES = $(shell find . -name "*.py")
 
 doc: readme refman uguide
 
@@ -34,7 +35,8 @@ $(WWW)/ReferenceManual.html: RefMan.md
 $(WWW)/UserGuide.html: UGuide.md
 	Markdown.pl $< > $@
 
-sdist: *.py
+sdist: $(PYFILES)
+	echo $(PYFILES)
 	setup.py sdist
 
 install:
