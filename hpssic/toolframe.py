@@ -55,6 +55,7 @@ import testhelp
 import traceback as tb
 import unittest
 
+
 # -----------------------------------------------------------------------------
 def tf_main(args, prefix=None, noarg='help'):
     """
@@ -90,6 +91,7 @@ def tf_main(args, prefix=None, noarg='help'):
                 tb.print_exc()
         except Exception, e:
             tb.print_exc()
+
 
 # ----------------------------------------------------------------------------
 def tf_help(A, prefix=None):
@@ -161,6 +163,7 @@ def tf_launch(prefix,
         else:
             tf_main(sys.argv, prefix=prefix, noarg=noarg)
 
+
 # -----------------------------------------------------------------------------
 def tf_dispatch(prefix, args):
     if len(args) < 1:
@@ -177,6 +180,7 @@ def tf_dispatch(prefix, args):
         except:
             tb.print_exc()
             
+
 # -----------------------------------------------------------------------------
 def tf_shell(prefix, args):
     prompt = "%s> " % prefix
@@ -186,8 +190,9 @@ def tf_shell(prefix, args):
         tf_dispatch(prefix, r)
         cmd = raw_input(prompt)
 
+
 # -----------------------------------------------------------------------------
-def ez_launch(main = None,
+def ez_launch(main=None,
               setup=None,
               cleanup=None,
               test=None,
@@ -201,7 +206,9 @@ def ez_launch(main = None,
         return
     sname = sys.argv[0]
     pname = re.sub('.py$', '', sname)
-    if sname.endswith('.py') and not os.path.exists(pname) and '-L' in sys.argv:
+    if all([sname.endswith('.py'),
+            not os.path.exists(pname),
+            '-L' in sys.argv]):
         print("creating symlink: %s -> %s" % (pname, sname))
         os.symlink(os.path.basename(sname), pname)
     elif sys._getframe(1).f_code.co_name in ['?', '<module>']:
@@ -209,13 +216,13 @@ def ez_launch(main = None,
             if '-d' in sys.argv:
                 sys.argv.remove('-d')
                 pdb.set_trace()
-            if test == None:
+            if test is None:
                 unittest.main()
             else:
                 if setup != None:
                     setup()
-                keep = testhelp.main(sys.argv,test, logfile=logfile)
-                if not keep and cleanup != None:
+                keep = testhelp.main(sys.argv, test, logfile=logfile)
+                if not keep and cleanup is not None:
                     cleanup()
-        elif main != None:
+        elif main is not None:
             main(sys.argv)

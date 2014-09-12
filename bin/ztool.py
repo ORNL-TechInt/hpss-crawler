@@ -9,6 +9,7 @@ import toolframe
 prefix = "c"
 H = None
 
+
 # -----------------------------------------------------------------------------
 def c_cscount(argv):
     """cscount - count checksummed files in log and in database
@@ -31,7 +32,8 @@ def c_cscount(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     result = []
     with open(o.filename, "r") as f:
@@ -41,13 +43,14 @@ def c_cscount(argv):
                 if "/" in z[-1]:
                     (path, x) = z[-1].split()
                     result.append(path)
-    
+
     db = CrawlDBI.DBI()
     for path in result:
         rows = db.select(table="checkables",
                          fields=["checksum"],
                          where="path = '%s'" % path)
         print("%d %s" % (rows[0][0], path))
+
 
 # -----------------------------------------------------------------------------
 def c_failtest(argv):
@@ -71,7 +74,8 @@ def c_failtest(argv):
     except SystemExit:
         return
 
-    if o.debug: pdb.set_trace()
+    if o.debug:
+        pdb.set_trace()
 
     db = CrawlDBI.DBI()
 
@@ -79,6 +83,6 @@ def c_failtest(argv):
                      where="rowid < 10")
     print rows
     db.close()
-    
+
 # -----------------------------------------------------------------------------
 toolframe.tf_launch(prefix, __name__)
