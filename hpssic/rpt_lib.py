@@ -11,12 +11,12 @@ import util
 def get_cv_report(db, last_rpt_time):
     # get the body of the report from a Dimension object
     rval = "----------------------------------------------------------\n"
-    rval += "Checksum Verifier Population vs. Sample"
-    d = Dimension.Dimension(name="cos")
-    rval += d.report()
-    rval += "\n"
-
+    rval += "Checksum Verifier Population vs. Sample\n"
     if db.table_exists(table="checkables"):
+        d = Dimension.Dimension(name="cos")
+        rval += d.report()
+        rval += "\n"
+
         # get the population and sample entries added since the last report
         rows = db.select(table="checkables",
                          fields=["count(path)"],
@@ -35,7 +35,7 @@ def get_cv_report(db, last_rpt_time):
                  "%d items added to population, " % (c_pop_size) +
                  "%d items added to sample" % (c_sample_size))
     else:
-        rval = "No checksum verifier data to report."
+        rval += "   No checksum verifier data to report."
 
     rval += "\n"
 
@@ -47,8 +47,8 @@ def get_mpra_report(db, last_rpt_time):
     rval = ("\n----------------------------------------------------------\n" +
             "Migration/Purge Record Checks\n" +
             "\n")
-    hfmt = "  %-5s  %-20s  %-20s  %-20s  %8s\n"
-    bfmt = "  %-5s  %-20s  %-20s  %-20s  %8d\n"
+    hfmt = "   %-5s  %-20s  %-20s  %-20s  %8s\n"
+    bfmt = "   %-5s  %-20s  %-20s  %-20s  %8d\n"
     body = ''
     if db.table_exists(table='mpra'):
         rows = db.select(table="mpra",
@@ -71,10 +71,10 @@ def get_mpra_report(db, last_rpt_time):
         if 0 < len(body):
             body = hfmt % ('Type', 'Scan Time', 'Start', 'End', 'Records') + body
         else:
-            body = "  No records found to report"
+            body = "   No records found to report"
 
     else:
-        body = "  No MPRA result to report at this time."
+        body = "   No MPRA result to report at this time."
 
     rval += body + "\n"
     
