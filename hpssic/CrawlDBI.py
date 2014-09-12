@@ -106,37 +106,6 @@ class DBI(object):
                 raise DBIerror("Unrecognized argument to %s. " %
                                self.__class__ +
                                "Only 'cfg=<config>' is accepted")
-        if 'dbtype' in kwargs and kwargs['dbtype'] != 'db2':
-            raise DBIerror("Only dbtype='db2' may be specified explicitly")
-
-        if 'dbname' in kwargs and 'dbtype' not in kwargs:
-            raise DBIerror("dbname may only be specified if dbtype = 'db2'")
-
-        # Figure out the dbtype
-        try:
-            if 'dbtype' in kwargs and 'cfg' in kwargs:
-                cfg = kwargs['cfg']
-                dbtype = kwargs['dbtype']
-                del kwargs['dbtype']
-                tbl_pfx = 'hpss'
-                dbname = kwargs['dbname']
-            elif 'dbtype' not in kwargs and 'cfg' in kwargs:
-                cfg = kwargs['cfg']
-                dbtype = cfg.get('dbi', 'dbtype')
-                tbl_pfx = cfg.get('dbi', 'tbl_prefix')
-                dbname = cfg.get('dbi', 'dbname')
-            elif 'dbtype' in kwargs and 'cfg' not in kwargs:
-                cfg = CrawlConfig.get_config()
-                dbtype = kwargs['dbtype']
-                del kwargs['dbtype']
-                tbl_pfx = 'hpss'
-                dbname = kwargs['dbname']
-            elif 'dbtype' not in kwargs and 'cfg' not in kwargs:
-                cfg = CrawlConfig.get_config()
-                dbtype = cfg.get('dbi', 'dbtype')
-                tbl_pfx = cfg.get('dbi', 'tbl_prefix')
-                dbname = cfg.get('dbi', 'dbname')
-                kwargs['cfg'] = cfg
             else:
                 cfg = args[0]
         elif 'cfg' in kwargs and kwargs['cfg'] is not None:
@@ -180,11 +149,11 @@ class DBI(object):
 
         self.closed = False
         if dbtype == 'sqlite':
-            self._dbobj = DBIsqlite(*args, **kwargs)
+            self._dbobj = DBIsqlite(*args, **okw)
         elif dbtype == 'mysql':
-            self._dbobj = DBImysql(*args, **kwargs)
+            self._dbobj = DBImysql(*args, **okw)
         elif dbtype == 'db2':
-            self._dbobj = DBIdb2(*args, **kwargs)
+            self._dbobj = DBIdb2(*args, **okw)
         else:
             raise DBIerror("Unknown database type")
 
@@ -1162,14 +1131,14 @@ if db2_available:
             except:
                 cfg = CrawlConfig.get_config()
             util.env_update(cfg)
-            host = cfg.get('db2', 'hostname')
-            port = cfg.get('db2', 'port')
+            host = cfg.get(HPSS_SECTION, 'hostname')
+            port = cfg.get(HPSS_SECTION, 'port')
             try:
-                username = cfg.get('db2', 'username')
+                username = cfg.get(HPSS_SECTION, 'username')
             except:
                 username = ''
             try:
-                password = base64.b64decode(cfg.get('db2', 'password'))
+                password = base64.b64decode(cfg.get(HPSS_SECTION, 'password'))
             except:
                 password = ''
             try:
