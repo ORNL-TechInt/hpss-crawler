@@ -6,17 +6,17 @@ In this file we import fakesmtp, which monkey patches smtplib so that any
 e-mail sent gets captured in a memory inbox for inspection rather than actually
 sent off the machine.
 """
-import Alert
-import CrawlConfig
+from hpssic import Alert
+from hpssic import CrawlConfig
 import email.mime.text as emt
-import fakesmtp
+from hpssic import fakesmtp
 import os
 import socket
 import stat
 import sys
-import testhelp
-import toolframe
-import util
+from hpssic import testhelp
+from hpssic import toolframe
+from hpssic import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():

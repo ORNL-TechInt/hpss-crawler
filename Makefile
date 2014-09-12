@@ -7,8 +7,8 @@ clean:
 	find . -name "*~" | xargs rm
 	rm -rf test.d MANIFEST
 
-TAGS: *.py tests/*.py
-	etags *.py
+TAGS: 
+	find . -name "*.py" | xargs etags
 
 TESTLOG=tests/nosetests.log
 NOSE_WHICH=

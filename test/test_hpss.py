@@ -2,12 +2,12 @@
 """
 Tests for hpss.py
 """
-import CrawlConfig
-import hpss
-import testhelp
-import toolframe
+from hpssic import CrawlConfig
+from hpssic import hpss
+from hpssic import testhelp
+from hpssic import toolframe
 import traceback as tb
-import util
+from hpssic import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():
@@ -30,6 +30,7 @@ class hpssTest(testhelp.HelpedTestCase):
     """
     Tests for the hpss.HSI class
     """
+    slow = 1
     testdir = testhelp.testdata(__name__)
     hdir = "/home/tpb/hic_test"
     stem = "hashable"

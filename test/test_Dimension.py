@@ -2,17 +2,17 @@
 """
 Track stratum proportions in a sample against a population
 """
-import Checkable
+from hpssic import Checkable
 import copy
-import CrawlDBI
-from Dimension import Dimension
+from hpssic import CrawlDBI
+from hpssic.Dimension import Dimension
 import os
 import pdb
 import sys
-import testhelp
-import toolframe
+from hpssic import testhelp
+from hpssic import toolframe
 import traceback as tb
-import util
+from hpssic import util
 
 mself = sys.modules[__name__]
 logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)

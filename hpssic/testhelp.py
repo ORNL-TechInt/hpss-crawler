@@ -276,7 +276,6 @@ def module_test_teardown(dir):
     """
     if not keepfiles():
         # close and release any open logging files
-        logger = CrawlConfig.get_logger(reset=True, soft=True)
         if type(dir) == str:
             reset_directory(dir, make=False)
         elif type(dir) == list:
@@ -294,6 +293,7 @@ def reset_directory(dirpath, make=True, force=False):
     used by module_test_teardown().
     """
     if not keepfiles() or force:
+        logger = CrawlConfig.get_logger(reset=True, soft=True)
         if os.path.isdir(dirpath):
             shutil.rmtree(dirpath)
         if make and not os.path.exists(dirpath):

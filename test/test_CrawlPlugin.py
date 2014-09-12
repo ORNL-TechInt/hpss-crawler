@@ -5,17 +5,17 @@ Plugin class for HPSS integrity crawler
 This module contains the CrawlPlugin and CrawlPluginTest classes.
 """
 import copy
-import CrawlConfig
-import CrawlPlugin
+from hpssic import CrawlConfig
+from hpssic import CrawlPlugin
 import os
 import pdb
 import re
 import sys
-import testhelp
+from hpssic import testhelp
 import time
-import toolframe
+from hpssic import toolframe
 import traceback as tb
-import util
+from hpssic import util
 
 # -----------------------------------------------------------------------------
 def setUpModule():

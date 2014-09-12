@@ -18,7 +18,7 @@ import shutil
 import sys
 import testhelp
 import time
-import toolframe
+from hpssic import toolframe
 import traceback as tb
 import util
 
