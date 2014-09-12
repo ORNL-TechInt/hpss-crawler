@@ -509,10 +509,10 @@ def running_pid(proc_required=True):
     """
     rval = []
     if proc_required:
-        result = pexpect.run("ps -ef")
+        result = pexpect.run("ps -ewwo pid,cmd")
         for line in result.split("\n"):
             if 'crawl start' in line:
-                pid = int(line.split()[1])
+                pid = int(line.split()[0])
                 pfpath = "%s/%d" % (CrawlDaemon.piddir, pid)
                 if os.path.exists(pfpath):
                     (ctx, xpath) = util.contents(pfpath).strip().split()

@@ -3,10 +3,13 @@ PYFILES = $(shell find . -name "*.py")
 
 doc: readme refman uguide
 
+pristine: clean
+	rm dist/*
+
 clean:
 	find . -name "*.pyc" | xargs rm -f
 	find . -name "*~" | xargs rm -f
-	rm -rf test/test.d MANIFEST
+	rm -rf test/test.d MANIFEST README
 
 TAGS: 
 	find . -name "*.py" | xargs etags

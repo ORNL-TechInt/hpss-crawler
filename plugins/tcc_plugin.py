@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 import base64
-import CrawlConfig
-import CrawlDBI
-import hpss
+from hpssic import CrawlConfig
+from hpssic import CrawlDBI
+from hpssic import hpss
 import ibm_db as db2
 import os
 import pdb
 import pprint
 import re
 import sys
-import tcc_lib
+from hpssic import tcc_lib
 import time
-import util
+from hpssic import util
 
 sectname = 'tcc'
 # -----------------------------------------------------------------------------

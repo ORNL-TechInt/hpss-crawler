@@ -17,5 +17,5 @@ setup(name='hpssic',
                'bin/mpra',
                'bin/tcc',
                ],
-      packages=['hpssic'],
+      packages=['hpssic', 'hpssic/plugins'],
       )
