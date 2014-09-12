@@ -46,8 +46,6 @@ def crl_cfgdump(argv):
 
     if o.debug: pdb.set_trace()
 
-
-    if o.config == '':    o.config = 'crawl.cfg'
     if o.target == '':    o.target = 'stdout'
 
     cfg = CrawlConfig.get_config(o.config)

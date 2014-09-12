@@ -18,6 +18,7 @@ This class is based on python's standard ConfigParser class. It adds
 import ConfigParser
 from ConfigParser import NoSectionError, NoOptionError
 import os
+import pdb
 import re
 import stat
 import StringIO
@@ -221,12 +222,18 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return the string. If with_defaults = True, include the DEFAULTS
         section.
         """
-        rstr = StringIO.StringIO()
-        self.write(rstr)
-        rval = rstr.getvalue()
-        rstr.close()
-        if not with_defaults:
-            rval = re.sub('\[DEFAULT\][^\[]*\[', '[', rval)
+        rval = ''
+        if with_defaults and self.defaults():
+            defaults = self.defaults()
+            rval += "[DEFAULT]\n"
+            for o in defaults:
+                rval += "%s = %s\n" % (o, defaults[o])
+
+        for s in self.sections():
+            rval += '\n[%s]\n' % s
+            for o in self.options(s):
+                val = self.get(s, o)
+                rval += '%s = %s\n' % (o, val)
         return rval
 
     # -------------------------------------------------------------------------
