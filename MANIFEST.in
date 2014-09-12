@@ -1,0 +1,2 @@
+include *.py crawl.cfg.sample
+recursive-include tests *.py nose.cfg
