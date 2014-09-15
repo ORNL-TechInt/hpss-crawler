@@ -2,7 +2,7 @@
 
 # The directory where the crawler is running from. This will be used later in
 # the file. Customize this for your installation.
-root = $HOME/hpssic
+root = .
 hpssdb = /var/hpss/hpssdb
 
 # ------------------------------------------------------------
