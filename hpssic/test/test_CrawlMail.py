@@ -124,7 +124,16 @@ class CrawlMailTest(th.HelpedTestCase):
         The *to* arg to CrawlMail.send() is unspecified. Should throw an
         exception.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.no_recip_list,
+                             CrawlMail.send,
+                             sender=sender,
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
 
     # -------------------------------------------------------------------------
     def test_subj_something(self):

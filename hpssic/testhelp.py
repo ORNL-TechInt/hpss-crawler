@@ -22,6 +22,7 @@ import glob
 import optparse
 import os
 import pdb
+import re
 import shutil
 import sys
 import unittest
