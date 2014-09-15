@@ -1,5 +1,6 @@
 import CrawlConfig
 import email.mime.text
+import messages as MSG
 import smtplib
 import socket
 import util
@@ -20,7 +21,7 @@ def send(to='', subj='', msg='', sender='', cfg=None):
     default_recip = 'tbarron@ornl.gov'
     if to == '':
         if cfg is None:
-            addrs = default_recip
+            raise util.HpssicError(MSG.no_recip_list)
         else:
             (section, option) = ('crawler', 'notify-e-mail')
             addrs = cfg.get(section, option)

@@ -1,9 +1,11 @@
 from hpssic import CrawlMail
 from hpssic import fakesmtp
+from hpssic import messages as MSG
 import os
+import pdb
 import pytest
 from hpssic import testhelp as th
-
+from hpssic import util as U
 
 # -----------------------------------------------------------------------------
 class CrawlMailTest(th.HelpedTestCase):
@@ -49,7 +51,19 @@ class CrawlMailTest(th.HelpedTestCase):
         """
         The *to* arg to CrawlMail.send() is empty. Should throw an exception.
         """
-        pytest.skip('construction')
+        fakesmtp.inbox = []
+        sender = 'from@here.now'
+        tolist = []
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.no_recip_list,
+                             CrawlMail.send,
+                             sender=sender,
+                             to=','.join(tolist),
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
 
     # -------------------------------------------------------------------------
     def test_to_none(self):

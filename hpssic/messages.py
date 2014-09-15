@@ -20,6 +20,8 @@ no_cfg_found = """
              - use --cfg to specify a configuration file on the command line.
             """
 
+no_recip_list = "No recipient list specified or in configuration"
+
 nothing_to_drop = "table is None, nothing to drop"
 
 valid_dbtype = "dbtype must be 'hpss' or 'crawler'"

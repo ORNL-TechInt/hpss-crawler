@@ -162,6 +162,7 @@ PATH: +%(hpssdb)s/sqllib/bin:
 [dbi-crawler]
 # database type. Can be 'sqlite', 'mysql', or 'db2'
 dbtype = sqlite
+dbname = ./crawl.db
 
 # database name. 
 ## dbtype == 'sqlite'  ==> dbname is a file name
