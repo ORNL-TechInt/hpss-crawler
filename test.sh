@@ -35,6 +35,7 @@ set -x
 # pieces of db2 and mysql that are not on this machine. Our tests are
 # decorated so that tests that depend on db2 or mysql will be skipped.
 pip install -r jenkins_requirements.txt
+pip install .
 
 #
 # crawl.cfg.sample is set up with sqlite specified in its [dbi]

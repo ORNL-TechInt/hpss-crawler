@@ -1,3 +1,4 @@
+from hpssic import CrawlConfig
 from hpssic import CrawlMail
 from hpssic import fakesmtp
 from hpssic import messages as MSG
@@ -10,12 +11,18 @@ from hpssic import util as U
 # -----------------------------------------------------------------------------
 class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
+    def setUp(self):
+        """
+        Clear the inbox before each test
+        """
+        fakesmtp.inbox = []
+
+    # -------------------------------------------------------------------------
     def test_to_csv(self):
         """
         The *to* arg to CrawlMail.send() is a comma separated list of
         addresses. Should work.
         """
-        fakesmtp.inbox = []
         sender = 'from@here.now'
         tolist = ['a@b.c', 'd@e.f']
         subject = 'Topic'
@@ -36,7 +43,26 @@ class CrawlMailTest(th.HelpedTestCase):
         The *to* arg to CrawlMail.send() is a section.option ref into a config
         object. Should work.
         """
-        pytest.skip('construction')
+        exp = "jock@there.net,sally@elsewhere.org"
+        cdict = {'crawler': {'notify-email': "somebody@somewhere.com"},
+                 'alerts': {'recipients': exp},
+                 }
+        cfg = CrawlConfig.CrawlConfig.dictor(cdict)
+
+        sender = 'from@here.now'
+        to = 'alerts.recipients'
+        subject = 'Topic'
+        body = 'Message body'
+        CrawlMail.send(sender=sender,
+                       to=to,
+                       subj=subject,
+                       msg=body,
+                       cfg=cfg)
+        m = fakesmtp.inbox[0]
+        self.expected(sender, m.from_address)
+        self.expected(exp.split(','), m.to_address)
+        self.expected_in(subject, m.fullmessage)
+        self.expected_in(body, m.fullmessage)
 
     # -------------------------------------------------------------------------
     def test_to_notstr(self):
@@ -51,7 +77,6 @@ class CrawlMailTest(th.HelpedTestCase):
         """
         The *to* arg to CrawlMail.send() is empty. Should throw an exception.
         """
-        fakesmtp.inbox = []
         sender = 'from@here.now'
         tolist = []
         subject = 'Topic'
