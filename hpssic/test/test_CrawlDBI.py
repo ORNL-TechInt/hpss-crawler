@@ -20,6 +20,7 @@ from hpssic import dbschem
 from hpssic import messages as MSG
 import os
 import pdb
+import pytest
 import socket
 import sys
 from hpssic import testhelp
@@ -27,15 +28,6 @@ from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 import warnings
-
-# These lines look to see whether we're being run by py.test or nosetests so we
-# can set things up in a way that will make the test runner happy.
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
@@ -1776,7 +1768,7 @@ class DBI_out_Base(object):
 
 
 # -----------------------------------------------------------------------------
-@attr(heavy=True)
+@pytest.mark.skipif('jenkins' in os.getcwd())
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
     dbctype = 'crawler'
@@ -2349,7 +2341,9 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 
 
 # -----------------------------------------------------------------------------
-@attr(slow=True, heavy=True)
+@pytest.mark.skipif('jenkins' in os.getcwd())
+@pytest.mark.skipif(not pytest.config.getvalue("all"),
+                    reason="slow -- use --all to run this one")
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbctype = 'hpss'   # the function of the database
     dbtype = 'db2'     # which database engine it uses

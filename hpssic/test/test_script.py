@@ -2,17 +2,11 @@ from hpssic import messages as MSG
 import os
 import pdb
 import pexpect
+import pytest
 import re
 import sys
 from hpssic import testhelp as th
 from hpssic import util as U
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
@@ -314,7 +308,8 @@ class Test_MISC(th.HelpedTestCase):
             self.fail(rpt)
 
     # -------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_pep8(self):
         full_result = ""
         for r, d, f in os.walk('hpssic'):

@@ -14,6 +14,7 @@ from hpssic import messages as MSG
 import os
 import pdb
 import pexpect
+import pytest
 import re
 import shutil
 import sys
@@ -22,14 +23,6 @@ import time
 import tempfile
 from hpssic import toolframe
 from hpssic import util
-
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # ------------------------------------------------------------------------------
@@ -233,7 +226,8 @@ class CrawlMiscTest(CrawlTest):
                          "Expected '%s', got '%s'" % (exp, actual))
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_cfgdump_log_nopath(self):
         """
         TEST: "crawl cfgdump -c <cfgpath> --to log"
@@ -260,7 +254,8 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_nin('fire', lcontent)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_cfgdump_log_path(self):
         """
         TEST: "crawl cfgdump -c <cfgpath> --to log --log <logpath>"
@@ -289,7 +284,8 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_nin('fire', lcontent)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_cfgdump_nosuch(self):
         """
         TEST: "crawl cfgdump -c test.d/nosuch.cfg"
@@ -350,7 +346,8 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_in(exp, result)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_fire_log_path(self):
         """
         TEST: crawl fire --plugin <plugmod>
@@ -419,7 +416,8 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_in(msg, util.contents(lfname))
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_already(self):
         """
         TEST: If the crawler is already running, decline to run a second copy.
@@ -452,7 +450,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(crawl.is_running(context=self.ctx), False)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_cfg(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
@@ -507,7 +506,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_cfgctx(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
@@ -550,7 +550,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_cmdctx(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
@@ -596,7 +597,8 @@ class CrawlMiscTest(CrawlTest):
     #     """
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_fire(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
@@ -663,7 +665,8 @@ class CrawlMiscTest(CrawlTest):
                               util.line_quote(result)))
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_noexit(self):
         """
         'crawl start' with no exit path in the config file should throw an
@@ -688,7 +691,8 @@ class CrawlMiscTest(CrawlTest):
                          "Crawler should not have started")
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_nonplugin_sections(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
@@ -729,7 +733,8 @@ class CrawlMiscTest(CrawlTest):
                          pidfile)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_start_x(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
@@ -767,7 +772,8 @@ class CrawlMiscTest(CrawlTest):
                          "Expected pid file to be removed")
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_status(self):
         """
         TEST: 'crawl status' should report the crawler status correctly.
@@ -817,7 +823,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_status_multi(self):
         """
         TEST: 'crawl status' should report the crawler status correctly.
@@ -903,7 +910,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_stop_confirm(self):
         """
         TEST: 'crawl stop' should cause a running daemon to shut down. If no
@@ -955,7 +963,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_stop_ctx(self):
         """
         TEST: 'crawl stop' should cause a running daemon to shut down. If the
@@ -1195,7 +1204,8 @@ class CrawlMiscTest(CrawlTest):
                          "Expected '%s', got '%s'" % (exp, result))
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_stop_ctxoth(self):
         """
         TEST: 'crawl stop' with a context other than the running crawler will
@@ -1241,7 +1251,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_crawl_stop_noctx(self):
         """
         TEST: 'crawl stop' with multiple crawlers running and no args should
@@ -1591,7 +1602,8 @@ class CrawlGiveUpYetTest(CrawlTest):
             self.expected_in("crawl: %s" % shutdown_msg, m.fullmessage)
 
     # --------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_give_up_yet_window(self):
         """
         CrawlDaemon.give_up_yet() should return True if it gets a configured

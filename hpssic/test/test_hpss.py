@@ -2,22 +2,15 @@
 """
 Tests for hpss.py
 """
-# from nose.plugins.attrib import attr
 from hpssic import CrawlConfig
 from hpssic import hpss
-from nose.plugins.skip import SkipTest
+import os
+import pytest
 import sys
 from hpssic import testhelp
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
@@ -39,7 +32,9 @@ def tearDownModule():
 
 
 # -----------------------------------------------------------------------------
-@attr(slow=True, heavy=True)
+@pytest.mark.skipif('jenkins' in os.getcwd())
+@pytest.mark.skipif(not pytest.config.getvalue("all"),
+                    reason="slow -- use --all to run this one")
 class hpssTest(testhelp.HelpedTestCase):
     """
     Tests for the hpss.HSI class
@@ -76,7 +71,7 @@ class hpssTest(testhelp.HelpedTestCase):
                                  h.chdir)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_chdir_notdir(self):
@@ -94,7 +89,7 @@ class hpssTest(testhelp.HelpedTestCase):
                             (exp, util.line_quote(result)))
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_chdir_ok(self):
@@ -110,7 +105,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_chdir_perm(self):
@@ -128,7 +123,7 @@ class hpssTest(testhelp.HelpedTestCase):
                             (exp, util.line_quote(result)))
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_chdir_unicode(self):
@@ -143,7 +138,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashcreate_argbad(self):
@@ -160,7 +155,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashcreate_argnone(self):
@@ -175,7 +170,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashcreate_ok_glob(self):
@@ -194,7 +189,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashcreate_ok_list(self):
@@ -211,7 +206,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashcreate_ok_str(self):
@@ -228,7 +223,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashdelete_argbad(self):
@@ -245,7 +240,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashdelete_argnone(self):
@@ -261,7 +256,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashdelete_ok_glob(self):
@@ -292,7 +287,7 @@ class hpssTest(testhelp.HelpedTestCase):
                              util.line_quote(result)))
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashdelete_ok_list(self):
@@ -323,7 +318,7 @@ class hpssTest(testhelp.HelpedTestCase):
                              util.line_quote(result)))
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashdelete_ok_str(self):
@@ -354,7 +349,7 @@ class hpssTest(testhelp.HelpedTestCase):
                              (exp, util.line_quote(result)))
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashlist_argbad(self):
@@ -371,7 +366,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashlist_argnone(self):
@@ -386,7 +381,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashlist_ok_glob(self):
@@ -413,7 +408,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashlist_ok_list(self):
@@ -440,7 +435,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashlist_ok_str(self):
@@ -467,7 +462,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashverify_argbad(self):
@@ -484,7 +479,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashverify_argnone(self):
@@ -499,7 +494,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_glob(self):
@@ -530,7 +525,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in(exp, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_list(self):
@@ -561,7 +556,7 @@ class hpssTest(testhelp.HelpedTestCase):
                              result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_str(self):
@@ -580,7 +575,7 @@ class hpssTest(testhelp.HelpedTestCase):
                              result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_hashverify_ok_unicode(self):
@@ -599,7 +594,7 @@ class hpssTest(testhelp.HelpedTestCase):
                              result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_lscos(self):
@@ -617,7 +612,7 @@ class hpssTest(testhelp.HelpedTestCase):
             self.expected_in("6057 Disk X-Large_T 2-Copy", result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_lsP_argbad(self):
@@ -633,7 +628,7 @@ class hpssTest(testhelp.HelpedTestCase):
             h.quit()
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_lsP_argnone(self):
@@ -648,7 +643,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_lsP_glob(self):
@@ -663,7 +658,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_lsP_list(self):
@@ -677,7 +672,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_lsP_str(self):
@@ -691,7 +686,7 @@ class hpssTest(testhelp.HelpedTestCase):
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror, e:
             if "HPSS Unavailable" in str(e):
-                raise SkipTest
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_unavailable(self):
