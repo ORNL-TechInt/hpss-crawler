@@ -336,6 +336,19 @@ def test_name(obj=None):
 
 
 # -----------------------------------------------------------------------------
+def rm_cov_warn(string):
+    """
+    Return the input string with the coverage warning ('Coverage.py warning: no
+    data was collected') removed if present.
+    """
+    rval = string
+    covwarn = "Coverage.py.warning:.No.data.was.collected.\r?\n?"
+    if re.findall(covwarn, string):
+        rval = re.sub(covwarn, "", string)
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def run_tests(a, final, testlist, volume, logfile=None, module=None):
     """
     Run the tests.

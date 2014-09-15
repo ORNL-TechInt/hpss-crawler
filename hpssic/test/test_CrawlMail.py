@@ -82,7 +82,6 @@ class CrawlMailTest(th.HelpedTestCase):
                              subj=subject,
                              msg=body)
         self.expected(0, len(fakesmtp.inbox))
-        # pytest.skip('construction')
 
     # -------------------------------------------------------------------------
     def test_to_empty(self):
@@ -107,7 +106,17 @@ class CrawlMailTest(th.HelpedTestCase):
         """
         The *to* arg to CrawlMail.send() is None. Should throw an exception.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.invalid_recip_list,
+                             CrawlMail.send,
+                             sender=sender,
+                             to=None,
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
 
     # -------------------------------------------------------------------------
     def test_to_unspec(self):

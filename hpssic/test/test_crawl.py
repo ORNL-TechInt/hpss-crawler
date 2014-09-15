@@ -294,7 +294,7 @@ class CrawlMiscTest(CrawlTest):
         cfname = '%s/nosuch.cfg' % self.testdir
         util.conditional_rm(cfname)
         cmd = '%s cfgdump -c %s' % (self.crawl_cmd(), cfname)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(util.squash(MSG.no_cfg_found), util.squash(result),
                          "Expected %s,     got %s" %
                          (util.line_quote(MSG.no_cfg_found),
@@ -658,7 +658,7 @@ class CrawlMiscTest(CrawlTest):
         exp = util.squash(MSG.no_cfg_found)
         cmd = "%s start" % self.crawl_cmd()
         with util.Chdir(where):
-            result = util.squash(pexpect.run(cmd))
+            result = util.squash(testhelp.rm_cov_warn(pexpect.run(cmd)))
             self.assertEqual(exp, result,
                              "Expected %s\n      got %s" %
                              (util.line_quote(exp),
@@ -788,13 +788,13 @@ class CrawlMiscTest(CrawlTest):
         self.write_plugmod(self.plugdir, 'plugin_A')
         # pdb.set_trace()
         cmd = '%s status' % (self.crawl_cmd())
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s' % (self.crawl_cmd(),
                                                logpath, cfgpath))
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
@@ -805,13 +805,13 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), True)
 
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(self.cstr['crun'] in result, True)
         self.assertEqual('context=%s' % self.ctx in result, True)
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, self.ctx)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         time.sleep(2)
 
@@ -819,7 +819,7 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), False)
 
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
     # --------------------------------------------------------------------------
@@ -849,14 +849,14 @@ class CrawlMiscTest(CrawlTest):
 
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
         pre_l = glob.glob(self.pidglob)
         # start crawler A
         cmd = ('%s start --log %s --cfg %s' %
                (self.crawl_cmd(), logpath, cfgpath_a))
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
         a_up_l = glob.glob(self.pidglob)
@@ -864,7 +864,7 @@ class CrawlMiscTest(CrawlTest):
         # start crawler B
         cmd = ('%s start --log %s --cfg %s'
                % (self.crawl_cmd(), logpath, cfgpath_b))
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
         b_up_l = glob.glob(self.pidglob)
@@ -882,19 +882,19 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile_b), True)
 
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_in(self.cstr['crun'], result)
         self.assertEqual('context=%s' % ctx_a in result, True)
         self.assertEqual('context=%s' % ctx_b in result, True)
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, ctx_a)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, ctx_b)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
 
@@ -906,7 +906,7 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile_b), False)
 
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
     # --------------------------------------------------------------------------
@@ -1278,14 +1278,14 @@ class CrawlMiscTest(CrawlTest):
 
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
 
         pre_l = glob.glob(self.pidglob)
         # start crawler A
         cmd = ('%s start --log %s --cfg %s'
                % (self.crawl_cmd(), logpath, cfgpath_a))
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
@@ -1298,7 +1298,7 @@ class CrawlMiscTest(CrawlTest):
         # start crawler B
         cmd = ('%s start --log %s --cfg %s'
                % (self.crawl_cmd(), logpath, cfgpath_b))
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         self.vassert_nin(self.cstr['pfctx'], result)
 
@@ -1312,26 +1312,26 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile_b), True)
 
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(self.cstr['crun'] in result,
                          True)
         self.assertEqual('context=TEST' in result, True)
         self.assertEqual('context=DEV' in result, True)
 
         cmd = '%s stop --log %s' % (self.crawl_cmd(), logpath)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         self.vassert_in("Please specify a context", result)
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, ctx_a)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         time.sleep(1.5)
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, ctx_b)
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
         time.sleep(2.0)
 
@@ -1343,7 +1343,7 @@ class CrawlMiscTest(CrawlTest):
                          ctx_b)
 
         cmd = '%s status' % self.crawl_cmd()
-        result = pexpect.run(cmd)
+        result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), "The crawler is not running.")
 
         self.assertEqual(os.path.exists(pidfile_a), False,
