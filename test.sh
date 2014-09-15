@@ -49,4 +49,4 @@ ls -al
 # And run the tests! 
 # nosetests -v -c hpssic/test/nose_jenkins.cfg hpssic/test
 # py.test --all -x --cov hpssic
-py.test --all
+py.test --all hpssic
