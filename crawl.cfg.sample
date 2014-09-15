@@ -150,7 +150,7 @@ PATH: +%(hpssdb)s/sqllib/bin:
    %(hpssdb)s/sqllib/misc
 
 # ------------------------------------------------------------
-[db2]
+[dbi-hpss]
 # db_cfg_name = cfg
 # db_sub_name = subsys
 # hostname = localhost
@@ -159,9 +159,9 @@ PATH: +%(hpssdb)s/sqllib/bin:
 # password = <base64-encoded password> ('crawl pw_encode')
 
 # ------------------------------------------------------------
-[dbi]
+[dbi-crawler]
 # database type. Can be 'sqlite', 'mysql', or 'db2'
-# dbtype = sqlite
+dbtype = sqlite
 
 # database name. 
 ## dbtype == 'sqlite'  ==> dbname is a file name
