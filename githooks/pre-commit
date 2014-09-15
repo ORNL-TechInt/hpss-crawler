@@ -6,7 +6,7 @@ import time
 exec(open('hpssic/version.py').read())
 g = [x.strip() for x in pexpect.run("git describe").split('-')]
 v = __version__.split('.')
-g_pfx = g[0]
+g_pfx = '.'.join(g[0].split('.')[0:2])
 v_pfx = '.'.join(v[0:2])
 
 if 1 == len(g):
