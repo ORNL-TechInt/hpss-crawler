@@ -21,6 +21,7 @@ import time
 from hpssic import toolframe
 import traceback as tb
 import util
+import version
 
 exit_file = 'crawler.exit'
 
@@ -409,13 +410,7 @@ def crl_version(argv):
     if o.debug:
         pdb.set_trace()
 
-    if util.git_repo(__file__):
-        path = ".hpssic_version"
-    else:
-        path = util.pathjoin(util.dirname(__file__), ".hpssic_version")
-
-    hpssic_version = util.contents(path).strip()
-    print("HPSS Integrity Crawler version %s" % hpssic_version)
+    print("HPSS Integrity Crawler version %s" % version.__version__)
 
 
 # ------------------------------------------------------------------------------

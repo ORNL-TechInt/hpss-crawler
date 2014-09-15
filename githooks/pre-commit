@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+import pdb
+import pexpect
+import time
+
+exec(open('hpssic/version.py').read())
+g = [x.strip() for x in pexpect.run("git describe").split('-')]
+v = __version__.split('.')
+g_pfx = g[0]
+v_pfx = '.'.join(v[0:2])
+
+if 1 == len(g):
+     g_cmt = 0
+else:
+     g_cmt = int(g[-2])
+v_cmt = int(v[-1])
+
+if g_pfx == v_pfx and v_cmt != g_cmt + 1:
+     raise SystemExit("""
+     Looks like the version should be %s.%d
+                             but it's %s.%d
+
+     I'd do update it for you, but git won't let me. >:(
+     """ % (v_pfx, g_cmt+1, v_pfx, v_cmt))
+
