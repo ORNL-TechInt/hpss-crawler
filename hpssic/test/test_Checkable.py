@@ -41,7 +41,8 @@ class CheckableTest(testhelp.HelpedTestCase):
     testpath = '/home/tpb/TODO'
 
     # -------------------------------------------------------------------------
-    @attr(slow=True, heavy=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_check_dir(self):
         """
@@ -84,7 +85,8 @@ class CheckableTest(testhelp.HelpedTestCase):
                 self.expected(0, c.checksum)
 
     # -------------------------------------------------------------------------
-    @attr(slow=True, heavy=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_check_file(self):
         """
@@ -271,7 +273,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, rows[0][7])                   # fails
 
     # -------------------------------------------------------------------------
-    @attr(slow=True)
+    @pytest.mark.skipif(not pytest.config.getvalue("all"),
+                        reason="slow -- use --all to run this one")
     def test_ex_nihilo_exist(self):
         """
         If the database file and the checkables table already exists, calling
