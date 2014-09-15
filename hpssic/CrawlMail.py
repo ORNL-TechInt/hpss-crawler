@@ -11,6 +11,9 @@ def send(to='', subj='', msg='', sender='', cfg=None):
     """
     Send e-mail as indicated
     """
+    if type(to) != str:
+        raise util.HpssicError(MSG.invalid_recip_list)
+
     # Prepare a message object based on *msg*
     if msg:
         payload = email.mime.text.MIMEText(msg)

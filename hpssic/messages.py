@@ -10,6 +10,9 @@ db_closed = "Cannot operate on a closed database"
 
 dbname_not_allowed = "dbname may not be specified here"
 
+invalid_recip_list = ("The To: list should be a comma-separated list of " +
+                      "e-mail addresses in a string")
+
 more_than_one_ss = "More than one record found in %s for table %s"
 
 no_cfg_found = """

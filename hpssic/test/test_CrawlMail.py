@@ -8,6 +8,7 @@ import pytest
 from hpssic import testhelp as th
 from hpssic import util as U
 
+
 # -----------------------------------------------------------------------------
 class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
@@ -70,7 +71,18 @@ class CrawlMailTest(th.HelpedTestCase):
         The *to* arg to CrawlMail.send() is not a string. Should throw an
         exception.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.invalid_recip_list,
+                             CrawlMail.send,
+                             sender=sender,
+                             to=17,
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
+        # pytest.skip('construction')
 
     # -------------------------------------------------------------------------
     def test_to_empty(self):
