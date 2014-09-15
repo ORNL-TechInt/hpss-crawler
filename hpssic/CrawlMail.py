@@ -17,18 +17,21 @@ def send(to='', subj='', msg='', sender='', cfg=None):
         payload = email.mime.text.MIMEText("Empty message")
 
     # Set the recipient address(es) based on *to*
-    if cfg is None:
-        cfg = CrawlConfig.get_config()
-
-    if to:
-        if ',' in to:
-            addrs = to
-        elif '.' in to:
+    default_recip = 'tbarron@ornl.gov'
+    if to == '':
+        if cfg is None:
+            addrs = default_recip
+        else:
+            (section, option) = ('crawler', 'notify-e-mail')
+            addrs = cfg.get(section, option)
+    elif ',' in to or '@' in to:
+        addrs = to
+    elif '.' in to:
+        if cfg is None:
+            addrs = default_recip
+        else:
             (section, option) = to.split('.')
             addrs = cfg.get(section, option)
-    else:
-        (section, option) = ('crawler', 'notify-e-mail')
-        addrs = cfg.get(section, option)
 
     addrlist = [x.strip() for x in addrs.split(',')]
     payload['To'] = addrs
