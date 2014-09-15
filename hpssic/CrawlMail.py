@@ -13,6 +13,10 @@ def send(to='', subj='', msg='', sender='', cfg=None):
     """
     if type(to) != str:
         raise util.HpssicError(MSG.invalid_recip_list)
+    if type(sender) != str or '@' not in sender:
+        raise util.HpssicError(MSG.invalid_sender)
+    if type(msg) != str or msg == '':
+        raise util.HpssicError(MSG.invalid_msg_body)
 
     # Prepare a message object based on *msg*
     if msg:
@@ -44,7 +48,7 @@ def send(to='', subj='', msg='', sender='', cfg=None):
     if subj:
         payload['Subject'] = subj
     else:
-        payload['Subject'] = 'HPSS Integrity Crawler ALERT'
+        payload['Subject'] = MSG.default_mail_subject
 
     # Set the from address
     default_sender = 'hpssic@%s' % util.hostname(long=True)

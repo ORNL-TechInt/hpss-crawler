@@ -10,8 +10,14 @@ db_closed = "Cannot operate on a closed database"
 
 dbname_not_allowed = "dbname may not be specified here"
 
+default_mail_subject = ("HPSS Integrity Crawler ALERT")
+
+invalid_msg_body = ("The message body must be a string")
+
 invalid_recip_list = ("The To: list should be a comma-separated list of " +
                       "e-mail addresses in a string")
+
+invalid_sender = ("The sender should be a string containing a valid e-mail address")
 
 more_than_one_ss = "More than one record found in %s for table %s"
 

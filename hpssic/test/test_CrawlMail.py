@@ -89,14 +89,13 @@ class CrawlMailTest(th.HelpedTestCase):
         The *to* arg to CrawlMail.send() is empty. Should throw an exception.
         """
         sender = 'from@here.now'
-        tolist = []
         subject = 'Topic'
         body = 'Message body'
         self.assertRaisesMsg(U.HpssicError,
                              MSG.no_recip_list,
                              CrawlMail.send,
                              sender=sender,
-                             to=','.join(tolist),
+                             to='',
                              subj=subject,
                              msg=body)
         self.expected(0, len(fakesmtp.inbox))
@@ -141,7 +140,19 @@ class CrawlMailTest(th.HelpedTestCase):
         The *subj* arg to CrawlMail.send() is set. The generated message should
         have the correct subject.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        tolist = ['a@b.c', 'd@e.f']
+        subject = 'This is the topic we expect'
+        body = 'Message body'
+        CrawlMail.send(sender=sender,
+                       to=','.join(tolist),
+                       subj=subject,
+                       msg=body)
+        m = fakesmtp.inbox[0]
+        self.expected(sender, m.from_address)
+        self.expected(tolist, m.to_address)
+        self.expected_in(subject, m.fullmessage)
+        self.expected_in(body, m.fullmessage)
 
     # -------------------------------------------------------------------------
     def test_subj_empty(self):
@@ -149,11 +160,26 @@ class CrawlMailTest(th.HelpedTestCase):
         The *subj* arg to CrawlMail.send() is empty. The generated message
         should have the default subject 'HPSS Integrity Crawler ALERT'
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        tolist = ['a@b.c', 'd@e.f']
+        subject = ''
+        default_subj = 'HPSS Integrity Crawler ALERT'
+        body = 'Message body'
+        CrawlMail.send(sender=sender,
+                       to=','.join(tolist),
+                       subj=subject,
+                       msg=body)
+        m = fakesmtp.inbox[0]
+        self.expected(sender, m.from_address)
+        self.expected(tolist, m.to_address)
+        self.expected_in(MSG.default_mail_subject, m.fullmessage)
+        self.expected_in(body, m.fullmessage)
+        # pytest.skip('construction')
 
     # -------------------------------------------------------------------------
     def test_subj_none(self):
         """
+        !@!
         The *subj* arg to CrawlMail.send() is None. The generated message
         should have the default subject 'HPSS Integrity Crawler ALERT'
         """
@@ -162,6 +188,7 @@ class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_subj_unspec(self):
         """
+        !@!
         The *subj* arg to CrawlMail.send() is unspecified. The generated
         message should have the default subject 'HPSS Integrity Crawler ALERT'
         """
@@ -170,14 +197,26 @@ class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_subj_notstr(self):
         """
+        !@!
         The *subj* arg to CrawlMail.send() is not a string. Should throw
         exception.
         """
+        sender = 'from@here.now'
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.no_recip_list,
+                             CrawlMail.send,
+                             sender=sender,
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
         pytest.skip('construction')
 
     # -------------------------------------------------------------------------
     def test_msg_something(self):
         """
+        !@!
         The *msg* arg to CrawlMail.send() is set. The generated message should
         have the correct message body.
         """
@@ -186,8 +225,19 @@ class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_msg_empty(self):
         """
+        !@!
         The *msg* arg to CrawlMail.send() is empty. Should throw exception.
         """
+        sender = 'from@here.now'
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.no_recip_list,
+                             CrawlMail.send,
+                             sender=sender,
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
         pytest.skip('construction')
 
     # -------------------------------------------------------------------------
@@ -195,14 +245,30 @@ class CrawlMailTest(th.HelpedTestCase):
         """
         The *msg* arg to CrawlMail.send() is None. Should throw exception.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        subject = 'Topic'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.invalid_msg_body,
+                             CrawlMail.send,
+                             sender=sender,
+                             subj=subject,
+                             msg=None)
+        self.expected(0, len(fakesmtp.inbox))
 
     # -------------------------------------------------------------------------
     def test_msg_unspec(self):
         """
         The *msg* arg to CrawlMail.send() is unspecified. Show throw exception.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        subject = 'Topic'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.invalid_msg_body,
+                             CrawlMail.send,
+                             to='someone@someplace.net',
+                             sender=sender,
+                             subj=subject)
+        self.expected(0, len(fakesmtp.inbox))
 
     # -------------------------------------------------------------------------
     def test_msg_notstr(self):
@@ -210,19 +276,40 @@ class CrawlMailTest(th.HelpedTestCase):
         The *msg* arg to CrawlMail.send() is not a string. Should throw
         exception.
         """
-        pytest.skip('construction')
+        sender = 'from@here.now'
+        subject = 'Topic'
+        body = {}
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.invalid_msg_body,
+                             CrawlMail.send,
+                             to='someone@someplace.net',
+                             sender=sender,
+                             subj=subject,
+                             msg={})
+        self.expected(0, len(fakesmtp.inbox))
 
     # -------------------------------------------------------------------------
     def test_sender_something(self):
         """
+        !@!
         The *sender* arg to CrawlMail.send() is set. The generated message
         should have the correct sender.
         """
         pytest.skip('construction')
 
     # -------------------------------------------------------------------------
+    def test_sender_invalid(self):
+        """
+        !@!
+        The *sender* arg to CrawlMail.send() is set but is not a valid e-mail
+        address. Should throw exception.
+        """
+        pytest.skip('construction')
+
+    # -------------------------------------------------------------------------
     def test_sender_cfg(self):
         """
+        !@!
         The *sender* arg to CrawlMail.send() is empty. Sender should be pulled
         from the configuration [rpt.sender]
         """
@@ -231,6 +318,7 @@ class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_sender_empty(self):
         """
+        !@!
         The *sender* arg to CrawlMail.send() is empty. The generated message
         should have the default sender.
         """
@@ -239,6 +327,7 @@ class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_sender_none(self):
         """
+        !@!
         The *sender* arg to CrawlMail.send() is None. The generated message
         should use the default sender.
         """
@@ -247,6 +336,7 @@ class CrawlMailTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_sender_unspec(self):
         """
+        !@!
         The *sender* arg to CrawlMail.send() is unspecified. The generated
         message should use the default sender.
         """
@@ -258,4 +348,15 @@ class CrawlMailTest(th.HelpedTestCase):
         The *sender* arg to CrawlMail.send() is not a string. Should throw
         exception.
         """
-        pytest.skip('construction')
+        sender = 234.9234
+        tolist = ['a@b.c', 'd@e.f']
+        subject = 'Topic'
+        body = 'Message body'
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.invalid_sender,
+                             CrawlMail.send,
+                             sender=sender,
+                             to=','.join(tolist),
+                             subj=subject,
+                             msg=body)
+        self.expected(0, len(fakesmtp.inbox))
