@@ -7,6 +7,7 @@ from hpssic import CrawlDBI
 from hpssic import Dimension
 import os
 import pdb
+import pytest
 import stat
 import sys
 from hpssic import testhelp
@@ -14,14 +15,6 @@ import time
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
-
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
@@ -49,13 +42,12 @@ class CheckableTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     @attr(slow=True, heavy=True)
+    @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_check_dir(self):
         """
         Calling .check() on a directory should give us back a list of Checkable
         objects representing the entries in the directory
         """
-        if 'jenkins' in os.getcwd():
-            raise SkipTest('HPSS not available on jenkins')
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.ex_nihilo()
@@ -93,6 +85,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     @attr(slow=True, heavy=True)
+    @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_check_file(self):
         """
         Calling .check() on a file should execute the check actions for that
