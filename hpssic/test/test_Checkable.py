@@ -54,6 +54,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .check() on a directory should give us back a list of Checkable
         objects representing the entries in the directory
         """
+        if 'jenkins' in os.getcwd():
+            raise SkipTest('HPSS not available on jenkins')
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.ex_nihilo()
@@ -96,7 +98,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .check() on a file should execute the check actions for that
         file and update the item's last_check value.
         """
-        # pdb.set_trace()
+        if 'jenkins' in os.getcwd():
+            raise SkipTest('HPSS not available on jenkins')
         util.conditional_rm(self.testdb)
         Dimension.get_dim('ignore', reset=True)
         testhelp.db_config(self.testdir, util.my_name())
