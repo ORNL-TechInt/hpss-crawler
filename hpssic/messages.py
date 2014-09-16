@@ -12,6 +12,8 @@ dbname_not_allowed = "dbname may not be specified here"
 
 default_mail_subject = ("HPSS Integrity Crawler ALERT")
 
+empty_message = ("Empty message")
+
 invalid_msg_body = ("The message body must be a string")
 
 invalid_recip_list = ("The To: list should be a comma-separated list of " +
@@ -19,6 +21,8 @@ invalid_recip_list = ("The To: list should be a comma-separated list of " +
 
 invalid_sender_S = ("From address (%s) should be a string containing a " +
                     "valid e-mail address")
+
+invalid_subject_S = ("Subject (%s) is not a string")
 
 more_than_one_ss = "More than one record found in %s for table %s"
 

@@ -16,16 +16,18 @@ def send(to='', subj='', msg='', sender='', cfg=None):
     """
     if type(to) != str:
         raise util.HpssicError(MSG.invalid_recip_list)
-    if type(sender) != str:
+    if sender is not None and type(sender) != str:
         raise util.HpssicError(MSG.invalid_sender_S % str(sender))
-    if type(msg) != str or msg == '':
+    if type(msg) != str:
         raise util.HpssicError(MSG.invalid_msg_body)
+    if subj is not None and type(subj) != str:
+        raise util.HpssicError(MSG.invalid_subject_S % str(subj))
 
     # Prepare a message object based on *msg*
     if msg:
         payload = email.mime.text.MIMEText(msg)
     else:
-        payload = email.mime.text.MIMEText("Empty message")
+        payload = email.mime.text.MIMEText(MSG.empty_message)
 
     # Set the recipient address(es) based on *to*
     default_recip = 'tbarron@ornl.gov'
@@ -55,13 +57,14 @@ def send(to='', subj='', msg='', sender='', cfg=None):
 
     # Set the from address
     default_sender = 'hpssic@%s' % util.hostname(long=True)
-    if sender == '':
+    if sender is None or sender == '':
         if cfg is not None:
             sender = cfg.get_d('crawler', 'from_address', default_sender)
         else:
             sender = default_sender
-    elif type(sender) != str:
+    elif '@' not in sender:
         raise util.HpssicError(MSG.invalid_sender_S % str(sender))
+
     payload['From'] = sender
 
     # Send the message
