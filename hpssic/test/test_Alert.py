@@ -11,20 +11,13 @@ from hpssic import CrawlConfig
 import email.mime.text as emt
 from hpssic import fakesmtp
 import os
+import pytest
 import socket
 import stat
 import sys
 from hpssic import testhelp
 from hpssic import toolframe
 from hpssic import util
-
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------

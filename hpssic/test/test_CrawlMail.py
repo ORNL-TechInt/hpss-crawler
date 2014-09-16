@@ -353,7 +353,7 @@ class CrawlMailTest(th.HelpedTestCase):
         subject = 'Topic'
         body = 'Message body'
         self.assertRaisesMsg(U.HpssicError,
-                             MSG.invalid_sender,
+                             MSG.invalid_sender_S % str(sender),
                              CrawlMail.send,
                              sender=sender,
                              to=','.join(tolist),

@@ -17,7 +17,8 @@ invalid_msg_body = ("The message body must be a string")
 invalid_recip_list = ("The To: list should be a comma-separated list of " +
                       "e-mail addresses in a string")
 
-invalid_sender = ("The sender should be a string containing a valid e-mail address")
+invalid_sender_S = ("From address (%s) should be a string containing a " +
+                    "valid e-mail address")
 
 more_than_one_ss = "More than one record found in %s for table %s"
 

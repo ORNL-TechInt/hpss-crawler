@@ -10,11 +10,14 @@ import util
 def send(to='', subj='', msg='', sender='', cfg=None):
     """
     Send e-mail as indicated
+
+    sender precedence: argument, cfg, default value; if type(sender) is not
+    str, throw the exception
     """
     if type(to) != str:
         raise util.HpssicError(MSG.invalid_recip_list)
-    if type(sender) != str or '@' not in sender:
-        raise util.HpssicError(MSG.invalid_sender)
+    if type(sender) != str:
+        raise util.HpssicError(MSG.invalid_sender_S % str(sender))
     if type(msg) != str or msg == '':
         raise util.HpssicError(MSG.invalid_msg_body)
 
@@ -54,9 +57,11 @@ def send(to='', subj='', msg='', sender='', cfg=None):
     default_sender = 'hpssic@%s' % util.hostname(long=True)
     if sender == '':
         if cfg is not None:
-            sender = cfg.get_d('rpt', 'sender', default_sender)
+            sender = cfg.get_d('crawler', 'from_address', default_sender)
         else:
             sender = default_sender
+    elif type(sender) != str:
+        raise util.HpssicError(MSG.invalid_sender_S % str(sender))
     payload['From'] = sender
 
     # Send the message
