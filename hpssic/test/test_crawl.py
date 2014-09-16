@@ -75,11 +75,13 @@ class CrawlTest(testhelp.HelpedTestCase):
                          'tbarron@ornl.gov, tusculum@gmail.com',
                          'trigger': '<command-line>',
                          'plugins': 'plugin_A',
+                         'sleep_time': '0.25',
+                         'stopwait_timeout': '5.0',
                          },
              'plugin_A': {'module': 'plugin_A',
                           'frequency': '1h',
                           'operations': '15'
-                          }
+                          },
              }
     # more or less constant strings
     cstr = {
@@ -427,6 +429,7 @@ class CrawlMiscTest(CrawlTest):
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
+        xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         cmd = ('%s start --log %s --cfg %s --context %s' %
@@ -446,8 +449,10 @@ class CrawlMiscTest(CrawlTest):
 
         util.touch(exitpath)
 
-        time.sleep(2)
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
 
     # --------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),
@@ -463,6 +468,7 @@ class CrawlMiscTest(CrawlTest):
         exitpath = '%s/%s.exit' % (self.testdir, util.my_name())
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
+        xdict['crawler']['context'] = self.ctx
         xdict['crawler']['plugins'] = 'plugin_A, other_plugin'
         xdict['other_plugin'] = {'unplanned': 'silver',
                                  'simple': 'check for this',
@@ -501,8 +507,10 @@ class CrawlMiscTest(CrawlTest):
 
         util.touch(exitpath)
 
-        time.sleep(2)
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -545,8 +553,10 @@ class CrawlMiscTest(CrawlTest):
 
         util.touch(exitpath)
 
-        time.sleep(2)
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -563,6 +573,7 @@ class CrawlMiscTest(CrawlTest):
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
+        xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         pre_l = glob.glob(self.pidglob)
@@ -585,8 +596,10 @@ class CrawlMiscTest(CrawlTest):
 
         util.touch(exitpath)
 
-        time.sleep(2)
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -610,6 +623,7 @@ class CrawlMiscTest(CrawlTest):
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
+        xdict['crawler']['context'] = self.ctx
         xdict['other'] = {'frequency': '1s',
                           'fire': 'true',
                           'module': 'other'}
@@ -643,8 +657,10 @@ class CrawlMiscTest(CrawlTest):
 
         util.touch(exitpath)
 
-        time.sleep(2)
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -709,6 +725,7 @@ class CrawlMiscTest(CrawlTest):
         xdict['alerts']['email'] = 'one@somewhere.com, two@elsewhere.org'
         xdict['alerts']['log'] = '!!!ALERT!!! %s'
         xdict['crawler']['exitpath'] = exitpath
+        xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
 
@@ -724,10 +741,12 @@ class CrawlMiscTest(CrawlTest):
         pidfile = (set(up_l) - set(pre_l)).pop()
 
         util.touch(exitpath)
-        time.sleep(2)
+
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
         self.vassert_nin("Traceback", util.contents(logpath))
         self.assertEqual(crawl.is_running(context=self.ctx), False,
-                         "crawler is still running unexpectedly")
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False,
                          "%s is hanging around after it should be gone" %
                          pidfile)
@@ -746,6 +765,7 @@ class CrawlMiscTest(CrawlTest):
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
+        xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
         pre_l = glob.glob(self.pidglob)
@@ -765,8 +785,10 @@ class CrawlMiscTest(CrawlTest):
 
         util.touch(exitpath)
 
-        time.sleep(2)
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         down_l = glob.glob(self.pidglob)
         self.assertEqual(len(pre_l), len(down_l),
                          "Expected pid file to be removed")
@@ -813,9 +835,11 @@ class CrawlMiscTest(CrawlTest):
                                                  logpath, self.ctx)
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
-        time.sleep(2)
 
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
         cmd = '%s status' % self.crawl_cmd()
@@ -841,10 +865,12 @@ class CrawlMiscTest(CrawlTest):
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['context'] = ctx_a
         xdict['crawler']['exitpath'] = exitpath_a
+        cfg_a = CrawlConfig.CrawlConfig.dictor(xdict)
         self.write_cfg_file(cfgpath_a, xdict)
 
         xdict['crawler']['context'] = ctx_b
         xdict['crawler']['exitpath'] = exitpath_b
+        cfg_b = CrawlConfig.CrawlConfig.dictor(xdict)
         self.write_cfg_file(cfgpath_b, xdict)
 
         self.write_plugmod(self.plugdir, 'plugin_A')
@@ -896,7 +922,9 @@ class CrawlMiscTest(CrawlTest):
                                                  logpath, ctx_b)
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
-        time.sleep(1.5)
+
+        crawl.stop_wait(cfg=cfg_a)
+        crawl.stop_wait(cfg=cfg_b)
 
         self.assertEqual(crawl.is_running(context=ctx_a), False,
                          "Crawler %s should not be running but it is" % ctx_a)
@@ -957,9 +985,10 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_in("Stopping the crawler...", S.before)
         S.close()
 
-        time.sleep(2)
-
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -997,9 +1026,11 @@ class CrawlMiscTest(CrawlTest):
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
         self.vassert_in("Stopping the TEST crawler", result)
-        time.sleep(2)
 
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -1245,9 +1276,10 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_nin("Traceback", result)
         self.vassert_nin("No DEV crawler is running", result)
 
-        time.sleep(2)
-
-        self.assertEqual(crawl.is_running(context=self.ctx), False)
+        crawl.stop_wait(cfg=CrawlConfig.CrawlConfig.dictor(xdict))
+        self.assertEqual(crawl.is_running(context=self.ctx), False,
+                         "Expected crawler %s to be down but it is running" %
+                         self.ctx)
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
@@ -1270,10 +1302,12 @@ class CrawlMiscTest(CrawlTest):
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['context'] = ctx_a
         xdict['crawler']['exitpath'] = exitpath_a
+        cfg_a = CrawlConfig.CrawlConfig.dictor(xdict)
         self.write_cfg_file(cfgpath_a, xdict)
 
         xdict['crawler']['context'] = ctx_b
         xdict['crawler']['exitpath'] = exitpath_b
+        cfg_b = CrawlConfig.CrawlConfig.dictor(xdict)
         self.write_cfg_file(cfgpath_b, xdict)
 
         self.write_plugmod(self.plugdir, 'plugin_A')
@@ -1333,8 +1367,9 @@ class CrawlMiscTest(CrawlTest):
                                                  logpath, ctx_b)
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.vassert_nin("Traceback", result)
-        time.sleep(2.0)
 
+        crawl.stop_wait(cfg=cfg_a)
+        crawl.stop_wait(cfg=cfg_b)
         self.assertEqual(crawl.is_running(context=ctx_a), False,
                          "Expected crawler %s to be down but it is running" %
                          ctx_a)

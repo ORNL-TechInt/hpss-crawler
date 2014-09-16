@@ -526,6 +526,28 @@ def running_pid(proc_required=True):
 
 
 # ------------------------------------------------------------------------------
+def stop_wait(cfg=None):
+    """
+    Watch for the crawler's exit file to disappear. If it's still there after
+    the timeout period, give up and throw an exception.
+    """
+    if cfg is None:
+        cfg = CrawlConfig.get_config()
+    context = cfg.get('crawler', 'context')
+    exitpath = cfg.get('crawler', 'exitpath')
+    timeout = float(cfg.get_d('crawler', 'stopwait_timeout', 5.0))
+    sleep_time = float(cfg.get_d('crawler', 'sleep_time', 0.25))
+    lapse = 0.0
+
+    while is_running(context) and lapse < timeout:
+        time.sleep(sleep_time)
+        lapse += sleep_time
+
+    if is_running(context) and timeout <= lapse:
+        raise util.HpssicError("Stop wait timeout exceeded")
+
+
+# ------------------------------------------------------------------------------
 class CrawlDaemon(daemon.Daemon):
     """
     This class extends this daemon.Daemon to serve this application. Method

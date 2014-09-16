@@ -17,17 +17,25 @@ plugins = cv, tcc, mpra, rpt
 # context of this instance (a short name for this instance)
 context = SAMPLE
 
-# path of file to watch for and exit on
+# -- Stopping the crawler
+# exitpath:         path of file to watch for and exit on
+# stopwait_timeout: how long to wait after requesting a stop
+#                   before throwing an exception (default = 5.0)
+# sleep_time:       how frequently to check for the exitpath while
+#                   waiting for it to disappear (default = 0.25)
 exitpath = /tmp/crawler/SAMPLE.exit
+stopwait_timeout = 5.0
+sleep_time = 0.25
 
-# where to write log information
-logpath    = %(root)s/hpss_crawl.log
-
-# max size of a log file before rotating it
-logsize    = 5mb
-
-# max number of log files to keep
-logmax     = 5
+# -- Logging
+# logpath:     where to write log information
+# logsize:     max size of a log file before rotating it
+# logmax:      max number of log files to keep
+# archive_dir: where to archive full log files
+logpath     = %(root)s/hpss_crawl.log
+logsize     = 5mb
+logmax      = 5
+archive_dir = %(root)s/log_archive
 
 # addresses to receive e-mail about significant events
 notify-e-mail = tbarron@ornl.gov, tusculum@gmail.com
