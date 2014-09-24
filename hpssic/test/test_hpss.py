@@ -17,6 +17,14 @@ from hpssic import util
 def setUpModule():
     """
     Set up for testing
+
+    The test files for this suite currently live in my home directory. Instead,
+    what should happen is that this class should get a root directory for
+    testing from the default configuration. Then, this routine should check
+    whether the test files exist in that directory and create them if they do
+    not.
+
+    Once they're set up, we'll leave them in place and just reuse them.
     """
     testhelp.module_test_setup(hpssTest.testdir)
     CrawlConfig.get_logger("%s/hpssTest.log" % hpssTest.testdir, reset=True)
@@ -154,6 +162,144 @@ class hpssTest(testhelp.HelpedTestCase):
                                  32)
             h.quit()
         except hpss.HSIerror, e:
+            if "HPSS Unavailable" in str(e):
+                pytest.skip(str(e))
+
+    # -------------------------------------------------------------------------
+    def test_hashcreate_atime_reset(self):
+        """
+        1) use file /home/tpb/hic_test/hashable1
+        2) if it has a hash, delete it
+        3) Set the access time into the past (touch -a t yyyymmddHHMM.SS ...)
+        4) hashcreate with atime reset turned on (set when opening HSI)
+        5) Get the access time -- it should be the same as was set in step 2
+        """
+        pytest.skip("construction")
+        try:
+            filename = self.plist[0]
+            h = hpss.HSI(reset_atime=True)
+
+            # delete the file's hash if it has one
+            hash = h.hashlist(filename)
+            if "(none)" not in hash:
+                h.hashdelete(filename)
+
+            # set the atime into the past
+            h.touch(filename, when="200102030405.06")  # !@!
+
+            # create a hash
+            h.hashcreate(filename)
+
+            # check the atime -- it should be way in the past
+            result = h.ls_access(filename)             # !@!
+            (atime, displayable) = parse_time(atime)   # !@!
+            delta = time.time() - atime
+            self.assertTrue(10 < delta,
+                            "Expected time further back, got '%s'" %
+                            displayable)
+        except hpss.HSIerror as e:
+            if "HPSS Unavailable" in str(e):
+                pytest.skip(str(e))
+
+    # -------------------------------------------------------------------------
+    def test_hashcreate_atime_no_reset(self):
+        """
+        1) use file /home/tpb/hic_test/hashable1
+        2) delete the file's hash if it has one
+        3) Set the access time into the past (touch -a t yyyymmddHHMM.SS ...)
+        4) hashcreate with atime reset turned OFF
+        5) Get the access time -- it should be near the present
+        """
+        pytest.skip("construction")
+        try:
+            filename = self.plist[0]
+            h = hpss.HSI(reset_atime=False)
+
+            # delete the file's hash if it has one
+            hash = h.hashlist(filename)
+            if "(none)" not in hash:
+                h.hashdelete(filename)
+
+            # set the file's atime into the past
+            h.touch(filename, when="200102030405.06")  # !@!
+
+            # give the file a hash
+            h.hashcreate(filename)
+
+            # check the atime -- it should be recent
+            result = h.ls_access(filename)             # !@!
+            (atime, displayable) = parse_time(atime)   # !@!
+            delta = time.time() - atime
+            self.assertTrue(delta < 10,
+                            "Expected a recent time, got '%s'" %
+                            displayable)
+        except hpss.HSIerror as e:
+            if "HPSS Unavailable" in str(e):
+                pytest.skip(str(e))
+
+    # -------------------------------------------------------------------------
+    def test_hashverify_atime_reset(self):
+        """
+        1) Use file /home/tpb/hic_test/hashable1
+        2) hashcreate on it
+        3) Set the access time into the past (touch -a t yyyymmddHHMM.SS ...)
+        4) hashverify with atime reset turned on
+        5) Get the access time -- it should be the same as was set in step 3
+        """
+        pytest.skip('construction')
+        try:
+            filename = self.plist[0]
+            h = hpss.HSI(reset_atime=True)
+
+            # give it a hash
+            h.hashcreate(filename)
+
+            # set the access time into the past
+            h.touch(filename, when="200102030405.06")  # !@!
+
+            # hashverify
+            h.hashverify(filename)
+
+            # check the atime -- it should be old
+            result = h.ls_access(filename)             # !@!
+            (atime, displayable) = parse_time(atime)   # !@!
+            delta = time.time() - atime
+            self.assertTrue(10 < delta,
+                            "Expected time further back, got '%s'" %
+                            displayable)
+        except hpss.HSIerror as e:
+            if "HPSS Unavailable" in str(e):
+                pytest.skip(str(e))
+
+    # -------------------------------------------------------------------------
+    def test_hashverify_atime_no_reset(self):  # !@!
+        """
+        1) Create a file
+        2) hashcreate on it
+        3) Set the access time into the past (touch -a t yyyymmddHHMM.SS ...)
+        4) hashverify with atime reset turned OFF
+        5) Get the access time -- it should be near the present
+        6) remove the file
+        """
+        pytest.skip('construction')
+        try:
+            filename = self.plist[0]
+            h = hpss.HSI(reset_atime=False)
+            h.hashcreate(filename)
+            # set the access time into the past
+            h.touch(filename, when="200102030405.06")  # !@!
+
+            # hashverify
+            h.hashverify(filename)
+
+            # check the atime -- it should be recent
+            result = h.ls_access(filename)             # !@!
+            (atime, displayable) = parse_time(atime)   # !@!
+            delta = time.time() - atime
+            self.assertTrue(delta < 10,
+                            "Expected a recent time, got '%s'" %
+                            displayable)
+        except hpss.HSIerror as e:
             if "HPSS Unavailable" in str(e):
                 pytest.skip(str(e))
 
