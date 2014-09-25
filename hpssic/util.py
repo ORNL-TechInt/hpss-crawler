@@ -484,13 +484,28 @@ def memoize(f):
     cache = {}
 
     # -------------------------------------------------------------------------
-    def helper(x):
+    def helper(x=''):
         try:
             return cache[x]
         except KeyError:
             cache[x] = f(x)
             return cache[x]
     return helper
+
+
+# -------------------------------------------------------------------------
+@memoize
+def month_dict(arg=None):
+    """
+    Construct a dictionary mapping month names to month numbers
+    """
+    mdict = {}
+    dt = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    for month in range(1, 13):
+        dt[1] = month
+        mname = time.strftime("%b", dt)
+        mdict[mname] = month
+    return mdict
 
 
 # -----------------------------------------------------------------------------
@@ -503,6 +518,10 @@ def my_name():
 
 # -----------------------------------------------------------------------------
 def pop0(list):
+    """
+    Pop and return the 0th element of a list. If the list is empty, return
+    None.
+    """
     try:
         rval = list.pop(0)
     except IndexError:
