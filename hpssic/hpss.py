@@ -2,7 +2,9 @@ import CrawlConfig
 import os
 import pexpect
 import pwd
+import re
 import sys
+import time
 import traceback as tb
 import util
 
@@ -50,6 +52,13 @@ class HSI(object):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
+        if not hasattr(self, 'reset_atime'):
+            try:
+                cfg = CrawlConfig.get_config()
+                self.reset_atime = cfg.getboolean('cv', 'reset_atime')
+            except CrawlConfig.NoOptionError as e:
+                self.reset_atime = False
+
         self.cmd = "./hsi " + cmdopts
         if connect:
             self.connect()
@@ -93,6 +102,9 @@ class HSI(object):
         # self.xobj.expect(self.prompt)
         rval = ""
         for path in pathlist:
+            if self.reset_atime:
+                prev_time = self.access_time(path)
+
             self.xobj.sendline("hashcreate %s" % path)
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
@@ -107,6 +119,10 @@ class HSI(object):
                 rval += " TIMEOUT"
             elif 0 != which:
                 rval += " ERROR"
+
+            if self.reset_atime:
+                self.touch(path, when=prev_time)
+
         return rval
 
     # -------------------------------------------------------------------------
@@ -170,6 +186,9 @@ class HSI(object):
 
         rval = ""
         for path in pathlist:
+            if self.reset_atime:
+                prev_time = self.access_time(path)
+
             self.xobj.sendline("hashverify %s" % path)
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
@@ -184,7 +203,54 @@ class HSI(object):
                 rval += " TIMEOUT"
             elif 0 != which:
                 rval += " ERROR"
+
+            if self.reset_atime:
+                self.touch(path, when=prev_time)
         return rval
+
+    # -------------------------------------------------------------------------
+    def access_time(self, pathname=''):
+        """
+        Call ls_access() and convert the result to an epoch time
+        """
+        result = self.ls_access(pathname)
+
+        # get the list of month names and corresponding month numbers
+        month = util.month_dict()
+
+        # build the regular expression and parse the string
+        rgx = ('(' + '|'.join(month.keys()) + ')' +
+               "\s+(\d+)\s+(\d+):(\d+):(\d+)\s+(\d+)")
+        x = re.findall(rgx, result)
+
+        # peel the list
+        z = x[0]
+
+        # convert the matches to ints and put them in the proper order
+        # (y, m, d, h, m, s)
+        dt = [int(x) for x in
+              [z[5], month[z[0]], z[1], z[2], z[3], z[4], 0, 0, 0]]
+
+        # construct a candidate date
+        epoch = time.mktime(dt)
+
+        # run it through localtime to find out whether DST is set or not
+        q = time.localtime(epoch)
+        dt[-1] = q[-1]
+
+        # now compute the correct epoch time with the correct dst setting
+        epoch = time.mktime(dt)
+
+        return epoch
+
+    # -------------------------------------------------------------------------
+    def ls_access(self, pathname=''):
+        """
+        Return the result of 'ls -lDTr *pathname*'
+        """
+        self.xobj.sendline("ls -lDTr %s" % pathname)
+        self.xobj.expect(self.prompt)
+        return self.xobj.before
 
     # -------------------------------------------------------------------------
     def lscos(self):
@@ -230,3 +296,23 @@ class HSI(object):
             CrawlConfig.log("Ignoring OSError '%s'" % str(e))
             for line in tbstr.split("\n"):
                 CrawlConfig.log(line)
+
+    # -------------------------------------------------------------------------
+    def touch(self, filename, when=None):
+        """
+        Update the atime of *filename* with *when*
+        """
+        if when is None:
+            return ""
+
+        cmd = "touch -a -t %s %s" % (self.touch_format(when), filename)
+        self.xobj.sendline(cmd)
+        self.xobj.expect(self.prompt)
+        return self.xobj.before
+
+    # -------------------------------------------------------------------------
+    def touch_format(self, when):
+        """
+        Return *when* in the format touch expects
+        """
+        return time.strftime("%Y%m%d%H%M.%S", time.localtime(when))
