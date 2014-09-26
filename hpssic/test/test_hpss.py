@@ -2,12 +2,16 @@
 """
 Tests for hpss.py
 """
+import copy
 from hpssic import CrawlConfig
 from hpssic import hpss
 import os
+import pdb
 import pytest
+import re
 import sys
 from hpssic import testhelp
+import time
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
@@ -43,15 +47,15 @@ def tearDownModule():
 @pytest.mark.skipif('jenkins' in os.getcwd())
 @pytest.mark.skipif(not pytest.config.getvalue("all"),
                     reason="slow -- use --all to run this one")
-class hpssTest(testhelp.HelpedTestCase):
+class hpssCtorTest(testhelp.HelpedTestCase):
     """
-    Tests for the hpss.HSI class
+    Tests specifically for the constructor of the hpss.HSI class
     """
     testdir = testhelp.testdata(__name__)
-    hdir = "/home/tpb/hic_test"
-    stem = "hashable"
-    plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1, 4)]
-    paths = " ".join(plist)
+    cfg_d = {'crawler': {'plugins': 'cv'},
+             'cv':      {'fire': 'no',
+                         'reset_atime': 'yes'},
+             }
 
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
@@ -66,6 +70,125 @@ class hpssTest(testhelp.HelpedTestCase):
             self.assertTrue(hasattr(a, attr),
                             "Expected %s to have attribute '%s'" %
                             (a, attr))
+
+    # -------------------------------------------------------------------------
+    def test_ctor_reset_atime_default(self):
+        """
+        If reset_atime is not specified in the config or argument list, it
+        should default to False
+        """
+        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+
+        # write out a config file with no reset_atime spec
+        cd = copy.deepcopy(self.cfg_d)
+        del cd['cv']['reset_atime']
+        self.write_cfg_file(cf_name, cd)
+
+        # make the test config the default
+        CrawlConfig.get_config(cfname=cf_name, reset=True)
+
+        # get an hpss.HSI object and check its reset_atime attribute
+        h = hpss.HSI(connect=False)
+        self.expected(False, h.reset_atime)
+
+        CrawlConfig.get_config(reset=True, soft=True)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_reset_atime_cfg_true(self):
+        """
+        If reset_atime is specified in the config as True, it should be True
+        """
+        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+
+        # write out a config file with no reset_atime spec
+        self.write_cfg_file(cf_name, self.cfg_d)
+
+        # make the test config the default
+        CrawlConfig.get_config(cfname=cf_name, reset=True)
+
+        # get an hpss.HSI object and check its reset_atime attribute
+        h = hpss.HSI(connect=False)
+        self.expected(True, h.reset_atime)
+
+        CrawlConfig.get_config(reset=True, soft=True)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_reset_atime_cfg_false(self):
+        """
+        If reset_atime is specified in the config as False, it should be False
+        """
+        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+
+        # write out a config file with no reset_atime spec
+        cfg = copy.deepcopy(self.cfg_d)
+        cfg['cv']['reset_atime'] = 'no'
+        self.write_cfg_file(cf_name, cfg)
+
+        # make the test config the default
+        CrawlConfig.get_config(cfname=cf_name, reset=True)
+
+        # get an hpss.HSI object and check its reset_atime attribute
+        h = hpss.HSI(connect=False)
+        self.expected(False, h.reset_atime)
+
+        CrawlConfig.get_config(reset=True, soft=True)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_reset_atime_call_true(self):
+        """
+        If reset_atime is specified in the call as True, it should be True,
+        even if it's specified as False in the config
+        """
+        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+
+        # write out a config file with no reset_atime spec
+        cfg = copy.deepcopy(self.cfg_d)
+        cfg['cv']['reset_atime'] = 'no'
+        self.write_cfg_file(cf_name, cfg)
+
+        # make the test config the default
+        CrawlConfig.get_config(cfname=cf_name, reset=True)
+
+        # get an hpss.HSI object and check its reset_atime attribute
+        h = hpss.HSI(connect=False, reset_atime=True)
+        self.expected(True, h.reset_atime)
+
+        CrawlConfig.get_config(reset=True, soft=True)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_reset_atime_call_false(self):
+        """
+        If reset_atime is specified in the call as False, it should be False,
+        even if the config has it as True
+        """
+        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+
+        # write out a config file with no reset_atime spec
+        self.write_cfg_file(cf_name, self.cfg_d)
+
+        # make the test config the default
+        CrawlConfig.get_config(cfname=cf_name, reset=True)
+
+        # get an hpss.HSI object and check its reset_atime attribute
+        h = hpss.HSI(connect=False, reset_atime=False)
+        self.expected(False, h.reset_atime)
+
+        CrawlConfig.get_config(reset=True, soft=True)
+
+
+# -----------------------------------------------------------------------------
+@pytest.mark.skipif('jenkins' in os.getcwd())
+@pytest.mark.skipif(not pytest.config.getvalue("all"),
+                    reason="slow -- use --all to run this one")
+class hpssTest(testhelp.HelpedTestCase):
+    """
+    Tests for the hpss.HSI class
+    """
+    testdir = testhelp.testdata(__name__)
+    hdir = "/home/tpb/hic_test"
+    stem = "hashable"
+    plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1, 4)]
+    paths = " ".join(plist)
 
     # -------------------------------------------------------------------------
     def test_chdir_noarg(self):
@@ -174,7 +297,6 @@ class hpssTest(testhelp.HelpedTestCase):
         4) hashcreate with atime reset turned on (set when opening HSI)
         5) Get the access time -- it should be the same as was set in step 2
         """
-        pytest.skip("construction")
         try:
             filename = self.plist[0]
             h = hpss.HSI(reset_atime=True)
@@ -185,18 +307,16 @@ class hpssTest(testhelp.HelpedTestCase):
                 h.hashdelete(filename)
 
             # set the atime into the past
-            h.touch(filename, when="200102030405.06")  # !@!
+            past = util.epoch("2001.0203 04:05:06")
+            h.touch(filename, when=past)
 
             # create a hash
             h.hashcreate(filename)
 
             # check the atime -- it should be way in the past
-            result = h.ls_access(filename)             # !@!
-            (atime, displayable) = parse_time(atime)   # !@!
-            delta = time.time() - atime
-            self.assertTrue(10 < delta,
-                            "Expected time further back, got '%s'" %
-                            displayable)
+            atime = h.access_time(filename)
+            self.expected(util.ymdhms(past), util.ymdhms(atime))
+
         except hpss.HSIerror as e:
             if "HPSS Unavailable" in str(e):
                 pytest.skip(str(e))
@@ -210,7 +330,6 @@ class hpssTest(testhelp.HelpedTestCase):
         4) hashcreate with atime reset turned OFF
         5) Get the access time -- it should be near the present
         """
-        pytest.skip("construction")
         try:
             filename = self.plist[0]
             h = hpss.HSI(reset_atime=False)
@@ -221,18 +340,18 @@ class hpssTest(testhelp.HelpedTestCase):
                 h.hashdelete(filename)
 
             # set the file's atime into the past
-            h.touch(filename, when="200102030405.06")  # !@!
+            past = util.epoch("2001.0203 04:05:06")
+            h.touch(filename, when=past)
 
             # give the file a hash
             h.hashcreate(filename)
 
             # check the atime -- it should be recent
-            result = h.ls_access(filename)             # !@!
-            (atime, displayable) = parse_time(atime)   # !@!
+            atime = h.access_time(filename)
             delta = time.time() - atime
             self.assertTrue(delta < 10,
                             "Expected a recent time, got '%s'" %
-                            displayable)
+                            util.ymdhms(atime))
         except hpss.HSIerror as e:
             if "HPSS Unavailable" in str(e):
                 pytest.skip(str(e))
@@ -246,7 +365,6 @@ class hpssTest(testhelp.HelpedTestCase):
         4) hashverify with atime reset turned on
         5) Get the access time -- it should be the same as was set in step 3
         """
-        pytest.skip('construction')
         try:
             filename = self.plist[0]
             h = hpss.HSI(reset_atime=True)
@@ -255,24 +373,21 @@ class hpssTest(testhelp.HelpedTestCase):
             h.hashcreate(filename)
 
             # set the access time into the past
-            h.touch(filename, when="200102030405.06")  # !@!
+            past = util.epoch("2001.0203 04:05:06")
+            h.touch(filename, when=past)
 
             # hashverify
             h.hashverify(filename)
 
             # check the atime -- it should be old
-            result = h.ls_access(filename)             # !@!
-            (atime, displayable) = parse_time(atime)   # !@!
-            delta = time.time() - atime
-            self.assertTrue(10 < delta,
-                            "Expected time further back, got '%s'" %
-                            displayable)
+            atime = h.access_time(filename)
+            self.expected(util.ymdhms(past), util.ymdhms(atime))
         except hpss.HSIerror as e:
             if "HPSS Unavailable" in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
-    def test_hashverify_atime_no_reset(self):  # !@!
+    def test_hashverify_atime_no_reset(self):
         """
         1) Create a file
         2) hashcreate on it
@@ -281,24 +396,24 @@ class hpssTest(testhelp.HelpedTestCase):
         5) Get the access time -- it should be near the present
         6) remove the file
         """
-        pytest.skip('construction')
         try:
             filename = self.plist[0]
             h = hpss.HSI(reset_atime=False)
             h.hashcreate(filename)
+
             # set the access time into the past
-            h.touch(filename, when="200102030405.06")  # !@!
+            past = util.epoch("2001.0203 04:05:06")
+            h.touch(filename, when=past)
 
             # hashverify
             h.hashverify(filename)
 
             # check the atime -- it should be recent
-            result = h.ls_access(filename)             # !@!
-            (atime, displayable) = parse_time(atime)   # !@!
+            atime = h.access_time(filename)
             delta = time.time() - atime
             self.assertTrue(delta < 10,
                             "Expected a recent time, got '%s'" %
-                            displayable)
+                            util.ymdhms(atime))
         except hpss.HSIerror as e:
             if "HPSS Unavailable" in str(e):
                 pytest.skip(str(e))
@@ -835,6 +950,28 @@ class hpssTest(testhelp.HelpedTestCase):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
+    def test_touch_ls_access(self):
+        """
+        Test hpss.touch() and hpss.ls_access(). Use dates 120 days ahead and
+        120 days behind and one close to the current date to ensure we look at
+        dates both inside and outside daylight saving time.
+        """
+        def one_round(h, filename, when):
+            h.touch(filename, when)
+            atime = h.access_time(filename)
+            self.expected(when, atime)
+
+        filename = self.plist[0]
+        h = hpss.HSI(reset_atime=True)
+        now = int(time.time())
+
+        one_round(h, filename, now + (120*24*3600))
+        one_round(h, filename, now + (2*24*3600))
+        one_round(h, filename, now - (120*24*3600))
+
+        h.quit()
+
+    # -------------------------------------------------------------------------
     def test_unavailable(self):
         """
         If HPSS is down, the HSI constructor should throw an exception. And in
@@ -845,8 +982,3 @@ class hpssTest(testhelp.HelpedTestCase):
         self.assertRaisesMsg(hpss.HSIerror,
                              "HPSS Unavailable",
                              h.connect)
-
-# -----------------------------------------------------------------------------
-# if __name__ == '__main__':
-#     toolframe.ez_launch(test='hpssTest',
-#                         logfile=testhelp.testlog(__name__))
