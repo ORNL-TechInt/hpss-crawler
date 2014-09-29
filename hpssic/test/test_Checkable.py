@@ -16,6 +16,7 @@ import time
 from hpssic import toolframe
 import traceback as tb
 from hpssic import util
+from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -695,23 +696,33 @@ class CheckableTest(testhelp.HelpedTestCase):
         the list with the content of the priority file(s) at the top.
         """
         # set up data, filenames, etc
-        pri_1 = ['/this/should/come/first',
-                 '/this/should/come/second']
-        pri_2 = ['/this/should/come/third',
-                 '/this/should/come/fourth']
-        explist = pri_1 + pri_2 + self.testdata[0:3]
-        pri_pending = util.pathjoin(self.testdir, 'pending')
-        pri_glob = util.pathjoin(pri_pending, '*')
-        pri_complete = util.pathjoin(self.testdir, 'completed')
+        pri_pending = U.pathjoin(self.testdir, 'pending')
+        pri_glob = U.pathjoin(pri_pending, '*')
+        pri_complete = U.pathjoin(self.testdir, 'completed')
+        pri_d = [{'ppath': U.pathjoin(pri_pending, 'test1'),
+                  'cpath': U.pathjoin(pri_complete, 'test1'),
+                  'data': ['/this/should/come/first',
+                           '/this/should/come/second']
+                  },
+                 {'ppath': U.pathjoin(pri_pending, 'Test2'),
+                  'cpath': U.pathjoin(pri_complete, 'Test2'),
+                  'data': ['/this/should/come/third',
+                           '/this/should/come/fourth']
+                  }
+                 ]
+        explist = pri_d[0]['data'] + pri_d[1]['data']
+        explist.append(self.testdata[0])
+        explist.append(self.testdata[3])
+        explist.append(self.testdata[1])
 
         # write out the config file with info about the priority files
         cfg = copy.deepcopy(self.testcfg)
         cfg['cv']['priority'] = pri_glob
         cfg['cv']['completed'] = pri_complete
-        testhelp.db_config(self.testdir, util.my_name(), cfg_d=cfg)
+        testhelp.db_config(self.testdir, U.my_name(), cfg_d=cfg)
 
         # initialize the database from scratch with some known testdata
-        util.conditional_rm(self.testdb)
+        U.conditional_rm(self.testdb)
         Checkable.ex_nihilo()
         db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
@@ -722,15 +733,26 @@ class CheckableTest(testhelp.HelpedTestCase):
         # write out some priority files
         os.mkdir(pri_pending)
         os.mkdir(pri_complete)
-        testhelp.write_file(util.pathjoin(pri_pending, 'test1'), content=pri_1)
-        testhelp.write_file(util.pathjoin(pri_pending, 'Test2'), content=pri_2)
+        for z in pri_d:
+            testhelp.write_file(z['ppath'], content=z['data'])
 
         # run get_list
         x = Checkable.get_list()
 
         # verify that the priority file contents are at the top of the list
         for exp in explist:
-            self.expected(Checkable(path=exp, type='f'), util.pop0(x))
+            if type(exp) == tuple:
+                self.expected(Checkable(path=exp[0], type=exp[1]), U.pop0(x))
+            else:
+                self.expected(Checkable(path=exp, type='f'), U.pop0(x))
+
+        for z in pri_d:
+            self.assertFalse(os.path.exists(z['ppath']),
+                             "%s should have been moved to %s"
+                             % (z['ppath'], z['cpath']))
+            self.assertTrue(os.path.exists(z['cpath']),
+                            "%s should have been moved from %s"
+                            % (z['cpath'], z['ppath']))
 
     # -------------------------------------------------------------------------
     def test_persist_last_check(self):
