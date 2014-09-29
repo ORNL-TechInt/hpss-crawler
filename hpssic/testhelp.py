@@ -131,14 +131,16 @@ def all_tests(name, filter=None):
 
 
 # -----------------------------------------------------------------------------
-def db_config(tdir, tname):
+def db_config(tdir, tname, cfg_d=None):
     cfname = '%s/%s.cfg' % (tdir, tname)
-    cfgfile(cfname, {'dbi-crawler': {'dbtype': 'sqlite',
-                                     'dbname': '%s/test.db' % tdir,
-                                     'tbl_prefix': 'test'},
-                     'crawler': {'logpath': '%s/%s.log' % (tdir, tname)},
-                     'cv': {'fire': 'no'}
-                     })
+    if cfg_d is None:
+        cfg_d = {'dbi-crawler': {'dbtype': 'sqlite',
+                                 'dbname': '%s/test.db' % tdir,
+                                 'tbl_prefix': 'test'},
+                 'crawler': {'logpath': '%s/%s.log' % (tdir, tname)},
+                 'cv': {'fire': 'no'}
+                 }
+    cfgfile(cfname, cfg_d)
     os.environ['CRAWL_CONF'] = cfname
     CrawlConfig.get_config(reset=True, soft=True)
 
