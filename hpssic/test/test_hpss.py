@@ -44,19 +44,30 @@ def tearDownModule():
 
 
 # -----------------------------------------------------------------------------
+class hpssBaseTest(testhelp.HelpedTestCase):
+    """
+    Common stuff for hpss.HSI tests
+    """
+    testdir = testhelp.testdata(__name__)
+    hdir = "/home/tpb/hic_test"
+    stem = "hashable"
+    plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1, 4)]
+    paths = " ".join(plist)
+    cfg_d = {'crawler': {'plugins': 'cv'},
+             'cv':      {'fire': 'no',
+                         'reset_atime': 'yes',
+                         'hash_algorithm': 'md5'},
+             }
+
+
+# -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())
 @pytest.mark.skipif(not pytest.config.getvalue("all"),
                     reason="slow -- use --all to run this one")
-class hpssCtorTest(testhelp.HelpedTestCase):
+class hpssCtorTest(hpssBaseTest):
     """
     Tests specifically for the constructor of the hpss.HSI class
     """
-    testdir = testhelp.testdata(__name__)
-    cfg_d = {'crawler': {'plugins': 'cv'},
-             'cv':      {'fire': 'no',
-                         'reset_atime': 'yes'},
-             }
-
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
@@ -180,16 +191,10 @@ class hpssCtorTest(testhelp.HelpedTestCase):
 @pytest.mark.skipif('jenkins' in os.getcwd())
 @pytest.mark.skipif(not pytest.config.getvalue("all"),
                     reason="slow -- use --all to run this one")
-class hpssTest(testhelp.HelpedTestCase):
+class hpssTest(hpssBaseTest):
     """
     Tests for the hpss.HSI class
     """
-    testdir = testhelp.testdata(__name__)
-    hdir = "/home/tpb/hic_test"
-    stem = "hashable"
-    plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1, 4)]
-    paths = " ".join(plist)
-
     # -------------------------------------------------------------------------
     def test_chdir_noarg(self):
         """
@@ -945,7 +950,7 @@ class hpssTest(testhelp.HelpedTestCase):
             result = h.lsP(self.paths)
             for path in self.plist:
                 self.expected_in("FILE\s+%s" % path, result)
-        except hpss.HSIerror, e:
+        except hpss.HSIerror as e:
             if "HPSS Unavailable" in str(e):
                 pytest.skip(str(e))
 
@@ -982,3 +987,113 @@ class hpssTest(testhelp.HelpedTestCase):
         self.assertRaisesMsg(hpss.HSIerror,
                              "HPSS Unavailable",
                              h.connect)
+
+
+# -----------------------------------------------------------------------------
+@pytest.mark.skipif('jenkins' in os.getcwd())
+@pytest.mark.skipif(not pytest.config.getvalue("all"),
+                    reason="slow -- use --all to run this one")
+class hpssHashAlgTest(hpssBaseTest):
+    """
+    Tests for the hash_algorithm config item in hpss.HSI class
+    """
+    # -------------------------------------------------------------------------
+    def test_hashalg_default(self):
+        """
+        With no hash_algorithm in config, the default should be 'md5'
+        """
+        self.check_hash_algorithm(util.my_name(), '(none)', 'md5')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_md5(self):
+        """
+        With hash_algorithm = md5 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'md5')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_sha1(self):
+        """
+        With hash_algorithm = sha1 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'sha1')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_sha224(self):
+        """
+        With hash_algorithm = sha224 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'sha224')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_sha256(self):
+        """
+        With hash_algorithm = sha1 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'sha256')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_sha384(self):
+        """
+        With hash_algorithm = sha1 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'sha384')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_sha512(self):
+        """
+        With hash_algorithm = sha1 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'sha512')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_crc32(self):
+        """
+        With hash_algorithm = sha1 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'crc32')
+
+    # -------------------------------------------------------------------------
+    def test_hashalg_adler32(self):
+        """
+        With hash_algorithm = sha1 in config
+        """
+        self.check_hash_algorithm(util.my_name(), 'adler32')
+
+    # -------------------------------------------------------------------------
+    def check_hash_algorithm(self, cf_stem, alg, checkfor=None):
+        """
+        With hash_algorithm = *alg* in config
+        """
+        if checkfor is None:
+            checkfor = alg
+
+        # generate a config file and make it the default config
+        cf_name = util.pathjoin(self.testdir, cf_stem + ".cfg")
+        cd = copy.deepcopy(self.cfg_d)
+        if alg == '(none)':
+            del cd['cv']['hash_algorithm']
+        else:
+            cd['cv']['hash_algorithm'] = alg
+        self.write_cfg_file(cf_name, cd)
+        CrawlConfig.get_config(cfname=cf_name, reset=True)
+
+        # Get an hsi object
+        testfile = self.plist[1]
+        try:
+            h = hpss.HSI()
+        except hpss.HSIerror as e:
+            if "HPSS Unvailable" in str(e):
+                pytest.skip(str(e))
+
+        # if necessary, delete any hash on the test file
+        result = h.hashlist(testfile)
+        if "(none)" not in result:
+            h.hashdelete(testfile)
+
+        # generate a hash on the test file
+        h.hashcreate(testfile)
+
+        # verify that the hash created is of the proper type
+        result = h.hashlist(testfile)
+        self.expected_in(checkfor, result)

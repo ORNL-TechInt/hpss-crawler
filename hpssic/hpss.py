@@ -52,12 +52,15 @@ class HSI(object):
         for key in kwargs:
             setattr(self, key, kwargs[key])
 
+        cfg = CrawlConfig.get_config()
         if not hasattr(self, 'reset_atime'):
+            self.reset_atime = cfg.getboolean('cv', 'reset_atime')
+
+        if not hasattr(self, 'hash_algorithm'):
             try:
-                cfg = CrawlConfig.get_config()
-                self.reset_atime = cfg.getboolean('cv', 'reset_atime')
+                self.hash_algorithm = cfg.get('cv', 'hash_algorithm')
             except CrawlConfig.NoOptionError as e:
-                self.reset_atime = False
+                self.hash_algorithm = None
 
         self.cmd = "./hsi " + cmdopts
         if connect:
@@ -105,7 +108,11 @@ class HSI(object):
             if self.reset_atime:
                 prev_time = self.access_time(path)
 
-            self.xobj.sendline("hashcreate %s" % path)
+            if self.hash_algorithm is None:
+                cmd = "hashcreate %s" % path
+            else:
+                cmd = "hashcreate -H %s %s" % (self.hash_algorithm, path)
+            self.xobj.sendline(cmd)
             which = self.xobj.expect([self.prompt, pexpect.TIMEOUT] +
                                      self.hsierrs)
             while which == 1 and 1 < len(self.xobj.before):
