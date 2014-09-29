@@ -27,7 +27,9 @@ import CrawlConfig
 import CrawlDBI
 import dbschem
 import Dimension
+import glob
 import hpss
+import os
 import pdb
 import pexpect
 import random
@@ -35,6 +37,7 @@ import re
 import testhelp
 import time
 import util
+import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -432,7 +435,7 @@ class Checkable(object):
         Return the current list of Checkables from the database.
         """
         # Checkable.dbname = filename
-        rval = []
+        rval = Checkable.load_priority_list()
         db = CrawlDBI.DBI(dbtype='crawler')
         rows = db.select(table='checkables',
                          fields=['rowid',
@@ -575,6 +578,32 @@ class Checkable(object):
                                 "of %s in the database" % self)
 
         db.close()
+
+    # -------------------------------------------------------------------------
+    @classmethod
+    def load_priority_list(cls):
+        """
+        If one or more priority list files are configured, read them and put
+        their contents first in the list of Checkables to be processed
+        """
+        rval = []
+        cfg = CrawlConfig.get_config()
+        priglob = cfg.get_d('cv', 'priority', '')
+        if priglob == '':
+            return rval
+
+        pricomp = cfg.get_d('cv',
+                            'completed',
+                            U.pathjoin(U.dirname(priglob), 'completed'))
+
+        for pripath in U.foldsort(glob.glob(priglob)):
+            with open(pripath, 'r') as f:
+                for line in f.readlines():
+                    path = line.strip()
+                    rval.append(Checkable(path=path, type='f'))
+            os.rename(pripath, U.pathjoin(pricomp, U.basename(pripath)))
+
+        return rval
 
     # -------------------------------------------------------------------------
     def persist(self):
