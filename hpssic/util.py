@@ -385,6 +385,14 @@ def filename():
 
 
 # -----------------------------------------------------------------------------
+def foldsort(seq):
+    """
+    Return seq in sorted order without regard to case (i.e., 'folded')
+    """
+    return sorted(seq, cmp=lambda x, y: cmp(x.lower(), y.lower()))
+
+
+# -----------------------------------------------------------------------------
 def hostname(long=False):
     """
     Return the name of the current host.
