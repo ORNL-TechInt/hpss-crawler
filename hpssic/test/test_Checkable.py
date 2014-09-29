@@ -3,6 +3,7 @@
 Tests for Checkable.py
 """
 from hpssic.Checkable import Checkable
+import copy
 from hpssic import CrawlDBI
 from hpssic import Dimension
 import os
@@ -39,6 +40,18 @@ class CheckableTest(testhelp.HelpedTestCase):
     testdb = '%s/test.db' % testdir
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
     testpath = '/home/tpb/TODO'
+    testcfg = {'dbi-crawler': {'dbtype': 'sqlite',
+                               'dbname': testdb,
+                               'tbl_prefix': 'test'},
+               'crawler': {'logpath': '%s/test.log' % (testdir)},
+               'cv': {'fire': 'no'}
+               }
+
+    testdata = [('/', 'd', '', 0),
+                ('/abc', 'd', '', 17),
+                ('/xyz', 'f', '', 92),
+                ('/abc/foo', 'f', '', 5),
+                ('/abc/bar', 'f', '', time.time())]
 
     # -------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),
@@ -590,15 +603,11 @@ class CheckableTest(testhelp.HelpedTestCase):
         testhelp.db_config(self.testdir, util.my_name())
 
         # create some test data (path, type, cos, last_check)
-        testdata = [('/', 'd', '', 0),
-                    ('/abc', 'd', '', 17),
-                    ('/xyz', 'f', '', 92),
-                    ('/abc/foo', 'f', '', 5),
-                    ('/abc/bar', 'f', '', time.time())]
+        tdcopy = copy.deepcopy(self.testdata)
 
         # testdata has to be sorted by last_check since that's the way get_list
         # will order the list it returns
-        testdata.sort(key=lambda x: x[3])
+        tdcopy.sort(key=lambda x: x[3])
 
         # create the .db file
         Checkable.ex_nihilo()
@@ -607,7 +616,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
-                  data=testdata[1:])
+                  data=tdcopy[1:])
         db.close()
 
         # run the target routine
@@ -615,15 +624,15 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # we should have gotten back the same number of records as went into
         # the database
-        self.expected(len(testdata), len(x))
+        self.expected(len(tdcopy), len(x))
 
         # verify that the data from the database matches the testdata that was
         # inserted
         for idx, item in enumerate(x):
-            self.expected(testdata[idx][0], item.path)
-            self.expected(testdata[idx][1], item.type)
-            self.expected(testdata[idx][2], item.cos)
-            self.expected(testdata[idx][3], item.last_check)
+            self.expected(tdcopy[idx][0], item.path)
+            self.expected(tdcopy[idx][1], item.type)
+            self.expected(tdcopy[idx][2], item.cos)
+            self.expected(tdcopy[idx][3], item.last_check)
 
     # -------------------------------------------------------------------------
     def test_get_list_newroot(self):
@@ -643,11 +652,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         testhelp.db_config(self.testdir, util.my_name())
 
         # create some test data (path, type, cos, last_check)
-        testdata = [('/', 'd', '', 0),
-                    ('/abc', 'd', '', 17),
-                    ('/xyz', 'f', '', 92),
-                    ('/abc/foo', 'f', '', 5),
-                    ('/abc/bar', 'f', '', time.time())]
+        tdcopy = copy.deepcopy(self.testdata)
 
         nrpath = '/newroot'
         nrtup = (nrpath, 'd', '', 0)
@@ -659,7 +664,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
                   fields=['path', 'type', 'cos', 'last_check'],
-                  data=testdata[1:])
+                  data=tdcopy[1:])
         db.close()
 
         # run the target routine
@@ -667,21 +672,65 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         # we should have gotten back the same number of records as went into
         # the database plus 1 for the new root
-        testdata.append(nrtup)
+        tdcopy.append(nrtup)
 
         # testdata has to be sorted by last_check since that's the way get_list
         # will order the list it returns
-        testdata.sort(key=lambda x: x[3])
+        tdcopy.sort(key=lambda x: x[3])
 
-        self.expected(len(testdata), len(x))
+        self.expected(len(tdcopy), len(x))
 
         # verify that the data from the database matches the testdata that was
         # inserted
         for idx, item in enumerate(x):
-            self.expected(testdata[idx][0], item.path)
-            self.expected(testdata[idx][1], item.type)
-            self.expected(testdata[idx][2], item.cos)
-            self.expected(testdata[idx][3], item.last_check)
+            self.expected(tdcopy[idx][0], item.path)
+            self.expected(tdcopy[idx][1], item.type)
+            self.expected(tdcopy[idx][2], item.cos)
+            self.expected(tdcopy[idx][3], item.last_check)
+
+    # -------------------------------------------------------------------------
+    def test_get_list_priority(self):
+        """
+        Calling .get_list() when a priority file is in place should give back
+        the list with the content of the priority file(s) at the top.
+        """
+        # set up data, filenames, etc
+        pri_1 = ['/this/should/come/first',
+                 '/this/should/come/second']
+        pri_2 = ['/this/should/come/third',
+                 '/this/should/come/fourth']
+        explist = pri_1 + pri_2 + self.testdata[0:3]
+        pri_pending = util.pathjoin(self.testdir, 'pending')
+        pri_glob = util.pathjoin(pri_pending, '*')
+        pri_complete = util.pathjoin(self.testdir, 'completed')
+
+        # write out the config file with info about the priority files
+        cfg = copy.deepcopy(self.testcfg)
+        cfg['cv']['priority'] = pri_glob
+        cfg['cv']['completed'] = pri_complete
+        testhelp.db_config(self.testdir, util.my_name(), cfg_d=cfg)
+
+        # initialize the database from scratch with some known testdata
+        util.conditional_rm(self.testdb)
+        Checkable.ex_nihilo()
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.insert(table='checkables',
+                  fields=['path', 'type', 'cos', 'last_check', ],
+                  data=self.testdata[1:])
+        db.close()
+
+        # write out some priority files
+        os.mkdir(pri_pending)
+        os.mkdir(pri_complete)
+        testhelp.write_file(util.pathjoin(pri_pending, 'test1'), content=pri_1)
+        testhelp.write_file(util.pathjoin(pri_pending, 'Test2'), content=pri_2)
+
+        # run get_list
+        x = Checkable.get_list()
+
+        # verify that the priority file contents are at the top of the list
+        for exp in explist:
+            self.expected(Checkable(path=exp, type='f'), util.pop0(x))
 
     # -------------------------------------------------------------------------
     def test_persist_last_check(self):
