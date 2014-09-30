@@ -245,6 +245,49 @@ def sectname():
 
 
 # -----------------------------------------------------------------------------
+def path_nsobject(path=''):
+    """
+    Look up an nsobject id based on a path
+    """
+    if not path.startswith('/'):
+        raise U.HpssicError("An absolute path is required")
+
+    # break the path into its components with '/' at the beginning
+    nl = ['/'] + [z for z in path.lstrip('/').split(os.path.sep)]
+    parent_id = None
+
+    # walk down the tree structure to the leaf
+    for name in nl:
+        (obj_id, parent_id) = nsobj_id(name=name, parent=parent_id)
+        parent_id = obj_id
+
+    # return the bottom object id
+    return obj_id
+
+
+# -----------------------------------------------------------------------------
+def nsobj_id(name='', parent=None):
+    """
+    Look up an nsobject id based on name and, optionally, parent id
+    """
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+    if name == '':
+        return -1
+    elif name != '' and parent is None:
+        where = "name = '%s'" % name
+    elif name != '' and parent is not None:
+        where = "name = '%s' and parent_id=%d" % (name, parent)
+
+    rows = db.select(table='hpss.nsobject',
+                     fields=['object_id', 'parent_id'],
+                     where=where)
+    rval = (rows[0]['OBJECT_ID'], rows[0]['PARENT_ID'])
+    db.close()
+
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def table_list():
     db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
     db._dbobj.tbl_prefix = 'syscat.'

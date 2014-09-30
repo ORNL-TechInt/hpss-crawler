@@ -147,6 +147,33 @@ def tccp_copies_by_file(args):
 
 
 # -----------------------------------------------------------------------------
+def tccp_nsobj_by_path(args):
+    """nsobj_by_path - report the NSOBJECT ids by path
+
+    usage: tcc nsobj_by_path pathname
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(args)
+
+    path = a[0]
+
+    if o.debug:
+        pdb.set_trace()
+
+    nl = ['/'] + [z for z in path.split(os.path.sep)][1:]
+    parent_id = None
+    for name in nl:
+        (obj_id, parent_id) = tcc_lib.nsobj_id(name=name, parent=parent_id)
+        if parent_id is None:
+            parent_id = -1
+        print("%10d %10d %-20s" % (parent_id, obj_id, name))
+        parent_id = obj_id
+
+
+# -----------------------------------------------------------------------------
 def tccp_report(args):
     """report - report files with the wrong number of copies
 
