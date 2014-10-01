@@ -5,6 +5,7 @@ import dbschem
 import os
 import time
 import util
+import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -57,7 +58,7 @@ def get_bitfile_path(bitfile):
 
 
 # -----------------------------------------------------------------------------
-def get_bitfile_set(cfg, first_nsobj_id, limit):
+def get_bitfile_set(first_nsobj_id, limit):
     """
     Get a collection of bitfiles from DB2 returning a dict. The bitfiles in the
     set begin with object_id first_nsobj_id and end with the one before
@@ -106,7 +107,8 @@ def get_bitfile_set(cfg, first_nsobj_id, limit):
 
 
 # -----------------------------------------------------------------------------
-def get_cos_info():
+@U.memoize
+def get_cos_info(obarg=None):
     """
     Read COS info from tables COS and HIER in the DB2 database
     """
@@ -245,6 +247,94 @@ def sectname():
 
 
 # -----------------------------------------------------------------------------
+def check_file(filename, verbose, plugin=True):
+    """
+    This may be called interactively from the command line, in which case
+    *plugin* will be False. Or it may be called by the tcc plugin, in which
+    case plugin will be True.
+    """
+    for item in [x.strip() for x in U.contents(filename)]:
+        if item[1] == ':' and item[0] in ['o', 'b', 'p']:
+            (which, value) = item.split(':', 1)
+            if which == 'o':
+                check_object(value.strip(), verbose, plugin=plugin)
+            elif which == 'b':
+                check_bitfile(value.strip(), verbose, plugin=plugin)
+            elif which == 'p':
+                check_path(value.strip(), verbose, plugin=plugin)
+            else:
+                check_path(value.strip(), verbose, plugin=plugin)
+        else:
+            check_path(item.strip(), verbose, plugin=plugin)
+
+
+# -----------------------------------------------------------------------------
+def check_object(obj_id, verbose=False, plugin=True):
+    """
+    If plugin is True, we want to log and store, which tcc_report does by
+    default so we leave those flags alone.
+
+    If plugin is False, we're interactive and we want to write any report to
+    stdout. However, we only make a report if 1) verbose is True, or 2) the
+    counts don't match.
+    """
+    cosinfo = get_cos_info()
+    bfl = get_bitfile_set(int(obj_id), 1)
+    bf = U.pop0(bfl)
+    sc_count = int(bf['SC_COUNT'])
+    cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
+
+    if plugin and sc_count != cos_count:
+        tcc_report(bf)
+    elif not plugin and (verbose or sc_count != cos_count):
+        print(tcc_report(bf, log=False, store=False))
+
+
+# -----------------------------------------------------------------------------
+def check_bitfile(bfid, verbose=False, plugin=True):
+    """
+    If plugin is True, we want to log and store, which tcc_report does by
+    default so we leave those flags alone.
+
+    If plugin is False, we're interactive and we want to write any report to
+    stdout. However, we only make a report if 1) verbose is True, or 2) the
+    counts don't match.
+    """
+    cosinfo = get_cos_info()
+    bf = by_bitfile_id(bfid)   # !@! write
+    sc_count = int(bf['SC_COUNT'])
+    cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
+
+    if plugin and sc_count != cos_count:
+        rpt = tcc_report(bf)
+    elif not plugin and (verbose or sc_count != cos_count):
+        print(tcc_report(bf, log=False, store=False))
+
+
+# -----------------------------------------------------------------------------
+def check_path(path, verbose=False, plugin=True):
+    """
+    If plugin is True, we want to log and store, which tcc_report does by
+    default so we leave those flags alone.
+
+    If plugin is False, we're interactive and we want to write any report to
+    stdout. However, we only make a report if 1) verbose is True, or 2) the
+    counts don't match.
+    """
+    cosinfo = get_cos_info()
+    nsobj = path_nsobject(path)
+    bfl = get_bitfile_set(int(nsobj), 1)
+    bf = U.pop0(bfl)
+    sc_count = int(bf['SC_COUNT'])
+    cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
+
+    if plugin and sc_count != cos_count:
+        tcc_report(bf)
+    elif not plugin and (verbose or sc_count != cos_count):
+        print(tcc_report(bf, log=False, store=False))
+
+
+# -----------------------------------------------------------------------------
 def path_nsobject(path=''):
     """
     Look up an nsobject id based on a path
@@ -300,26 +390,34 @@ def table_list():
 
 
 # -----------------------------------------------------------------------------
-def tcc_report(bitfile, cosinfo):
+def tcc_report(bitfile, cosinfo=None, path=None, log=True, store=True):
     """
     The bitfile appears to not have the right number of copies. We're going to
     write its information out to a report for manual followup.
     """
-    fmt = "%7s %8s %8s %s\n"
+    cosinfo = get_cos_info()
+    fmt = "%7s %8s %8s %s"
     # Compute the bitfile's path
-    bfp = get_bitfile_path(bitfile['BFID'])
+    if path is None:
+        bfp = get_bitfile_path(bitfile['BFID'])
+    else:
+        bfp = path
     rpt = fmt % (bitfile['BFATTR_COS_ID'],
                  str(cosinfo[bitfile['BFATTR_COS_ID']]),
                  str(bitfile['SC_COUNT']),
                  bfp)
-    CrawlConfig.log(rpt)
-    try:
-        tcc_report._f.write(rpt)
-        tcc_report._f.flush()
-    except AttributeError:
-        cfg = CrawlConfig.get_config()
-        rptfname = cfg.get(sectname(), 'report_file')
-        tcc_report._f = open(rptfname, 'a')
-        tcc_report._f.write(fmt % ("COS", "Ccopies", "Fcopies", "Filepath"))
-        tcc_report._f.write(rpt)
-        tcc_report._f.flush()
+    if log:
+        CrawlConfig.log(rpt)
+    if store:
+        try:
+            tcc_report._f.write(rpt + "\n")
+            tcc_report._f.flush()
+        except AttributeError:
+            cfg = CrawlConfig.get_config()
+            rptfname = cfg.get(sectname(), 'report_file')
+            tcc_report._f = open(rptfname, 'a')
+            tcc_report._f.write(fmt %
+                                ("COS", "Ccopies", "Fcopies", "Filepath"))
+            tcc_report._f.write(rpt + "\n")
+            tcc_report._f.flush()
+    return rpt

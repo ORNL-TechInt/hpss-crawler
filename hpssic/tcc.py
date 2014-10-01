@@ -100,6 +100,55 @@ def tccp_bfts(args):
 
 
 # -----------------------------------------------------------------------------
+def tccp_check(args):
+    """check - examine the copy count for one or more files
+
+    usage: tcc check [-f FILENAME] [-p PATH] [-o OBJECT_ID] [-b BITFILE_ID]
+
+     -f/--filename    Get the items to check from FILENAME, one per line
+     -p/--path        Check the file identified by PATH
+     -o/--object      Check the file identified by OBJECT_ID
+     -b/--bitfile     CHeck the file identified by BITFILE_ID
+    """
+    p = optparse.OptionParser()
+    p.add_option('-b', '--bitfile',
+                 action='append', default=[], dest='bitfile',
+                 help='BITFILE to check')
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-f', '--filename',
+                 action='append', default=[], dest='file',
+                 help='file(s) containing items to check')
+    p.add_option('-o', '--object',
+                 action='append', default=[], dest='object',
+                 help='NSOBJECT IDs to check')
+    p.add_option('-p', '--path',
+                 action='append', default=[], dest='path',
+                 help='PATH to check')
+    p.add_option('-v', '--verbose',
+                 action='store', default=False, dest='verbose',
+                 help='report items with correct number of copies')
+
+    (o, a) = p.parse_args(args)
+
+    if o.debug:
+        pdb.set_trace()
+
+    for objid in o.object:
+        tcc_lib.check_object(objid, verbose=o.verbose, plugin=False)
+
+    for bfid in o.bitfile:
+        tcc_lib.check_bitfile(bf, verbose=o.verbose, plugin=False)
+
+    for path in o.path:
+        tcc_lib.check_path(path, verbose=o.verbose, plugin=False)
+
+    for filename in o.file:
+        tcc_lib.check_file(filename, verbose=o.verbose, plugin=False)
+
+
+# -----------------------------------------------------------------------------
 def tccp_copies_by_cos(args):
     """copies_by_cos - get a list of cos and the copy count for each
 

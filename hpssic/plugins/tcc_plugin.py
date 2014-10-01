@@ -2,6 +2,7 @@
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
+import glob
 from hpssic import hpss
 import os
 import pdb
@@ -11,6 +12,7 @@ import sys
 from hpssic import tcc_lib
 import time
 from hpssic import util
+from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -26,8 +28,12 @@ def main(cfg):
 
     # retrieve COS info
     cosinfo = tcc_lib.get_cos_info()
-    # for cos_id in cosinfo:
-    #     CrawlConfig.log("%d => %d" % (int(cos_id), int(cosinfo[cos_id])))
+
+    # check for priority file(s)
+    pri_glob = cfg.get_d(tcc_lib.sectname(), 'priority', None)
+    if pri_glob is not None:
+        if 0 < tcc_priority(pri_glob, cosinfo):
+            return
 
     # get the nsobject_id of the next bitfile to process from mysql
     next_nsobj_id = tcc_lib.get_next_nsobj_id(cfg)
@@ -77,6 +83,22 @@ def main(cfg):
                                        error)
 
         CrawlConfig.log("last nsobject in range: %d" % last_obj_id)
+
+
+# -----------------------------------------------------------------------------
+def tcc_priority(globspec, cosinfo):
+    """
+    Handle any files matching globspec. Return the number of files processed.
+    """
+    rval = 0
+    cfg = CrawlConfig.get_config()
+    pri_compdir = cfg.get_d(tcc_lib.sectname(), 'completed', '/tmp')
+    for filepath in glob.glob(globspec):
+        tcc_lib.check_file(filepath, verbose=False, plugin=True)
+        cpath = U.pathjoin(pri_compdir, U.basename(filepath))
+        os.rename(filepath, cpath)
+
+    return rval
 
 
 # -----------------------------------------------------------------------------
