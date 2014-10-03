@@ -87,6 +87,26 @@ To install the HPSS Integrity Crawler, clone the git repository.
     
         db2 connect reset
 
+        If you would prefer to only grant the user access to the
+        tables the crawler actually accesses, those tables are show in
+        the following list. You would need to issue the following
+        command on each of these tables.
+
+          GRANT SELECT ON TABLE _tablename_ TO USER hpssic
+
+          Table                Database
+           cartridge            cfg
+           cos                  cfg
+           hier                 cfg
+           pvlpv                cfg
+
+           bfmigrrec            subsys
+           bfpurgerec           subsys
+           bftapeseg            subsys
+           bitfile              subsys
+           nsobject             subsys
+
+
 * DB2 client support on the client machine
 
         root: groupadd -g 9903 hpssic
