@@ -121,14 +121,14 @@ class DBITestRoot(testhelp.HelpedTestCase):
         return db
 
     # -------------------------------------------------------------------------
-    def DBI(self):
+    def DBI(self, dbname='cfg'):
         """
         DBITestRoot: Return a CrawlDBI.DBI() object based on the current object
         """
         kw = {'cfg': make_tcfg(self.dbtype),
               'dbtype': self.dbctype}
         if self.dbctype == 'hpss':
-            kw['dbname'] = 'cfg'
+            kw['dbname'] = dbname
         rval = CrawlDBI.DBI(**kw)
         return rval
 
@@ -2431,12 +2431,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         fields requested
         """
         db = self.DBI()
-        rows = db.select(table='hpss.server',
-                         fields=['desc_name', 'flags'])
+        rows = db.select(table='hpss.cos',
+                         fields=['cos_id', 'hier_id'])
         self.assertEqual(len(rows[0].keys()), 2,
                          "Expected two fields in each row, got %d" %
                          len(rows[0].keys()))
-        for exp in ['FLAGS', 'DESC_NAME']:
+        for exp in ['HIER_ID', 'COS_ID']:
             self.assertTrue(exp in rows[0].keys(),
                             "Expected key '%s' in each row, not found" %
                             exp)
@@ -2448,15 +2448,15 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Select with a group by clause on a field that is present in
         the table.
         """
-        db = self.DBI()
-        rows = db.select(table='hpss.logpolicy',
-                         fields=['max(desc_name) as mdn',
-                                 'log_record_type_mask'],
-                         groupby='log_record_type_mask')
+        db = self.DBI(dbname='sub')
+        rows = db.select(table='hpss.bitfile',
+                         fields=['max(bfid) as mbf',
+                                 'bfattr_cos_id'],
+                         groupby='bfattr_cos_id')
         self.assertEqual(len(rows[0].keys()), 2,
                          "Expected two fields in each row, got %d" %
                          len(rows[0].keys()))
-        for exp in ['MDN', 'LOG_RECORD_TYPE_MASK']:
+        for exp in ['MBF', 'BFATTR_COS_ID']:
             self.assertTrue(exp in rows[0].keys(),
                             "Expected key '%s' in each row, not found" %
                             exp)
@@ -2468,14 +2468,14 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Select with a group by clause that is not a string --
         should get an exception.
         """
-        db = self.DBI()
+        db = self.DBI(dbname='sub')
         exp = "On select(), groupby clause must be a string"
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              exp,
                              db.select,
-                             table='hpss.logpolicy',
-                             fields=['max(desc_name) as mdn',
-                                     'log_record_type_mask'],
+                             table='hpss.bitfile',
+                             fields=['max(bfid) as mbf',
+                                     'bfattr_cos_id'],
                              groupby=17)
         db.close()
 
@@ -2485,14 +2485,14 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Select with a group by clause on a field that is unknown
         should get an exception.
         """
-        db = self.DBI()
+        db = self.DBI(dbname='sub')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              '"UNKNOWN_FIELD" is not valid in the context ' +
                              'where it',
                              db.select,
-                             table="hpss.logpolicy",
-                             fields=['max(desc_name) as mdn',
-                                     'log_record_type_mask'],
+                             table="hpss.bitfile",
+                             fields=['max(bfid) as mbf',
+                                     'bfattr_cos_id'],
                              groupby='unknown_field')
         db.close()
 
@@ -2501,10 +2501,13 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         DBIdb2Test: Select should support joining tables.
         """
-        db = self.DBI()
-        rows = db.select(table=['server', 'logclient'],
-                         fields=['server_id', 'desc_name', 'logc_directory'],
-                         where="server_id = logc_server_id")
+        db = self.DBI(dbname='sub')
+        rows = db.select(table=['nsobject', 'bitfile'],
+                         fields=['object_id',
+                                 'name',
+                                 'bitfile_id',
+                                 'bfattr_cos_id'],
+                         where="bitfile_id = bfid")
         self.assertTrue(0 < len(rows),
                         "Expected at least one row, got 0")
         db.close()
@@ -2515,12 +2518,13 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Select should support joining tables with temporary table
         names.
         """
-        db = self.DBI()
-        rows = db.select(table=['server A', 'logclient B'],
-                         fields=['A.server_id',
-                                 'A.desc_name',
-                                 'B.logc_directory'],
-                         where="A.server_id = B.logc_server_id")
+        db = self.DBI(dbname='sub')
+        rows = db.select(table=['nsobject A', 'bitfile B'],
+                         fields=['A.object_id',
+                                 'A.name',
+                                 'A.bitfile_id',
+                                 'B.bfattr_cos_id'],
+                         where="A.bitfile_id = B.bfid")
         self.assertTrue(0 < len(rows),
                         "Expected at least one row, got 0")
         db.close()
@@ -2534,10 +2538,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), limit must be an int",
                              db.select,
-                             table="authzacl",
-                             fields=['server_id',
-                                     'entry_entity_id',
-                                     'entry_realm_id'],
+                             table="cartridge",
+                             fields=['cart',
+                                     'version',
+                                     'cart_sides'],
                              limit='not an int')
         db.close()
 
@@ -2547,12 +2551,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: select with limit being an int should retrieve the
         indicated number of records
         """
-        db = self.DBI()
+        db = self.DBI(dbname='sub')
         rlim = 3
-        rows = db.select(table='hpss.server',
-                         fields=["server_id",
-                                 "desc_name",
-                                 "executable_pathname"],
+        rows = db.select(table='hpss.nsobject',
+                         fields=["object_id",
+                                 "name",
+                                 "bitfile_id"],
                          limit=rlim)
         self.expected(rlim, len(rows))
         db.close()
@@ -2563,12 +2567,12 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: select with limit being a float should convert the value to
         an int (without rounding) and retrieve that number of records
         """
-        db = self.DBI()
+        db = self.DBI(dbname='sub')
         rlim = 4.5
-        rows = db.select(table='hpss.server',
-                         fields=["server_id",
-                                 "desc_name",
-                                 "executable_pathname"],
+        rows = db.select(table='hpss.nsobject',
+                         fields=["object_id",
+                                 "name",
+                                 "bitfile_id"],
                          limit=rlim)
         self.expected(int(rlim), len(rows))
         db.close()
@@ -2583,7 +2587,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.wildcard_selects,
                              db.select,
-                             table="hpss.gatekeeper",
+                             table="hpss.cos",
                              fields=[])
         db.close()
 
@@ -2598,7 +2602,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.wildcard_selects,
                              db.select,
-                             table='hpss.logclient')
+                             table='hpss.pvlpv')
         db.close()
 
     # -------------------------------------------------------------------------
@@ -2607,15 +2611,15 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() with an empty orderby should get the data
         in the same order as using no orderby at all.
         """
-        db = self.DBI()
-        ordered_rows = db.select(table='hpss.logclient',
-                                 fields=['LOGC_SERVER_ID'],
+        db = self.DBI(dbname='sub')
+        ordered_rows = db.select(table='hpss.bitfile',
+                                 fields=['bfid'],
                                  orderby='')
-        unordered_rows = db.select(table='hpss.logclient',
-                                   fields=['LOGC_SERVER_ID'])
-        okl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+        unordered_rows = db.select(table='hpss.bitfile',
+                                   fields=['bfid'])
+        okl = [CrawlDBI.DBIdb2.hexstr(x['BFID'])
                for x in ordered_rows]
-        ukl = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+        ukl = [CrawlDBI.DBIdb2.hexstr(x['BFID'])
                for x in unordered_rows]
         self.expected(ukl, okl)
         db.close()
@@ -2643,10 +2647,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() with an empty where arg should get the
         same data as no where arg at all
         """
-        db = self.DBI()
-        flist = ['desc_name', 'log_record_type_mask', 'ssm_record_type_mask']
-        w_rows = db.select(table='hpss.logpolicy', fields=flist, where='')
-        x_rows = db.select(table='hpss.logpolicy', fields=flist)
+        db = self.DBI(dbname='sub')
+        flist = ['object_id', 'name', 'bitfile_id']
+        w_rows = db.select(table='hpss.nsobject', fields=flist, where='')
+        x_rows = db.select(table='hpss.nsobject', fields=flist)
         self.expected(len(x_rows), len(w_rows))
         for exp, actual in zip(x_rows, w_rows):
             self.expected(actual, exp)
@@ -2662,7 +2666,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), data must be a tuple",
                              db.select,
-                             table="hpss.logpolicy",
+                             table="hpss.bitfile",
                              fields=self.fnames,
                              where="desc_name = ?",
                              data='prudhoe')
@@ -2678,7 +2682,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), fields must be a list",
                              db.select,
-                             table="hpss.logpolicy",
+                             table="hpss.bitfile",
                              fields=92,
                              where="desc_name = ?",
                              data=('prudhoe', ))
@@ -2694,7 +2698,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "Data would be ignored",
                              db.select,
-                             table="hpss.logpolicy",
+                             table="hpss.bitfile",
                              fields=self.fnames,
                              where="desc_name = ''",
                              data=('prudhoe', ))
@@ -2706,16 +2710,16 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() with where with no '?' and an empty data
         list is fine. The data returned should match the where clause.
         """
-        db = self.DBI()
-        crit = 'Server'
-        rows = db.select(table='hpss.server',
-                         fields=['desc_name', 'rpc_prog_num', 'server_type'],
-                         where="desc_name like '%%%s%%'" % crit,
+        db = self.DBI(dbname='sub')
+        crit = 'logfile'
+        rows = db.select(table='hpss.nsobject',
+                         fields=['name', 'object_id', 'bitfile_id'],
+                         where="name like '%%%s%%'" % crit,
                          data=())
         for x in rows:
-            self.assertTrue(crit in x['DESC_NAME'],
+            self.assertTrue(crit in x['NAME'],
                             "Expected '%s' in '%s' but it's missing" %
-                            (crit, x['DESC_NAME']))
+                            (crit, x['NAME']))
         db.close()
 
     # -------------------------------------------------------------------------
@@ -2728,8 +2732,8 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), orderby clause must be a string",
                              db.select,
-                             table="hpss.logpolicy",
-                             fields=['desc_name'],
+                             table="hpss.bitfile",
+                             fields=['bfid'],
                              orderby=22)
         db.close()
 
@@ -2758,10 +2762,10 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "On select(), where clause must be a string",
                              db.select,
-                             table="hpss.server",
-                             fields=['desc_name',
-                                     'rpc_prog_num',
-                                     'server_type'],
+                             table="hpss.nsobject",
+                             fields=['name',
+                                     'object_id',
+                                     'bitfile_id'],
                              where=[])
         db.close()
 
@@ -2771,15 +2775,15 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() specifying orderby should get the rows in
         the order requested
         """
-        db = self.DBI()
-        ordered_rows = db.select(table='hpss.logclient',
-                                 fields=['logc_server_id'],
-                                 orderby='logc_server_id')
+        db = self.DBI(dbname='sub')
+        ordered_rows = db.select(table='hpss.bitfile',
+                                 fields=['bfid'],
+                                 orderby='bfid')
 
-        ford = [CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+        ford = [CrawlDBI.DBIdb2.hexstr(x['BFID'])
                 for x in ordered_rows]
 
-        sord = sorted([CrawlDBI.DBIdb2.hexstr(x['LOGC_SERVER_ID'])
+        sord = sorted([CrawlDBI.DBIdb2.hexstr(x['BFID'])
                        for x in ordered_rows])
 
         self.expected(sord, ford)
@@ -2791,16 +2795,16 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() with a where clause containing '?' and
         data in the data list should return the data matching the where clause
         """
-        db = self.DBI()
-        crit = 'Server'
-        rows = db.select(table='hpss.server',
-                         fields=['desc_name', 'rpc_prog_num', 'server_type'],
-                         where="desc_name like '%?%'",
+        db = self.DBI(dbname='sub')
+        crit = 'logfile'
+        rows = db.select(table='hpss.nsobject',
+                         fields=['name', 'object_id', 'bitfile_id'],
+                         where="name like '%?%'",
                          data=(crit,))
         for x in rows:
-            self.assertTrue(crit in x['DESC_NAME'],
+            self.assertTrue(crit in x['NAME'],
                             "Expected '%s' in '%s' but it's missing" %
-                            (crit, x['DESC_NAME']))
+                            (crit, x['NAME']))
         db.close()
 
     # -------------------------------------------------------------------------
@@ -2813,8 +2817,8 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "0 params bound not matching 1 required",
                              db.select,
-                             table="hpss.logpolicy",
-                             fields=['log_record_type_mask'],
+                             table="hpss.bitfile",
+                             fields=['bfid'],
                              data=(),
                              where="DESC_NAME = ?")
         db.close()
@@ -2825,15 +2829,15 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() specifying where should get only the rows
         requested
         """
-        db = self.DBI()
-        crit = 'Server'
-        rows = db.select(table='hpss.server',
-                         fields=['desc_name', 'rpc_prog_num', 'server_type'],
-                         where="desc_name like '%%%s%%'" % crit)
+        db = self.DBI(dbname='sub')
+        crit = 'logfile'
+        rows = db.select(table='hpss.nsobject',
+                         fields=['name', 'object_id', 'bitfile_id'],
+                         where="name like '%%%s%%'" % crit)
         for x in rows:
-            self.assertTrue(crit in x['DESC_NAME'],
+            self.assertTrue(crit in x['NAME'],
                             "Expected '%s' in '%s' but it's missing" %
-                            (crit, x['DESC_NAME']))
+                            (crit, x['NAME']))
         db.close()
 
     # -------------------------------------------------------------------------
@@ -2842,7 +2846,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: For a table that exists, table_exists() should return True.
         """
         db = self.DBI()
-        self.expected(True, db.table_exists(table='authzacl'))
+        self.expected(True, db.table_exists(table='cartridge'))
         db.close()
 
     # -------------------------------------------------------------------------
