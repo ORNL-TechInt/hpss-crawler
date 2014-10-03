@@ -645,7 +645,7 @@ def tape_types_populate(hpssroot):
     def dubk(d, x, y, z):
         try:
             d[x][y]['list'].append(z)
-        except KeyError, e:
+        except KeyError as e:
             d[x][y] = {'list': [z]}
 
     for line in mt.readlines():

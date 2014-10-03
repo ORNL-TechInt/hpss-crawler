@@ -72,7 +72,7 @@ def alter_table(table=None, addcol=None, dropcol=None, pos=None, cfg=None):
     try:
         db.alter(table=table, addcol=addcol, dropcol=dropcol, pos=pos)
         rval = "Successful"
-    except CrawlDBI.DBIerror, e:
+    except CrawlDBI.DBIerror as e:
         if (dropcol and
             "Can't DROP '%s'; check that column/key exists" % fieldname
                 in str(e)):

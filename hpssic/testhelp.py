@@ -179,7 +179,7 @@ def expectVSgot(expected, got):
     """
     try:
         assert(expected == got)
-    except AssertionError, e:
+    except AssertionError as e:
         if type(expected) == list:
             if 5 < len(expected):
                 for i in range(0, len(expected)):
@@ -441,7 +441,7 @@ class HelpedTestCase(unittest.TestCase):
         """
         try:
             func(*args, **kwargs)
-        except exception, e:
+        except exception as e:
             if type(message) == str:
                 self.assertTrue(message in str(e),
                                 "\nExpected '%s', \n     got '%s'" %
@@ -452,7 +452,7 @@ class HelpedTestCase(unittest.TestCase):
                                                                     str(e)))
             else:
                 self.fail("message must be a string or list")
-        except Exception, e:
+        except Exception as e:
             self.fail('Unexpected exception thrown: %s %s' % (type(e), str(e)))
         else:
             self.fail('Expected exception %s not thrown' % exception)

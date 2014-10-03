@@ -1017,7 +1017,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         try:
             CrawlConfig.log(a1, a2, a3, a4)
             self.fail("Expected exception not thrown")
-        except TypeError, e:
+        except TypeError as e:
             self.assertEqual("not enough arguments for format string", str(e),
                              "Wrong TypeError thrown")
 
@@ -1054,7 +1054,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         try:
             CrawlConfig.log(a1, a2, a3, a4, a5)
             self.fail("Expected exception not thrown")
-        except TypeError, e:
+        except TypeError as e:
             exc = "not all arguments converted during string formatting"
             self.assertEqual(exc, str(e),
                              "Expected '%s', got '%s'" % (exc, str(e)))

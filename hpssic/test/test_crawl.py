@@ -1117,7 +1117,7 @@ class CrawlMiscTest(CrawlTest):
         try:
             crawl.make_pidfile(pid, self.ctx, exitpath)
             self.fail("Expected exception was not thrown")
-        except StandardError, e:
+        except StandardError as e:
             exp = "The pidfile for context TEST exists"
             self.assertTrue(exp in str(e),
                             "Expected '%s', got '%s'" % (exp, str(e)))

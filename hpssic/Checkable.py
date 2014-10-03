@@ -254,7 +254,7 @@ class Checkable(object):
             # h = hpss.HSI(timeout=hsi_timeout, verbose=True)
             h = hpss.HSI(verbose=True)
             CrawlConfig.log("started hsi with pid %d" % h.pid())
-        except hpss.HSIerror, e:
+        except hpss.HSIerror as e:
             return "unavailable"
 
         if self.type == 'd':

@@ -31,7 +31,7 @@ def main(cfg):
     # database
     try:
         clist = Checkable.Checkable.get_list(odds, rootlist=dataroot)
-    except CrawlDBI.DBIerror, e:
+    except CrawlDBI.DBIerror as e:
         if any([util.rgxin(msg, str(e))
                 for msg in ["no such table: checkables",
                             "Table '.*' doesn't exist"]]):
@@ -40,7 +40,7 @@ def main(cfg):
             clist = Checkable.Checkable.get_list(odds)
         else:
             raise
-    except StandardError, e:
+    except StandardError as e:
         if 'Please call .ex_nihilo()' in str(e):
             CrawlConfig.log("calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)

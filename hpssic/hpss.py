@@ -298,7 +298,7 @@ class HSI(object):
             self.xobj.expect([pexpect.EOF, pexpect.TIMEOUT])
             self.xobj.close()
             CrawlConfig.log("Closing hsi process %d" % pid)
-        except OSError, e:
+        except OSError as e:
             tbstr = tb.format_exc()
             CrawlConfig.log("Ignoring OSError '%s'" % str(e))
             for line in tbstr.split("\n"):

@@ -62,7 +62,7 @@ class Daemon:
                 # exit first parent
                 sys.exit(0)
             self.dlog("fork #1 child: %d" % os.getpid())
-        except OSError, e:
+        except OSError as e:
             sys.stderr.write("fork #1 failed: %d (%s)\n" %
                              (e.errno, e.strerror))
             sys.exit(1)
@@ -84,7 +84,7 @@ class Daemon:
                 # exit from second parent
                 sys.exit(0)
             self.dlog("fork #2 child: %d" % os.getpid())
-        except OSError, e:
+        except OSError as e:
             sys.stderr.write("fork #2 failed: %d (%s)\n" %
                              (e.errno, e.strerror))
             sys.exit(1)
@@ -127,7 +127,7 @@ class Daemon:
         """
         try:
             os.close(fd)
-        except OSError, exc:
+        except OSError as exc:
             if exc.errno == errno.EBADF:
                 # file was not open
                 pass
@@ -213,7 +213,7 @@ class Daemon:
             while 1:
                 os.kill(pid, SIGTERM)
                 time.sleep(0.1)
-        except OSError, err:
+        except OSError as err:
             err = str(err)
             if err.find("No such process") > 0:
                 if os.path.exists(self.pidfile):

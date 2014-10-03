@@ -282,7 +282,7 @@ def crl_start(argv):
         cfg.set('crawler', 'context', o.context)
     try:
         exitpath = cfg.get('crawler', 'exitpath')
-    except CrawlConfig.NoOptionError, e:
+    except CrawlConfig.NoOptionError as e:
         print("No exit path is specified in the configuration")
         sys.exit(1)
 
@@ -433,7 +433,7 @@ def is_running(context=None):
         cfg = CrawlConfig.get_config()
         try:
             context = cfg.get('crawler', 'context')
-        except CrawlConfig.NoOptionError, e:
+        except CrawlConfig.NoOptionError as e:
             emsg = ("No option 'context' in section 'crawler', file '%s'" %
                     cfg.filename)
             raise StandardError(emsg)

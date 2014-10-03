@@ -158,7 +158,7 @@ class DBI(object):
             dbtype = cfg.get(CRWL_SECTION, 'dbtype')
             try:
                 dbname = cfg.get(CRWL_SECTION, 'dbname')
-            except CrawlConfig.NoOptionError, e:
+            except CrawlConfig.NoOptionError as e:
                 raise DBIerror(e)
             tbl_pfx = cfg.get(CRWL_SECTION, 'tbl_prefix')
         else:
@@ -411,7 +411,7 @@ class DBIsqlite(DBI_abstract):
                    (self.prefix(table), addcol))
             c = self.dbh.cursor()
             c.execute(cmd)
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -423,7 +423,7 @@ class DBIsqlite(DBI_abstract):
         try:
             self.dbh.close()
         # Convert any sqlite3 error into a DBIerror
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -453,7 +453,7 @@ class DBIsqlite(DBI_abstract):
             c = self.dbh.cursor()
             c.execute(cmd)
         # Convert any sqlite3 error into a DBIerror
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -464,7 +464,7 @@ class DBIsqlite(DBI_abstract):
         try:
             rval = self.dbh.cursor()
             return rval
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -505,7 +505,7 @@ class DBIsqlite(DBI_abstract):
 
             c.close()
         # Translate any sqlite3 errors to DBIerror
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(cmd + ': ' + ''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -538,7 +538,7 @@ class DBIsqlite(DBI_abstract):
             c = self.dbh.cursor()
             c.execute(cmd)
         # Convert any sqlite3 error into a DBIerror
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -577,7 +577,7 @@ class DBIsqlite(DBI_abstract):
             c.executemany(cmd, data)
             c.close()
         # Translate sqlite specific exception into a DBIerror
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(cmd + ": " + ''.join(e.args),
                            dbname=self.dbname)
 
@@ -647,7 +647,7 @@ class DBIsqlite(DBI_abstract):
             c.close()
             return rv
         # Translate any sqlite3 errors to DBIerror
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args),
                            dbname=self.dbname)
 
@@ -671,7 +671,7 @@ class DBIsqlite(DBI_abstract):
                 return True
             else:
                 raise DBIerror(MSG.more_than_one_ss % ('sqlite_master', table))
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -715,7 +715,7 @@ class DBIsqlite(DBI_abstract):
             c.executemany(cmd, data)
             c.close()
         # Translate database-specific exceptions into DBIerrors
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args),
                            dbname=self.dbname)
 
@@ -815,7 +815,7 @@ if mysql_available:
             try:
                 c = self.dbh.cursor()
                 c.execute(cmd)
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -827,7 +827,7 @@ if mysql_available:
             try:
                 self.dbh.close()
             # Convert any mysql error into a DBIerror
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -860,7 +860,7 @@ if mysql_available:
                 c.execute(cmd)
 
             # Convert any db specific error into a DBIerror
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -871,7 +871,7 @@ if mysql_available:
             try:
                 rval = self.dbh.cursor()
                 return rval
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -912,7 +912,7 @@ if mysql_available:
 
                 c.close()
             # Translate any db specific errors to DBIerror
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -928,7 +928,7 @@ if mysql_available:
                 c.execute(cmd, (self.prefix(table),))
                 r = c.fetchall()
                 return r
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -954,7 +954,7 @@ if mysql_available:
                     c.execute(cmd)
 
             # Convert any db specific error into a DBIerror
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -993,7 +993,7 @@ if mysql_available:
                 c.executemany(cmd, data)
                 c.close()
             # Translate sqlite specific exception into a DBIerror
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -1100,7 +1100,7 @@ if mysql_available:
                 else:
                     raise DBIerror(MSG.more_than_one_ss %
                                    ('information_schema.tables', table))
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
@@ -1144,7 +1144,7 @@ if mysql_available:
                 c.executemany(cmd, data)
                 c.close()
             # Translate database-specific exceptions into DBIerrors
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 self.err_handler(e)
 
 
@@ -1191,7 +1191,7 @@ if db2_available:
                           "uid=%s;" % username +
                           "pwd=%s;" % password)
                 self.dbh = db2.connect(cxnstr, "", "")
-            except ibm_db_dbi.Error, e:
+            except ibm_db_dbi.Error as e:
                 raise DBIerror("%s" % str(e))
 
         # ---------------------------------------------------------------------
@@ -1244,7 +1244,7 @@ if db2_available:
             try:
                 db2.close(self.dbh)
             # Convert any mysql error into a DBIerror
-            except ibm_db_dbi.Error, e:
+            except ibm_db_dbi.Error as e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
         # ---------------------------------------------------------------------
@@ -1262,7 +1262,7 @@ if db2_available:
             try:
                 rval = self.dbh.cursor()
                 return rval
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
         # ---------------------------------------------------------------------
@@ -1372,10 +1372,10 @@ if db2_available:
                 return rval
 
             # Translate any db2 errors to DBIerror
-            except ibm_db_dbi.Error, e:
+            except ibm_db_dbi.Error as e:
                 errmsg = str(e) + "\nSQL: '" + cmd + "'"
                 raise DBIerror(errmsg, dbname=self.dbname)
-            except Exception, e:
+            except Exception as e:
                 if self.__recognized_exception__(e):
                     errmsg = str(e) + "\nSQL: '" + cmd + "'"
                     raise DBIerror(errmsg, dbname=self.dbname)
@@ -1399,7 +1399,7 @@ if db2_available:
                 else:
                     raise DBIerror(MSG.more_than_one_ss %
                                    ('@syscat.tables', table))
-            except mysql_exc.Error, e:
+            except mysql_exc.Error as e:
                 raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
 
         # ---------------------------------------------------------------------

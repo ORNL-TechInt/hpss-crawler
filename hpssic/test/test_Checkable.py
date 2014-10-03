@@ -178,7 +178,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             x = Checkable(path_x='/one/two/three', type='f', last_check=72)
             self.fail("Expected an exception but didn't get one.")
-        except StandardError, e:
+        except StandardError as e:
             self.assertEqual('Attribute path_x is invalid for Checkable'
                              in str(e), True,
                              "Got the wrong StandardError: %s" %
@@ -588,7 +588,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             Checkable.get_list()
             self.fail("Expected an exception but didn't get one.")
-        except CrawlDBI.DBIerror, e:
+        except CrawlDBI.DBIerror as e:
             self.assertEqual("no such table: test_checkables" in str(e), True,
                              "Got the wrong DBIerror: %s" %
                              util.line_quote(tb.format_exc()))
@@ -913,7 +913,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         try:
             x[0].persist()
             self.fail("Expected an exception but didn't get one.")
-        except StandardError, e:
+        except StandardError as e:
             self.assertEqual("has rowid == None, last_check != 0.0" in str(e),
                              True,
                              "Got the wrong StandardError: %s" %
