@@ -5,12 +5,13 @@ export PYTHONPATH=$GIT_REPO
 export CRONOUT=/tmp/cronjob.$$.out
 export TESTDIR=$GIT_REPO/hpssic/test
 
-/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
+/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT 2>&1
 cd $HOME/prj/hpssic/dev
 . $HOME/venv/hpssic/bin/activate
+echo "Activating environment hpssic" >> $CRONOUT 2>&1
 /usr/bin/py.test --cov hpssic --all >> $CRONOUT 2>&1
 STATUS=$?
-/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT
+/bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT 2>&1
 
 SUMMARY=$(grep "seconds ===" $CRONOUT | sed -e "s/==*/===/g")
 
