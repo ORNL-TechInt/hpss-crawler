@@ -2,6 +2,7 @@ import base64
 import CrawlDBI
 import CrawlConfig
 import dbschem
+import messages as MSG
 import os
 import time
 import util
@@ -325,6 +326,13 @@ def check_path(path, verbose=False, plugin=True):
     nsobj = path_nsobject(path)
     bfl = get_bitfile_set(int(nsobj), 1)
     bf = U.pop0(bfl)
+    if bf is None:
+        if plugin:
+            CrawlConfig.log(MSG.nothing_to_check)
+        else:
+            print(MSG.nothing_to_check)
+        return
+
     sc_count = int(bf['SC_COUNT'])
     cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
 
