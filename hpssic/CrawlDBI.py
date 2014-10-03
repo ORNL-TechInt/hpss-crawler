@@ -8,6 +8,7 @@ import messages as MSG
 import pdb
 import sqlite3
 import sys
+import time
 import util
 import warnings
 
@@ -37,7 +38,7 @@ class DBI_abstract(object):
     DBImysql, etc.) inherit from this one
     """
     settable_attrl = ['cfg', 'dbname', 'host', 'username', 'password',
-                      'tbl_prefix']
+                      'tbl_prefix', 'timeout']
 
     # -------------------------------------------------------------------------
     def prefix(self, tabname):
@@ -57,6 +58,28 @@ class DBI_abstract(object):
         else:
             return self.tbl_prefix + tabname
 
+    # -------------------------------------------------------------------------
+    def retry(self, exception, payload, *args, **kwargs):
+        """
+        Call *payload*. If it does not throw an exception, we're done --
+        return. OTOH, if it does throw an exception, we call the database
+        specific err_handler(). It will either throw a DBIerror up the stack
+        and we're done, or it will sleep an appropriate amount of time and
+        return so we can keep trying again until the timeout expires.
+
+        The timeout is set when the DBI object is instantiated.
+        """
+        rval = None
+        done = False
+        start = time.time()
+        while not done and time.time() - start < self.timeout:
+            try:
+                rval = payload(*args, **kwargs)
+                done = True
+            except exception as e:
+                self.err_handler(e)
+        return rval
+
 
 # -----------------------------------------------------------------------------
 class DBI(object):
@@ -75,11 +98,10 @@ class DBI(object):
     def __init__(self, *args, **kwargs):
         """
         DBI: Here we look for configuration information indicating which kind
-        of database to use. In the cfg argument, the caller can pass us 1) the
-        name of a configuration file, or 2) a CrawlConfig object. If the cfg
-        argument is not present, we try to check 'crawl.cfg' as the default
-        configuration file. Anything else in the cfg argument (i.e., not a
-        string and not a CrawlConfig object) will generate an exception.
+        of database to use. In the cfg argument, the caller can pass us a
+        CrawlConfig object. If the cfg argument is not present, we check the
+        default configuration ('crawl.cfg'). Anything else in the cfg argument
+        (i.e., not a CrawlConfig object) will generate an exception.
 
         Once we know which kind of database to use, we create an object
         specific to that database type and forward calls from the caller to
@@ -92,13 +114,13 @@ class DBI(object):
         for now.
         """
 
-        # Check for invalid arguments in kwargs. Only 'cfg', 'dbtype', and
-        # 'dbname' are accepted. Other classes may need to select 'hpss' for
-        # the database type and if so will need to specify the database name,
-        # but everything else should come from the configuration.
-
+        # Valid arguments in kwargs are:
+        #   'cfg' - a CrawlConfig object
+        #   'dbtype' - 'hpss' or 'crawler'
+        #   'dbname' - if dbtype is 'hpss', this must be 'cfg' or 'sub'
+        #   'timeout' - max length of time to retry failing operations
         for key in kwargs:
-            if key not in ['cfg', 'dbtype', 'dbname']:
+            if key not in ['cfg', 'dbtype', 'dbname', 'timeout']:
                 raise DBIerror("Attribute '%s' is not valid for %s" %
                                (key, self.__class__))
         if 0 < len(args):
@@ -146,6 +168,11 @@ class DBI(object):
         okw['cfg'] = cfg
         okw['dbname'] = dbname
         okw['tbl_prefix'] = tbl_pfx
+
+        if 'timeout' in kwargs:
+            okw['timeout'] = kwargs['timeout']
+        else:
+            okw['timeout'] = 3600
 
         self.closed = False
         if dbtype == 'sqlite':
@@ -340,7 +367,7 @@ class DBIsqlite(DBI_abstract):
             # set autocommit mode
             self.dbh.isolation_level = None
             self.table_exists(table="sqlite_master")
-        except sqlite3.Error, e:
+        except sqlite3.Error as e:
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
@@ -350,6 +377,13 @@ class DBIsqlite(DBI_abstract):
         """
         rv = "DBIsqlite(dbname='%s')" % self.dbname
         return rv
+
+    # -------------------------------------------------------------------------
+    def err_handler(self, err):
+        """
+        DBIsqlite: error handler
+        """
+        raise DBIerror(''.join(err.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
     def alter(self, table='', addcol=None, dropcol=None, pos=None):
@@ -711,14 +745,13 @@ if mysql_available:
             host = cfg.get(CRWL_SECTION, 'hostname')
             username = cfg.get(CRWL_SECTION, 'username')
             password = base64.b64decode(cfg.get(CRWL_SECTION, 'password'))
-            try:
-                self.dbh = mysql.connect(host=host,
-                                         user=username,
-                                         passwd=password,
-                                         db=self.dbname)
-                self.dbh.autocommit(True)
-            except mysql_exc.Error, e:
-                self.err_handler(e)
+
+            self.dbh = self.retry(mysql_exc.Error,
+                                  mysql.connect,
+                                  host=host,
+                                  user=username,
+                                  passwd=password,
+                                  db=self.dbname)
 
         # ---------------------------------------------------------------------
         def __repr__(self):
@@ -737,8 +770,10 @@ if mysql_available:
                 raise DBIerror(str(err), dbname=self.dbname)
             elif 1 < len(err.args) and err.args[0] in [1047, 2003]:
                 print("RETRY")
+                if not hasattr(self, 'sleeptime'):
+                    self.sleeptime = 0.1
                 time.sleep(self.sleeptime)
-                self.sleeptime = min(2*self.sleeptime, 1.0)
+                self.sleeptime = min(2*self.sleeptime, 10.0)
             else:
                 raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
 
@@ -1018,20 +1053,28 @@ if mysql_available:
             if limit is not None:
                 cmd += " limit 0, %d" % int(limit)
 
-            self.sleeptime = 0.1
-            while True:
-                try:
-                    c = self.dbh.cursor()
-                    if '%s' in cmd:
-                        c.execute(cmd, data)
-                    else:
-                        c.execute(cmd)
-                    rv = c.fetchall()
-                    c.close()
-                    return rv
-                # Translate any sqlite3 errors to DBIerror
-                except mysql_exc.Error, e:
-                    self.err_handler(e)
+            rv = self.retry(mysql_exc.Error,
+                            self.do_select,
+                            cmd,
+                            data)
+            return rv
+
+        # ---------------------------------------------------------------------
+        def do_select(self, cmd, data=None):
+            """
+            Routine select has set everything up. These are the calls that
+            might throw an exception that we want to run under retry(), so they
+            need to be isolated in this routine.
+            """
+            c = self.dbh.cursor()
+            # if data:
+            if '%s' in cmd:
+                c.execute(cmd, data)
+            else:
+                c.execute(cmd)
+            rval = c.fetchall()
+            c.close()
+            return rval
 
         # ---------------------------------------------------------------------
         def table_exists(self, table=''):
@@ -1158,6 +1201,13 @@ if db2_available:
             """
             rv = "DBIdb2(dbname='%s')" % self.dbname
             return rv
+
+        # ---------------------------------------------------------------------
+        def err_handler(self, err):
+            """
+            DBIdb2: error handler
+            """
+            raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
 
         # ---------------------------------------------------------------------
         def __recognized_exception__(self, exc):
