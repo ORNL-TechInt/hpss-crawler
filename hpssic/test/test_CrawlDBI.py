@@ -126,7 +126,8 @@ class DBITestRoot(testhelp.HelpedTestCase):
         DBITestRoot: Return a CrawlDBI.DBI() object based on the current object
         """
         kw = {'cfg': make_tcfg(self.dbtype),
-              'dbtype': self.dbctype}
+              'dbtype': self.dbctype,
+              'timeout': 10.0}
         if self.dbctype == 'hpss':
             kw['dbname'] = dbname
         rval = CrawlDBI.DBI(**kw)
