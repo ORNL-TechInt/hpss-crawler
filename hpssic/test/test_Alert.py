@@ -183,6 +183,87 @@ class AlertTest(testhelp.HelpedTestCase):
                         "'%s' not found in e-mail message '%s'" %
                         (payload, m.fullmessage))
 
+    # -------------------------------------------------------------------------
+    def test_alert_email_defcfg(self):
+        """
+        Generate an e-mail alert using the default config and verify that it
+        was sent (this is where we use 'monkey patching').
+        """
+        fakesmtp.inbox = []
+        orig = os.getenv('CRAWL_CONF')
+        os.environ['CRAWL_CONF'] = 'crawl.cfg'
+        logfile = '%s/alert_email.log' % self.testdir
+        targets = "addr1@domain.gov, addr2@domain.gov"
+        payload = 'this is an e-mail alert'
+        sender = 'hpssic@' + util.hostname(long=True)
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+
+        x = Alert.Alert(caller='cv', msg=payload)
+        m = fakesmtp.inbox[0]
+        try:
+            self.assertEqual(', '.join(m.to_address),
+                             targets,
+                             "'%s' does not match '%s'" %
+                             (', '.join(m.to_address), targets))
+            self.assertEqual(m.from_address, sender,
+                             "from address '%s' does not match sender '%s'" %
+                             (m.from_address, sender))
+            self.assertTrue('sent mail to' in util.contents(logfile),
+                            "expected '%s' in %s, not found")
+            self.assertTrue(payload in m.fullmessage,
+                            "'%s' not found in e-mail message '%s'" %
+                            (payload, m.fullmessage))
+        finally:
+            if orig:
+                os.environ['CRAWL_CONF'] = orig
+            else:
+                del os.environ['CRAWL_CONF']
+
+    # -------------------------------------------------------------------------
+    def test_alert_use_other(self):
+        """
+        A use directive sends us to another config section where we generate a
+        log alert and verify that the message was written to the correct log
+        file.
+        """
+        logfile = '%s/alert_use.log' % self.testdir
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section('crawler')
+        cfg.add_section('AlertTest')
+        cfg.add_section('alert_section')
+        cfg.add_section('other_section')
+        cfg.set('crawler', 'logpath', logfile)
+        cfg.set('AlertTest', 'alerts', 'alert_section')
+        cfg.set('alert_section', 'use', "other_section")
+        cfg.set('other_section', 'log', "%s")
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        payload = 'this is a test message from %s' % util.my_name()
+        x = Alert.Alert(caller='AlertTest', msg=payload,
+                        cfg=cfg)
+        self.expected_in(payload, util.contents(logfile))
+
+    # -------------------------------------------------------------------------
+    def test_alert_use_same(self):
+        """
+        Generate a log alert and verify that the message was written to the
+        correct log file.
+        """
+        logfile = '%s/alert_use.log' % self.testdir
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section('crawler')
+        cfg.add_section('AlertTest')
+        cfg.add_section('alert_section')
+        cfg.set('crawler', 'logpath', logfile)
+        cfg.set('AlertTest', 'alerts', 'alert_section')
+        cfg.set('alert_section', 'log', "%s")
+        cfg.set('alert_section', 'use', 'alert_section')
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        payload = 'this is a test message from %s' % util.my_name()
+        x = Alert.Alert(caller='AlertTest', msg=payload,
+                        cfg=cfg)
+        self.expected_in(payload, util.contents(logfile))
+
+
 # -----------------------------------------------------------------------------
 if __name__ == '__main__':
     toolframe.ez_launch(test='AlertTest',
