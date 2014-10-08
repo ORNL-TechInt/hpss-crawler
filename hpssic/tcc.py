@@ -14,6 +14,7 @@ import tcc_lib
 import time
 import toolframe
 import util
+import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -127,7 +128,7 @@ def tccp_check(args):
                  action='append', default=[], dest='path',
                  help='PATH to check')
     p.add_option('-v', '--verbose',
-                 action='store', default=False, dest='verbose',
+                 action='store_true', default=False, dest='verbose',
                  help='report items with correct number of copies')
 
     (o, a) = p.parse_args(args)
@@ -139,7 +140,7 @@ def tccp_check(args):
         tcc_lib.check_object(objid, verbose=o.verbose, plugin=False)
 
     for bfid in o.bitfile:
-        tcc_lib.check_bitfile(bf, verbose=o.verbose, plugin=False)
+        tcc_lib.check_bitfile(bfid, verbose=o.verbose, plugin=False)
 
     for path in o.path:
         tcc_lib.check_path(path, verbose=o.verbose, plugin=False)
@@ -403,7 +404,11 @@ def tccp_zreport(args):
     outfile = cfg.get(tcc_lib.sectname(), 'report_file')
 
     cosinfo = tcc_lib.get_cos_info()
-    bfl = tcc_lib.get_bitfile_set(cfg, int(nsobj_id), 1)
+    try:
+        bfl = tcc_lib.get_bitfile_set(int(nsobj_id), 1)
+    except U.HpssicError as e:
+        bfl = []
+        pass
     print("Writing output to %s" % outfile)
     for bf in bfl:
         tcc_lib.tcc_report(bf, cosinfo)

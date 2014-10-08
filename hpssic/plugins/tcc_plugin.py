@@ -42,9 +42,12 @@ def main(cfg):
     # fetch the next N bitfiles from DB2
     CrawlConfig.log("looking for nsobject ids between %d and %d"
                     % (next_nsobj_id, next_nsobj_id+how_many-1))
-    bfl = tcc_lib.get_bitfile_set(cfg,
-                                  int(next_nsobj_id),
-                                  how_many)
+    try:
+        bfl = tcc_lib.get_bitfile_set(int(next_nsobj_id),
+                                      how_many)
+    except U.HpssicError as e:
+        bfl = []
+        pass
 
     CrawlConfig.log("got %d bitfiles" % len(bfl))
 
