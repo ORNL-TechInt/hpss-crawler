@@ -34,6 +34,7 @@ import CrawlConfig
 import CrawlMail
 import email.mime.text
 import os
+import pdb
 import smtplib
 import socket
 import util
@@ -60,6 +61,16 @@ class Alert(object):
         Figure out where we're supposed to send this alert and send it.
         Possible destinations are the log file, one or more e-mail addresses,
         and/or a shell program.
+
+        It's also possible for a 'use' option to show up in the alerts section.
+        In this case, we're being redirected to another section, also 'use' can
+        also point to the current alerts section. There's no reason to ever do
+        this, but it could happen so we want to handle it in a reasonable way.
+
+        That's why we sort the config options in the while statement below --
+        to make 'use' get handled last, so any other options in the section
+        will get handled. Once we process 'use', anything not yet processed in
+        the current section is ignored.
         """
         # mainmod = sys.modules['__main__']
         # cfg = mainmod.get_config()
@@ -75,7 +86,7 @@ class Alert(object):
 
         done = False
         while not done:
-            for opt in cfg.options(section):
+            for opt in sorted(cfg.options(section)):
                 if opt == 'log':
                     # write to log
                     fmt = cfg.get(section, 'log')
