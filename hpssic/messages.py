@@ -26,6 +26,10 @@ invalid_subject_S = ("Subject (%s) is not a string")
 
 more_than_one_ss = "More than one record found in %s for table %s"
 
+multiple_objects_S = ("Multiple objects found for bitfile $s")
+
+no_bitfile_found_S = ("No bitfile found with id %s")
+
 no_cfg_found = """
             No configuration found. Please do one of the following:
              - cd to a directory with an appropriate crawl.cfg file,
@@ -36,7 +40,13 @@ no_cfg_found = """
 
 no_recip_list = "No recipient list specified or in configuration"
 
-nothing_to_check = ("Nothing to check")
+no_such_path_component_SD = ("No match for object '%s' with parent %d")
+
+not_in_bftapeseg_S = ("Bitfile ID %s\n   not found in table BFTAPESEG")
+
+not_in_bitfile_S = ("Bitfile ID %s\n   not found in table BITFILE")
+
+not_in_nsobject_D = ("Object ID %d not found in table NSOBJECT")
 
 nothing_to_drop = "table is None, nothing to drop"
 

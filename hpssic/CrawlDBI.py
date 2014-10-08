@@ -7,6 +7,7 @@ import CrawlConfig
 import messages as MSG
 import pdb
 import sqlite3
+import string
 import sys
 import time
 import util
@@ -1428,3 +1429,23 @@ if db2_available:
             """
             rval = "".join(["%02x" % ord(c) for c in list(bfid)])
             return rval.upper()
+
+        @classmethod
+        # ---------------------------------------------------------------------
+        def hexval(cls, bfid_str):
+            """
+            DBIdb2: Convert a quoted or unquoted hexadecimal string as
+            presented by DB2 into a hex value.
+            """
+            bfid_low = bfid_str.lower()
+            if bfid_low.startswith("x'"):
+                rval = bfid_low.strip("x'").decode("hex")
+            elif all(c in string.hexdigits for c in bfid_str):
+                rval = bfid_str.decode("hex")
+            elif (bfid_low.startswith("x") and
+                  all(c in string.hexdigits for c in bfid_low[1:])):
+                rval = bfid_low[1:].decode("hex")
+            else:
+                rval = bfid_str
+
+            return rval

@@ -1,9 +1,12 @@
+from __future__ import print_function
 import base64
 import CrawlDBI
 import CrawlConfig
 import dbschem
 import messages as MSG
 import os
+import pdb
+import sys
 import time
 import util
 import util as U
@@ -28,34 +31,77 @@ def get_bitfile_path(bitfile):
     """
     db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
 
-    if bitfile.startswith("x'") or bitfile.startswith('x"'):
-        bfarg = bitfile
-    else:
-        bfarg = hexstr(bitfile)
-    bfl = db.select(table='nsobject',
-                    fields=['parent_id', 'name'],
-                    where='bitfile_id = ?',
-                    data=(bfarg,))
+    rows = db.select(table='nsobject',
+                     fields=['parent_id', 'name'],
+                     where='bitfile_id = ?',
+                     data=(bitfile,))
 
-    if 1 < len(bfl):
-        raise StandardError("Multiple objects found for bf %s" %
-                            hexstr(bitfile))
-    elif len(bfl) < 1:
+    if 1 < len(rows):
+        raise U.HpssicError(MSG.multiple_objects_S % hexstr(bitfile))
+    elif len(rows) < 1:
         return("<unnamed bitfile>")
 
-    x = bfl[0]
     rval = ''
-    while x:
+    while rows:
+        x = rows[0]
         if rval == '':
             rval = x['NAME']
         else:
             rval = os.path.join(x['NAME'], rval)
 
-        x = db.select(table='nsobject',
-                      fields=['parent_id', 'name'],
-                      where='object_id = ?',
-                      data=(x['PARENT_ID']))
+        rows = db.select(table='nsobject',
+                         fields=['parent_id', 'name'],
+                         where='object_id = ?',
+                         data=(x['PARENT_ID'],))
+
     return rval
+
+
+# -----------------------------------------------------------------------------
+def nsobject_lookup(start_id, id_count, dbh=None):
+    """
+    Lookup the records in NSOBJECT beginning with start_id and continuing for
+    id_count entries. Return the list of corresponding bitfile ids.
+    """
+    local_connect = False
+    if dbh is None:
+        dbh = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+        local_connect = True
+
+    bflist = dbh.select(table='nsobject',
+                        fields=['bitfile_id'],
+                        where='? <= object_id and object_id < ?',
+                        data=(start_id, start_id + id_count),
+                        limit=id_count)
+
+    if local_connect:
+        dbh.close()
+
+    rval = [CrawlDBI.DBIdb2.hexstr(z['BITFILE_ID']) for z in bflist]
+    return rval
+    # return [z['BITFILE_ID'] for z in bflist]
+
+
+# -----------------------------------------------------------------------------
+def bitfile_lookup(bflist, dbh=None):
+    """
+    Lookup each of the ids in *bflist* in table BITFILE. Return the count of
+    records found.
+    """
+    local_connect = False
+    if dbh is None:
+        dbh = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+        local_connect = True
+
+    count = dbh.select(table='bitfile',
+                       fields=['count(bfid) as bfid_count'],
+                       where='bfid in (%s)' %
+                       ','.join(bflist))
+
+    if local_connect:
+        dbh.close()
+
+    return(count[0]['BFID_COUNT'])
 
 
 # -----------------------------------------------------------------------------
@@ -64,29 +110,19 @@ def get_bitfile_set(first_nsobj_id, limit):
     Get a collection of bitfiles from DB2 returning a dict. The bitfiles in the
     set begin with object_id first_nsobj_id and end with the one before
     last_nsobj_id.
-
-    get items between object_id LOW and HIGH:
-          select A.object_id,
-                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
-                 count(C.storage_class) as sc_count
-          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
-          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
-                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id and A.object_id < ?
-          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
-
-    get N items beginning at object_id LOW:
-          "select A.object_id,
-                 B.bfid, B.bfattr_cos_id, B.bfattr_create_time,
-                 count(C.storage_class) as sc_count
-          from hpss.nsobject A, hpss.bitfile B, hpss.bftapeseg C
-          where A.bitfile_id = B.bfid and B.bfid = C.bfid and
-                 B.bfattr_data_len > 0 and C.bf_offset = 0 and
-                 ? <= A.object_id
-          group by A.object_id, B.bfid, B.bfattr_cos_id, B.bfattr_create_time
-          fetch first %d rows only" % limit
     """
     db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+
+    bfid_list = nsobject_lookup(first_nsobj_id, limit, dbh=db)
+    if 0 == len(bfid_list):
+        db.close()
+        raise U.HpssicError(MSG.not_in_nsobject_D % first_nsobj_id)
+
+    n_found = bitfile_lookup(bfid_list, dbh=db)
+    if 0 == n_found:
+        db.close()
+        raise U.HpssicError(MSG.not_in_bitfile_S % bfid_list[0])
+
     rval = db.select(table=['nsobject A',
                             'bitfile B',
                             'bftapeseg C'],
@@ -104,7 +140,42 @@ def get_bitfile_set(first_nsobj_id, limit):
                                         "B.bfattr_create_time"]),
                      data=(first_nsobj_id, first_nsobj_id + limit),
                      limit=limit)
+    db.close()
+
+    if 0 == len(rval):
+        raise U.HpssicError(MSG.not_in_bftapeseg_S % bfid_list[0])
+
     return rval
+
+
+# -----------------------------------------------------------------------------
+def by_bitfile_id(bfid):
+    """
+    Get info about a bitfile from DB2 returning a dict.
+    """
+    bfid_val = CrawlDBI.DBIdb2.hexval(bfid)
+    db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
+    rval = db.select(table=['nsobject A',
+                            'bitfile B',
+                            'bftapeseg C'],
+                     fields=['A.object_id',
+                             'B.bfid',
+                             'B.bfattr_cos_id',
+                             'B.bfattr_create_time',
+                             'count(C.storage_class) as sc_count'],
+                     where="A.bitfile_id = B.bfid and B.bfid = C.bfid and " +
+                           "B.bfattr_data_len > 0 and C.bf_offset = 0 and " +
+                           "A.bitfile_id = ?",
+                     groupby=", ".join(["A.object_id",
+                                        "B.bfid",
+                                        "B.bfattr_cos_id",
+                                        "B.bfattr_create_time"]),
+                     data=(bfid_val, ))
+    if 1 < len(rval):
+        raise U.HpssicError(MSG.multiple_objects_S % bfid)
+    elif len(rval) < 1:
+        raise U.HpssicError(MSG.no_bitfile_found_S % bfid)
+    return rval[0]
 
 
 # -----------------------------------------------------------------------------
@@ -254,23 +325,43 @@ def check_file(filename, verbose, plugin=True):
     *plugin* will be False. Or it may be called by the tcc plugin, in which
     case plugin will be True.
     """
-    for item in [x.strip() for x in U.contents(filename)]:
-        if item[1] == ':' and item[0] in ['o', 'b', 'p']:
-            (which, value) = item.split(':', 1)
-            if which == 'o':
-                check_object(value.strip(), verbose, plugin=plugin)
-            elif which == 'b':
-                check_bitfile(value.strip(), verbose, plugin=plugin)
-            elif which == 'p':
-                check_path(value.strip(), verbose, plugin=plugin)
+    for item in [x.strip() for x in U.contents(filename, string=False)]:
+        try:
+            if 0 == len(item.strip()):
+                continue
+            elif item[1] == ':' and item[0] in ['o', 'b', 'p']:
+                (which, value) = item.split(':', 1)
+                if which == 'o':
+                    check_object(value.strip(),
+                                 verbose,
+                                 plugin=plugin,
+                                 xof=False)
+                elif which == 'b':
+                    check_bitfile(value.strip(),
+                                  verbose,
+                                  plugin=plugin,
+                                  xof=False)
+                elif which == 'p':
+                    check_path(value.strip(),
+                               verbose,
+                               plugin=plugin,
+                               xof=False)
+                else:
+                    check_path(value.strip(),
+                               verbose,
+                               plugin=plugin,
+                               xof=False)
             else:
-                check_path(value.strip(), verbose, plugin=plugin)
-        else:
-            check_path(item.strip(), verbose, plugin=plugin)
+                check_path(item.strip(),
+                           verbose,
+                           plugin=plugin,
+                           xof=False)
+        except U.HpssicError as e:
+            print("%s:\n %s" % (item, e.value), file=sys.stderr)
 
 
 # -----------------------------------------------------------------------------
-def check_object(obj_id, verbose=False, plugin=True):
+def check_object(obj_id, verbose=False, plugin=True, xof=True):
     """
     If plugin is True, we want to log and store, which tcc_report does by
     default so we leave those flags alone.
@@ -280,7 +371,16 @@ def check_object(obj_id, verbose=False, plugin=True):
     counts don't match.
     """
     cosinfo = get_cos_info()
-    bfl = get_bitfile_set(int(obj_id), 1)
+    try:
+        bfl = get_bitfile_set(int(obj_id), 1)
+    except U.HpssicError as e:
+        if plugin:
+            CrawlConfig.log(e.value)
+        elif xof:
+            raise SystemExit(e.value)
+        else:
+            raise U.HpssicError(e.value)
+
     bf = U.pop0(bfl)
     sc_count = int(bf['SC_COUNT'])
     cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
@@ -292,7 +392,7 @@ def check_object(obj_id, verbose=False, plugin=True):
 
 
 # -----------------------------------------------------------------------------
-def check_bitfile(bfid, verbose=False, plugin=True):
+def check_bitfile(bfid, verbose=False, plugin=True, xof=True):
     """
     If plugin is True, we want to log and store, which tcc_report does by
     default so we leave those flags alone.
@@ -302,7 +402,7 @@ def check_bitfile(bfid, verbose=False, plugin=True):
     counts don't match.
     """
     cosinfo = get_cos_info()
-    bf = by_bitfile_id(bfid)   # !@! write
+    bf = by_bitfile_id(bfid)
     sc_count = int(bf['SC_COUNT'])
     cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
 
@@ -313,7 +413,7 @@ def check_bitfile(bfid, verbose=False, plugin=True):
 
 
 # -----------------------------------------------------------------------------
-def check_path(path, verbose=False, plugin=True):
+def check_path(path, verbose=False, plugin=True, xof=True):
     """
     If plugin is True, we want to log and store, which tcc_report does by
     default so we leave those flags alone.
@@ -324,22 +424,25 @@ def check_path(path, verbose=False, plugin=True):
     """
     cosinfo = get_cos_info()
     nsobj = path_nsobject(path)
-    bfl = get_bitfile_set(int(nsobj), 1)
-    bf = U.pop0(bfl)
-    if bf is None:
+    try:
+        bfl = get_bitfile_set(int(nsobj), 1)
+    except U.HpssicError as e:
         if plugin:
-            CrawlConfig.log(MSG.nothing_to_check)
+            CrawlConfig.log(e.value)
+            return
+        elif xof:
+            raise SystemExit(e.value)
         else:
-            print(MSG.nothing_to_check)
-        return
+            raise U.HpssicError(e.value)
 
+    bf = U.pop0(bfl)
     sc_count = int(bf['SC_COUNT'])
     cos_count = int(cosinfo[bf['BFATTR_COS_ID']])
 
     if plugin and sc_count != cos_count:
-        tcc_report(bf)
+        tcc_report(bf, path=path)
     elif not plugin and (verbose or sc_count != cos_count):
-        print(tcc_report(bf, log=False, store=False))
+        print(tcc_report(bf, path=path, log=False, store=False))
 
 
 # -----------------------------------------------------------------------------
@@ -379,8 +482,11 @@ def nsobj_id(name='', parent=None):
     rows = db.select(table='hpss.nsobject',
                      fields=['object_id', 'parent_id'],
                      where=where)
-    rval = (rows[0]['OBJECT_ID'], rows[0]['PARENT_ID'])
     db.close()
+    try:
+        rval = (rows[0]['OBJECT_ID'], rows[0]['PARENT_ID'])
+    except IndexError:
+        raise U.HpssicError(MSG.no_such_path_component_SD % (name, parent))
 
     return rval
 
@@ -405,6 +511,8 @@ def tcc_report(bitfile, cosinfo=None, path=None, log=True, store=True):
     """
     cosinfo = get_cos_info()
     fmt = "%7s %8s %8s %s"
+    hdr = fmt % ("COS", "Ccopies", "Fcopies", "Filepath")
+
     # Compute the bitfile's path
     if path is None:
         bfp = get_bitfile_path(bitfile['BFID'])
@@ -424,8 +532,7 @@ def tcc_report(bitfile, cosinfo=None, path=None, log=True, store=True):
             cfg = CrawlConfig.get_config()
             rptfname = cfg.get(sectname(), 'report_file')
             tcc_report._f = open(rptfname, 'a')
-            tcc_report._f.write(fmt %
-                                ("COS", "Ccopies", "Fcopies", "Filepath"))
+            tcc_report._f.write(hdr)
             tcc_report._f.write(rpt + "\n")
             tcc_report._f.flush()
     return rpt
