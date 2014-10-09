@@ -1,6 +1,8 @@
-<head><title>HPSSIC README</title></head>
+<head>
+<title>HPSSIC README</title>
+</head>
 
-# HPSS Integrity Crawler
+# HPSS Integrity Crawler README
 
 Code for the HPSS Integrity Crawler resides in a git repo on the TechInt github
 organization:
@@ -9,11 +11,11 @@ organization:
 
 ## Goals of the program
 
-A white paper motivating the HIC is available in Google documents here:
+A white paper motivating the HPSSIC is available in Google documents here:
 
 * [HPSS Quality Assurance at ORNL](http://tinyurl.com/n2xlof3)
 
-The high level design for the HIC is documented in a Google document here:
+The high level design for the HPSSIC is documented in a Google document here:
 
 * [HPSS System Integrity Crawler High Level Design](http://tinyurl.com/n5b4cxy)
 
@@ -28,28 +30,28 @@ needed.
 
 ## Running Tests
 
-> $ tests/all
+> $ py.test --all
 
 Test results are written to stdout and also logged in crawl_test.log so a
 history is available.
 
 The tests for a specific component can be run like this:
 
-> $ tests/_component-testfile_.py
+> $ py.test -k test_<component>
+
+To see a list of testable components,
+
+> $ ls -al hpssic/test/test_*.py
 
 ## Git Repo Branches
 
 The git repo has the following branches used for the indicated intentions
 
-        devel
+        <feature>
             Current development
 
         master
             Last stable release
-
-        post
-            This branch is historic and the material from it has been merged to
-            dev. it can be deleted
 
         prehistory
             This branch contains the history of the work from before the
@@ -57,26 +59,59 @@ The git repo has the following branches used for the indicated intentions
             devel, however deleting this branch would lose the steps from
             project inception to when the github repo was set up.
 
+### Obtaining the Git Repository
 
-## Configuration
+     $ git clone https://github.com/ORNL-TechInt/hpss-crawler.git hpssic
+     $ cd hpssic
 
-The configuration file is determined by the -c/--cfg option on the command line,
-the environment variable $CRAWL_CONF, and the default of 'crawl.cfg' in that
-order.
+### Git Hooks
+
+There are two hook scripts provided in directory githooks. If you will
+be pushing to the repository on github or gerrit, please install the
+hook scripts after cloning the repository (see above) as follows:
+
+     $ ln -s `pwd`/githooks/pre-commit .git/hooks/pre-commit
+     $ ln -s `pwd`/githooks/commit-msg .git/hooks/commit-msg
+
+The commit-msg hook adds "Change-ID" values to commit messages as
+required by gerrit.
+
+The pre-commit hook checks the output of 'git describe' against the
+system version in hpssic/version.py to ensure they are aligned before
+allowing the commit to go forward.
 
 
-## Log file
+## Configuration File and Log Path Precedence
 
-The log file is determined by the -l/--logpath command line option, the
-'logpath' setting in the 'crawler' section of the configuration file, the
-environment variable $CRAWL_LOG, or the default of '/var/log/crawl.log', in that
-order.
+The configuration file and log path can each be specified in several
+ways. The following table shows the precedence of the various
+mechanisms. Items higher in the table will supercede those further
+down. So, for example, if $CRAWL_LOG is set and --logpath is specified
+on the command line, log messages will be written to the file
+specified on the command line.
+
+    |                          | Configuration File |      Log Path      |
+    |:------------------------:|:------------------:|:------------------:|
+    |      Command line option |      -c/--cfg      |    -l/--logpath    |
+    | Configuration file entry |                    |   crawler/logpath  |
+    |     Environment variable |     $CRAWL_CONF    |     $CRAWL_LOG     |
+    |            Default value |      crawl.cfg     | /var/log/crawl.log |
+    |                          |                    |  or /tmp/crawl.log |
+
+Note that it makes no sense to specify the location of the
+configuration file in the configuration file itself, so that is not
+supported.
+
+If the crawler is run by the root user, it will be able to write in
+/var/log and will use /var/log/crawl.log as the default log file. If
+/var/log is not write accessible (e.g., if the crawler is run by some
+other user), /tmp/crawl.log will be used as the default log file.
 
 
 ## Environment Variables
 
   * CRAWL - Where the crawler is deployed. In this directory should
-    appear subdirectories hpssic, plugins, bin, githooks, dist, etc.
+    appear subdirectories hpssic, githooks, dist, etc.
 
   * CRAWL_CONF - Full path for the configuration file to use. This
     environment variable overrides the default and is in turn

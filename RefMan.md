@@ -4,44 +4,53 @@
 
 ## Installation
 
-To install the HPSS Integrity Crawler, clone the git repository.
-
-        $ git clone https://github.com/ORNL-TechInt/hpss-crawler.git
-
 ### Prerequisites
 
-* git
+NOTE: Some of these steps may not be necessary if your system already
+has components installed.
+
+* git 1.7.1 or higher
 
         yum install git.x86_64
 
-* Python 2.6 
+* Python 2.6.6 or higher
 
-        http://www.python.org/ftp/python/2.6.9/Python-2.6.9.tgz
+        yum install python
+        yum install python-devel.x86_64
 
-* MySQL database interface
+* Python packaging tools 
+
+   1. If the current host does not have Internet access, you will
+      need to [tell wget to use a proxy server](#wget-config).
+
+   2. `ez_setup.py` and `get-pip.py` use curl under the covers. That's why
+      the `https_proxy` environment variable is needed -- to tell curl
+      to use the proxy. We use wget for fetching `ez_setup.py` and
+      `get-pip.py` because wget has the --no-check-certificate option,
+      which is needed for talking to raw.github.com. I could not get
+      curl's corresponding option to work.
+
+        wget https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py
+        wget --no-check-certificate https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+
+        export https_proxy=https://proxy.ccs.ornl.gov:3128
+        python ez_setup.py
+        python get-pip.py
+
+* MySQL
+
+        yum install mysql
+
+* MySQL/Python database interface 1.2.3
 
         yum install MySQL-python
 
-* ibm-db
-
-        yum install python-devel.x86_64
-        curl https://bitbucket.org/pypa/setuptools/raw/bootstrap/ez_setup.py -O ez_setup.py
-        python ez_setup.py
-
-        curl https://raw.github.com/pypa/pip/master/contrib/get-pip.py -O get-pip.py
-        python get-pip.py
-
-        export IBM_DB_HOME=/opt/ibm/db2/V10.5
-        pip install ibm_db
-
-        echo $IBM_DB_HOME/lib64 > /etc/ld.so.conf.d/db2-x86_64.conf
-        ldconfig
-
 * DB2 client
 
-        Fetch /hpss_prereq/db2_10.5/DB2_Svr_V10.5_Linux_x86-64.tar.gz
+        [Set up whatever tunnels](#tunnel) are required to reach
+        barstow, then fetch the DB2 package
 
-                scp [server]:[path] .
+                scp [-P port] barstow:/hpss_prereq/db2_10.5/DB2_Svr_V10.5_Linux_x86-64.tar.gz . 
         
         Unpack
 
@@ -114,6 +123,22 @@ To install the HPSS Integrity Crawler, clone the git repository.
         root: passwd hpssic
         root: db2icrt -s client hpssic
         hpssc: . /home/hpssic/sqllib/db2profile
+
+* ibm-db
+
+        # install the ibm_db python module
+        export IBM_DB_HOME=/opt/ibm/db2/V10.5
+        pip install ibm_db
+
+        # tell the link loader where to find DB2 libraries
+        echo $IBM_DB_HOME/lib64 > /etc/ld.so.conf.d/db2-x86_64.conf
+        ldconfig
+
+## Install hpssic
+
+        $ git clone ssh://USERNAME@gerrit.ccs.ornl.gov:29418/hpss/hpssic
+        $ cd hpssic
+        $ pip install .
 
 ## The 'crawl' command
 
@@ -439,3 +464,24 @@ Unit tests for specific components can be run with commands like the following:
 
         $ tests/UtilTest.py
         $ tests/CrawlConfigTest.py
+
+<a name="wget-config">
+## How To Tell `wget` to Use a Proxy Server
+
+* Edit `$HOME/.wgetrc` and add the following lines:
+
+        http_proxy = http://proxy.ccs.ornl.gov:3128
+        https_proxy = http://proxy.ccs.ornl.gov:3128
+        use_proxy = on
+
+<a name="tunnel-proxy">
+## Tunneling
+
+Here's an example tunnel set up for reaching barstow from inside a
+firewall:
+
+        Host barstow-tunnel
+            User ...
+            Hostname ...IP address...
+            LocalForward 21717 localhost:22
+            ProxyCommand ssh gateway nc %h 22

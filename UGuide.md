@@ -40,7 +40,7 @@ To check whether the crawler is running or not, do
         crawl status
 
 For other crawl sub-commands, consult the [Reference
-Manual](http://users.nccs.gov/~tpb/hpss/hpssic/ReferenceManual.html).
+Manual](http://users.nccs.gov/~tpb/hpssic/ReferenceManual.html).
 
 ## Plugins
 
