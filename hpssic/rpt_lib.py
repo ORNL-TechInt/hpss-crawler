@@ -11,6 +11,9 @@ import util
 
 # -----------------------------------------------------------------------------
 def get_cv_report(db, last_rpt_time):
+    """
+    Generate the checksum verifier portion of the report
+    """
     # get the body of the report from a Dimension object
     rval = "\n" + ("-" * 79) + "\n"
     rval += "Checksum Verifier Population vs. Sample\n"
@@ -73,6 +76,9 @@ def get_cv_report(db, last_rpt_time):
 
 # -----------------------------------------------------------------------------
 def get_mpra_report(db=None, last_rpt_time=0):
+    """
+    Generate the MPRA portion of the report
+    """
     close = False
     if db is None:
         db = CrawlDBI.DBI(dbtype="crawler")
@@ -140,6 +146,9 @@ def get_mpra_report(db=None, last_rpt_time=0):
 
 # -----------------------------------------------------------------------------
 def get_tcc_report(db, last_rpt_time):
+    """
+    Generate the TCC portion of the report
+    """
     rval = "\n" + ("-" * 79) + "\n"
     rval += "Tape Copy Checker:\n\n"
 
@@ -194,6 +203,9 @@ def get_tcc_report(db, last_rpt_time):
 
 # -----------------------------------------------------------------------------
 def get_report():
+    """
+    Generate and return a text report
+    """
     db = CrawlDBI.DBI(dbtype="crawler")
 
     last_report_time = get_last_rpt_time(db)
@@ -201,11 +213,16 @@ def get_report():
     report += get_mpra_report(db, last_report_time)
     report += get_tcc_report(db, last_report_time)
     set_last_rpt_time(db)
+
+    db.close()
     return report
 
 
 # -----------------------------------------------------------------------------
 def set_last_rpt_time(db):
+    """
+    Record the current time as the time of the last report generated
+    """
     db.insert(table='report',
               fields=['report_time'],
               data=[(int(time.time()),)])
