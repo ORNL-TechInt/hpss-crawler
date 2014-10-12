@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+from hpssic import html
+from hpssic import toolframe
+from hpssic import util
+import pdb
+import sys
+util.dispatch(modname='hpssic.html', prefix='htmp', args=sys.argv)
