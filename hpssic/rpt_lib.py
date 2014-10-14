@@ -4,6 +4,7 @@ import dbschem
 import Dimension
 import email.mime.text
 import pdb
+import rpt_sublib
 import smtplib
 import time
 import util
@@ -208,7 +209,7 @@ def get_report():
     """
     db = CrawlDBI.DBI(dbtype="crawler")
 
-    last_report_time = get_last_rpt_time(db)
+    last_report_time = rpt_sublib.get_last_rpt_time(db)
     report = get_cv_report(db, last_report_time)
     report += get_mpra_report(db, last_report_time)
     report += get_tcc_report(db, last_report_time)
@@ -226,24 +227,3 @@ def set_last_rpt_time(db):
     db.insert(table='report',
               fields=['report_time'],
               data=[(int(time.time()),)])
-
-
-# -----------------------------------------------------------------------------
-def get_last_rpt_time(db):
-    """
-    Retrieve the last report time from the report table. If the table does not
-    exist before make_table ('Created' in result), the table is empty so we
-    just return 0 to indicate no last report time.
-    """
-    result = dbschem.make_table("report")
-    if "Created" in result:
-        rval = 0
-    else:
-        rows = db.select(table='report',
-                         fields=['max(report_time)'])
-        (rval) = rows[0][0]
-        if rval is None:
-            rval = 0
-
-    CrawlConfig.log("time of last report: %d" % rval)
-    return rval
