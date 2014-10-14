@@ -30,8 +30,8 @@ def main(cfg):
     cosinfo = tcc_lib.get_cos_info()
 
     # check for priority file(s)
-    pri_glob = cfg.get_d(tcc_lib.sectname(), 'priority', None)
-    if pri_glob is not None:
+    pri_glob = cfg.get_d(tcc_lib.sectname(), 'priority', '')
+    if pri_glob != '':
         if 0 < tcc_priority(pri_glob, cosinfo):
             return
 
