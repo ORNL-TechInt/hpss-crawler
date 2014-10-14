@@ -5,6 +5,7 @@ from hpssic import cv_sublib
 from hpssic import html
 from hpssic import mpra_sublib
 import pexpect
+import pytest
 from hpssic import tcc_sublib
 from hpssic import testhelp
 from hpssic import util as U
