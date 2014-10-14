@@ -11,6 +11,7 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
+@pytest.mark.skipif('jenkins' in os.getcwd())
 class HtmlTest(testhelp.HelpedTestCase):
     testdir = testhelp.testdata(__name__)
 
