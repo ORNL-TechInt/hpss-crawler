@@ -102,3 +102,51 @@ name like
     my_special_string_dfs
 
 would indicate a string with "%d", "%f", and "%s" embedded.
+
+
+#### 2014.1013
+
+Current software layers:
+
+                                         test/test_*.py
+                                         fakesmtp
+
+   crawl   cv   rpt   tcc     mpra      html
+
+   crawl_lib  cv_lib   rpt_lib  tcc_lib   mpra_lib   html_lib
+
+         Checkable                              toolframe
+
+            Alert     dbschem    Dimension     testhelp(?)
+
+               hpss      CrawlDBI   CrawlMail   CrawlPlugin
+
+       CrawlConfig
+
+   util    version     messages    daemon
+
+Source files may only import files below them in the hierarchy. We
+need to add files to the layer below the _lib files. For example,
+rpt_lib and html_lib should use the same titles for the CV report, the
+TCC report, etc. Those titles should be defined in cv_sublib,
+tcc_sublib, mpra_sublib. Both rpt_lib and html_lib need to retrieve
+the last report time from the database, so we need rpt_sublib that can
+be imported by both rpt_lib and html_lib. Etc.
+
+
+0                                         test/test_*.py
+0.1                                         fakesmtp
+
+1   crawl   cv   rpt   tcc     mpra      html
+
+2   crawl_lib  cv_lib   rpt_lib  tcc_lib   mpra_lib   html_lib
+
+3         Checkable    {cv,tcc,mpra,rpt}_sublib      toolframe
+
+4            Alert     dbschem    Dimension     testhelp(?)
+
+5               hpss      CrawlDBI   CrawlMail   CrawlPlugin
+
+6       CrawlConfig
+
+7   util    version     messages    daemon

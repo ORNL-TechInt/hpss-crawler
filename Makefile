@@ -17,7 +17,7 @@ help:
 	@echo "    alltests     Run and log all the tests"
 	@echo "    uguide       Generate the User Guide in HTML"
 	@echo "    uninstall    Remove hpssic from the current environment"
-	@echo "    upgrade      Re-install hpssic with the --upgrade flag"
+	@echo "    up           Re-install hpssic with the --upgrade flag"
 	@echo ""
 
 doc: readme refman uguide
@@ -89,7 +89,7 @@ install:
 		pip install .; \
 	fi
 
-upgrade:
+up:
 	@if [[ `whoami` == "root" ]]; then \
         pip install --upgrade .; \
     elif [[ `which python` == "/usr/bin/python" ]]; then \
