@@ -67,6 +67,7 @@ add_ChangeId() {
 	# - once the next textLine appears, print textLine+ blankLine* as these
 	#   aren't footer
 	# - in END, the last textLine+ block is available for footer parsing
+    hpssic_version=`_hpssic_version`
 	$AWK '
 	BEGIN {
 		# while we start with the assumption that textLine+
@@ -152,11 +153,13 @@ add_ChangeId() {
 		for (line = 1; line <= numlines; line++) {
 			if (unprinted && match(tolower(footer[line]), changeIdAfter) != 1) {
 				unprinted = 0
+                print "Version:   '"$hpssic_version"'"
 				print "Change-Id: I'"$id"'"
 			}
 			print footer[line]
 		}
 		if (unprinted) {
+            print "Version:   '"$hpssic_version"'"
 			print "Change-Id: I'"$id"'"
 		}
 	}' "$MSG" > "$T" && mv "$T" "$MSG" || rm -f "$T"
@@ -176,6 +179,9 @@ _gen_ChangeId() {
 	_gen_ChangeIdInput |
 	git hash-object -t commit --stdin
 }
-
+_hpssic_version() {
+    verval=`cat hpssic/version.py | sed -e 's%\(__version__ = "\|"$\)%%g'`
+    echo $verval
+}
 
 add_ChangeId
