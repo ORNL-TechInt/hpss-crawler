@@ -4,6 +4,7 @@ import crawl_lib
 import CrawlConfig
 import CrawlDBI
 import base64
+import html_lib
 import optparse
 import pdb
 import rpt_lib
@@ -20,12 +21,15 @@ def htmp_report(args):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-C', '--context',
+                 action='store', default='', dest='context',
+                 help='which tables to use')
     (o, a) = p.parse_args(args)
 
     if o.debug:
         pdb.set_trace()
 
-    print html_lib.get_report()
+    print html_lib.get_html_report(o.context)
 
 
 # -----------------------------------------------------------------------------
