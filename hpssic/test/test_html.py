@@ -4,6 +4,7 @@ Tests for html.py
 from hpssic import cv_sublib
 from hpssic import html
 from hpssic import mpra_sublib
+import os
 import pexpect
 import pytest
 from hpssic import tcc_sublib
