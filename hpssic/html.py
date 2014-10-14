@@ -16,27 +16,29 @@ import util
 # -----------------------------------------------------------------------------
 def htmp_report(args):
     """report - write a sample report to stdout
+
+    usage: html report [-c config]
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
-    p.add_option('-C', '--context',
-                 action='store', default='', dest='context',
-                 help='which tables to use')
+    p.add_option('-c', '--config',
+                 action='store', default='', dest='config',
+                 help='which config file to use')
     (o, a) = p.parse_args(args)
 
     if o.debug:
         pdb.set_trace()
 
-    print html_lib.get_html_report(o.context)
+    print html_lib.get_html_report(o.config)
 
 
 # -----------------------------------------------------------------------------
 def htmp_simplug(args):
     """simplug - simulate the plugin
 
-    usage: rpt simplug
+    usage: html simplug
 
     """
-    crawl_lib.simplug('rpt', args)
+    crawl_lib.simplug('html', args)

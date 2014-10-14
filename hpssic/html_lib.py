@@ -1,3 +1,4 @@
+import CrawlConfig
 import CrawlDBI
 import cv_sublib
 import Dimension
@@ -10,11 +11,12 @@ import util
 
 
 # -----------------------------------------------------------------------------
-def get_html_report(context):
+def get_html_report(cfg_file):
     """
     Format a report in HTML
     """
     rval = ""
+    cfg = CrawlConfig.get_config(cfg_file)
     db = CrawlDBI.DBI(dbtype="crawler")
 
     last_rpt_time = rpt_sublib.get_last_rpt_time(db)
