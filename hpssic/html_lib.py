@@ -138,6 +138,7 @@ def get_html_tcc_report(db, last_rpt_time):
     """
     Format the TCC report in HTML
     """
+    rval = ""
     if not db.table_exists(table='tcc_data'):
         return rval
 
