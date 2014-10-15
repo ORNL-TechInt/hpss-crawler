@@ -8,6 +8,7 @@ import rpt_sublib
 import tcc_sublib
 import time
 import util
+import version
 
 
 # -----------------------------------------------------------------------------
@@ -20,13 +21,18 @@ def get_html_report(cfg_file):
     db = CrawlDBI.DBI(dbtype="crawler")
 
     last_rpt_time = rpt_sublib.get_last_rpt_time(db)
-    rval += "Report generated at %s" % time.strftime("%Y.%m%d %H:%M:%S")
-    rval += ("<br>Based on data from %s" %
+    rval += ('<head><meta http-equiv="refresh" content="60">\n')
+    rval += ("<title>HPSSIC Dashboard</title></head>")
+    rval += ("<body><center><h1>HPSS Integrity Crawler Dashboard</h1>" +
+             "<br><h4>Version %s</h4>" % version.__version__ +
+             "</center>\n")
+    rval += ("Report generated at %s\n" % time.strftime("%Y.%m%d %H:%M:%S"))
+    rval += ("<br>Based on data from %s\n" %
              time.strftime("%Y.%m%d %H:%M:%S", time.localtime(last_rpt_time)))
     rval += get_html_cv_report(db, last_rpt_time)
     rval += get_html_mpra_report(db, last_rpt_time)
     rval += get_html_tcc_report(db, last_rpt_time)
-
+    rval += "</body>"
     db.close()
 
     return rval
@@ -41,7 +47,7 @@ def get_html_cv_report(db, last_rpt_time):
     if not db.table_exists(table="checkables"):
         return rval
 
-    rval += ("<h2>%s</h2>" % cv_sublib.report_title())
+    rval += ("<h2>%s</h2>\n" % cv_sublib.report_title())
     diml = [{'name': 'cos',
              'pop': "type = 'f' and ? < last_check",
              'samp': "type = 'f' and checksum = 1 and ? < last_check"},
@@ -52,9 +58,9 @@ def get_html_cv_report(db, last_rpt_time):
 
     for dim in diml:
         d = Dimension.Dimension(name=dim['name'])
-        rval += "<pre>"
+        rval += "<pre>\n"
         rval += d.report()
-        rval += "</pre><br>"
+        rval += "</pre>\n<br>"
 
         # get the population and sample entries added since the last report
         rows = db.select(table="checkables",
@@ -86,7 +92,7 @@ def get_html_mpra_report(db, last_rpt_time):
     if not db.table_exists(table="mpra"):
         return ""
 
-    rval = ("<h2>%s</h2>" % mpra_sublib.report_title())
+    rval = ("<h2>%s</h2>\n" % mpra_sublib.report_title())
     body = ''
     hfmt = "   %-5s  %-20s  %-20s  %-20s  %8s\n"
     bfmt = "   %-5s  %-20s  %-20s  %-20s  %8d\n"
@@ -128,7 +134,7 @@ def get_html_mpra_report(db, last_rpt_time):
     body += ("    Total                    %10d       %10d\n" %
              (total['migr'], total['purge']))
 
-    rval += "<pre>" + body + "</pre><br>"
+    rval += "<pre>\n" + body + "\n</pre>\n<br>\n"
 
     return rval
 
@@ -142,7 +148,7 @@ def get_html_tcc_report(db, last_rpt_time):
     if not db.table_exists(table='tcc_data'):
         return rval
 
-    rval = ("<h2>%s</h2>" % tcc_sublib.report_title())
+    rval = ("<h2>%s</h2>\n" % tcc_sublib.report_title())
 
     checks = correct = error = 0
 
