@@ -55,6 +55,13 @@ class UtilTest(testhelp.HelpedTestCase):
     testdir = testhelp.testdata(__name__)
 
     # -------------------------------------------------------------------------
+    def test_Chdir(self):
+        start = os.getcwd()
+        with util.Chdir("/tmp"):
+            self.assertEqual("/tmp", os.getcwd())
+        self.assertEqual(start, os.getcwd())
+
+    # -------------------------------------------------------------------------
     def test_csv_list(self):
         """
         csv_list() called with whitespace should return an empty list
@@ -569,6 +576,29 @@ class UtilTest(testhelp.HelpedTestCase):
                         "'%s' should match '%s'" % (rgx, tstring2))
         self.assertFalse(util.rgxin(rgx, fstring),
                          "'%s' should NOT match '%s'" % (rgx, fstring))
+
+    # -------------------------------------------------------------------------
+    def test_rrfile(self):
+        """
+        Test the reverse read file class
+        """
+        tdfile = os.path.join(self.testdir, util.my_name())
+        clist = [chr(ord('a') + x) for x in range(0, 16)]
+        with open(tdfile, 'w') as f:
+            for c in clist:
+                f.write(c * 64)
+
+        rf = util.RRfile.open(tdfile, 'r')
+        zlist = clist
+        buf = rf.revread()
+        while buf != '':
+            ref = zlist[-2:]
+            del zlist[-1]
+            self.expected(ref[0], buf[0])
+            self.expected(ref[-1], buf[-1])
+            buf = rf.revread()
+
+        rf.close()
 
     # -------------------------------------------------------------------------
     def test_touch_newpath_default(self):
