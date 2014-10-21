@@ -7,20 +7,13 @@ import copy
 import logging
 import os
 import pdb
+import pytest
 import sys
 from hpssic import testhelp
 import time
 from hpssic import toolframe
 from hpssic import util
 import warnings
-
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
@@ -690,8 +683,22 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj.add_section(section)
         obj.set(section, 'tenmb', '10mb')
         obj.set(section, 'thirtymib', '30mib')
+        obj.set(section, 'bogusunit', '92thousand')
         self.expected(10*1000*1000, obj.get_size(section, 'tenmb'))
         self.expected(30*1024*1024, obj.get_size(section, 'thirtymib'))
+        self.expected(92, obj.get_size(section, 'bogusunit'))
+
+    # -------------------------------------------------------------------------
+    def test_get_size_opt_def(self):
+        """
+        Call get_size() so it throws NoOptionError but provides a default value
+        """
+        section = util.my_name()
+        obj = CrawlConfig.CrawlConfig()
+        obj.add_section(section)
+        obj.set(section, 'tenmb', '10mb')
+        obj.set(section, 'thirtymib', '30mib')
+        self.expected(17, obj.get_size(section, 'foobar', 17))
 
     # -------------------------------------------------------------------------
     def test_get_size_opt(self):
@@ -727,6 +734,19 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                              "foobar")
 
     # -------------------------------------------------------------------------
+    def test_get_size_sect_def(self):
+        """
+        Call get_size() so it throws NoSectionError but provides a default
+        value
+        """
+        section = util.my_name()
+        obj = CrawlConfig.CrawlConfig()
+        obj.add_section(section)
+        obj.set(section, 'tenmb', '10mb')
+        obj.set(section, 'thirtymib', '30mib')
+        self.expected(17, obj.get_size(section + "nosuch", 'foobar', 17))
+
+    # -------------------------------------------------------------------------
     def test_get_time(self):
         """
         Routines exercised: __init__(), load_dict(), get_time().
@@ -735,6 +755,26 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj.load_dict(self.sample)
         self.assertEqual(obj.get_time('crawler', 'heartbeat'), 3600)
         self.assertEqual(obj.get_time('crawler', 'frequency'), 300)
+
+    # -------------------------------------------------------------------------
+    def test_get_time_opt_def(self):
+        """
+        Call get_time so it throws NoOptionError but provide a default
+        """
+        obj = CrawlConfig.CrawlConfig()
+        obj.load_dict(self.sample)
+        self.assertEqual(388, obj.get_time('crawler', 'dumpling', 388))
+        self.assertEqual(47, obj.get_time('crawler', 'strawberry', 47))
+
+    # -------------------------------------------------------------------------
+    def test_get_time_sect_def(self):
+        """
+        Call get_time so it throws NoSectionError but provide a default
+        """
+        obj = CrawlConfig.CrawlConfig()
+        obj.load_dict(self.sample)
+        self.assertEqual(82, obj.get_time('crawlerfoo', 'heartbeat', 82))
+        self.assertEqual(19, obj.get_time('crawlerfoo', 'frequency', 19))
 
     # -------------------------------------------------------------------------
     def test_get_time_opt(self):
@@ -776,9 +816,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj.add_section('abc')
         obj.set('abc', 'fire', 'True')
         obj.set('abc', 'other', 'False')
-        self.assertEqual(obj.getboolean('abc', 'flip'), False)
-        self.assertEqual(obj.getboolean('abc', 'other'), False)
-        self.assertEqual(obj.getboolean('abc', 'fire'), True)
+        obj.set('abc', 'bogus', "Santa Claus")
+        self.expected(False, obj.getboolean('abc', 'flip'))
+        self.expected(False, obj.getboolean('abc', 'other'))
+        self.expected(True, obj.getboolean('abc', 'fire'))
+        self.expected(False, obj.getboolean('abc', 'bogus'))
+        self.expected(False, obj.getboolean('nosuch', 'fribble'))
 
     # -------------------------------------------------------------------------
     def test_interpolation_ok(self):
@@ -807,6 +850,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Routines exercised: __init__(), load_dict().
         """
         obj = CrawlConfig.CrawlConfig()
+        obj.add_section("remove_me")
 
         self.assertEqual(obj.filename, '<???>')
         self.assertEqual(obj.loadtime, 0.0)
