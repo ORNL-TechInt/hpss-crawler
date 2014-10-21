@@ -28,6 +28,8 @@ def pytest_addoption(parser):
                      help="run all tests")
     parser.addoption("--nolog", action="store_true", default=False,
                      help="suppress test logging")
+    parser.addoption("--dbg", action="append", default=[],
+                     help="start debugger on named test or all")
     attr = pytest.mark.attr
 
 

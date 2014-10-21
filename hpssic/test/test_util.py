@@ -42,10 +42,6 @@ def tearDownModule():
         util.conditional_rm("/tmp/crawl.log")
     testhelp.module_test_teardown(UtilTest.testdir)
 
-# -----------------------------------------------------------------------------
-# def logErr(record):
-#     raise
-
 
 # -----------------------------------------------------------------------------
 class UtilTest(testhelp.HelpedTestCase):
@@ -55,7 +51,16 @@ class UtilTest(testhelp.HelpedTestCase):
     testdir = testhelp.testdata(__name__)
 
     # -------------------------------------------------------------------------
+    def setUp(self):
+        dbgopt = pytest.config.getoption("dbg")
+        if self._testMethodName in dbgopt or "all" in dbgopt:
+            self.dbgfunc = pdb.set_trace
+        else:
+            self.dbgfunc = lambda: None
+
+    # -------------------------------------------------------------------------
     def test_Chdir(self):
+        self.dbgfunc()
         start = os.getcwd()
         with util.Chdir("/tmp"):
             self.assertEqual("/tmp", os.getcwd())
@@ -68,6 +73,7 @@ class UtilTest(testhelp.HelpedTestCase):
         csv_list() on whitespace with a comma in it => ['', '']
         csv_list() on 'a, b   , c' => ['a', 'b', 'c']
         """
+        self.dbgfunc()
         self.expected([''], util.csv_list(""))
         self.expected([''], util.csv_list("     "))
         self.expected(['', ''], util.csv_list("  , "))
@@ -76,11 +82,28 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected(['a', 'b', 'c'], util.csv_list(" a,b ,  c  "))
 
     # -------------------------------------------------------------------------
-    def test_content(self):
+    def test_content_list(self):
+        """
+        contents() reads and returns the contents of a file as a list
+        """
+        self.dbgfunc()
+        # x = util.contents('hpssic/util.py')
+        filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
+        x = util.contents(filename, string=False)
+        self.assertEqual(type(x), list,
+                         "Expected a string but got a %s" % type(x))
+        expected = 'def contents('
+        self.assertTrue(any([expected in ln for ln in x]),
+                        "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
+                        (expected, x))
+
+    # -------------------------------------------------------------------------
+    def test_content_str(self):
         """
         contents() is supposed to read and return the contents of a file as a
         string.
         """
+        self.dbgfunc()
         # x = util.contents('hpssic/util.py')
         filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
         x = util.contents(filename)
@@ -97,6 +120,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Given a file containing several log records, return the timestamp on
         the last one.
         """
+        self.dbgfunc()
         tdata = ["This line should be ignored\n",
                  "2014.0412 12:25:50 This is not the timestamp to return\n",
                  "2014.0430 19:30:00 This should not be returned\n",
@@ -118,6 +142,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Given a file containing several log records (with some irrelevant
         introductory material), return the timestamp on the first one.
         """
+        self.dbgfunc()
         tdata = ["This line should be ignored\n",
                  "2014.0412 12:25:50 This is the timestamp to return\n",
                  "2014.0430 19:30:00 This should not be returned\n"]
@@ -136,6 +161,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the value gets set to the payload with the whitespace squeezed out
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         add = "four:\n   five:\n   six"
@@ -166,6 +192,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the value gets set to the payload with the whitespace squeezed out
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         pre_val = "one:two:three"
@@ -195,6 +222,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the value gets set to the payload
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         add = "four:five:six"
@@ -224,6 +252,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: payload is appended to the old value
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         pre_val = "one:two:three"
@@ -255,6 +284,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the value gets set
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         newval = "one:\n   two:\n   three"
@@ -283,6 +313,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the old value gets overwritten
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         pre_val = "one:two:three"
@@ -315,6 +346,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the value gets set
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         exp = "newval"
@@ -342,6 +374,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
         EXP: the old value gets overwritten
         """
+        self.dbgfunc()
         sname = 'env'
         evname = 'UTIL_TEST'
         pre_val = "one:two:three"
@@ -368,6 +401,7 @@ class UtilTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_epoch(self):
+        self.dbgfunc()
         self.expected(1388638799, util.epoch("2014.0101 23:59:59"))
         self.expected(1388638799, util.epoch("2014.0101.23.59.59"))
         self.expected(1388638740, util.epoch("2014.0101 23:59"))
@@ -376,10 +410,18 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected(1388635200, util.epoch("2014.0101.23"))
         self.expected(1388552400, util.epoch("2014.0101"))
         self.expected(1388552399, util.epoch("1388552399"))
+        self.assertRaisesMsg(util.HpssicError,
+                             "The date '' does not match any of the formats:",
+                             util.epoch,
+                             "")
 
     # -------------------------------------------------------------------------
     def test_expand_unset(self):
-        # make sure our variable is not set
+        """
+        Test expanding an unset variable with simple, braced, and default
+        syntaxes
+        """
+        self.dbgfunc()
         vname = "EXPAND_UNSET"
         if vname in os.environ:
             del os.environ[vname]
@@ -404,7 +446,11 @@ class UtilTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_expand_empty(self):
-        # make sure our variable is not set
+        """
+        Test expanding an empty variable with simple, braced, and default
+        syntaxes
+        """
+        self.dbgfunc()
         vname = "EXPAND_EMPTY"
         if vname not in os.environ:
             os.environ[vname] = ""
@@ -431,6 +477,18 @@ class UtilTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_expand_filled(self):
+        """
+        Test expand on
+
+            'before $VAR after',
+            'before/${VAR}/after',
+            'before.${VAR:-default-value}.after'
+
+        Note that the default value is allowed but not used in the expansion.
+        Python does not natively support that aspect of shell variable
+        expansion.
+        """
+        self.dbgfunc()
         vname = "EXPAND_FILLED"
         if vname not in os.environ:
             os.environ[vname] = "SOMETHING"
@@ -460,6 +518,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Make sure git_repo() works on relative paths
         """
+        self.dbgfunc()
         tdir = U.dirname(__file__)
         hdir = U.dirname(tdir)
         gdir = U.dirname(hdir)
@@ -478,6 +537,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Calling util.hostname() with no argument should get the short hostname
         """
+        self.dbgfunc()
         hn = util.hostname()
         self.assertFalse('.' in hn,
                          "Short hostname expected but got '%s'" % hn)
@@ -488,6 +548,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Calling util.hostname(long=True) or util.hostname(True) should get the
         long hostanme
         """
+        self.dbgfunc()
         hn = util.hostname(long=True)
         self.assertTrue('.' in hn,
                         "Expected long hostname but got '%s'" % hn)
@@ -501,6 +562,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Calling util.hostname(long=False) or util.hostname(False) should get
         the short hostname
         """
+        self.dbgfunc()
         hn = util.hostname(long=False)
         self.assertFalse('.' in hn,
                          "Expected short hostname but got '%s'" % hn)
@@ -515,6 +577,7 @@ class UtilTest(testhelp.HelpedTestCase):
         (three double quotes in a row) on separate lines. Any single or double
         quotes wrapping the incoming string are stripped off in the output.
         """
+        self.dbgfunc()
         exp = '\n"""\nabc\n"""'
         act = util.line_quote('abc')
         self.assertEqual(exp, act,
@@ -535,6 +598,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Return the name of the calling function.
         """
+        self.dbgfunc()
         actual = util.my_name()
         expected = 'test_my_name'
         self.assertEqual(expected, actual,
@@ -548,6 +612,7 @@ class UtilTest(testhelp.HelpedTestCase):
         the list is empty, it should return None. After pop0() returns, the
         list should be one element shorter.
         """
+        self.dbgfunc()
         tl = [1, 2, 3, 4, 5]
         x = copy.copy(tl)
         e = util.pop0(x)
@@ -566,6 +631,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Routine rgxin(needle, haystack) is analogous to the Python expression
         "needle in haystack" with needle being a regexp.
         """
+        self.dbgfunc()
         rgx = "a\(?b\)?c"
         fstring = "The quick brown fox jumps over the lazy dog"
         tstring1 = "Now we know our abc's"
@@ -578,10 +644,11 @@ class UtilTest(testhelp.HelpedTestCase):
                          "'%s' should NOT match '%s'" % (rgx, fstring))
 
     # -------------------------------------------------------------------------
-    def test_rrfile(self):
+    def test_rrfile_long(self):
         """
         Test the reverse read file class
         """
+        self.dbgfunc()
         tdfile = os.path.join(self.testdir, util.my_name())
         clist = [chr(ord('a') + x) for x in range(0, 16)]
         with open(tdfile, 'w') as f:
@@ -601,6 +668,29 @@ class UtilTest(testhelp.HelpedTestCase):
         rf.close()
 
     # -------------------------------------------------------------------------
+    def test_rrfile_short(self):
+        """
+        Test the reverse read file class
+        """
+        self.dbgfunc()
+        tdfile = os.path.join(self.testdir, util.my_name())
+        clist = [chr(ord('a') + x) for x in range(0, 4)]
+        with open(tdfile, 'w') as f:
+            for c in clist:
+                f.write(c * 16)
+
+        rf = util.RRfile.open(tdfile, 'r')
+        zlist = clist
+        buf = rf.revread()
+        self.assertEqual(64, len(buf),
+                         "Expected 64 bytes in the file, got %d" % len(buf))
+        for exp in ["aaa", "bbb", "ccc", "ddd"]:
+            self.assertTrue(exp in buf,
+                            "Expected exp in '%s'" % buf)
+
+        rf.close()
+
+    # -------------------------------------------------------------------------
     def test_touch_newpath_default(self):
         """
         Call touch on a path that does not exist with no amtime tuple
@@ -608,6 +698,7 @@ class UtilTest(testhelp.HelpedTestCase):
         This test code assumes that file system operations truncate atime and
         mtime rather than rounding them.
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(), new=True)
 
@@ -616,6 +707,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does not exist with atime, no mtime
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(-75, None), new=True)
 
@@ -624,6 +716,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does not exist with mtime, no atime
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(None, -32), new=True)
 
@@ -632,6 +725,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does not exist with both atime and mtime
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(-175, -3423), new=True)
 
@@ -640,6 +734,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does exist with no amtime tuple
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=())
 
@@ -648,6 +743,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does exist with atime, no mtime
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(-75, None))
 
@@ -656,6 +752,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does exist with mtime, no atime
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(None, -32))
 
@@ -664,6 +761,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Call touch on a path that does exist with both atime and mtime
         """
+        self.dbgfunc()
         testpath = util.pathjoin(self.testdir, util.my_name())
         self.touch_payload(testpath, offs=(-175, -3423))
 
