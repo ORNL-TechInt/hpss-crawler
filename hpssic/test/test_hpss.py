@@ -5,6 +5,7 @@ Tests for hpss.py
 import copy
 from hpssic import CrawlConfig
 from hpssic import hpss
+from hpssic import messages as MSG
 import os
 import pdb
 import pytest
@@ -206,7 +207,7 @@ class hpssTest(hpssBaseTest):
                                  "chdir() takes exactly 2 arguments",
                                  h.chdir)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -224,7 +225,7 @@ class hpssTest(hpssBaseTest):
                             "Expected '%s' in %s" %
                             (exp, util.line_quote(result)))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -240,7 +241,7 @@ class hpssTest(hpssBaseTest):
             exp = "/home/tpb/hic_test"
             self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -258,7 +259,7 @@ class hpssTest(hpssBaseTest):
                             "Expected '%s' in %s" %
                             (exp, util.line_quote(result)))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -273,7 +274,7 @@ class hpssTest(hpssBaseTest):
             exp = "/home/tpb/hic_test"
             self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -290,7 +291,7 @@ class hpssTest(hpssBaseTest):
                                  32)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -323,7 +324,7 @@ class hpssTest(hpssBaseTest):
             self.expected(util.ymdhms(past), util.ymdhms(atime))
 
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -358,7 +359,7 @@ class hpssTest(hpssBaseTest):
                             "Expected a recent time, got '%s'" %
                             util.ymdhms(atime))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -388,7 +389,7 @@ class hpssTest(hpssBaseTest):
             atime = h.access_time(filename)
             self.expected(util.ymdhms(past), util.ymdhms(atime))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -420,7 +421,7 @@ class hpssTest(hpssBaseTest):
                             "Expected a recent time, got '%s'" %
                             util.ymdhms(atime))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -435,7 +436,7 @@ class hpssTest(hpssBaseTest):
                                  h.hashcreate)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -454,7 +455,7 @@ class hpssTest(hpssBaseTest):
                 exp = "\(?md5\)? %s" % path
                 self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -471,7 +472,7 @@ class hpssTest(hpssBaseTest):
                 exp = "\(?md5\)? %s" % path
                 self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -488,7 +489,7 @@ class hpssTest(hpssBaseTest):
                 exp = "\(?md5\)? %s" % path
                 self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -505,7 +506,7 @@ class hpssTest(hpssBaseTest):
                                  32)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -521,7 +522,7 @@ class hpssTest(hpssBaseTest):
                                  h.hashdelete)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -552,7 +553,7 @@ class hpssTest(hpssBaseTest):
                             (exp,
                              util.line_quote(result)))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -583,7 +584,7 @@ class hpssTest(hpssBaseTest):
                             (exp,
                              util.line_quote(result)))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -614,7 +615,7 @@ class hpssTest(hpssBaseTest):
                              "'%s' not expected in %s" %
                              (exp, util.line_quote(result)))
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -631,7 +632,7 @@ class hpssTest(hpssBaseTest):
                                  32)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -646,7 +647,7 @@ class hpssTest(hpssBaseTest):
                                  h.hashlist)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -673,7 +674,7 @@ class hpssTest(hpssBaseTest):
             exp = "\(?none\)?  %s/hashnot" % self.hdir
             self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -700,7 +701,7 @@ class hpssTest(hpssBaseTest):
             exp = "\(?none\)?  %s/hashnot" % self.hdir
             self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -727,7 +728,7 @@ class hpssTest(hpssBaseTest):
             exp = "\(?none\)?  %s/hashnot" % self.hdir
             self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -744,7 +745,7 @@ class hpssTest(hpssBaseTest):
                                  32)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -759,7 +760,7 @@ class hpssTest(hpssBaseTest):
                                  h.hashverify)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -790,7 +791,7 @@ class hpssTest(hpssBaseTest):
             exp = "hashnot failed: no valid checksum found"
             self.expected_in(exp, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -821,7 +822,7 @@ class hpssTest(hpssBaseTest):
             self.expected_in("hashnot failed: no valid checksum found",
                              result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -840,7 +841,7 @@ class hpssTest(hpssBaseTest):
             self.expected_in("hashnot failed: no valid checksum found",
                              result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -859,7 +860,7 @@ class hpssTest(hpssBaseTest):
             self.expected_in("hashnot failed: no valid checksum found",
                              result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -877,7 +878,7 @@ class hpssTest(hpssBaseTest):
             self.expected_in("6054 Disk Large_T", result)
             self.expected_in("6057 Disk X-Large_T 2-Copy", result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -893,7 +894,7 @@ class hpssTest(hpssBaseTest):
                                  19)
             h.quit()
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -908,7 +909,7 @@ class hpssTest(hpssBaseTest):
             for path in self.plist:
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -923,7 +924,7 @@ class hpssTest(hpssBaseTest):
             for path in self.plist:
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -937,7 +938,7 @@ class hpssTest(hpssBaseTest):
             for path in self.plist:
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -951,7 +952,7 @@ class hpssTest(hpssBaseTest):
             for path in self.plist:
                 self.expected_in("FILE\s+%s" % path, result)
         except hpss.HSIerror as e:
-            if "HPSS Unavailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
@@ -966,15 +967,19 @@ class hpssTest(hpssBaseTest):
             atime = h.access_time(filename)
             self.expected(when, atime)
 
-        filename = self.plist[0]
-        h = hpss.HSI(reset_atime=True)
-        now = int(time.time())
+        try:
+            filename = self.plist[0]
+            h = hpss.HSI(reset_atime=True)
+            now = int(time.time())
 
-        one_round(h, filename, now + (120*24*3600))
-        one_round(h, filename, now + (2*24*3600))
-        one_round(h, filename, now - (120*24*3600))
+            one_round(h, filename, now + (120*24*3600))
+            one_round(h, filename, now + (2*24*3600))
+            one_round(h, filename, now - (120*24*3600))
 
-        h.quit()
+            h.quit()
+        except hpss.HSIerror as e:
+            if MSG.hpss_unavailable in str(e):
+                pytest.skip(str(e))
 
     # -------------------------------------------------------------------------
     def test_unavailable(self):
@@ -985,7 +990,7 @@ class hpssTest(hpssBaseTest):
         """
         h = hpss.HSI(connect=False, unavailable=True)
         self.assertRaisesMsg(hpss.HSIerror,
-                             "HPSS Unavailable",
+                             MSG.hpss_unavailable,
                              h.connect)
 
 
@@ -1083,7 +1088,7 @@ class hpssHashAlgTest(hpssBaseTest):
         try:
             h = hpss.HSI()
         except hpss.HSIerror as e:
-            if "HPSS Unvailable" in str(e):
+            if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
 
         # if necessary, delete any hash on the test file

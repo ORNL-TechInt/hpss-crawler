@@ -14,6 +14,8 @@ default_mail_subject = ("HPSS Integrity Crawler ALERT")
 
 empty_message = ("Empty message")
 
+hpss_unavailable = ("HPSS Unavailable")
+
 invalid_msg_body = ("The message body must be a string")
 
 invalid_recip_list = ("The To: list should be a comma-separated list of " +
