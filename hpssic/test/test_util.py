@@ -52,6 +52,10 @@ class UtilTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def setUp(self):
+        """
+        Set self.dbgfunc to either pdb.set_trace or a no-op, depending on the
+        value of the --dbg option from the command line
+        """
         dbgopt = pytest.config.getoption("dbg")
         if self._testMethodName in dbgopt or "all" in dbgopt:
             self.dbgfunc = pdb.set_trace
@@ -60,6 +64,11 @@ class UtilTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_Chdir(self):
+        """
+        util.Chdir() is a context manager. Upon entry to the 'with' clause, the
+        CM sets the current directory to the argument passed to Chdir(). Upon
+        exit from the 'with' clause, the CM returns to the original directory.
+        """
         self.dbgfunc()
         start = os.getcwd()
         with util.Chdir("/tmp"):
@@ -401,6 +410,10 @@ class UtilTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_epoch(self):
+        """
+        util.epoch() converts a date string matching one of a list of formats
+        to an epoch time.
+        """
         self.dbgfunc()
         self.expected(1388638799, util.epoch("2014.0101 23:59:59"))
         self.expected(1388638799, util.epoch("2014.0101.23.59.59"))
@@ -592,6 +605,55 @@ class UtilTest(testhelp.HelpedTestCase):
         act = util.line_quote('"abc"')
         self.assertEqual(exp, act,
                          "Expected %s, got %s" % (exp, act))
+
+    # -------------------------------------------------------------------------
+    def test_lsp_parse_dir(self):
+        """
+        Test lsp_parse on a directory
+        """
+        td_l = ["DIRECTORY", "/home/tpb/corefiles"]
+        td_s = "\t".join(td_l)
+        rv = util.lsp_parse(td_s)
+        self.expected(td_l[0][0].lower(), rv[0])
+        self.expected(td_l[1], rv[1])
+        self.expected(None, rv[2])
+        self.expected('', rv[3])
+
+    # -------------------------------------------------------------------------
+    def test_lsp_parse_file_mt(self):
+        """
+        Test lsp_parse on an empty file
+        """
+        td_l = ["FILE",          "/home/tpb/201410021303.35",
+                "0",             "0",                "0",
+                " ",             "6056",
+                "0",             "1",
+                "09/25/2014",    "13:03:35",
+                "09/25/2014",    "13:03:35"]
+        td_s = "\t".join(td_l)
+        rv = util.lsp_parse(td_s)
+        self.expected(td_l[0][0].lower(), rv[0])
+        self.expected(td_l[1], rv[1])
+        self.expected(td_l[5].strip(), rv[2])
+        self.expected(td_l[6], rv[3])
+
+    # -------------------------------------------------------------------------
+    def test_lsp_parse_file_cart(self):
+        """
+        Test lsp_parse on a file with cart info
+        """
+        td_l = ["FILE",          "/home/tpb/ancient",
+                "2369",          "2369",        "19625+0",
+                "X1605700",      "5081",
+                "0",             "1",
+                "09/16/2014",    "16:50:45",
+                "09/16/2014",    "16:50:57"]
+        td_s = "\t".join(td_l)
+        rv = util.lsp_parse(td_s)
+        self.expected(td_l[0][0].lower(), rv[0])
+        self.expected(td_l[1], rv[1])
+        self.expected(td_l[5], rv[2])
+        self.expected(td_l[6], rv[3])
 
     # -------------------------------------------------------------------------
     def test_my_name(self):
