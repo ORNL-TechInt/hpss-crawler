@@ -371,7 +371,7 @@ def epoch(ymdhms):
             else:
                 err = ("The date '%s' does not match any of the formats: %s" %
                        (ymdhms, fmts))
-                raise StandardError(err)
+                raise HpssicError(err)
 
     return rval
 
