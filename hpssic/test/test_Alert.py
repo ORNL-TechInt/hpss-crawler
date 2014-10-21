@@ -184,6 +184,44 @@ class AlertTest(testhelp.HelpedTestCase):
                         (payload, m.fullmessage))
 
     # -------------------------------------------------------------------------
+    def test_alert_email_mtcaller(self):
+        """
+        Generate an e-mail alert and verify that it was sent (this is where we
+        use 'monkey patching'). For this case, caller is ''.
+        """
+        fakesmtp.inbox = []
+        logfile = '%s/alert_email.log' % self.testdir
+        targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
+        payload = 'this is an e-mail alert'
+        sender = 'hpssic@' + util.hostname(long=True)
+
+        cfg = CrawlConfig.CrawlConfig()
+        cfg.add_section('crawler')
+        # cfg.add_section('AlertTest')
+        cfg.add_section('alerts')
+        cfg.set('crawler', 'logpath', logfile)
+        # cfg.set('AlertTest', 'alerts', 'alert_section')
+        cfg.set('alerts', 'email', targets)
+        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+
+        x = Alert.Alert(caller='', msg=payload,
+                        cfg=cfg)
+        # print fakesmtp.inbox[0].fullmessage
+        m = fakesmtp.inbox[0]
+        self.assertEqual(', '.join(m.to_address),
+                         targets,
+                         "'%s' does not match '%s'" %
+                         (', '.join(m.to_address), targets))
+        self.assertEqual(m.from_address, sender,
+                         "from address '%s' does not match sender '%s'" %
+                         (m.from_address, sender))
+        self.assertTrue('sent mail to' in util.contents(logfile),
+                        "expected '%s' in %s, not found")
+        self.assertTrue(payload in m.fullmessage,
+                        "'%s' not found in e-mail message '%s'" %
+                        (payload, m.fullmessage))
+
+    # -------------------------------------------------------------------------
     def test_alert_email_defcfg(self):
         """
         Generate an e-mail alert using the default config and verify that it
