@@ -1,9 +1,11 @@
 WWW = $(HOME)/www/hpssic
 PYFILES = $(shell find . -name "*.py")
+YMDHM = $(shell date +"%Y.%m%d.%H%M")
 help:
 	@echo ""
 	@echo "Targets in this Makefile"
 	@echo "    clean        Remove *.pyc, *~, test.d, MANIFEST, README"
+	@echo "    cov          run tests, show and capture coverage report"
 	@echo "    cron         run tests in a cronjob"
 	@echo "    doc          Generate the documentation"
 	@echo "    install      Install the package locally"
@@ -36,23 +38,14 @@ TAGS: hpssic/*.py hpssic/plugins/*.py hpssic/test/*.py
 TEST_OPTS=-x
 TESTLOG="hpssic_test.log"
 tests:
-	@echo "--------------------------------------------" >> $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	py.test $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	py.test $(TEST_OPTS) 2>&1
 
 alltests:
-	@echo "--------------------------------------------" >> $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	py.test --all $(TEST_OPTS) 2>&1 | tee -a $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+	py.test --all $(TEST_OPTS) 2>&1
 
-coverage:
-	@echo "--------------------------------------------" >> $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
-	export PYTHONPATH=/usr/lib/python2.6/site-packages; \
-        py.test --cov hpssic --all 2>&1 | tee -a $(TESTLOG)
-	@date "+%Y.%m%d %H:%M:%S" >> $(TESTLOG)
+cov:
+	py.test --cov hpssic --all 2>&1
+	coverage report -m > coverage/$(YMDHM)
 
 cron:
 	echo cronjob | at now
