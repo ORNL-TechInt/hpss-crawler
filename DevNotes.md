@@ -149,4 +149,6 @@ be imported by both rpt_lib and html_lib. Etc.
 
 6       CrawlConfig
 
-7   util    version     messages    daemon
+7   util    version    daemon
+
+8          messages
