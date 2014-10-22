@@ -3,6 +3,7 @@
 import copy
 import logging
 import logging.handlers as logh
+import messages as MSG
 import os
 import pdb
 import re
@@ -451,21 +452,22 @@ def lsp_parse(lspout):
     returning file type ('f' or 'd'), file name, cartridge (if available), and
     cos (if available). Directories don't have cartridge or cos values.
     """
-    lines = lspout.split("\r\n")
-    while [] == re.findall("(FILE|DIRECTORY)", lines[0]):
-        pop0(lines)
+    for line in lspout.split("\r\n"):
+        result = re.findall("(FILE|DIRECTORY)", line)
+        if [] != result:
+            break
 
-    if len(lines) < 1:
-        raise HpssicError("ls -P output not found in lsp_parse input")
+    if [] == result:
+        raise HpssicError(MSG.lsp_output_not_found)
 
-    x = lines[0].split("\t")
+    x = line.split("\t")
     itype = pop0(x)        # 'FILE' or 'DIRECTORY'
     if itype == 'FILE':
         itype = 'f'
     elif itype == 'DIRECTORY':
         itype = 'd'
     else:
-        raise HpssicError("Invalid file type in 'ls -P' output")
+        raise HpssicError(MSG.lsp_invalid_file_type)
     iname = pop0(x)        # name of file or dir
     pop0(x)
     pop0(x)
@@ -538,15 +540,6 @@ def pop0(list):
 
 
 # -----------------------------------------------------------------------------
-def raiseError(record):
-    """
-    This is used in the log file handler to cause errors in logging to get
-    pushed up the stack so we see them.
-    """
-    raise
-
-
-# -----------------------------------------------------------------------------
 def realpath(fakepath):
     """
     Convenience wrapper for os.path.realpath()
@@ -580,6 +573,9 @@ def setup_logging(logfile='',
     root, so if the call to ArchiveLogfileHandler below fails, we fall back
     /tmp/crawl.log that anyone should be able to create and write.
     """
+    def raiseError():
+        raise
+
     if logfile == '':
         logfile = default_logfile_name
 

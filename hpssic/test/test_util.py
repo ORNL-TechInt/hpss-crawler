@@ -5,6 +5,7 @@ Tests for util.py
 import copy
 from hpssic import CrawlConfig
 import logging
+from hpssic import messages as MSG
 import os
 import pdb
 import re
@@ -59,6 +60,7 @@ class UtilTest(testhelp.HelpedTestCase):
         dbgopt = pytest.config.getoption("dbg")
         if self._testMethodName in dbgopt or "all" in dbgopt:
             self.dbgfunc = pdb.set_trace
+            # pdb.set_trace()
         else:
             self.dbgfunc = lambda: None
 
@@ -607,10 +609,69 @@ class UtilTest(testhelp.HelpedTestCase):
                          "Expected %s, got %s" % (exp, act))
 
     # -------------------------------------------------------------------------
+    def test_lsp_parse_bogus(self):
+        """
+        Test lsp_parse on input that is not output from 'ls -P'
+        """
+        self.dbgfunc()
+        td_l = ['\r[reading local startup files]\r\r[Site=ORNL - Authenticati',
+                'ng] \r======================================================',
+                '===================\r\n                            NOTICE TO',
+                ' USERS\r\n     This is a Federal computer system and is the ',
+                'property of the United \r\n States Government.  It is for au',
+                'thorized use only.  Users (authorized or \r\n unauthorized) ',
+                'have no explicit or implicit expectation of privacy.\r\n    ',
+                ' Any or all uses of this system and all files on this system',
+                ' may be \r\n intercepted, monitored, recorded, copied, audit',
+                'ed, inspected, and \r\n disclosed to authorized site, Depart',
+                'ment of Energy, and law enforcement \r\n personnel, as well ',
+                'as authorized officials of other agencies, both \r\n domesti',
+                'c and foreign.  By using this system, the user consents to s',
+                'uch \r\n interception, monitoring, recording, copying, audit',
+                'ing, inspection, and \r\n disclosure at the discretion of au',
+                'thorized site or Department of Energy \r\n personnel.\r\n   ',
+                '  Unauthorized or improper use of this system may result in ',
+                '\r\n administrative disciplinary action and civil and crimin',
+                'al penalties.  By\r\n continuing to use this system you indi',
+                'cate your awareness of and consent\r\n to these terms and co',
+                'nditions of use.  LOG OFF IMMEDIATELY if you do not\r\n agre',
+                'e to the conditions stated in this warning.\r\n=============',
+                '============================================================',
+                '\r\n                      Oak Ridge National Laboratory \r\n',
+                '\t\t Oak Ridge Leadership Computing Facility\r\n            ',
+                '      High Performance Storage System (HPSS)\r\n            ',
+                '            http://www.olcf.ornl.gov/\r\n\r\n              P',
+                'lease report problems to help@olcf.ornl.gov.\r\n============',
+                '============================================================',
+                '=\r\n\rGetting remote site info    \r\r[setting umask]      ',
+                '   \r\r               \rUsername: tpb  UID: 23951  Acct: 239',
+                '51(tpb) Copies: 1 Firewall: off [hsi.4.0.1.3 Wed Jun 12 10:0',
+                '3:13 EDT 2013] \r\n\r\rO:[/home/tpb']
+        td_s = ''.join(td_l)
+        self.assertRaisesMsg(util.HpssicError,
+                             MSG.lsp_output_not_found,
+                             util.lsp_parse,
+                             td_s)
+
+    # -------------------------------------------------------------------------
+    def test_lsp_parse_invfile(self):
+        """
+        Test lsp_parse on a directory
+        """
+        self.dbgfunc()
+        td_l = ["xxx", "DIRECTORY", "/home/tpb/corefiles"]
+        td_s = "\t".join(td_l)
+        self.assertRaisesMsg(util.HpssicError,
+                             MSG.lsp_invalid_file_type,
+                             util.lsp_parse,
+                             td_s)
+
+    # -------------------------------------------------------------------------
     def test_lsp_parse_dir(self):
         """
         Test lsp_parse on a directory
         """
+        self.dbgfunc()
         td_l = ["DIRECTORY", "/home/tpb/corefiles"]
         td_s = "\t".join(td_l)
         rv = util.lsp_parse(td_s)
@@ -624,6 +685,7 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         Test lsp_parse on an empty file
         """
+        self.dbgfunc()
         td_l = ["FILE",          "/home/tpb/201410021303.35",
                 "0",             "0",                "0",
                 " ",             "6056",
@@ -640,15 +702,18 @@ class UtilTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_lsp_parse_file_cart(self):
         """
-        Test lsp_parse on a file with cart info
+        Test lsp_parse on a file with cart info. Add pre- and post- cruft from
+        an actual hsi session to make sure lsp_parse() deals with it
+        appropriately.
         """
+        self.dbgfunc()
         td_l = ["FILE",          "/home/tpb/ancient",
                 "2369",          "2369",        "19625+0",
                 "X1605700",      "5081",
                 "0",             "1",
                 "09/16/2014",    "16:50:45",
                 "09/16/2014",    "16:50:57"]
-        td_s = "\t".join(td_l)
+        td_s = " ls -P\r\n" + "\t".join(td_l) + "\r\n\r\rO:[/home/tpb"
         rv = util.lsp_parse(td_s)
         self.expected(td_l[0][0].lower(), rv[0])
         self.expected(td_l[1], rv[1])
@@ -751,6 +816,20 @@ class UtilTest(testhelp.HelpedTestCase):
                             "Expected exp in '%s'" % buf)
 
         rf.close()
+
+    # -------------------------------------------------------------------------
+    def test_setup_logging(self):
+        """
+        Run setup_logging
+        """
+        self.dbgfunc()
+        logpath = os.path.join(self.testdir, util.my_name() + ".log")
+        logger = util.setup_logging(logpath,
+                                    maxBytes=0,
+                                    backupCount=0,
+                                    bumper=True)
+        self.assertTrue(isinstance(logger, logging.Logger),
+                        "Expected a Logger, got %s" % type(logger))
 
     # -------------------------------------------------------------------------
     def test_touch_newpath_default(self):

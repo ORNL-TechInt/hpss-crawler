@@ -26,6 +26,10 @@ invalid_sender_S = ("From address (%s) should be a string containing a " +
 
 invalid_subject_S = ("Subject (%s) is not a string")
 
+lsp_invalid_file_type = ("Invalid file type in 'ls -P' output")
+
+lsp_output_not_found = ("ls -P output not found in lsp_parse input")
+
 more_than_one_ss = "More than one record found in %s for table %s"
 
 multiple_objects_S = ("Multiple objects found for bitfile $s")
