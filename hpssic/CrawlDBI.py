@@ -354,7 +354,7 @@ class DBIsqlite(DBI_abstract):
                 raise DBIerror("Attribute '%s'" % attr +
                                " is not valid for %s" % self.__class__)
         if not hasattr(self, 'dbname'):
-            raise DBIerror("A database name is required")
+            raise DBIerror(MSG.dbname_required)
         if not hasattr(self, 'tbl_prefix'):
             raise DBIerror("A table prefix is required")
 
@@ -418,6 +418,9 @@ class DBIsqlite(DBI_abstract):
         DBIsqlite: See DBI.close()
         """
         # Close the database connection
+        if hasattr(self, "sqlite_closed") and self.sqlite_closed:
+            raise DBIerror("closing a closed connection", dbname=self.dbname)
+        self.sqlite_closed = True
         try:
             self.dbh.close()
         # Convert any sqlite3 error into a DBIerror
@@ -512,9 +515,16 @@ class DBIsqlite(DBI_abstract):
         DBIsqlite: Return the description of a table.
         """
         cmd = "pragma table_info(%s)" % self.prefix(table)
-        c = self.dbh.cursor()
-        c.execute(cmd)
-        rows = c.fetchall()
+        try:
+            c = self.dbh.cursor()
+            c.execute(cmd)
+            rows = c.fetchall()
+        except sqlite3.Error as e:
+            self.err_handler(e)
+
+        if [] == rows:
+            raise DBIerror(MSG.no_such_table_S % self.prefix(table))
+
         return rows
 
     # -------------------------------------------------------------------------
@@ -733,7 +743,7 @@ if mysql_available:
                     raise DBIerror("Attribute '%s'" % attr +
                                    " is not valid for %s" % self.__class__)
             if not hasattr(self, 'dbname'):
-                raise DBIerror("A database name is required")
+                raise DBIerror(MSG.dbname_required)
             if not hasattr(self, 'tbl_prefix'):
                 raise DBIerror("A table prefix is required")
 
@@ -925,9 +935,13 @@ if mysql_available:
                 c = self.dbh.cursor()
                 c.execute(cmd, (self.prefix(table),))
                 r = c.fetchall()
-                return r
             except mysql_exc.Error as e:
                 self.err_handler(e)
+
+            if 0 == len(r):
+                raise DBIerror(MSG.no_such_table_S % self.prefix(table))
+
+            return r
 
         # ---------------------------------------------------------------------
         def drop(self, table=''):
@@ -1161,7 +1175,7 @@ if db2_available:
                     raise DBIerror("Attribute '%s'" % attr +
                                    " is not valid for %s" % self.__class__)
             if not hasattr(self, 'dbname'):
-                raise DBIerror("A database name is required")
+                raise DBIerror(MSG.dbname_required)
             if not hasattr(self, 'tbl_prefix'):
                 self.tbl_prefix = 'hpss'
 
@@ -1231,7 +1245,7 @@ if db2_available:
             """
             DBIdb2: See DBI.alter()
             """
-            raise DBIerror("ALTER not supported for DB2")
+            raise DBIerror(MSG.db2_unsupported_S % "ALTER")
 
         # ---------------------------------------------------------------------
         def close(self):
@@ -1243,14 +1257,19 @@ if db2_available:
                 db2.close(self.dbh)
             # Convert any mysql error into a DBIerror
             except ibm_db_dbi.Error as e:
-                raise DBIerror("%d: %s" % e.args, dbname=self.dbname)
+                self.err_handler(e)
+            except Exception as e:
+                if "Connection is not active" in str(e):
+                    raise DBIerror("%s" % str(e), dbname=self.dbname)
+                else:
+                    raise
 
         # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
             """
             DBIdb2: See DBI.create()
             """
-            raise DBIerror("CREATE not supported for DB2")
+            raise DBIerror(MSG.db2_unsupported_S % "CREATE")
 
         # ---------------------------------------------------------------------
         def cursor(self):
@@ -1268,28 +1287,28 @@ if db2_available:
             """
             DBIdb2: See DBI.delete()
             """
-            raise DBIerror("DELETE not supported for DB2")
+            raise DBIerror(MSG.db2_unsupported_S % "DELETE")
 
         # ---------------------------------------------------------------------
         def describe(self, **kwargs):
             """
             DBIdb2: Return a table description
             """
-            pass   # yagni
+            raise DBIerror(MSG.db2_unsupported_S % "DESCRIBE")
 
         # ---------------------------------------------------------------------
         def drop(self, table=''):
             """
             DBIdb2:
             """
-            raise DBIerror("DROP not supported for DB2")
+            raise DBIerror(MSG.db2_unsupported_S % "DROP")
 
         # ---------------------------------------------------------------------
         def insert(self, table='', fields=[], data=[]):
             """
             DBIdb2: Insert not supported for DB2
             """
-            raise DBIerror("INSERT not supported for DB2")
+            raise DBIerror(MSG.db2_unsupported_S % "INSERT")
 
         # ---------------------------------------------------------------------
         def select(self,
@@ -1405,7 +1424,7 @@ if db2_available:
             """
             DBIdb2: See DBI.update()
             """
-            raise DBIerror("UPDATE not supported for DB2")
+            raise DBIerror(MSG.db2_unsupported_S % "UPDATE")
 
         # ---------------------------------------------------------------------
         @classmethod

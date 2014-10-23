@@ -126,12 +126,25 @@ class DBITestRoot(testhelp.HelpedTestCase):
         """
         DBITestRoot: Return a CrawlDBI.DBI() object based on the current object
         """
-        kw = {'cfg': make_tcfg(self.dbtype),
-              'dbtype': self.dbctype,
-              'timeout': 10.0}
+        try:
+            x = self._use_args
+        except AttributeError:
+            self._use_args = True
+
+        if self._use_args:
+            args = [make_tcfg(self.dbtype)]
+            kw = {'dbtype': self.dbctype,
+                  'timeout': 10.0}
+        else:
+            args = []
+            kw = {'cfg': make_tcfg(self.dbtype),
+                  'dbtype': self.dbctype,
+                  'timeout': 10.0}
+
         if self.dbctype == 'hpss':
             kw['dbname'] = dbname
-        rval = CrawlDBI.DBI(**kw)
+        rval = CrawlDBI.DBI(*args, **kw)
+        self._use_args = not self._use_args
         return rval
 
 
@@ -277,6 +290,18 @@ class DBI_in_Base(object):
                              db.close)
 
     # -------------------------------------------------------------------------
+    def test_close_deep(self):
+        """
+        DBI_in_Base: Closing a closed database should generate an exception.
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        db.close()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.db_closed_already_rgx,
+                               db._dbobj.close)
+
+    # -------------------------------------------------------------------------
     def test_close_open(self):
         """
         DBI_in_Base: Closing an open database should work.
@@ -379,6 +404,20 @@ class DBI_in_Base(object):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.valid_dbtype,
                              CrawlDBI.DBI)
+
+    # -------------------------------------------------------------------------
+    def test_describe_fail(self):
+        """
+        DBI_in_Base: Calling describe on a non-existent table should get an
+        exception
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.no_such_table_desc_rgx,
+                               db.describe,
+                               table="frobble")
+        db.close()
 
     # -------------------------------------------------------------------------
     def test_select_f(self):
@@ -1268,7 +1307,7 @@ class DBI_out_Base(object):
         self.dbgfunc()
         (db, td) = self.delete_setup()
         self.assertRaisesRegex(CrawlDBI.DBIerror,
-                               MSG.no_such_table_rgx,
+                               MSG.no_such_table_del_rgx,
                                db.delete,
                                table="nonesuch",
                                where="name='sam'")
@@ -1493,7 +1532,7 @@ class DBI_out_Base(object):
         self.dbgfunc()
         db = self.DBI()
         self.assertRaisesRegex(CrawlDBI.DBIerror,
-                               MSG.drop_table_nosuch_rgx,
+                               MSG.no_such_table_drop_rgx,
                                db.drop,
                                table="nonesuch")
         db.close()
@@ -1835,6 +1874,22 @@ class DBI_out_Base(object):
         db.close()
 
     # -------------------------------------------------------------------------
+    def test_update_nonesuch(self):
+        """
+        DBI_out_Base: Calling update() on a table that does not exist should
+        get an exception
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.no_such_table_upd_rgx,
+                               db.update,
+                               table="nonesuch",
+                               fields=self.fnames[1:],
+                               data=self.testdata)
+        db.close()
+
+    # -------------------------------------------------------------------------
     def test_update_nst(self):
         """
         DBI_out_Base: Calling update() with a non-string table argument should
@@ -2032,15 +2087,26 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                          "Not expecting '%s' in '%s'" % (exp, c))
 
     # -------------------------------------------------------------------------
-    def test_ctor_mysql_dbnreq(self):
+    def test_ctor_dbname_none(self):
         """
         DBImysqlTest: The DBImysql ctor requires 'dbname' and 'tbl_prefix' as
         keyword arguments
         """
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "A database name is required",
+                             MSG.dbname_required,
                              CrawlDBI.DBImysql,
                              tbl_prefix='xyzzy')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_tblpfx_none(self):
+        """
+        DBImysqlTest: The DBImysql ctor requires 'tbl_prefix' as
+        keyword arguments
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.tblpfx_required,
+                             CrawlDBI.DBImysql,
+                             dbname='crawler')
 
     # -------------------------------------------------------------------------
     def test_dbschem_alter_table(self):
@@ -2285,6 +2351,27 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              CrawlDBI.DBI,
                              cfg=make_tcfg(self.dbtype),
                              dbtype=self.dbctype)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbname_none(self):
+        """
+        DBIsqliteTest: Called with no dbname, constructor should throw
+        exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.dbname_required,
+                             CrawlDBI.DBIsqlite)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_tblpfx_none(self):
+        """
+        DBIsqliteTest: Called with no tbl_prefix, constructor should throw
+        exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.tblpfx_required,
+                             CrawlDBI.DBIsqlite,
+                             dbname='crawler')
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_nosuch(self):
@@ -2533,6 +2620,40 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         pass
 
     # -------------------------------------------------------------------------
+    def test_alter_unsupported(self):
+        """
+        DBIdb2Test: alter is not supported for DB2. Calls to it should get an
+        exception.
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.db2_unsupported_S % "ALTER",
+                             db.alter,
+                             table="foo",
+                             addcol="new")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_ctor_dbname_none(self):
+        """
+        DBIdb2Test: Called with no dbname, constructor should throw exception
+        """
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.dbname_required,
+                             CrawlDBI.DBIdb2)
+
+    # -------------------------------------------------------------------------
+    def test_ctor_tblpfx_none(self):
+        """
+        DBIdb2Test: Called with no tbl_prefix, constructor should throw
+        exception
+        """
+        db = CrawlDBI.DBIdb2(dbname="cfg")
+        self.expected('hpss.', db.tbl_prefix)
+        db.close()
+
+    # -------------------------------------------------------------------------
     def test_ctor_dbtype_hpss_no_dbname(self):
         """
         DBIdb2Test: With dbtype value 'hpss', no dbname, constructor should
@@ -2575,6 +2696,37 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                         "%s: Expected attribute 'dbh', not present" %
                         self.dbtype)
         db.close()
+
+    # -------------------------------------------------------------------------
+    def test_hexstr(self):
+        """
+        DBIdb2Test: Passing a string of binary values to hexstr(), hexstr_uq()
+        should get back the corresponding string of hex digits.
+        """
+        val = ('\x08\xe1"n\xff\xd2\xd9\x11\x80\x14\x10\x00Z\xfau\xbf\xa2' +
+               '\xf9aj6\xfd\xd0\x11\x93\xcb\x00\x00\x00\x00\x00\x04')
+        exp = ("08E1226EFFD2D911801410005AFA75BFA2F9616A36FDD01193CB" +
+               "000000000004")
+        xqexp = "x'" + exp + "'"
+        self.expected(exp, CrawlDBI.DBIdb2.hexstr_uq(val))
+        self.expected(xqexp, CrawlDBI.DBIdb2.hexstr(val))
+
+    # -------------------------------------------------------------------------
+    def test_hexval(self):
+        """
+        DBIdb2Test: Passing a string of hex digits to hexval() should get back
+        the corresponding binary string.
+        """
+        val = ("08E1226EFFD2D911801410005AFA75BFA2F9616A36FDD01193CB" +
+               "000000000004")
+        xval = "x" + val
+        xqval = "x'" + val + "'"
+        exp = ('\x08\xe1"n\xff\xd2\xd9\x11\x80\x14\x10\x00Z\xfau\xbf\xa2' +
+               '\xf9aj6\xfd\xd0\x11\x93\xcb\x00\x00\x00\x00\x00\x04')
+        self.expected(exp, CrawlDBI.DBIdb2.hexval(val))
+        self.expected(exp, CrawlDBI.DBIdb2.hexval(xval))
+        self.expected(exp, CrawlDBI.DBIdb2.hexval(xqval))
+        self.expected(exp, CrawlDBI.DBIdb2.hexval(exp))
 
     # -------------------------------------------------------------------------
     def test_repr(self):
@@ -3032,7 +3184,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "INSERT not supported for DB2",
+                             MSG.db2_unsupported_S % "INSERT",
                              db.insert,
                              table="hpss.bogus",
                              data=[('a', 'b', 'c')])
@@ -3045,7 +3197,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "CREATE not supported for DB2",
+                             MSG.db2_unsupported_S % "CREATE",
                              db.create,
                              table="hpss.nonesuch",
                              fields=self.fdef)
@@ -3058,7 +3210,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "DELETE not supported for DB2",
+                             MSG.db2_unsupported_S % "DELETE",
                              db.delete,
                              table="hpss.bogus",
                              data=[('a',)],
@@ -3072,7 +3224,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "DROP not supported for DB2",
+                             MSG.db2_unsupported_S % "DROP",
                              db.drop,
                              table="hpss.bogus")
         db.close()
@@ -3084,7 +3236,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         """
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "UPDATE not supported for DB2",
+                             MSG.db2_unsupported_S % "UPDATE",
                              db.update,
                              table="hpss.bogus",
                              fields=['one', 'two'],
