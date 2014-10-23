@@ -5,7 +5,7 @@ help:
 	@echo ""
 	@echo "Targets in this Makefile"
 	@echo "    clean        Remove *.pyc, *~, test.d, MANIFEST, README"
-	@echo "    cov          run tests, show and capture coverage report"
+	@echo "    cov          show and capture coverage report"
 	@echo "    cron         run tests in a cronjob"
 	@echo "    doc          Generate the documentation"
 	@echo "    install      Install the package locally"
@@ -17,6 +17,7 @@ help:
 	@echo "    TAGS         Navigation tags for emacs"
 	@echo "    tests        Run and log the fast tests"
 	@echo "    alltests     Run and log all the tests"
+	@echo "    testcov      Run tests, show & capture coverage report"
 	@echo "    uguide       Generate the User Guide in HTML"
 	@echo "    uninstall    Remove hpssic from the current environment"
 	@echo "    up           Re-install hpssic with the --upgrade flag"
@@ -43,8 +44,11 @@ tests:
 alltests:
 	py.test --all $(TEST_OPTS) 2>&1
 
-cov:
+testcov:
 	py.test --cov hpssic --all 2>&1
+	coverage report -m > coverage/$(YMDHM)
+
+cov:
 	coverage report -m > coverage/$(YMDHM)
 
 cron:
