@@ -12,16 +12,20 @@ create_table_string = ("On create(), table name must be a string")
 
 db_closed = ("Cannot operate on a closed database")
 
+db_closed_already_rgx = ("(closing a closed connection|" +
+                         "Connection is not active)")
+
+db2_unsupported_S = ("%s not supported for DB2")
+
 dbname_not_allowed = ("dbname may not be specified here")
+
+dbname_required = ("A database name is required")
 
 default_mail_subject = ("HPSS Integrity Crawler ALERT")
 
 drop_table_string = ("On drop(), table name must be a string")
 
 drop_table_empty = ("On drop(), table name must not be empty")
-
-drop_table_nosuch_rgx = ("(1051: Unknown table '.*' \\(dbname=.*\\)|" +
-                         "no such table: .* \\(dbname=.*\\))")
 
 empty_message = ("Empty message")
 
@@ -59,9 +63,20 @@ no_recip_list = ("No recipient list specified or in configuration")
 
 no_such_path_component_SD = ("No match for object '%s' with parent %d")
 
-no_such_table_rgx = ("(\\(1146, \"Table '.*?' doesn't exist\"\\)|" +
-                     "delete from .*? where name='.*?': " +
-                     "no such table: .*? \\(dbname=.*?\\))")
+no_such_table_del_rgx = ("(\\(1146, \"Table '.*?' doesn't exist\"\\)|" +
+                         "delete from .*? where name='.*?': " +
+                         "no such table: .*? \\(dbname=.*?\\))")
+
+no_such_table_drop_rgx = ("(1051: Unknown table '.*' \\(dbname=.*\\)|" +
+                          "no such table: .* \\(dbname=.*\\))")
+
+no_such_table_upd_rgx = ("(\\(1146, \"Table '.*?' doesn't exist\"\\)|" +
+                         "no such table: .*? \\(dbname=.*?\\))")
+
+no_such_table_desc_rgx = ("(Unknown table '.*'|" +
+                          "DESCRIBE not supported for DB2)")
+
+no_such_table_S = ("Unknown table '%s'")
 
 not_in_bftapeseg_S = ("Bitfile ID %s\n   not found in table BFTAPESEG")
 
@@ -74,6 +89,8 @@ nothing_to_drop = ("table is None, nothing to drop")
 table_already_mysql = ("1050: Table 'test_create_already' already exists")
 
 table_already_sqlite = ("table test_create_already already exists")
+
+tblpfx_required = ("A table prefix is required")
 
 unknown_dbtype = ("Unknown database type")
 
