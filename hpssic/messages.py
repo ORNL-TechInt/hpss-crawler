@@ -6,11 +6,22 @@ all_mpra_data_lost = """
 
    Are you sure? > """
 
-db_closed = "Cannot operate on a closed database"
+alter_table_string = ("On alter(), table name must be a string")
 
-dbname_not_allowed = "dbname may not be specified here"
+create_table_string = ("On create(), table name must be a string")
+
+db_closed = ("Cannot operate on a closed database")
+
+dbname_not_allowed = ("dbname may not be specified here")
 
 default_mail_subject = ("HPSS Integrity Crawler ALERT")
+
+drop_table_string = ("On drop(), table name must be a string")
+
+drop_table_empty = ("On drop(), table name must not be empty")
+
+drop_table_nosuch_rgx = ("(1051: Unknown table '.*' \\(dbname=.*\\)|" +
+                         "no such table: .* \\(dbname=.*\\))")
 
 empty_message = ("Empty message")
 
@@ -44,9 +55,13 @@ no_cfg_found = """
              - use --cfg to specify a configuration file on the command line.
             """
 
-no_recip_list = "No recipient list specified or in configuration"
+no_recip_list = ("No recipient list specified or in configuration")
 
 no_such_path_component_SD = ("No match for object '%s' with parent %d")
+
+no_such_table_rgx = ("(\\(1146, \"Table '.*?' doesn't exist\"\\)|" +
+                     "delete from .*? where name='.*?': " +
+                     "no such table: .*? \\(dbname=.*?\\))")
 
 not_in_bftapeseg_S = ("Bitfile ID %s\n   not found in table BFTAPESEG")
 
@@ -54,9 +69,18 @@ not_in_bitfile_S = ("Bitfile ID %s\n   not found in table BITFILE")
 
 not_in_nsobject_D = ("Object ID %d not found in table NSOBJECT")
 
-nothing_to_drop = "table is None, nothing to drop"
+nothing_to_drop = ("table is None, nothing to drop")
 
-valid_dbtype = "dbtype must be 'hpss' or 'crawler'"
+table_already_mysql = ("1050: Table 'test_create_already' already exists")
+
+table_already_sqlite = ("table test_create_already already exists")
+
+unknown_dbtype = ("Unknown database type")
+
+unrecognized_arg_S = ("Unrecognized argument to %s. " +
+                      "Only 'cfg=<config>' is accepted")
+
+valid_dbtype = ("dbtype must be 'hpss' or 'crawler'")
 
 wildcard_selects = ("Wildcard selects are not supported. " +
                     "Please supply a list of fields.")

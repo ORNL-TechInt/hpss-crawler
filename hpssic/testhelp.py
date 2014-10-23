@@ -22,6 +22,7 @@ import glob
 import optparse
 import os
 import pdb
+import pytest
 import re
 import shutil
 import sys
@@ -434,6 +435,30 @@ class HelpedTestCase(unittest.TestCase):
     This class adds some goodies to the standard unittest.TestCase
     """
     # -------------------------------------------------------------------------
+    def assertRaisesRegex(self, exception, message, func, *args, **kwargs):
+        """
+        A more precise version of assertRaises so we can validate the content
+        of the exception thrown.
+        """
+        try:
+            func(*args, **kwargs)
+        except exception as e:
+            if type(message) == str:
+                self.assertTrue(re.findall(message, str(e)),
+                                "\nExpected '%s', \n     got '%s'" %
+                                (message, str(e)))
+            elif type(message) == list:
+                self.assertTrue(any(re.findall(t, str(e)) for t in message),
+                                "Expected one of '%s', got '%s'" % (message,
+                                                                    str(e)))
+            else:
+                self.fail("message must be a string or list")
+        except Exception as e:
+            self.fail('Unexpected exception thrown: %s %s' % (type(e), str(e)))
+        else:
+            self.fail('Expected exception %s not thrown' % exception)
+
+    # -------------------------------------------------------------------------
     def assertRaisesMsg(self, exception, message, func, *args, **kwargs):
         """
         A more precise version of assertRaises so we can validate the content
@@ -510,6 +535,19 @@ class HelpedTestCase(unittest.TestCase):
     # -------------------------------------------------------------------------
     def noop(self):
         pass
+
+    # ------------------------------------------------------------------------
+    def setUp(self):
+        """
+        Set self.dbgfunc to either pdb.set_trace or a no-op, depending on the
+        value of the --dbg option from the command line
+        """
+        dbgopt = pytest.config.getoption("dbg")
+        if self._testMethodName in dbgopt or "all" in dbgopt:
+            self.dbgfunc = pdb.set_trace
+            # pdb.set_trace()
+        else:
+            self.dbgfunc = lambda: None
 
     # ------------------------------------------------------------------------
     def write_cfg_file(self, fname, cfgdict, includee=False):
