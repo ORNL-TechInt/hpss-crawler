@@ -126,9 +126,7 @@ class DBI(object):
                                (key, self.__class__))
         if 0 < len(args):
             if not isinstance(args[0], CrawlConfig.CrawlConfig):
-                raise DBIerror("Unrecognized argument to %s. " %
-                               self.__class__ +
-                               "Only 'cfg=<config>' is accepted")
+                raise DBIerror(MSG.unrecognized_arg_S % self.__class__)
             else:
                 cfg = args[0]
         elif 'cfg' in kwargs and kwargs['cfg'] is not None:
@@ -136,13 +134,12 @@ class DBI(object):
         else:
             cfg = CrawlConfig.get_config()
 
-        # pdb.set_trace()
         dbtype = ''
         dbname = ''
         tbl_pfx = ''
         if 'dbtype' not in kwargs:
             raise DBIerror(MSG.valid_dbtype)
-        elif kwargs['dbtype'] == 'db2' or kwargs['dbtype'] == 'hpss':
+        elif kwargs['dbtype'] == 'hpss':
             dbtype = cfg.get(HPSS_SECTION, 'dbtype')
             tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
             if 'dbname' not in kwargs:
@@ -153,7 +150,7 @@ class DBI(object):
                                kwargs['dbname'])
             else:
                 dbname = cfg.get(HPSS_SECTION, kwargs['dbname'])
-        elif kwargs['dbtype'] == 'dbi' or kwargs['dbtype'] == 'crawler':
+        elif kwargs['dbtype'] == 'crawler':
             if 'dbname' in kwargs:
                 raise DBIerror("dbname may not be specified here")
             dbtype = cfg.get(CRWL_SECTION, 'dbtype')
@@ -183,7 +180,7 @@ class DBI(object):
         elif dbtype == 'db2':
             self._dbobj = DBIdb2(*args, **okw)
         else:
-            raise DBIerror("Unknown database type")
+            raise DBIerror(Msg.unknown_dbtype)
 
         self.dbname = self._dbobj.dbname
 
@@ -392,7 +389,7 @@ class DBIsqlite(DBI_abstract):
         DBIsqlite: Sqlite ignores pos if it's set and does not support dropcol.
         """
         if type(table) != str:
-            raise DBIerror("On alter(), table name must be a string",
+            raise DBIerror(MSG.alter_table_string,
                            dbname=self.dbname)
         elif table == '':
             raise DBIerror("On alter(), table name must not be empty",
@@ -440,7 +437,7 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror("On create(), fields must not be empty",
                            dbname=self.dbname)
         if type(table) != str:
-            raise DBIerror("On create(), table name must be a string",
+            raise DBIerror(MSG.create_table_string,
                            dbname=self.dbname)
         elif table == '':
             raise DBIerror("On create(), table name must not be empty",

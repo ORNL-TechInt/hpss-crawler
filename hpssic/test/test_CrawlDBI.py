@@ -21,6 +21,7 @@ from hpssic import messages as MSG
 import os
 import pdb
 import pytest
+import sqlite3
 import socket
 import sys
 from hpssic import testhelp
@@ -157,6 +158,45 @@ class DBITest(DBITestRoot):
                              "(dbname=None)",
                              CrawlDBI.DBI,
                              dbname='foobar')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_pos0_arg(self):
+        """
+        DBITest: If the DBI ctor is called with something other than a config
+        object in argv[0], it is expected to throw an exception
+        """
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.unrecognized_arg_S % '.*?',
+                               CrawlDBI.DBI,
+                               'foobar')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_bad_dbtype(self):
+        """
+        DBITest: If the DBI ctor is called with a dbtype other than one of the
+        known ones, it is expected to throw an exception
+        """
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.valid_dbtype,
+                               CrawlDBI.DBI,
+                               dbtype='Informix')
+
+    # -------------------------------------------------------------------------
+    def test_ctor_upd_closed(self):
+        """
+        DBITest: An attempt to update a table in a closed database should throw
+        an exception.
+        """
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
+        a.close()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.db_closed,
+                             a.update,
+                             table="foobar",
+                             where="status = 'flappy'",
+                             fields=['one', 'two', 'three'],
+                             data=[('a', 'b', 'c'),
+                                   ('x', 'y', 'z')])
 
     # -------------------------------------------------------------------------
     def test_ctor_sqlite(self):
@@ -953,6 +993,22 @@ class DBI_out_Base(object):
         db.close()
 
     # -------------------------------------------------------------------------
+    def test_alter_table_notstr(self):
+        """
+        DBI_out_Base: Calling alter() with a non-string table should get an
+        exception
+        """
+        self.dbgfunc()
+        tname = util.my_name().replace('test_', '')
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.alter_table_string,
+                             db.alter,
+                             table=32,
+                             addcol="size")
+        db.close()
+
+    # -------------------------------------------------------------------------
     def test_closed_create(self):
         """
         DBI_out_Base: Calling create() on a closed database should get an
@@ -1029,6 +1085,30 @@ class DBI_out_Base(object):
                              data=[])
 
     # -------------------------------------------------------------------------
+    def test_create_already(self):
+        """
+        DBI_out_Base: Calling create() for a table that already exists should
+        get an exception
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        tname = util.my_name()
+        flist = ['rowid integer primary key autoincrement',
+                 'one text',
+                 'two int']
+        if db.table_exists(table=tname):
+            db.drop(table=tname)
+        db.create(table=tname,
+                  fields=flist)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             [MSG.table_already_sqlite,
+                              MSG.table_already_mysql],
+                             db.create,
+                             table=tname,
+                             fields=flist)
+        db.close()
+
+    # -------------------------------------------------------------------------
     def test_create_mtf(self):
         """
         DBI_out_Base: Calling create() with an empty field list should get an
@@ -1068,6 +1148,20 @@ class DBI_out_Base(object):
                              db.create,
                              table='create_nlf',
                              fields='notdict')
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_create_table_notstr(self):
+        """
+        DBI_out_Base: Calling create() with a non-string as the table argument
+        should get an exception
+        """
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.create_table_string,
+                             db.create,
+                             table=14.7,
+                             fields=['foo', 'bar'])
         db.close()
 
     # -------------------------------------------------------------------------
@@ -1164,6 +1258,21 @@ class DBI_out_Base(object):
         self.assertEqual("Created", result)
         result = dbschem.make_table('tcc_data', cfg=tcfg)
         self.assertEqual("Already", result)
+
+    # -------------------------------------------------------------------------
+    def test_delete_except(self):
+        """
+        DBI_out_Base: A delete from a table that does not exist should throw an
+        exception
+        """
+        self.dbgfunc()
+        (db, td) = self.delete_setup()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.no_such_table_rgx,
+                               db.delete,
+                               table="nonesuch",
+                               where="name='sam'")
+        db.close()
 
     # -------------------------------------------------------------------------
     def test_delete_nq_nd(self):
@@ -1363,6 +1472,47 @@ class DBI_out_Base(object):
                              "%s should have been deleted" % (r,))
 
     # -------------------------------------------------------------------------
+    def test_drop_table_empty(self):
+        """
+        DBI_out_Base: If *table* is the empty string, drop should throw an
+        exception
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.drop_table_empty,
+                             db.drop,
+                             table="")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_drop_table_nonesuch(self):
+        """
+        DBI_out_Base: If *table* does not exist, drop should throw an exception
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.drop_table_nosuch_rgx,
+                               db.drop,
+                               table="nonesuch")
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_drop_table_notstr(self):
+        """
+        DBI_out_Base: If *table* is not a string, drop should throw an
+        exception
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             MSG.drop_table_string,
+                             db.drop,
+                             table=17)
+        db.close()
+
+    # -------------------------------------------------------------------------
     def test_insert_fnox(self):
         """
         DBI_out_Base: Calling insert on fields not in the table should get an
@@ -1480,6 +1630,7 @@ class DBI_out_Base(object):
         DBI_out_Base: Calling insert on a non-existent table should get an
         exception
         """
+        self.dbgfunc()
         mcfg = make_tcfg(self.dbtype)
         util.conditional_rm(self.testdb)
         db = self.DBI()
@@ -2050,6 +2201,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         should get an unsupported exception since sqlite does not support this
         operation.
         """
+        self.dbgfunc()
         tname = util.my_name().replace('test_', '')
         db = self.DBI()
         db.create(table=tname, fields=self.fdef)
@@ -2318,6 +2470,19 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              addcol="missing int",
                              dropcol="missing",
                              cfg=tcfg)
+
+    # -------------------------------------------------------------------------
+    def test_err_handler(self):
+        """
+        Test the sqlite error handler method
+        """
+        self.dbgfunc()
+        e = sqlite3.OperationalError("no such table: leapfrog")
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "no such table: leapfrog",
+                             db._dbobj.err_handler,
+                             e)
 
     # -------------------------------------------------------------------------
     def test_repr(self):
