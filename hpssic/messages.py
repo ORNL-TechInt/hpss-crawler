@@ -31,6 +31,10 @@ empty_message = ("Empty message")
 
 hpss_unavailable = ("HPSS Unavailable")
 
+invalid_attr_SS = ("Attribute '%s' is not valid for %s")
+
+invalid_attr_rgx = ("Attribute '.*' is not valid for .*")
+
 invalid_msg_body = ("The message body must be a string")
 
 invalid_recip_list = ("The To: list should be a comma-separated list of " +
@@ -85,6 +89,9 @@ not_in_bitfile_S = ("Bitfile ID %s\n   not found in table BITFILE")
 not_in_nsobject_D = ("Object ID %d not found in table NSOBJECT")
 
 nothing_to_drop = ("table is None, nothing to drop")
+
+password_missing_rgx = ('Security processing failed with reason "\d" ' +
+                        '\("PASSWORD MISSING"\)')
 
 table_already_mysql = ("1050: Table 'test_create_already' already exists")
 

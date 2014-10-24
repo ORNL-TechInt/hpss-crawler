@@ -122,8 +122,7 @@ class DBI(object):
         #   'timeout' - max length of time to retry failing operations
         for key in kwargs:
             if key not in ['cfg', 'dbtype', 'dbname', 'timeout']:
-                raise DBIerror("Attribute '%s' is not valid for %s" %
-                               (key, self.__class__))
+                raise DBIerror(MSG.invalid_attr_SS % (key, self.__class__))
         if 0 < len(args):
             if not isinstance(args[0], CrawlConfig.CrawlConfig):
                 raise DBIerror(MSG.unrecognized_arg_S % self.__class__)
@@ -351,8 +350,7 @@ class DBIsqlite(DBI_abstract):
             if attr in self.settable_attrl:
                 setattr(self, attr, kwargs[attr])
             else:
-                raise DBIerror("Attribute '%s'" % attr +
-                               " is not valid for %s" % self.__class__)
+                raise DBIerror(MSG.invalid_attr_SS % (attr, self.__class__))
         if not hasattr(self, 'dbname'):
             raise DBIerror(MSG.dbname_required)
         if not hasattr(self, 'tbl_prefix'):
@@ -740,8 +738,8 @@ if mysql_available:
                 if attr in self.settable_attrl:
                     setattr(self, attr, kwargs[attr])
                 else:
-                    raise DBIerror("Attribute '%s'" % attr +
-                                   " is not valid for %s" % self.__class__)
+                    raise DBIerror(MSG.invalid_attr_SS % (attr,
+                                                          self.__class__))
             if not hasattr(self, 'dbname'):
                 raise DBIerror(MSG.dbname_required)
             if not hasattr(self, 'tbl_prefix'):
@@ -772,7 +770,8 @@ if mysql_available:
         # ---------------------------------------------------------------------
         def err_handler(self, err):
             """
-            DBImysql: Error handler
+            DBImysql: Error handler. If this returns, it should be called in a
+            loop to retry operations that are having transient failures.
             """
             if isinstance(err, mysql_exc.ProgrammingError):
                 raise DBIerror(str(err), dbname=self.dbname)
@@ -1172,8 +1171,8 @@ if db2_available:
                 if attr in self.settable_attrl:
                     setattr(self, attr, kwargs[attr])
                 else:
-                    raise DBIerror("Attribute '%s'" % attr +
-                                   " is not valid for %s" % self.__class__)
+                    raise DBIerror(MSG.invalid_attr_SS % (attr,
+                                                          self.__class__))
             if not hasattr(self, 'dbname'):
                 raise DBIerror(MSG.dbname_required)
             if not hasattr(self, 'tbl_prefix'):
@@ -1203,8 +1202,8 @@ if db2_available:
                           "uid=%s;" % username +
                           "pwd=%s;" % password)
                 self.dbh = db2.connect(cxnstr, "", "")
-            except ibm_db_dbi.Error as e:
-                raise DBIerror("%s" % str(e))
+            except Exception as e:
+                self.err_handler(err=e)
 
         # ---------------------------------------------------------------------
         def __repr__(self):
@@ -1215,11 +1214,17 @@ if db2_available:
             return rv
 
         # ---------------------------------------------------------------------
-        def err_handler(self, err):
+        def err_handler(self, err=None, message=''):
             """
-            DBIdb2: error handler
+            DBIdb2: error handler can accept a string or an exception object
             """
-            raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
+            if err is not None:
+                if isinstance(err, ibm_db_dbi.Error):
+                    raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
+                else:
+                    raise DBIerror(str(err), dbname=self.dbname)
+            else:
+                raise DBIerror(message, dbname=self.dbname)
 
         # ---------------------------------------------------------------------
         def __recognized_exception__(self, exc):
@@ -1255,14 +1260,9 @@ if db2_available:
             # Close the database connection
             try:
                 db2.close(self.dbh)
-            # Convert any mysql error into a DBIerror
-            except ibm_db_dbi.Error as e:
-                self.err_handler(e)
+            # Convert any db2 error into a DBIerror
             except Exception as e:
-                if "Connection is not active" in str(e):
-                    raise DBIerror("%s" % str(e), dbname=self.dbname)
-                else:
-                    raise
+                self.err_handler(err=e)
 
         # ---------------------------------------------------------------------
         def create(self, table='', fields=[]):
