@@ -17,6 +17,7 @@ import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import dbschem
+import ibm_db_dbi
 from hpssic import messages as MSG
 import os
 import pdb
@@ -379,11 +380,12 @@ class DBI_in_Base(object):
         DBI_in_Base: Attempt to create an object with an invalid attribute
         should get an exception
         """
-        self.assertRaisesMsg(CrawlDBI.DBIerror,
-                             "Attribute 'badattr' is not valid",
-                             CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype),
-                             badattr='frooble')
+        self.dbgfunc()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.invalid_attr_rgx,
+                               CrawlDBI.DBI,
+                               cfg=make_tcfg(self.dbtype),
+                               badattr='frooble')
 
     # -------------------------------------------------------------------------
     def test_ctor_dbtype_bad(self):
@@ -2087,6 +2089,19 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                          "Not expecting '%s' in '%s'" % (exp, c))
 
     # -------------------------------------------------------------------------
+    def test_ctor_bad_attrs_mysql(self):
+        """
+        DBImysqlTest: Attempt to create an object with an invalid attribute
+        should get an exception
+        """
+        self.dbgfunc()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.invalid_attr_rgx,
+                               CrawlDBI.DBImysql,
+                               cfg=make_tcfg(self.dbtype),
+                               badattr='frooble')
+
+    # -------------------------------------------------------------------------
     def test_ctor_dbname_none(self):
         """
         DBImysqlTest: The DBImysql ctor requires 'dbname' and 'tbl_prefix' as
@@ -2277,6 +2292,19 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              table=tname,
                              dropcol="size")
         db.close()
+
+    # -------------------------------------------------------------------------
+    def test_ctor_bad_attrs_sqlite(self):
+        """
+        DBIsqliteTest: Attempt to create an object with an invalid attribute
+        should get an exception
+        """
+        self.dbgfunc()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.invalid_attr_rgx,
+                               CrawlDBI.DBIsqlite,
+                               cfg=make_tcfg(self.dbtype),
+                               badattr='frooble')
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_db(self):
@@ -2635,6 +2663,61 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db.close()
 
     # -------------------------------------------------------------------------
+    def test_ctor_bad_attrs_db2(self):
+        """
+        DBIdb2Test: Attempt to create an object with an invalid attribute
+        should get an exception
+        """
+        self.dbgfunc()
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.invalid_attr_rgx,
+                               CrawlDBI.DBIdb2,
+                               cfg=make_tcfg(self.dbtype),
+                               badattr='frooble')
+
+    # -------------------------------------------------------------------------
+    def test_err_handler_db2(self):
+        """
+        DBIdb2Test: The DB2 err handler will accept *err* (an exception object)
+        or *message* (a string). It should alwasy raise a CrawlDBI.DBIerror.
+        """
+        self.dbgfunc()
+        testerrnum = 1438
+        testmsg = "This is a test"
+        db = self.DBI()
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             testmsg,
+                             db._dbobj.err_handler,
+                             testmsg)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             testmsg,
+                             db._dbobj.err_handler,
+                             Exception(testmsg))
+        e = ibm_db_dbi.Error(testmsg)
+        e.args = (testerrnum, testmsg)
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "%d: %s" % (testerrnum, testmsg),
+                             db._dbobj.err_handler,
+                             e)
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def test_ctor_nouser_nopass_noconn(self):
+        """
+        DBIdb2Test: Called with no dbname, constructor should throw exception
+        """
+        self.dbgfunc()
+        cfg = make_tcfg(self.dbtype)
+        cfg.remove_option('dbi-hpss', 'username')
+        cfg.remove_option('dbi-hpss', 'password')
+        self.assertRaisesRegex(CrawlDBI.DBIerror,
+                               MSG.password_missing_rgx,
+                               CrawlDBI.DBI,
+                               cfg,
+                               dbtype=self.dbctype,
+                               dbname='cfg')
+
+    # -------------------------------------------------------------------------
     def test_ctor_dbname_none(self):
         """
         DBIdb2Test: Called with no dbname, constructor should throw exception
@@ -2803,6 +2886,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Select with a group by clause on a field that is unknown
         should get an exception.
         """
+        self.dbgfunc()
         db = self.DBI(dbname='sub')
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              '"UNKNOWN_FIELD" is not valid in the context ' +
@@ -3131,6 +3215,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Calling select() with a where clause with a '?' and an
         empty data list should get an exception
         """
+        self.dbgfunc()
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "0 params bound not matching 1 required",
