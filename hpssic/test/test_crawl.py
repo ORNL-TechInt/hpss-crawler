@@ -668,8 +668,10 @@ class CrawlMiscTest(CrawlTest):
         """
         'crawl start' with no configuration available should throw an exception
         """
-        if os.getenv('CRAWL_CONF') is not None:
+        env_crawl_config = os.getenv('CRAWL_CONF')
+        if env_crawl_config is not None:
             del os.environ['CRAWL_CONF']
+
         where = tempfile.mkdtemp(dir=self.testdir)
         exp = util.squash(MSG.no_cfg_found)
         cmd = "%s start" % self.crawl_cmd()
@@ -679,6 +681,9 @@ class CrawlMiscTest(CrawlTest):
                              "Expected %s\n      got %s" %
                              (util.line_quote(exp),
                               util.line_quote(result)))
+
+        if env_crawl_config:
+            os.environ['CRAWL_CONF'] = env_crawl_config
 
     # --------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),

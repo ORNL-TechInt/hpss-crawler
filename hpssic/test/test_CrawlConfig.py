@@ -28,6 +28,7 @@ def setUpModule():
     """
     testhelp.module_test_setup(CrawlConfigTest.testdir)
     CrawlConfig.get_logger(CrawlConfigTest.default_logpath, reset=True)
+    setUpModule.env_crawl_config = os.getenv("CRAWL_CONF")
 
 
 # -----------------------------------------------------------------------------
@@ -37,6 +38,8 @@ def tearDownModule():
     """
     CrawlConfig.get_logger(reset=True, soft=True)
     testhelp.module_test_teardown(CrawlConfigTest.testdir)
+    if setUpModule.env_crawl_config:
+        os.environ["CRAWL_CONF"] = setUpModule.env_crawl_config
 
 
 # -----------------------------------------------------------------------------
