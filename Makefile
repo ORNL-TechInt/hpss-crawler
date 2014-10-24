@@ -15,8 +15,8 @@ help:
 	@echo "    refman       Generate the Reference Manual in HTML"
 	@echo "    sdist        Generate the source distribution"
 	@echo "    TAGS         Navigation tags for emacs"
-	@echo "    tests        Run and log the fast tests"
-	@echo "    alltests     Run and log all the tests"
+	@echo "    ftests       Run and log the fast tests"
+	@echo "    tests        Run and log all the tests"
 	@echo "    testcov      Run tests, show & capture coverage report"
 	@echo "    uguide       Generate the User Guide in HTML"
 	@echo "    uninstall    Remove hpssic from the current environment"
@@ -36,12 +36,11 @@ clean:
 TAGS: hpssic/*.py hpssic/plugins/*.py hpssic/test/*.py
 	find . -name "*.py" | xargs etags
 
-TEST_OPTS=-x
-TESTLOG="hpssic_test.log"
-tests:
+TEST_OPTS=-x --cov hpssic
+ftests:
 	py.test $(TEST_OPTS) 2>&1
 
-alltests:
+tests:
 	py.test --all $(TEST_OPTS) 2>&1
 
 testcov:
