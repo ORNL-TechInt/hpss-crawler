@@ -17,7 +17,7 @@ import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import dbschem
-import ibm_db_dbi
+# import ibm_db_dbi
 from hpssic import messages as MSG
 import os
 import pdb
@@ -2676,11 +2676,13 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                                badattr='frooble')
 
     # -------------------------------------------------------------------------
+    @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_err_handler_db2(self):
         """
         DBIdb2Test: The DB2 err handler will accept *err* (an exception object)
         or *message* (a string). It should alwasy raise a CrawlDBI.DBIerror.
         """
+        import ibm_db_dbi
         self.dbgfunc()
         testerrnum = 1438
         testmsg = "This is a test"
