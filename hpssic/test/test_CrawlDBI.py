@@ -17,7 +17,6 @@ import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import dbschem
-# import ibm_db_dbi
 from hpssic import messages as MSG
 import os
 import pdb

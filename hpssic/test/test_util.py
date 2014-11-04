@@ -818,20 +818,6 @@ class UtilTest(testhelp.HelpedTestCase):
         rf.close()
 
     # -------------------------------------------------------------------------
-    def test_setup_logging(self):
-        """
-        Run setup_logging
-        """
-        self.dbgfunc()
-        logpath = os.path.join(self.testdir, util.my_name() + ".log")
-        logger = util.setup_logging(logpath,
-                                    maxBytes=0,
-                                    backupCount=0,
-                                    bumper=True)
-        self.assertTrue(isinstance(logger, logging.Logger),
-                        "Expected a Logger, got %s" % type(logger))
-
-    # -------------------------------------------------------------------------
     def test_touch_newpath_default(self):
         """
         Call touch on a path that does not exist with no amtime tuple
