@@ -179,21 +179,17 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = re.sub("\n\s*", "", add)
 
         # make sure the target env variable is not defined
-        if evname in os.environ:
-            del os.environ[evname]
+        with util.tmpenv(evname, None):
+            # create a config object with an 'env' section and a '+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, '+' + add)
 
-        # create a config object with an 'env' section and a '+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, '+' + add)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the variable was set to the expected value
-        self.expected(exp, os.environ[evname])
-
-        # raise testhelp.UnderConstructionError()
+            # verify that the variable was set to the expected value
+            self.expected(exp, os.environ[evname])
 
     # -------------------------------------------------------------------------
     def test_env_add_folded_pre(self):
@@ -211,20 +207,18 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = ":".join([pre_val, re.sub("\n\s*", "", add)])
 
         # make sure the target env variable has the expected value
-        os.environ[evname] = pre_val
+        with util.tmpenv(evname, pre_val):
+            # create a config object with an 'env' section and a folded '+'
+            # option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, '+' + add)
 
-        # create a config object with an 'env' section and a folded '+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, '+' + add)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the variable was set to the expected value
-        self.expected(exp, os.environ[evname])
-
-        # raise testhelp.UnderConstructionError()
+            # verify that the variable was set to the expected value
+            self.expected(exp, os.environ[evname])
 
     # -------------------------------------------------------------------------
     def test_env_add_none(self):
@@ -240,21 +234,17 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = add
 
         # make sure the target env variable is not defined
-        if evname in os.environ:
-            del os.environ[evname]
+        with util.tmpenv(evname, None):
+            # create a config object with an 'env' section and a '+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, '+' + add)
 
-        # create a config object with an 'env' section and a '+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, '+' + add)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the variable was set to the expected value
-        self.expected(exp, os.environ[evname])
-
-        # raise testhelp.UnderConstructionError()
+            # verify that the variable was set to the expected value
+            self.expected(exp, os.environ[evname])
 
     # -------------------------------------------------------------------------
     def test_env_add_pre(self):
@@ -271,21 +261,18 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = ":".join([pre_val, add])
 
         # make sure the target env variable is set to a known value
-        os.environ[evname] = pre_val
+        with util.tmpenv(evname, pre_val):
+            # create a config object with an 'env' section and a '+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, "+" + add)
 
-        # create a config object with an 'env' section and a '+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, "+" + add)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the target env variable now contains both old and added
-        # values
-        self.expected(exp, os.environ[evname])
-
-        # raise testhelp.UnderConstructionError()
+            # verify that the target env variable now contains both old and
+            # added values
+            self.expected(exp, os.environ[evname])
 
     # -------------------------------------------------------------------------
     def test_env_set_folded_none(self):
@@ -302,19 +289,17 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = re.sub("\n\s*", "", newval)
 
         # make sure the target env variable is not defined
-        if evname in os.environ:
-            del os.environ[evname]
+        with util.tmpenv(evname, None):
+            # create a config object with an 'env' section and a non-'+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, newval)
 
-        # create a config object with an 'env' section and a non-'+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, newval)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the variable was set to the expected value
-        self.expected(exp, os.environ[evname])
+            # verify that the variable was set to the expected value
+            self.expected(exp, os.environ[evname])
 
     # -------------------------------------------------------------------------
     def test_env_set_pre_folded(self):
@@ -332,22 +317,21 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = re.sub("\n\s*", "", add)
 
         # make sure the target env variable is set to a known value
-        os.environ[evname] = pre_val
+        with util.tmpenv(evname, pre_val):
+            # create a config object with an 'env' section and a non-'+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, add)
 
-        # create a config object with an 'env' section and a non-'+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, add)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the target env variable now contains the new value and
-        # the old value is gone
-        self.expected(exp, os.environ[evname])
-        self.assertTrue(pre_val not in os.environ[evname],
-                        "The old value should be gone but still seems to be " +
-                        " hanging around")
+            # verify that the target env variable now contains the new value
+            # and the old value is gone
+            self.expected(exp, os.environ[evname])
+            self.assertTrue(pre_val not in os.environ[evname],
+                            "The old value should be gone but still seems " +
+                            "to be hanging around")
 
     # -------------------------------------------------------------------------
     def test_env_set_none(self):
@@ -363,19 +347,17 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = "newval"
 
         # make sure the target env variable is not defined
-        if evname in os.environ:
-            del os.environ[evname]
+        with util.tmpenv(evname, None):
+            # create a config object with an 'env' section and a non-'+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, exp)
 
-        # create a config object with an 'env' section and a non-'+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, exp)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the variable was set to the expected value
-        self.expected(exp, os.environ[evname])
+            # verify that the variable was set to the expected value
+            self.expected(exp, os.environ[evname])
 
     # -------------------------------------------------------------------------
     def test_env_set_pre(self):
@@ -393,22 +375,21 @@ class UtilTest(testhelp.HelpedTestCase):
         exp = add
 
         # make sure the target env variable is set to a known value
-        os.environ[evname] = pre_val
+        with util.tmpenv(evname, pre_val):
+            # create a config object with an 'env' section and a non-'+' option
+            cfg = CrawlConfig.CrawlConfig()
+            cfg.add_section(sname)
+            cfg.set(sname, evname, add)
 
-        # create a config object with an 'env' section and a non-'+' option
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.add_section(sname)
-        cfg.set(sname, evname, add)
+            # pass the config object to util.env_update()
+            util.env_update(cfg)
 
-        # pass the config object to util.env_update()
-        util.env_update(cfg)
-
-        # verify that the target env variable now contains the new value and
-        # the old value is gone
-        self.expected(exp, os.environ[evname])
-        self.assertTrue(pre_val not in os.environ[evname],
-                        "The old value should be gone but still seems to be " +
-                        " hanging around")
+            # verify that the target env variable now contains the new value
+            # and the old value is gone
+            self.expected(exp, os.environ[evname])
+            self.assertTrue(pre_val not in os.environ[evname],
+                            "The old value should be gone but still seems " +
+                            "to be hanging around")
 
     # -------------------------------------------------------------------------
     def test_epoch(self):
@@ -438,26 +419,24 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         vname = "EXPAND_UNSET"
-        if vname in os.environ:
-            del os.environ[vname]
+        with util.tmpenv(vname, None):
+            bare_str = "before  $%s   after" % vname
+            exp = "before     after"
+            actual = util.expand(bare_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
-        bare_str = "before  $%s   after" % vname
-        exp = "before     after"
-        actual = util.expand(bare_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+            braced_str = "before/${%s}/after" % vname
+            exp = "before//after"
+            actual = util.expand(braced_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
-        braced_str = "before/${%s}/after" % vname
-        exp = "before//after"
-        actual = util.expand(braced_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
-
-        def_str = "before.${%s:-default-value}.after" % vname
-        exp = "before.default-value.after"
-        actual = util.expand(def_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+            def_str = "before.${%s:-default-value}.after" % vname
+            exp = "before.default-value.after"
+            actual = util.expand(def_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
     # -------------------------------------------------------------------------
     def test_expand_empty(self):
@@ -467,28 +446,24 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         vname = "EXPAND_EMPTY"
-        if vname not in os.environ:
-            os.environ[vname] = ""
+        with util.tmpenv(vname, ""):
+            bare_str = "before  $%s   after" % vname
+            exp = "before     after"
+            actual = util.expand(bare_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
-        bare_str = "before  $%s   after" % vname
-        exp = "before     after"
-        actual = util.expand(bare_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+            braced_str = "before/${%s}/after" % vname
+            exp = "before//after"
+            actual = util.expand(braced_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
-        braced_str = "before/${%s}/after" % vname
-        exp = "before//after"
-        actual = util.expand(braced_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
-
-        def_str = "before.${%s:-default-value}.after" % vname
-        exp = "before..after"
-        actual = util.expand(def_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
-
-        del os.environ[vname]
+            def_str = "before.${%s:-default-value}.after" % vname
+            exp = "before..after"
+            actual = util.expand(def_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
     # -------------------------------------------------------------------------
     def test_expand_filled(self):
@@ -505,28 +480,24 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         vname = "EXPAND_FILLED"
-        if vname not in os.environ:
-            os.environ[vname] = "SOMETHING"
+        with util.tmpenv(vname, "SOMETHING"):
+            bare_str = "before  $%s   after" % vname
+            exp = "before  SOMETHING   after"
+            actual = util.expand(bare_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
-        bare_str = "before  $%s   after" % vname
-        exp = "before  SOMETHING   after"
-        actual = util.expand(bare_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+            braced_str = "before/${%s}/after" % vname
+            exp = "before/SOMETHING/after"
+            actual = util.expand(braced_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
-        braced_str = "before/${%s}/after" % vname
-        exp = "before/SOMETHING/after"
-        actual = util.expand(braced_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
-
-        def_str = "before.${%s:-default-value}.after" % vname
-        exp = "before.SOMETHING.after"
-        actual = util.expand(def_str)
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
-
-        del os.environ[vname]
+            def_str = "before.${%s:-default-value}.after" % vname
+            exp = "before.SOMETHING.after"
+            actual = util.expand(def_str)
+            self.assertEqual(exp, actual,
+                             "Expected '%s', got '%s'" % (exp, actual))
 
     # -------------------------------------------------------------------------
     def test_git_repo(self):

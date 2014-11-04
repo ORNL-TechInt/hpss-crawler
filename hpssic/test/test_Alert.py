@@ -18,6 +18,7 @@ import sys
 from hpssic import testhelp
 from hpssic import toolframe
 from hpssic import util
+from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -213,26 +214,19 @@ class AlertTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         fakesmtp.inbox = []
-        orig = os.getenv('CRAWL_CONF')
-        os.environ['CRAWL_CONF'] = 'crawl.cfg'
-        logfile = '%s/alert_email.log' % self.testdir
-        targets = "addr1@domain.gov, addr2@domain.gov"
-        payload = 'this is an e-mail alert'
-        sender = 'hpssic@' + util.hostname(long=True)
-        CrawlConfig.log(logpath=logfile, close=True)
+        with U.tmpenv('CRAWL_CONF', 'crawl_cfg'):
+            logfile = '%s/alert_email.log' % self.testdir
+            targets = "addr1@domain.gov, addr2@domain.gov"
+            payload = 'this is an e-mail alert'
+            sender = 'hpssic@' + util.hostname(long=True)
+            CrawlConfig.log(logpath=logfile, close=True)
 
-        x = Alert.Alert(caller='cv', msg=payload)
-        m = fakesmtp.inbox[0]
-        try:
+            x = Alert.Alert(caller='cv', msg=payload)
+            m = fakesmtp.inbox[0]
             self.expected(', '.join(m.to_address), targets)
             self.expected(m.from_address, sender)
             self.expected_in('sent mail to', util.contents(logfile))
             self.expected_in(payload, m.fullmessage)
-        finally:
-            if orig:
-                os.environ['CRAWL_CONF'] = orig
-            else:
-                del os.environ['CRAWL_CONF']
 
     # -------------------------------------------------------------------------
     def test_alert_use_other(self):

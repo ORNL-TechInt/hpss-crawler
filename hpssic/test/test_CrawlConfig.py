@@ -2,8 +2,9 @@
 """
 Test class for CrawlConfig.py
 """
-from hpssic import CrawlConfig
+import contextlib as ctx
 import copy
+from hpssic import CrawlConfig
 import logging
 import os
 import pdb
@@ -13,6 +14,7 @@ from hpssic import testhelp
 import time
 from hpssic import toolframe
 from hpssic import util
+from hpssic import util as U
 import warnings
 
 
@@ -28,18 +30,20 @@ def setUpModule():
     """
     testhelp.module_test_setup(CrawlConfigTest.testdir)
     CrawlConfig.log(logpath=CrawlConfigTest.default_logpath, close=True)
-    setUpModule.env_crawl_config = os.getenv("CRAWL_CONF")
+    # @RAFT:
+    # setUpModule.env_crawl_config = os.getenv("CRAWL_CONF")
 
 
 # -----------------------------------------------------------------------------
 def tearDownModule():
     """
-    Clean up after the tests
+    Clean up after the tests, restore the previous value of $CRAWL_CONF
     """
     CrawlConfig.log(close=True)
     testhelp.module_test_teardown(CrawlConfigTest.testdir)
-    if setUpModule.env_crawl_config:
-        os.environ["CRAWL_CONF"] = setUpModule.env_crawl_config
+    # @RAFT:
+    # if setUpModule.env_crawl_config:
+    #     os.environ["CRAWL_CONF"] = setUpModule.env_crawl_config
 
 
 # -----------------------------------------------------------------------------
@@ -182,8 +186,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            self.clear_env()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
             self.write_cfg_file(self.default_cfname, self.cdict)
@@ -207,8 +211,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            self.clear_env()
+        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
             util.conditional_rm(self.default_cfname)
 
             # test with no argument
@@ -227,8 +230,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config() or get_config('') should load the config
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            self.clear_env()
+        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
             self.write_cfg_file(self.default_cfname, d)
@@ -264,8 +266,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            os.environ['CRAWL_CONF'] = self.env_cfname
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
             self.write_cfg_file(self.env_cfname, d)
@@ -287,8 +289,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            os.environ['CRAWL_CONF'] = self.env_cfname
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', self.env_cfname)):
             util.conditional_rm(self.env_cfname)
 
             self.assertRaisesMsg(SystemExit,
@@ -309,8 +311,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config(), get_config('') should load the config
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            os.environ['CRAWL_CONF'] = self.env_cfname
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
             self.write_cfg_file(self.env_cfname, d)
@@ -338,8 +340,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
              readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            os.environ['CRAWL_CONF'] = self.env_cfname
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
             self.write_cfg_file(self.env_cfname, d)
@@ -365,8 +367,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
              about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            os.environ['CRAWL_CONF'] = self.env_cfname
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
             self.write_cfg_file(self.env_cfname, d)
@@ -388,8 +390,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config('explicit.cfg') should load the explicit.cfg
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with util.Chdir(self.testdir):
-            os.environ['CRAWL_CONF'] = self.env_cfname
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
             self.write_cfg_file(self.env_cfname, d)
@@ -593,13 +595,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         CrawlConfig.get_config()).
         """
         self.dbgfunc()
-        with util.Chdir(self.testdir):
+        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
             # reset any logger that has been initialized
             CrawlConfig.log(close=True)
             CrawlConfig.get_config(reset=True, soft=True)
 
             logpath = os.path.basename(self.default_logpath)
-            self.clear_env()
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
             d['crawler']['logpath'] = logpath
@@ -625,8 +626,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         '/tmp/crawl.log' if we can't access the protected file
         """
         self.dbgfunc()
-        self.clear_env()
-        with util.Chdir(self.testdir):
+        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
             util.conditional_rm('crawl.cfg')
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
@@ -640,8 +640,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         the resulting logger has the correct parameters.
         """
         self.dbgfunc()
-        self.clear_env()
-        with util.Chdir(self.testdir):
+        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
             # reset any logger and config that has been initialized
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
@@ -882,7 +881,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         have to be updated.
         """
         self.dbgfunc()
-        with util.Chdir(self.testdir):
+        with ctx.nested(U.Chdir(self.testdir), U.tmpenv("CRAWL_CONF", None)):
+            for filename in ["crawl.cfg", default_logpath()]:
+                if os.path.exists(filename):
+                    os.unlink(filename)
+
             # reset any config and logger already initialized
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
@@ -1749,15 +1752,15 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                       new.get('crawler', 'logpath'))
 
     # --------------------------------------------------------------------------
-    def clear_env(self):
-        """
-        Remove $CRAWL_CFG from the environment.
-        """
-        try:
-            x = os.environ['CRAWL_CONF']
-            del os.environ['CRAWL_CONF']
-        except KeyError:
-            pass
+    # def clear_env(self): @RAFT
+    #     """
+    #     Remove $CRAWL_CONF from the environment.
+    #     """
+    #     try:
+    #         x = os.environ['CRAWL_CONF']
+    #         del os.environ['CRAWL_CONF']
+    #     except KeyError:
+    #         pass
 
     # ------------------------------------------------------------------------
     def try_qt_spec(self, cfg, exp, tval):

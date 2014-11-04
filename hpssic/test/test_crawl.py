@@ -668,22 +668,16 @@ class CrawlMiscTest(CrawlTest):
         """
         'crawl start' with no configuration available should throw an exception
         """
-        env_crawl_config = os.getenv('CRAWL_CONF')
-        if env_crawl_config is not None:
-            del os.environ['CRAWL_CONF']
-
-        where = tempfile.mkdtemp(dir=self.testdir)
-        exp = util.squash(MSG.no_cfg_found)
-        cmd = "%s start" % self.crawl_cmd()
-        with util.Chdir(where):
-            result = util.squash(testhelp.rm_cov_warn(pexpect.run(cmd)))
-            self.assertEqual(exp, result,
-                             "Expected %s\n      got %s" %
-                             (util.line_quote(exp),
-                              util.line_quote(result)))
-
-        if env_crawl_config:
-            os.environ['CRAWL_CONF'] = env_crawl_config
+        with util.tmpenv('CRAWL_CONF', None):
+            where = tempfile.mkdtemp(dir=self.testdir)
+            exp = util.squash(MSG.no_cfg_found)
+            cmd = "%s start" % self.crawl_cmd()
+            with util.Chdir(where):
+                result = util.squash(testhelp.rm_cov_warn(pexpect.run(cmd)))
+                self.assertEqual(exp, result,
+                                 "Expected %s\n      got %s" %
+                                 (util.line_quote(exp),
+                                  util.line_quote(result)))
 
     # --------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),
@@ -1419,57 +1413,56 @@ class CrawlMiscTest(CrawlTest):
 
         EXP: correct number of seconds returned
         """
-        os.environ['CRAWL_LOG'] = '%s/test_get_timeval.log' % self.testdir
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(type(result), int,
-                         '%s should return %s but got %s (%s)'
-                         % ('CrawlConfig.get_time',
-                            'int',
-                            type(result),
-                            str(result)))
-        self.assertEqual(result, 3600,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
+        with util.tmpenv('CRAWL_LOG',
+                         '%s/test_get_timeval.log' % self.testdir):
+            t = CrawlConfig.CrawlConfig()
+            t.load_dict(self.cdict)
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(type(result), int,
+                             '%s should return %s but got %s (%s)'
+                             % ('CrawlConfig.get_time',
+                                'int',
+                                type(result),
+                                str(result)))
+            self.assertEqual(result, 3600,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin_A', 'frequency', '5')
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(result, 5,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
+            t.set('plugin_A', 'frequency', '5')
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(result, 5,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin_A', 'frequency', '5min')
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(result, 300,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
+            t.set('plugin_A', 'frequency', '5min')
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(result, 300,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin_A', 'frequency', '3 days')
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(result, 3 * 24 * 3600,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
+            t.set('plugin_A', 'frequency', '3 days')
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(result, 3 * 24 * 3600,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin_A', 'frequency', '2     w')
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(result, 2 * 7 * 24 * 3600,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
+            t.set('plugin_A', 'frequency', '2     w')
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(result, 2 * 7 * 24 * 3600,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin_A', 'frequency', '4 months')
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(result, 4 * 30 * 24 * 3600,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
+            t.set('plugin_A', 'frequency', '4 months')
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(result, 4 * 30 * 24 * 3600,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
-        t.set('plugin_A', 'frequency', '8 y')
-        result = t.get_time('plugin_A', 'frequency', 1900)
-        self.assertEqual(result, 8 * 365 * 24 * 3600,
-                         'CrawlConfig.get_time() got %s wrong: %d'
-                         % (t.get('plugin_A', 'frequency'), result))
-
-        del os.environ['CRAWL_LOG']
+            t.set('plugin_A', 'frequency', '8 y')
+            result = t.get_time('plugin_A', 'frequency', 1900)
+            self.assertEqual(result, 8 * 365 * 24 * 3600,
+                             'CrawlConfig.get_time() got %s wrong: %d'
+                             % (t.get('plugin_A', 'frequency'), result))
 
     # --------------------------------------------------------------------------
     def test_map_time_unit(self):
@@ -1479,27 +1472,26 @@ class CrawlMiscTest(CrawlTest):
 
         EXP: expected return values encoded in umap
         """
-        os.environ['CRAWL_LOG'] = '%s/test_map_time_unit.log' % self.testdir
-        umap = {'s': 1, 'sec': 1, 'second': 1, 'seconds': 1,
-                'm': 60, 'min': 60, 'minute': 60, 'minutes': 60,
-                'h': 3600, 'hr': 3600, 'hour': 3600, 'hours': 3600,
-                'd': 24 * 3600, 'day': 24 * 3600, 'days': 24 * 3600,
-                'w': 7 * 24 * 3600, 'week': 7 * 24 * 3600,
-                'weeks': 7 * 24 * 3600,
-                'month': 30 * 24 * 3600, 'months': 30 * 24 * 3600,
-                'y': 365 * 24 * 3600, 'year': 365 * 24 * 3600,
-                'years': 365 * 24 * 3600,
-                }
-        cfg = CrawlConfig.CrawlConfig()
-        for unit in umap.keys():
-            result = cfg.map_time_unit(unit)
-            self.assertEqual(result, umap[unit])
+        with util.tmpenv('CRAWL_LOG',
+                         '%s/test_map_time_unit.log' % self.testdir):
+            umap = {'s': 1, 'sec': 1, 'second': 1, 'seconds': 1,
+                    'm': 60, 'min': 60, 'minute': 60, 'minutes': 60,
+                    'h': 3600, 'hr': 3600, 'hour': 3600, 'hours': 3600,
+                    'd': 24 * 3600, 'day': 24 * 3600, 'days': 24 * 3600,
+                    'w': 7 * 24 * 3600, 'week': 7 * 24 * 3600,
+                    'weeks': 7 * 24 * 3600,
+                    'month': 30 * 24 * 3600, 'months': 30 * 24 * 3600,
+                    'y': 365 * 24 * 3600, 'year': 365 * 24 * 3600,
+                    'years': 365 * 24 * 3600,
+                    }
+            cfg = CrawlConfig.CrawlConfig()
+            for unit in umap.keys():
+                result = cfg.map_time_unit(unit)
+                self.assertEqual(result, umap[unit])
 
-            unit += '_x'
-            result = cfg.map_time_unit(unit)
-            self.assertEqual(result, 1)
-
-        del os.environ['CRAWL_LOG']
+                unit += '_x'
+                result = cfg.map_time_unit(unit)
+                self.assertEqual(result, 1)
 
     # --------------------------------------------------------------------------
     @util.memoize
