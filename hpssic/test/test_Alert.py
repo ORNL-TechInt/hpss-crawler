@@ -50,9 +50,7 @@ class AlertTest(testhelp.HelpedTestCase):
                         dispatch=False)
         self.expected('this is the message', x.msg)
         self.expected(util.my_name(), x.caller)
-        self.assertEqual('dispatch' in dir(x), True,
-                         "'dispatch' should be an attribute of the Alert" +
-                         " object, but is not")
+        self.expected_in('dispatch', dir(x))
 
     # -------------------------------------------------------------------------
     def test_alert_log(self):
@@ -68,13 +66,10 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'log', "%s")
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
-        self.assertEqual('this is a test message' in util.contents(logfile),
-                         True,
-                         "'this is a test message' expected in log file" +
-                         " but not found")
+        self.expected_in('this is a test message', util.contents(logfile))
 
     # -------------------------------------------------------------------------
     def test_alert_shell(self):
@@ -99,13 +94,11 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'shell', '%s/runme' % self.testdir + " %s")
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
         expected = "ran: '%s this is a test message'" % runfile
-        self.assertTrue(expected in util.contents(logfile),
-                        "'%s' expected in log file" % expected +
-                        " but not found")
+        self.expected_in(expected, util.contents(logfile))
         self.assertTrue(os.path.exists(outfile),
                         "expected %s to exist but it's not found" %
                         outfile)
@@ -134,13 +127,11 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'shell', '%s/runme' % self.testdir)
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
         expected = "ran: '%s'" % runfile
-        self.assertTrue(expected in util.contents(logfile),
-                        "'%s' expected in log file" % expected +
-                        " but not found")
+        self.expected_in(expected, util.contents(logfile))
         self.assertTrue(os.path.exists(outfile),
                         "expected %s to exist but it's not found" %
                         outfile)
@@ -151,6 +142,7 @@ class AlertTest(testhelp.HelpedTestCase):
         Generate an e-mail alert and verify that it was sent (this is where we
         use 'monkey patching').
         """
+        self.dbgfunc()
         fakesmtp.inbox = []
         logfile = '%s/alert_email.log' % self.testdir
         targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
@@ -164,7 +156,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'email', targets)
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
 
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)
@@ -177,11 +169,8 @@ class AlertTest(testhelp.HelpedTestCase):
         self.assertEqual(m.from_address, sender,
                          "from address '%s' does not match sender '%s'" %
                          (m.from_address, sender))
-        self.assertTrue('sent mail to' in util.contents(logfile),
-                        "expected '%s' in %s, not found")
-        self.assertTrue(payload in m.fullmessage,
-                        "'%s' not found in e-mail message '%s'" %
-                        (payload, m.fullmessage))
+        self.expected_in('sent mail to', util.contents(logfile))
+        self.expected_in(payload, m.fullmessage)
 
     # -------------------------------------------------------------------------
     def test_alert_email_mtcaller(self):
@@ -202,7 +191,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('crawler', 'logpath', logfile)
         # cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alerts', 'email', targets)
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
 
         x = Alert.Alert(caller='', msg=payload,
                         cfg=cfg)
@@ -212,14 +201,9 @@ class AlertTest(testhelp.HelpedTestCase):
                          targets,
                          "'%s' does not match '%s'" %
                          (', '.join(m.to_address), targets))
-        self.assertEqual(m.from_address, sender,
-                         "from address '%s' does not match sender '%s'" %
-                         (m.from_address, sender))
-        self.assertTrue('sent mail to' in util.contents(logfile),
-                        "expected '%s' in %s, not found")
-        self.assertTrue(payload in m.fullmessage,
-                        "'%s' not found in e-mail message '%s'" %
-                        (payload, m.fullmessage))
+        self.expected(m.from_address, sender)
+        self.expected_in('sent mail to', util.contents(logfile))
+        self.expected_in(payload, m.fullmessage)
 
     # -------------------------------------------------------------------------
     def test_alert_email_defcfg(self):
@@ -227,6 +211,7 @@ class AlertTest(testhelp.HelpedTestCase):
         Generate an e-mail alert using the default config and verify that it
         was sent (this is where we use 'monkey patching').
         """
+        self.dbgfunc()
         fakesmtp.inbox = []
         orig = os.getenv('CRAWL_CONF')
         os.environ['CRAWL_CONF'] = 'crawl.cfg'
@@ -234,23 +219,15 @@ class AlertTest(testhelp.HelpedTestCase):
         targets = "addr1@domain.gov, addr2@domain.gov"
         payload = 'this is an e-mail alert'
         sender = 'hpssic@' + util.hostname(long=True)
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
 
         x = Alert.Alert(caller='cv', msg=payload)
         m = fakesmtp.inbox[0]
         try:
-            self.assertEqual(', '.join(m.to_address),
-                             targets,
-                             "'%s' does not match '%s'" %
-                             (', '.join(m.to_address), targets))
-            self.assertEqual(m.from_address, sender,
-                             "from address '%s' does not match sender '%s'" %
-                             (m.from_address, sender))
-            self.assertTrue('sent mail to' in util.contents(logfile),
-                            "expected '%s' in %s, not found")
-            self.assertTrue(payload in m.fullmessage,
-                            "'%s' not found in e-mail message '%s'" %
-                            (payload, m.fullmessage))
+            self.expected(', '.join(m.to_address), targets)
+            self.expected(m.from_address, sender)
+            self.expected_in('sent mail to', util.contents(logfile))
+            self.expected_in(payload, m.fullmessage)
         finally:
             if orig:
                 os.environ['CRAWL_CONF'] = orig
@@ -274,7 +251,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'use', "other_section")
         cfg.set('other_section', 'log', "%s")
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
         payload = 'this is a test message from %s' % util.my_name()
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)
@@ -295,7 +272,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alert_section', 'log', "%s")
         cfg.set('alert_section', 'use', 'alert_section')
-        CrawlConfig.get_logger(cmdline=logfile, reset=True)
+        CrawlConfig.log(logpath=logfile, close=True)
         payload = 'this is a test message from %s' % util.my_name()
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)

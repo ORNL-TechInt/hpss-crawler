@@ -74,7 +74,7 @@ class daemonTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_dlog(self):
         lfname = '%s/daemon.dlog.log' % self.testdir
-        lf = CrawlConfig.get_logger(cmdline=lfname)
+        lf = CrawlConfig.log(logpath=lfname)
         a = daemon.Daemon("%s/daemon_pid" % self.testdir,
                           logger=lf)
         logmsg = "testing the dlog method of %s" % a

@@ -1,11 +1,11 @@
+import CrawlConfig
 import pexpect
 import sys
 
 
 # -----------------------------------------------------------------------------
 def main(cfg):
-    clog = sys.modules['__main__'].get_logger()
-    clog.info("hsi-demo: sending output to hsi.out")
+    CrawlConfig.log("hsi-demo: sending output to hsi.out")
     hsi_prompt = "]:"
 
     S = pexpect.spawn("/opt/public/bin/hsi")

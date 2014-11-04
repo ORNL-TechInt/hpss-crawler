@@ -27,7 +27,7 @@ def setUpModule():
     Set up for the tests.
     """
     testhelp.module_test_setup(CrawlConfigTest.testdir)
-    CrawlConfig.get_logger(CrawlConfigTest.default_logpath, reset=True)
+    CrawlConfig.log(logpath=CrawlConfigTest.default_logpath, close=True)
     setUpModule.env_crawl_config = os.getenv("CRAWL_CONF")
 
 
@@ -36,10 +36,22 @@ def tearDownModule():
     """
     Clean up after the tests
     """
-    CrawlConfig.get_logger(reset=True, soft=True)
+    CrawlConfig.log(close=True)
     testhelp.module_test_teardown(CrawlConfigTest.testdir)
     if setUpModule.env_crawl_config:
         os.environ["CRAWL_CONF"] = setUpModule.env_crawl_config
+
+
+# -----------------------------------------------------------------------------
+def default_logpath():
+    """
+    Return the ultimate default log path
+    """
+    if os.getuid() == 0:
+        rval = "/var/log/hpssic.log"
+    else:
+        rval = "/tmp/hpssic.log"
+    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -455,68 +467,62 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                              'deer')
 
     # -------------------------------------------------------------------------
-    def test_get_logger_00(self):
+    def test_logging_00(self):
         """
-        With no logger cached, reset=False and soft=False should create a
-        new logger. If a logger has been created, this case should return the
-        cached logger.
+        With no logger cached, calling CrawlConfig.log() with a logpath and
+        close=True should create a new logger. If a logger has been created,
+        a call with close=False should not open a new logpath.
         """
+        self.dbgfunc()
         # throw away any logger that has been set
-        CrawlConfig.get_logger(reset=True, soft=True)
-
-        # get_logger(..., reset=False, soft=False) should create a new one
-        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' %
-                                        self.testdir,
-                                        reset=False, soft=False)
+        # and get a new one
+        actual = CrawlConfig.log(logpath='%s/CrawlConfig.log' % self.testdir,
+                                 close=True)
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
 
-        # now ask for a logger with a different name, with reset=False,
-        # soft=False. Since one has already been created, the new name should
-        # be ignored and we should get back the one already cached.
-        CrawlConfig.get_logger(cmdline='%s/util_foobar.log' % self.testdir,
-                               reset=False, soft=False)
+        # now ask for a logger with a different name, with close=False. Since
+        # one has already been created, the new name should be ignored and we
+        # should get back the one already cached.
+        actual = CrawlConfig.log(logpath='%s/util_foobar.log' % self.testdir)
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
 
     # -------------------------------------------------------------------------
-    def test_get_logger_01(self):
+    def test_logging_01(self):
         """
-        With no logger cached, reset=False and soft=True should not create a
-        new logger. If a logger has been created, this case should return the
-        cached logger.
+        With no logger cached, close=True should not create a new logger. If a
+        logger has been created, calling CrawlConfig.log() with no arguments
+        should return the cached logger.
         """
-        # throw away any logger that has been set
-        CrawlConfig.get_logger(reset=True, soft=True)
-
-        # then see what happens with reset=False, soft=True
-        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' %
-                                        self.testdir, reset=False, soft=True)
+        # reset the logger
+        actual = CrawlConfig.log(close=True)
         self.expected(None, actual)
 
         # now create a logger
-        CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' % self.testdir)
-        # now reset=False, soft=True should return the one just created
-        actual = CrawlConfig.get_logger(reset=False, soft=True)
+        CrawlConfig.log(logpath='%s/CrawlConfig.log' % self.testdir)
+
+        # now retrieving the logger should get the one just set
+        actual = CrawlConfig.log()
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
                       actual.handlers[0].baseFilename)
 
     # -------------------------------------------------------------------------
-    def test_get_logger_10(self):
+    def test_logging_10(self):
         """
-        Calling get_logger with reset=True, soft=False should get rid of the
-        previously cached logger and make a new one.
+        Calling CrawlConfig.log() with close=True and a logpath should get rid
+        of the previously cached logger and make a new one.
         """
         # throw away any logger that has been set and create one to be
         # overridden
-        tmp = CrawlConfig.get_logger(cmdline='%s/throwaway.log' % self.testdir,
-                                     reset=True)
+        tmp = CrawlConfig.log(logpath='%s/throwaway.log' % self.testdir,
+                              close=True)
 
         # verify that it's there with the expected attributes
         self.assertTrue(isinstance(tmp, logging.Logger),
@@ -526,9 +532,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                       tmp.handlers[0].baseFilename)
 
         # now override it
-        actual = CrawlConfig.get_logger(cmdline='%s/CrawlConfig.log' %
-                                        self.testdir,
-                                        reset=True, soft=False)
+        actual = CrawlConfig.log(logpath='%s/CrawlConfig.log' % self.testdir,
+                                 close=True)
+
         # and verify that it got replaced
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
@@ -537,21 +543,22 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                       actual.handlers[0].baseFilename)
 
     # -------------------------------------------------------------------------
-    def test_get_logger_11(self):
+    def test_logging_11(self):
         """
-        Calling get_logger with both reset=True and soft=True should throw away
-        any cached logger and return None without creating a new one.
+        Calling CrawlConfig.log() with close=True and no new logpath should
+        throw away any cached logger and return None without creating a new
+        one.
         """
         exp = None
-        actual = CrawlConfig.get_logger(reset=True, soft=True)
+        actual = CrawlConfig.log(close=True)
         self.expected(exp, actual)
 
     # -------------------------------------------------------------------------
-    def test_get_logger_cfg(self):
+    def test_logging_cfg(self):
         """
-        Call get_logger with a config that specifies non default values for log
-        file name, log file size, and max log files on disk. Verify that the
-        resulting logger has the correct parameters.
+        Call CrawlConfig.log() with a config that specifies non default values
+        for log file name, log file size, and max log files on disk. Verify
+        that the resulting logger has the correct parameters.
         """
         cfname = "%s/%s.cfg" % (self.testdir, util.my_name())
         lfname = "%s/%s.log" % (self.testdir, util.my_name())
@@ -563,11 +570,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         c = CrawlConfig.CrawlConfig()
         c.load_dict(cdict)
 
-        # reset any logger that has been initialized
-        CrawlConfig.get_logger(reset=True, soft=True)
-
-        # now ask for one that matches the configuration
-        l = CrawlConfig.get_logger(cfg=c)
+        # reset any logger that has been initialized and ask for one that
+        # matches the configuration
+        l = CrawlConfig.log(cfg=c, close=True)
 
         # and check that it has the right handler
         self.assertNotEqual(l, None)
@@ -580,16 +585,17 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         "%s should exist but does not" % lfname)
 
     # -------------------------------------------------------------------------
-    def test_get_logger_def_cfg(self):
+    def test_logging_def_cfg(self):
         """
-        Call get_logger with no cmdline or cfg arguments but with a default
-        config file available. The result should be a logger open on the log
-        path named in the default config file (retrieved by
+        Call CrawlConfig.log() with no logpath or cfg arguments but with a
+        default config file available. The result should be a logger open on
+        the log path named in the default config file (retrieved by
         CrawlConfig.get_config()).
         """
+        self.dbgfunc()
         with util.Chdir(self.testdir):
             # reset any logger that has been initialized
-            CrawlConfig.get_logger(reset=True, soft=True)
+            CrawlConfig.log(close=True)
             CrawlConfig.get_config(reset=True, soft=True)
 
             logpath = os.path.basename(self.default_logpath)
@@ -601,77 +607,67 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             os.chmod(self.default_cfname, 0644)
 
             # now ask for a default logger
-            l = CrawlConfig.get_logger()
+            l = CrawlConfig.log("frooble test log")
 
             # and check that it has the right handler
             self.expected(1, len(l.handlers))
             self.expected(os.path.abspath(logpath),
                           l.handlers[0].stream.name)
-            self.expected(5000000, l.handlers[0].maxBytes)
-            self.expected(5, l.handlers[0].backupCount)
-
-    # --------------------------------------------------------------------------
-    def test_get_logger_default(self):
-        """
-        TEST: Call get_logger() with no argument
-
-        EXP: Attempts to log to '/var/log/crawl.log', falls back to
-        '/tmp/crawl.log' if we can't access the protected file
-        """
-        self.clear_env()
-        with util.Chdir(self.testdir):
-            util.conditional_rm('crawl.cfg')
-            CrawlConfig.get_config(reset=True, soft=True)
-            CrawlConfig.get_logger(reset=True, soft=True)
-            lobj = CrawlConfig.get_logger()
-
-            # if I'm root, I should be looking at /var/log/crawl.log
-            if os.getuid() == 0:
-                self.expected('/var/log/crawl.log',
-                              lobj.handlers[0].stream.name)
-
-            # otherwise, I should be looking at /tmp/crawl.log
-            else:
-                self.expected('/tmp/crawl.log',
-                              lobj.handlers[0].stream.name)
-
-    # -------------------------------------------------------------------------
-    def test_get_logger_nocfg(self):
-        """
-        Call get_logger with no cmdline or cfg arguments and make sure the
-        resulting logger has the correct parameters.
-        """
-        self.clear_env()
-        with util.Chdir(self.testdir):
-            # reset any logger and config that has been initialized
-            CrawlConfig.get_config(reset=True, soft=True)
-            CrawlConfig.get_logger(reset=True, soft=True)
-
-            # now ask for a default logger
-            l = CrawlConfig.get_logger()
-
-            # and check that it has the right handler
-            self.expected(1, len(l.handlers))
-            if os.getuid() == 0:
-                self.expected("/var/log/crawl.log", l.handlers[0].stream.name)
-            else:
-                self.expected("/tmp/crawl.log", l.handlers[0].stream.name)
             self.expected(10*1024*1024, l.handlers[0].maxBytes)
             self.expected(5, l.handlers[0].backupCount)
 
     # --------------------------------------------------------------------------
-    def test_get_logger_path(self):
+    def test_logging_default(self):
         """
-        TEST: Call get_logger() with a pathname
+        TEST: Call CrawlConfig.log() with no argument
+
+        EXP: Attempts to log to '/var/log/crawl.log', falls back to
+        '/tmp/crawl.log' if we can't access the protected file
+        """
+        self.dbgfunc()
+        self.clear_env()
+        with util.Chdir(self.testdir):
+            util.conditional_rm('crawl.cfg')
+            CrawlConfig.get_config(reset=True, soft=True)
+            CrawlConfig.log(close=True)
+            lobj = CrawlConfig.log("This is a test log message")
+            self.expected(default_logpath(), lobj.handlers[0].stream.name)
+
+    # -------------------------------------------------------------------------
+    def test_logging_nocfg(self):
+        """
+        Call CrawlConfig.log() with no cmdline or cfg arguments and make sure
+        the resulting logger has the correct parameters.
+        """
+        self.dbgfunc()
+        self.clear_env()
+        with util.Chdir(self.testdir):
+            # reset any logger and config that has been initialized
+            CrawlConfig.get_config(reset=True, soft=True)
+            CrawlConfig.log(close=True)
+
+            # now ask for a default logger
+            l = CrawlConfig.log("test log message")
+
+            # and check that it has the right handler
+            self.expected(1, len(l.handlers))
+            self.expected(default_logpath(), l.handlers[0].stream.name)
+            self.expected(10*1024*1024, l.handlers[0].maxBytes)
+            self.expected(5, l.handlers[0].backupCount)
+
+    # --------------------------------------------------------------------------
+    def test_logging_path(self):
+        """
+        TEST: Call CrawlConfig.log() with a pathname
 
         EXP: Attempts to log to pathname
         """
-        CrawlConfig.get_logger(reset=True, soft=True)
+        CrawlConfig.log(close=True)
         logpath = '%s/%s.log' % (self.testdir, util.my_name())
         util.conditional_rm(logpath)
         self.assertEqual(os.path.exists(logpath), False,
                          '%s should not exist but does' % logpath)
-        lobj = CrawlConfig.get_logger(logpath)
+        lobj = CrawlConfig.log(logpath=logpath)
         self.assertEqual(os.path.exists(logpath), True,
                          '%s should exist but does not' % logpath)
 
@@ -878,25 +874,26 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         If CrawlConfig.log() is called with no logger already instantiated, and
         no default config file available, it should resort to the default log
-        file names in either /var/log/crawl.log or /tmp/crawl.log, depending on
-        the privilege of the running user.
+        file names depending on the privilege of the running user.
+
+        The '+ 2' added to f_lineno just before logging the message is the
+        number of lines from where f_lineno reference is to where the log call
+        actually happens. If they move relative to each other, this value will
+        have to be updated.
         """
+        self.dbgfunc()
         with util.Chdir(self.testdir):
             # reset any config and logger already initialized
             CrawlConfig.get_config(reset=True, soft=True)
-            CrawlConfig.get_logger(reset=True, soft=True)
+            CrawlConfig.log(close=True)
 
             # now attempt to log a message to the default file
             msg = "This is a test log message %s"
             arg = "with a format specifier"
-            if 0 == os.getuid():
-                exp_logfile = "/var/log/crawl.log"
-            else:
-                exp_logfile = "/tmp/crawl.log"
-            exp = (util.my_name() +
-                   "(%s:%d): " % (sys._getframe().f_code.co_filename,
-                                  sys._getframe().f_lineno + 2) +
-                   msg % arg)
+            exp_logfile = default_logpath()
+            loc = "(%s:%d): " % (sys._getframe().f_code.co_filename,
+                                 sys._getframe().f_lineno + 2)
+            exp = (util.my_name() + loc + msg % arg)
             CrawlConfig.log(msg, arg)
             result = util.contents(exp_logfile)
             self.assertTrue(exp in result,
@@ -922,7 +919,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                               'logmax': '10'}}
         lcfg = CrawlConfig.CrawlConfig()
         lcfg.load_dict(lcfg_d)
-        CrawlConfig.get_logger(cfg=lcfg, reset=True)
+        CrawlConfig.log(cfg=lcfg, close=True)
         lmsg = "This is a test " + "-" * 35
         for x in range(0, 5):
             CrawlConfig.log(lmsg)
@@ -951,7 +948,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                               'logmax': '10'}}
         lcfg = CrawlConfig.CrawlConfig()
         lcfg.load_dict(lcfg_d)
-        CrawlConfig.get_logger(cfg=lcfg, reset=True)
+        CrawlConfig.log(cfg=lcfg, close=True)
         lmsg = "This is a test " + "-" * 35
         for x in range(0, 5):
             CrawlConfig.log(lmsg)
@@ -972,8 +969,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        CrawlConfig.log(close=True)
+        log = CrawlConfig.log(logpath=fpath)
 
         # multiple % formatters in first arg
         a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
@@ -1000,8 +997,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        CrawlConfig.log(logpath=fpath, close=True)
 
         # 1 % formatter in first arg
         a1 = "This has a formatter and one argument: %s"
@@ -1026,8 +1022,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
          - too many args for % formatters
         """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        CrawlConfig.log(logpath=fpath, close=True)
 
         # simple string in first arg
         exp = util.my_name() + ": " + "This is a simple string"
@@ -1048,29 +1043,31 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        log = CrawlConfig.log(logpath=fpath, close=True)
 
         # this allows exceptions thrown from inside the logging handler to
         # propagate up so we can catch it.
         log.handlers[0].handleError = logErr
 
         # multiple % formatters in first arg
-        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f; %g"
-        a2 = "zebedee"
-        a3 = 94
-        a4 = 23.12348293402
-        exp = util.my_name() + ": " + a1 % (a2, a3, a4, 17.9)
-        try:
-            CrawlConfig.log(a1, a2, a3, a4)
-            self.fail("Expected exception not thrown")
-        except TypeError as e:
-            self.assertEqual("not enough arguments for format string", str(e),
-                             "Wrong TypeError thrown")
+
+        argl = ["Here's a string: '%s'; here's an int: %d; " +
+                "here's a float: %f; %g",
+                "zebedee",
+                94,
+                23.12348293402]
+        exp = util.my_name() + ": " + argl[0] % (argl[1],
+                                                 argl[2],
+                                                 argl[3],
+                                                 17.9)
+        self.assertRaisesMsg(TypeError,
+                             "not enough arguments for format string",
+                             CrawlConfig.log,
+                             *argl)
 
         result = util.contents(fpath)
         self.assertFalse(exp in result,
-                         "Expected '%s' in %s" %
+                         "Not expecting '%s' in %s" %
                          (exp, util.line_quote(result)))
 
     # -------------------------------------------------------------------------
@@ -1084,27 +1081,30 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many args for % formatters
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
-        CrawlConfig.get_logger(reset=True, soft=True)
-        log = CrawlConfig.get_logger(cmdline=fpath)
+        log = CrawlConfig.log(logpath=fpath, close=True)
 
         # this allows exceptions thrown from inside the logging handler to
         # propagate up so we can catch it.
         log.handlers[0].handleError = logErr
 
         # multiple % formatters in first arg
-        a1 = "Here's a string: '%s'; here's an int: %d; here's a float: %f"
-        a2 = "zebedee"
-        a3 = 94
-        a4 = 23.12348293402
-        a5 = "friddle"
-        exp = (util.my_name() + ": " + a1 % (a2, a3, a4))
-        try:
-            CrawlConfig.log(a1, a2, a3, a4, a5)
-            self.fail("Expected exception not thrown")
-        except TypeError as e:
-            exc = "not all arguments converted during string formatting"
-            self.assertEqual(exc, str(e),
-                             "Expected '%s', got '%s'" % (exc, str(e)))
+        argl = ["Here's a string: '%s'; here's an int: %d; here's a float: %f",
+                "zebedee",
+                94,
+                23.12348293402,
+                "friddle"]
+        exp = (util.my_name() + ": " + argl[0] % (argl[1], argl[2], argl[3]))
+        exc = "not all arguments converted during string formatting"
+        self.assertRaisesMsg(TypeError,
+                             exc,
+                             CrawlConfig.log,
+                             *argl)
+        # try:
+        #     CrawlConfig.log(a1, a2, a3, a4, a5)
+        #     self.fail("Expected exception not thrown")
+        # except TypeError as e:
+        #     self.assertEqual(exc, str(e),
+        #                      "Expected '%s', got '%s'" % (exc, str(e)))
 
         result = util.contents(fpath)
         self.assertFalse(exp in result,

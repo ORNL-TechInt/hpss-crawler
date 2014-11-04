@@ -47,7 +47,7 @@ def tearDownModule():
     """
     Clean up after a sequence of tests.
     """
-    CrawlConfig.get_logger(reset=True, soft=True)
+    CrawlConfig.log(close=True)
     testhelp.module_test_teardown(CrawlTest.testdir)
 
     if crawl.is_running(context=CrawlTest.ctx):
@@ -1587,8 +1587,8 @@ class CrawlGiveUpYetTest(CrawlTest):
         t.set('alerts', 'email', self.email_targets)
 
         self.D = crawl.CrawlDaemon("fake_pidfile",
-                                   logger=CrawlConfig.get_logger(self.logpath,
-                                                                 reset=True))
+                                   logger=CrawlConfig.log(logpath=self.logpath,
+                                                          close=True))
         self.D.cfg = t
         self.sender = 'hpssic@%s' % util.hostname(long=True)
         self.tbstr = ["abc", 'def', 'ghi', 'jkl', 'mno', 'pqr', "xyz"]
