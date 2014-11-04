@@ -72,9 +72,6 @@ class Alert(object):
         will get handled. Once we process 'use', anything not yet processed in
         the current section is ignored.
         """
-        # mainmod = sys.modules['__main__']
-        # cfg = mainmod.get_config()
-        # log = mainmod.get_logger()
         if self.cfg is not None:
             cfg = self.cfg
         else:
