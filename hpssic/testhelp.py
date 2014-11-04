@@ -317,7 +317,7 @@ def reset_directory(dirpath, make=True, force=False):
     """
     try:
         if not keepfiles() or force:
-            logger = CrawlConfig.get_logger(reset=True, soft=True)
+            CrawlConfig.log(close=True)
             if os.path.isdir(dirpath):
                 shutil.rmtree(dirpath)
             if make and not os.path.exists(dirpath):
@@ -530,7 +530,14 @@ class HelpedTestCase(unittest.TestCase):
         else:
             msg += "'%s'"
 
-        self.assertTrue(util.rgxin(exprgx, actual), msg % (exprgx, actual))
+        if type(actual) == list:
+            if type(exprgx) == str:
+                self.assertTrue(any([util.rgxin(exprgx, x) for x in actual]),
+                                msg % (exprgx, actual))
+            else:
+                self.assertTrue(exprgx in actual, msg % (exprgx, actual))
+        else:
+            self.assertTrue(util.rgxin(exprgx, actual), msg % (exprgx, actual))
 
     # -------------------------------------------------------------------------
     def noop(self):
