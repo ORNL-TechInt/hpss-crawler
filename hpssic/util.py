@@ -559,62 +559,62 @@ default_logfile_name = "/var/log/crawl.log"
 
 
 # -----------------------------------------------------------------------------
-def setup_logging(logfile='',
-                  logname='crawl',
-                  maxBytes=10*1024*1024,
-                  backupCount=5,
-                  bumper=True,
-                  archdir=''):
-    """
-    Create a new logger and return the object.
-
-    If the caller does not specify a *logfile*, we try to use the
-    default_logfile_name set above. However, this path is only writable by
-    root, so if the call to ArchiveLogfileHandler below fails, we fall back
-    /tmp/crawl.log that anyone should be able to create and write.
-    """
-    def raiseError():
-        raise
-
-    if logfile == '':
-        logfile = default_logfile_name
-
-    logfile = expand(logfile)
-
-    rval = logging.getLogger(logname)
-    rval.setLevel(logging.INFO)
-    host = hostname()
-    if rval.handlers != [] and logfile != rval.handlers[0].baseFilename:
-        rval.handlers[0].close()
-        del rval.handlers[0]
-    if rval.handlers == []:
-        if maxBytes == 0:
-            maxBytes = 10*1024*1024
-        if backupCount == 0:
-            backupCount = 1
-        done = False
-        while not done:
-            try:
-                fh = ArchiveLogfileHandler(logfile,
-                                           maxBytes=maxBytes,
-                                           backupCount=backupCount,
-                                           archdir=archdir)
-                done = True
-            except:
-                if logfile == default_logfile_name:
-                    logfile = "/tmp/%s" % os.path.basename(logfile)
-                else:
-                    raise
-
-        strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
-        fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
-        fh.setFormatter(fmt)
-        fh.handleError = raiseError
-
-        rval.addHandler(fh)
-    if bumper:
-        rval.info('-' * (55 - len(host)))
-    return rval
+# def setup_logging(logfile='',
+#                   logname='crawl',
+#                   maxBytes=10*1024*1024,
+#                   backupCount=5,
+#                   bumper=True,
+#                   archdir=''):
+#     """
+#     Create a new logger and return the object.
+#
+#     If the caller does not specify a *logfile*, we try to use the
+#     default_logfile_name set above. However, this path is only writable by
+#     root, so if the call to ArchiveLogfileHandler below fails, we fall back
+#     /tmp/crawl.log that anyone should be able to create and write.
+#     """
+#     def raiseError():
+#         raise
+#
+#     if logfile == '':
+#         logfile = default_logfile_name
+#
+#     logfile = expand(logfile)
+#
+#     rval = logging.getLogger(logname)
+#     rval.setLevel(logging.INFO)
+#     host = hostname()
+#     if rval.handlers != [] and logfile != rval.handlers[0].baseFilename:
+#         rval.handlers[0].close()
+#         del rval.handlers[0]
+#     if rval.handlers == []:
+#         if maxBytes == 0:
+#             maxBytes = 10*1024*1024
+#         if backupCount == 0:
+#             backupCount = 1
+#         done = False
+#         while not done:
+#             try:
+#                 fh = ArchiveLogfileHandler(logfile,
+#                                            maxBytes=maxBytes,
+#                                            backupCount=backupCount,
+#                                            archdir=archdir)
+#                 done = True
+#             except:
+#                 if logfile == default_logfile_name:
+#                     logfile = "/tmp/%s" % os.path.basename(logfile)
+#                 else:
+#                     raise
+#
+#         strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
+#         fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
+#         fh.setFormatter(fmt)
+#         fh.handleError = raiseError
+#
+#         rval.addHandler(fh)
+#     if bumper:
+#         rval.info('-' * (55 - len(host)))
+#     return rval
 
 
 # -----------------------------------------------------------------------------

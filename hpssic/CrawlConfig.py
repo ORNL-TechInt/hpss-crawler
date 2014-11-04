@@ -20,6 +20,7 @@ import ConfigParser
 from ConfigParser import NoSectionError
 from ConfigParser import NoOptionError
 from ConfigParser import InterpolationMissingOptionError
+import logging
 import os
 import pdb
 import re
@@ -28,6 +29,7 @@ import StringIO
 import sys
 import time
 import util
+import util as U
 import warnings
 
 
@@ -115,88 +117,150 @@ def get_logcfg(cfg):
 
 
 # ------------------------------------------------------------------------------
-def get_logger(cmdline='', cfg=None, reset=False, soft=False):
+def new_logger(logpath='', cfg=None):
     """
-    Return the logging object for this process. Instantiate it if it
-    does not exist already.
+    Return a new logging object for this process. The log file path is derived
+    from (in order):
 
-    cmdline contains the log file name from the command line if one was
-    specified.
-
-    cfg contains a configuration object or None.
-
-    reset == True means that the caller wants to close any currently open log
-    file and open a new one rather than returning the one that's already open.
-
-    soft == True means that if a logger does not exist, we don't want to open
-    one but return None instead. Normally, if a logger does not exist, we
-    create it.
+     - logpath if set
+     - environment ($CRAWL_LOG)
+     - cfg
+     - default (/var/log/hpssic.log if writable, else /tmp/hpssic.log)
     """
-    if reset:
-        try:
-            l = get_logger._logger
-            for h in l.handlers:
-                h.close()
-            del get_logger._logger
-        except AttributeError:
-            pass
-        if soft:
-            return None
+    # -------------------------------------------------------------------------
+    def default_logpath():
+        rval = '/var/log/hpssic.log'
+        if not os.access(rval, os.W_OK):
+            rval = '/tmp/hpssic.log'
+        return rval
 
-    kwargs = {}
-    envval = os.getenv('CRAWL_LOG')
+    # -------------------------------------------------------------------------
+    def cfg_get(func, section, option, defval):
+        if cfg:
+            rval = func(section, option, defval)
+        else:
+            rval = defval
+        return rval
+
+    # -------------------------------------------------------------------------
+    def raiseError():
+        raise
+
+    envname = os.getenv('CRAWL_LOG')
     try:
         dcfg = get_config()
     except:
         dcfg = None
 
-    # setting filename -- first, assume the default, then work down the
-    # precedence stack from cmdline to cfg to environment
-    filename = ''
-    if cmdline != '':
-        filename = cmdline
-    elif cfg is not None:
-        kwargs = get_logcfg(cfg)
-        filename = kwargs['filename']
-        del kwargs['filename']
-    elif envval is not None:
-        filename = envval
-    elif dcfg is not None:
-        kwargs = get_logcfg(dcfg)
-        filename = kwargs['filename']
-        del kwargs['filename']
+    if logpath != '':
+        final_logpath = logpath
+    elif envname:
+        final_logpath = envname
+    elif cfg:
+        try:
+            final_logpath = cfg.get('crawler', 'logpath')
+        except NoOptionError:
+            final_logpath = default_logpath()
+        except NoSectionError:
+            final_logpath = default_logpath()
+    elif dcfg:
+        try:
+            final_logpath = dcfg.get('crawler', 'logpath')
+        except NoOptionError:
+            final_logpath = default_logpath()
+        except NoSectionError:
+            final_logpath = default_logpath()
+    else:
+        final_logpath = default_logpath()
 
-    try:
-        rval = get_logger._logger
-    except AttributeError:
-        if soft:
-            return None
-        get_logger._logger = util.setup_logging(filename, 'crawl',
-                                                bumper=False, **kwargs)
-        rval = get_logger._logger
+    rval = logging.getLogger('hpssic')
+    rval.setLevel(logging.INFO)
+    host = util.hostname()
+
+    for h in rval.handlers:
+        h.close()
+        del h
+
+    if cfg:
+        maxBytes = cfg.get_size('crawler', 'logsize', 10*1024*1024)
+        backupCount = cfg.get_size('crawler', 'logmax', 5)
+        archdir = cfg.get_d('crawler', 'archive_dir',
+                            U.pathjoin(U.dirname(final_logpath),
+                                       'hpss_log_archive'))
+    else:
+        maxBytes = 10*1024*1024
+        backupCount = 5
+        archdir = U.pathjoin(U.dirname(final_logpath), 'hpss_log_archive')
+
+    fh = util.ArchiveLogfileHandler(final_logpath,
+                                    maxBytes=maxBytes,
+                                    backupCount=backupCount,
+                                    archdir=archdir)
+
+    strfmt = "%" + "(asctime)s [%s] " % host + '%' + "(message)s"
+    fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
+    fh.setFormatter(fmt)
+    fh.handleError = raiseError
+    rval.addHandler(fh)
+
+    rval.info('-' * (55 - len(host)))
 
     return rval
 
 
 # -----------------------------------------------------------------------------
-def log(*args):
+def log(*args, **kwargs):
     """
-    Here we use the same logger as the one cached in get_logger() so that if it
-    is reset, all handles to it get reset.
+    Manage a singleton logging object. If we already have one, we use it.
+
+    If the caller sets *reopen* or *close*, we close the currently open object
+    if any. For *reopen*, we get a new one.
+
+    If there's anything in *args*, we expect args[0] to be a format string with
+    subsequent elements matching format specifiers.
     """
-    cframe = sys._getframe(1)
-    caller_name = cframe.f_code.co_name
-    caller_file = cframe.f_code.co_filename
-    caller_lineno = cframe.f_lineno
-    fmt = (caller_name +
-           "(%s:%d): " % (caller_file, caller_lineno) +
-           args[0])
-    nargs = (fmt,) + args[1:]
-    try:
-        get_logger._logger.info(*nargs)
-    except AttributeError:
-        get_logger._logger = get_logger()
-        get_logger._logger.info(*nargs)
+    def kwget(kwargs, name, defval):
+        if name in kwargs:
+            rval = kwargs[name]
+        else:
+            rval = defval
+        return rval
+
+    logpath = kwget(kwargs, 'logpath', '')
+    cfg = kwget(kwargs, 'cfg', None)
+    close = kwget(kwargs, 'close', False)
+    if logpath is None:
+        logpath = ''
+
+    if close and hasattr(log, '_logger'):
+        while 0 < len(log._logger.handlers):
+            h = U.pop0(log._logger.handlers)
+            h.close()
+            del h
+        del log._logger
+
+    if logpath or cfg:
+        log._logger = new_logger(logpath=logpath, cfg=cfg)
+
+    if 0 < len(args):
+        cframe = sys._getframe(1)
+        caller_name = cframe.f_code.co_name
+        caller_file = cframe.f_code.co_filename
+        caller_lineno = cframe.f_lineno
+        fmt = (caller_name +
+               "(%s:%d): " % (caller_file, caller_lineno) +
+               args[0])
+        nargs = (fmt,) + args[1:]
+        try:
+            log._logger.info(*nargs)
+        except AttributeError:
+            log._logger = new_logger(logpath=logpath, cfg=cfg)
+            log._logger.info(*nargs)
+
+    if hasattr(log, '_logger'):
+        return log._logger
+    else:
+        return None
 
 
 # ------------------------------------------------------------------------------
