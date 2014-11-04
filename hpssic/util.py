@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import contextlib
 import copy
 import logging
 import logging.handlers as logh
@@ -12,6 +13,41 @@ import socket
 import sys
 import time
 import traceback as tb
+
+
+# -----------------------------------------------------------------------------
+@contextlib.contextmanager
+def tmpenv(name, val):
+    """
+    This is the simpler way of defining a context manager (as opposed to
+    writing a whole class with __init__(), __enter__() and __exit__()
+    routines). We can use this one like so:
+
+        assert(os.getenv('FOO') == 'xyz'
+        with tmpenv('FOO', 'bar'):
+            assert(os.getenv('FOO') == 'bar')
+        assert(os.getenv('FOO') == 'xyz'
+
+    A variable can be removed from the environment by setting it to None. For
+    example,
+
+        assert(os.getenv('FOO') == 'xyz'
+        with tmpenv('FOO', None):
+            assert(os.getenv('FOO') is None)
+        assert(os.getenv('FOO') == 'xyz'
+    """
+    prev = os.getenv(name)
+    if val is not None:
+        os.environ[name] = val
+    elif prev is not None:
+        del os.environ[name]
+
+    yield
+
+    if prev is not None:
+        os.environ[name] = prev
+    elif os.getenv(name) is not None:
+        del os.environ[name]
 
 
 # -----------------------------------------------------------------------------
@@ -556,65 +592,6 @@ def rgxin(needle, haystack):
 
 
 default_logfile_name = "/var/log/crawl.log"
-
-
-# -----------------------------------------------------------------------------
-# def setup_logging(logfile='',
-#                   logname='crawl',
-#                   maxBytes=10*1024*1024,
-#                   backupCount=5,
-#                   bumper=True,
-#                   archdir=''):
-#     """
-#     Create a new logger and return the object.
-#
-#     If the caller does not specify a *logfile*, we try to use the
-#     default_logfile_name set above. However, this path is only writable by
-#     root, so if the call to ArchiveLogfileHandler below fails, we fall back
-#     /tmp/crawl.log that anyone should be able to create and write.
-#     """
-#     def raiseError():
-#         raise
-#
-#     if logfile == '':
-#         logfile = default_logfile_name
-#
-#     logfile = expand(logfile)
-#
-#     rval = logging.getLogger(logname)
-#     rval.setLevel(logging.INFO)
-#     host = hostname()
-#     if rval.handlers != [] and logfile != rval.handlers[0].baseFilename:
-#         rval.handlers[0].close()
-#         del rval.handlers[0]
-#     if rval.handlers == []:
-#         if maxBytes == 0:
-#             maxBytes = 10*1024*1024
-#         if backupCount == 0:
-#             backupCount = 1
-#         done = False
-#         while not done:
-#             try:
-#                 fh = ArchiveLogfileHandler(logfile,
-#                                            maxBytes=maxBytes,
-#                                            backupCount=backupCount,
-#                                            archdir=archdir)
-#                 done = True
-#             except:
-#                 if logfile == default_logfile_name:
-#                     logfile = "/tmp/%s" % os.path.basename(logfile)
-#                 else:
-#                     raise
-#
-#         strfmt = "%" + "(asctime)s [%s] " % host + "%" + "(message)s"
-#         fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
-#         fh.setFormatter(fmt)
-#         fh.handleError = raiseError
-#
-#         rval.addHandler(fh)
-#     if bumper:
-#         rval.info('-' * (55 - len(host)))
-#     return rval
 
 
 # -----------------------------------------------------------------------------
