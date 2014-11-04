@@ -32,7 +32,7 @@ def setUpModule():
     Once they're set up, we'll leave them in place and just reuse them.
     """
     testhelp.module_test_setup(hpssTest.testdir)
-    CrawlConfig.get_logger("%s/hpssTest.log" % hpssTest.testdir, reset=True)
+    CrawlConfig.log(logpath="%s/hpssTest.log" % hpssTest.testdir, close=True)
 
 
 # -----------------------------------------------------------------------------
@@ -40,7 +40,7 @@ def tearDownModule():
     """
     Clean up after testing
     """
-    CrawlConfig.get_logger(reset=True, soft=True)
+    CrawlConfig.log(close=True)
     testhelp.module_test_teardown(hpssTest.testdir)
 
 

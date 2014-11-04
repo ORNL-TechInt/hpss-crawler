@@ -59,9 +59,9 @@ def crl_cfgdump(argv):
     if o.target == 'stdout':
         print dumpstr
     elif o.target == 'log':
-        log = CrawlConfig.get_logger(o.logpath, cfg)
+        log = CrawlConfig.log(logpath=o.logpath, cfg=cfg)
         for line in dumpstr.split("\n"):
-            log.info(line)
+            CrawlConfig.log(line)
 
 
 # ------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ def crl_fire(argv):
         pdb.set_trace()
 
     cfg = CrawlConfig.get_config(o.config)
-    log = CrawlConfig.get_logger(o.logpath, cfg)
+    CrawlConfig.log(logpath=o.logpath, cfg=cfg)
 
     if o.plugname == '':
         print("'-p <plugin-name>' is required")
@@ -159,7 +159,7 @@ def crl_fire(argv):
         plugdir = cfg.get('crawler', 'plugin-dir')
         sys.path.append(plugdir)
         __import__(o.plugname)
-        log.info('firing %s' % o.plugname)
+        CrawlConfig.log('firing %s', o.plugname)
         sys.modules[o.plugname].main(cfg)
 
 
@@ -181,13 +181,8 @@ def crl_log(argv):
     if o.debug:
         pdb.set_trace()
 
-    if o.logfile is not None:
-        log = CrawlConfig.get_logger(o.logfile)
-    else:
-        cfg = CrawlConfig.get_config()
-        log = CrawlConfig.get_logger(cfg=cfg)
-
-    log.info(" ".join(a))
+    cfg = CrawlConfig.get_config()
+    CrawlConfig.log(" ".join(a), logpath=o.logfile, cfg=cfg)
 
 
 # -----------------------------------------------------------------------------
@@ -286,7 +281,7 @@ def crl_start(argv):
         print("No exit path is specified in the configuration")
         sys.exit(1)
 
-    log = CrawlConfig.get_logger(o.logfile, cfg)
+    log = CrawlConfig.log(logpath=o.logfile, cfg=cfg)
     pfpath = make_pidfile(os.getpid(),
                           cfg.get('crawler', 'context'),
                           exitpath,
@@ -296,7 +291,7 @@ def crl_start(argv):
                           stderr="crawler.stderr",
                           logger=log,
                           workdir='.')
-    log.info('crl_start: calling crawler.start()')
+    CrawlConfig.log('crl_start: calling crawler.start()')
     crawler.start()
     pass
 
@@ -411,16 +406,6 @@ def crl_version(argv):
         pdb.set_trace()
 
     print("HPSS Integrity Crawler version %s" % version.__version__)
-
-
-# ------------------------------------------------------------------------------
-def get_timeval(cfg, section, option, default):
-    """
-    Return the number of seconds indicated by the time spec, using default if
-    any errors or failures occur
-    """
-    log = CrawlConfig.get_logger()
-    return cfg.gettime(section, option, default, log)
 
 
 # ------------------------------------------------------------------------------
