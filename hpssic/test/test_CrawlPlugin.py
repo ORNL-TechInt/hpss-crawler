@@ -280,9 +280,6 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
             sys.path.append(self.plugdir)
         pname = util.my_name()
 
-        # don't call make_plugin -- leave the following line commented
-        # self.make_plugin(pname)
-
         # set up the config
         c = self.make_cfg(pname)
 

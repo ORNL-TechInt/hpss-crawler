@@ -161,7 +161,6 @@ class AlertTest(testhelp.HelpedTestCase):
 
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)
-        # print fakesmtp.inbox[0].fullmessage
         m = fakesmtp.inbox[0]
         self.assertEqual(', '.join(m.to_address),
                          targets,
@@ -187,16 +186,13 @@ class AlertTest(testhelp.HelpedTestCase):
 
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
-        # cfg.add_section('AlertTest')
         cfg.add_section('alerts')
         cfg.set('crawler', 'logpath', logfile)
-        # cfg.set('AlertTest', 'alerts', 'alert_section')
         cfg.set('alerts', 'email', targets)
         CrawlConfig.log(logpath=logfile, close=True)
 
         x = Alert.Alert(caller='', msg=payload,
                         cfg=cfg)
-        # print fakesmtp.inbox[0].fullmessage
         m = fakesmtp.inbox[0]
         self.assertEqual(', '.join(m.to_address),
                          targets,

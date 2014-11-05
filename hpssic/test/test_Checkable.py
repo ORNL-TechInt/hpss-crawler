@@ -530,7 +530,7 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         fdparse() should return type='d', path=<file path>
         """
-        # pdb.set_trace()
+        self.dbgfunc()
         n = Checkable(path='xyx', type='d')
         line = "DIRECTORY\t       /home/tpb/apache"
         r = n.fdparse(line)

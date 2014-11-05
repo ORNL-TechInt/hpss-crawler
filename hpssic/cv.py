@@ -207,11 +207,9 @@ def cvv_report(argv):
 
     dim = {}
     dim['cos'] = Dimension.get_dim('cos')
-    # dim['cart'] = Dimension.get_dim('cart')
     dim['ttypes'] = Dimension.get_dim('ttypes')
 
     print dim['cos'].report()
-    # print dim['cart'].report()
     print dim['ttypes'].report()
 
 
@@ -694,8 +692,6 @@ def tape_types_populate(hpssroot):
             x = line.strip().split(None, 2)
             name = x[1]
             t = name.split("_")[2]
-            # t = name.replace("_DEF", "")
-            # t = re.sub("_DEF$", "", name)
             label = x[2].strip('"').replace("\\n", "")
             TT[t]['label'] = label
             continue

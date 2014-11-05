@@ -273,7 +273,6 @@ class CrawlMiscTest(CrawlTest):
         self.vassert_nin("Traceback", result)
         self.assertEqual(os.path.exists(logpath), True)
         lcontent = util.contents(logpath)
-        # print(">>>\n%s\n<<<" % result)
         for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
@@ -327,7 +326,6 @@ class CrawlMiscTest(CrawlTest):
         self.write_cfg_file(cfname, self.cdict)
         cmd = '%s cfgdump -c %s --to stdout' % (self.crawl_cmd(), cfname)
         result = pexpect.run(cmd)
-        # print(">>>\n%s\n<<<" % result)
         for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, result)
 
@@ -356,7 +354,6 @@ class CrawlMiscTest(CrawlTest):
         """
         cfname = "%s/test_crawl_fire_log.cfg" % self.testdir
         lfname = "%s/test_crawl_fire.log" % self.testdir
-        # plugdir = '%s/plugins' % self.testdir
         plugname = 'plugin_1'
 
         # create a plug module
@@ -688,7 +685,6 @@ class CrawlMiscTest(CrawlTest):
         """
         cfgpath = '%s/%s.cfg' % (self.testdir, util.my_name())
         logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        # self.ctx = 'TEST'
 
         self.write_cfg_file(cfgpath, self.cdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
@@ -798,6 +794,7 @@ class CrawlMiscTest(CrawlTest):
         """
         TEST: 'crawl status' should report the crawler status correctly.
         """
+        self.dbgfunc()
         logpath = '%s/%s.log' % (self.testdir, util.my_name())
         cfgpath = '%s/%s.cfg' % (self.testdir, util.my_name())
         exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
@@ -806,7 +803,6 @@ class CrawlMiscTest(CrawlTest):
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
         self.write_plugmod(self.plugdir, 'plugin_A')
-        # pdb.set_trace()
         cmd = '%s status' % (self.crawl_cmd())
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
@@ -1556,7 +1552,6 @@ class CrawlMiscTest(CrawlTest):
             for line in result.split("\n"):
                 if 'crawl start' in line:
                     pid = line.split()[1]
-                    # print("pid = %s <- kill this" % pid)
 
         util.conditional_rm(self.piddir, tree=True)
 

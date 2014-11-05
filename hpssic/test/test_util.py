@@ -52,19 +52,6 @@ class UtilTest(testhelp.HelpedTestCase):
     testdir = testhelp.testdata(__name__)
 
     # -------------------------------------------------------------------------
-    def setUp(self):
-        """
-        Set self.dbgfunc to either pdb.set_trace or a no-op, depending on the
-        value of the --dbg option from the command line
-        """
-        dbgopt = pytest.config.getoption("dbg")
-        if self._testMethodName in dbgopt or "all" in dbgopt:
-            self.dbgfunc = pdb.set_trace
-            # pdb.set_trace()
-        else:
-            self.dbgfunc = lambda: None
-
-    # -------------------------------------------------------------------------
     def test_Chdir(self):
         """
         util.Chdir() is a context manager. Upon entry to the 'with' clause, the
@@ -98,7 +85,6 @@ class UtilTest(testhelp.HelpedTestCase):
         contents() reads and returns the contents of a file as a list
         """
         self.dbgfunc()
-        # x = util.contents('hpssic/util.py')
         filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
         x = util.contents(filename, string=False)
         self.assertEqual(type(x), list,
@@ -115,7 +101,6 @@ class UtilTest(testhelp.HelpedTestCase):
         string.
         """
         self.dbgfunc()
-        # x = util.contents('hpssic/util.py')
         filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
         x = util.contents(filename)
         self.assertEqual(type(x), str,

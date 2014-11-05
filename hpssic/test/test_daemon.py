@@ -50,7 +50,6 @@ class daemonTest(testhelp.HelpedTestCase):
         """
         Verify that a newly created daemon object has the right attributes
         """
-        # dimname = 'ctor_attrs'
         a = daemon.Daemon('%s/daemon_pid' % self.testdir)
 
         for attr in ['origdir', 'stdin', 'stdout', 'stderr', 'pidfile',

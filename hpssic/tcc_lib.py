@@ -79,7 +79,6 @@ def nsobject_lookup(start_id, id_count, dbh=None):
 
     rval = [CrawlDBI.DBIdb2.hexstr(z['BITFILE_ID']) for z in bflist]
     return rval
-    # return [z['BITFILE_ID'] for z in bflist]
 
 
 # -----------------------------------------------------------------------------

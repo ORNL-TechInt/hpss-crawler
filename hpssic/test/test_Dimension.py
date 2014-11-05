@@ -56,8 +56,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         Given a set of values in a Dimension object, verify that addone does
         the right thing.
         """
-        # testhelp.db_config(self.testdir, util.my_name())
-        # Checkable.Checkable.ex_nihilo()
         a = Dimension(name='addone')
         a.p_sum = {'6001': {'count': 10, 'pct': 50.0},
                    '5081': {'count': 10, 'pct': 50.0}
@@ -155,6 +153,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         the table into the object. However, it should only count records where
         last_check <> 0.
         """
+        self.dbgfunc()
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
         Checkable.Checkable.ex_nihilo()
@@ -190,7 +189,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         q.load()
 
         # verify the loaded data in the object
-        # pdb.set_trace()
         self.expected('cos', q.name)
         self.assertTrue('6001' in q.p_sum.keys(),
                         "Expected '6001' in p_sum.keys()")
@@ -220,7 +218,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         Checkable.Checkable.ex_nihilo()
 
         ignore = Dimension(name='foobar')
-        # ignore.persist()
 
         # get a Dimension object that is not in the table
         test = Dimension(name='notindb')
@@ -232,7 +229,6 @@ class DimensionTest(testhelp.HelpedTestCase):
         test.load()
 
         # verify that the object didn't change
-        # self.expected(ref.dbname, test.dbname)
         self.expected(ref.name, test.name)
         self.expected(ref.sampsize, test.sampsize)
         self.expected(ref.p_sum, test.p_sum)

@@ -82,9 +82,6 @@ def main(args=None, filter=None, logfile=None):
     else:
         volume = 1
 
-    # print sys.modules.keys()
-    # print sys.modules['__main__']
-
     testlist = all_tests('__main__', filter)
     if o.list:
         list_tests(a, o.final, testlist)
@@ -101,13 +98,10 @@ def all_tests(name, filter=None):
     Return a list of tests in the module <name>.
     Limit the list to those which contain the string <filter>.
     """
-    # print("all_tests(%s, %s)" % (name, filter))
     testclasses = []
     cases = []
     if filter is None:
         filter = 'Test'
-    # print("all_tests(%s, %s)" % (name, filter))
-    # print dir(sys.modules[name])
     if type(filter) == str:
         for item in dir(sys.modules[name]):
             if filter in item:
@@ -552,7 +546,6 @@ class HelpedTestCase(unittest.TestCase):
         dbgopt = pytest.config.getoption("dbg")
         if self._testMethodName in dbgopt or "all" in dbgopt:
             self.dbgfunc = pdb.set_trace
-            # pdb.set_trace()
         else:
             self.dbgfunc = lambda: None
 

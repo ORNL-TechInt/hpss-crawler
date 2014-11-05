@@ -102,7 +102,6 @@ class HSI(object):
         else:
             raise HSIerror("%s: Invalid argument (%s: '%s')" %
                            (util.my_name(), type(pathnames), pathnames))
-        # self.xobj.expect(self.prompt)
         rval = ""
         for path in pathlist:
             if self.reset_atime:

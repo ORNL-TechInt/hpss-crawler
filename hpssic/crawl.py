@@ -491,7 +491,6 @@ def running_pid(proc_required=True):
     """
     rval = []
     if proc_required:
-        # result = pexpect.run("ps -ewwo pid,cmd")
         result = pidcmd()
         for line in result.split("\n"):
             if 'crawl start' in line:
@@ -563,7 +562,6 @@ class CrawlDaemon(daemon.Daemon):
 
         rval = False
 
-        # tbstr = tb.format_exc()
         now = time.time()
         self.ecount += 1
         self.whenq.append(now)
@@ -626,8 +624,6 @@ class CrawlDaemon(daemon.Daemon):
             if 0 < self.ecount:
                 self.ewhen = self.whenq.pop()
 
-        # CrawlConfig.log("rval = %s; ecount = %d; dt = %f; whenq = %s" %
-        #                 (rval, self.ecount, dt, self.whenq))
         return rval
 
     # --------------------------------------------------------------------------
@@ -689,7 +685,6 @@ class CrawlDaemon(daemon.Daemon):
                         del plugin_d[p]
 
                 heartbeat = self.cfg.get_time('crawler', 'heartbeat', 10)
-                # hb_msg = "crawl: heartbeat... "
                 while keep_going:
                     #
                     # Fire any plugins that are due

@@ -62,7 +62,6 @@ class Test_CRAWL(ScriptBase):
     # -------------------------------------------------------------------------
     def test_crawl_syspath(self):
         result = pexpect.run("crawl syspath")
-        # self.fail('here we are')
         pass
 
     # -------------------------------------------------------------------------

@@ -416,18 +416,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
         does not exist, catch the exception and return False.
         """
         try:
-            # rval = super(CrawlConfig, self).getboolean(name, option)
             rval = ConfigParser.ConfigParser.getboolean(self, name, option)
         except ValueError:
             rval = False
         except ConfigParser.NoOptionError as e:
             rval = False
-            # e.message += " in %s" % self.filename
-            # raise
         except ConfigParser.NoSectionError as e:
             rval = False
-            # e.message += " in %s" % self.filename
-            # raise
         return rval
 
     # -------------------------------------------------------------------------

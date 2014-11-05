@@ -153,7 +153,6 @@ def get_tcc_report(db, last_rpt_time):
     rval = "\n" + ("-" * 79) + "\n"
     rval += "Tape Copy Checker:\n\n"
 
-    # db = CrawlDBI.DBI(dbtype="crawler")
     if db.table_exists(table='tcc_data'):
         checks = correct = error = 0
         rows = db.select(table="tcc_data",

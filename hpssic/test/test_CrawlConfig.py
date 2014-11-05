@@ -99,11 +99,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual(changeable.loadtime, 0.0)
         changeable.read(cfgfile)
         self.assertEqual(changeable.changed(), False)
-        # time.sleep(1.0)
         os.utime(cfgfile, (time.time() + 5, time.time() + 5))
-        # f = open(cfgfile, 'a')
-        # f.write('\n')
-        # f.close()
         self.assertEqual(changeable.changed(), True)
         self.assertEqual(changeable.filename, cfgfile)
 
@@ -1085,12 +1081,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                              exc,
                              CrawlConfig.log,
                              *argl)
-        # try:
-        #     CrawlConfig.log(a1, a2, a3, a4, a5)
-        #     self.fail("Expected exception not thrown")
-        # except TypeError as e:
-        #     self.assertEqual(exc, str(e),
-        #                      "Expected '%s', got '%s'" % (exc, str(e)))
 
         result = util.contents(fpath)
         self.assertFalse(exp in result,
@@ -1693,8 +1683,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                               }
                   }
 
-        # inc2_d = {'fiddle': {'bar': 'wumpus'}}
-
         self.write_cfg_file(cfname_root, root_d)
         self.write_cfg_file(cfname_inc1, inc1_d)
 
@@ -1733,17 +1721,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         new.set('crawler', 'logpath', '%(root)s/xyzzy.log')
         self.expected("%s/xyzzy.log" % os.getcwd(),
                       new.get('crawler', 'logpath'))
-
-    # --------------------------------------------------------------------------
-    # def clear_env(self): @RAFT
-    #     """
-    #     Remove $CRAWL_CONF from the environment.
-    #     """
-    #     try:
-    #         x = os.environ['CRAWL_CONF']
-    #         del os.environ['CRAWL_CONF']
-    #     except KeyError:
-    #         pass
 
     # ------------------------------------------------------------------------
     def try_qt_spec(self, cfg, exp, tval):

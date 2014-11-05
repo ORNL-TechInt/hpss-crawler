@@ -115,7 +115,6 @@ def mprf_date_age(args):
                 print("Can't parse date/time '%s'" % a[0])
                 sys.exit(1)
 
-    # then = int(time.mktime(time.strptime(a[0], "%Y.%m%d")))
     now = int(time.time())
     age = now - then
     print("days: %d" % (age/(24*3600)))

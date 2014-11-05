@@ -83,7 +83,6 @@ class Dimension(object):
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
         self.load()
-        # self.db_init()
 
     # -------------------------------------------------------------------------
     def __repr__(self):
@@ -118,7 +117,6 @@ class Dimension(object):
         """
         Load this object with data from the database
         """
-        # pdb.set_trace()
         if not already_open:
             self.db = CrawlDBI.DBI(dbtype='crawler')
 
