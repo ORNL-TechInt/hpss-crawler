@@ -39,21 +39,6 @@ def tearDownModule():
     """
     CrawlConfig.log(close=True)
     testhelp.module_test_teardown(CrawlConfigTest.testdir)
-    # @RAFT:
-    # if setUpModule.env_crawl_config:
-    #     os.environ["CRAWL_CONF"] = setUpModule.env_crawl_config
-
-
-# -----------------------------------------------------------------------------
-def default_logpath():
-    """
-    Return the ultimate default log path
-    """
-    if os.getuid() == 0:
-        rval = "/var/log/hpssic.log"
-    else:
-        rval = "/tmp/hpssic.log"
-    return rval
 
 
 # -----------------------------------------------------------------------------
@@ -629,7 +614,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
             lobj = CrawlConfig.log("This is a test log message")
-            self.expected(default_logpath(), lobj.handlers[0].stream.name)
+            self.expected(U.default_logpath(), lobj.handlers[0].stream.name)
 
     # -------------------------------------------------------------------------
     def test_logging_nocfg(self):
@@ -648,7 +633,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             # and check that it has the right handler
             self.expected(1, len(l.handlers))
-            self.expected(default_logpath(), l.handlers[0].stream.name)
+            self.expected(U.default_logpath(), l.handlers[0].stream.name)
             self.expected(10*1024*1024, l.handlers[0].maxBytes)
             self.expected(5, l.handlers[0].backupCount)
 
@@ -880,7 +865,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         with ctx.nested(U.Chdir(self.testdir), U.tmpenv("CRAWL_CONF", None)):
-            for filename in ["crawl.cfg", default_logpath()]:
+            for filename in ["crawl.cfg", U.default_logpath()]:
                 if os.path.exists(filename):
                     os.unlink(filename)
 
@@ -891,7 +876,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             # now attempt to log a message to the default file
             msg = "This is a test log message %s"
             arg = "with a format specifier"
-            exp_logfile = default_logpath()
+            exp_logfile = U.default_logpath()
             loc = "(%s:%d): " % (sys._getframe().f_code.co_filename,
                                  sys._getframe().f_lineno + 2)
             exp = (util.my_name() + loc + msg % arg)

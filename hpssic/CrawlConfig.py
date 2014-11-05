@@ -128,13 +128,6 @@ def new_logger(logpath='', cfg=None):
      - default (/var/log/hpssic.log if writable, else /tmp/hpssic.log)
     """
     # -------------------------------------------------------------------------
-    def default_logpath():
-        rval = '/var/log/hpssic.log'
-        if not os.access(rval, os.W_OK):
-            rval = '/tmp/hpssic.log'
-        return rval
-
-    # -------------------------------------------------------------------------
     def cfg_get(func, section, option, defval):
         if cfg:
             rval = func(section, option, defval)
@@ -160,18 +153,18 @@ def new_logger(logpath='', cfg=None):
         try:
             final_logpath = cfg.get('crawler', 'logpath')
         except NoOptionError:
-            final_logpath = default_logpath()
+            final_logpath = U.default_logpath()
         except NoSectionError:
-            final_logpath = default_logpath()
+            final_logpath = U.default_logpath()
     elif dcfg:
         try:
             final_logpath = dcfg.get('crawler', 'logpath')
         except NoOptionError:
-            final_logpath = default_logpath()
+            final_logpath = U.default_logpath()
         except NoSectionError:
-            final_logpath = default_logpath()
+            final_logpath = U.default_logpath()
     else:
-        final_logpath = default_logpath()
+        final_logpath = U.default_logpath()
 
     rval = logging.getLogger('hpssic')
     rval.setLevel(logging.INFO)

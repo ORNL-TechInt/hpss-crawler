@@ -218,6 +218,18 @@ def basename(path):
 
 
 # -----------------------------------------------------------------------------
+def default_logpath():
+    """
+    Return the ultimate default log path
+    """
+    if os.getuid() == 0:
+        rval = "/var/log/hpssic.log"
+    else:
+        rval = "/tmp/hpssic.log"
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def dirname(path):
     """
     Convenience wrapper for os.path.dirname()
