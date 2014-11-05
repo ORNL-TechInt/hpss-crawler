@@ -706,8 +706,8 @@ class CrawlDaemon(daemon.Daemon):
                     # Issue the heartbeat if it's time
                     #
                     if 0 == (int(time.time()) % heartbeat):
-                        # self.dlog('crawl: heartbeat...')
-                        self.dlog(hb_msg)
+                        # self.dlog(hb_msg)
+                        CrawlConfig.log(hb_msg)
 
                     # CrawlConfig.log("check for config changes")
                     #
