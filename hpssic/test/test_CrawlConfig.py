@@ -29,9 +29,7 @@ def setUpModule():
     Set up for the tests.
     """
     testhelp.module_test_setup(CrawlConfigTest.testdir)
-    CrawlConfig.log(logpath=CrawlConfigTest.default_logpath, close=True)
-    # @RAFT:
-    # setUpModule.env_crawl_config = os.getenv("CRAWL_CONF")
+    CrawlConfig.log(logpath=CrawlConfigTest.cls_logpath, close=True)
 
 
 # -----------------------------------------------------------------------------
@@ -67,9 +65,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
     testdir = testhelp.testdata(__name__)
-    default_logpath = '%s/test_default_hpss_crawl.log' % testdir
+    cls_logpath = '%s/test_default_hpss_crawl.log' % testdir
     cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
-                         'logpath': default_logpath,
+                         'logpath': cls_logpath,
                          'logsize': '5mb',
                          'logmax': '5',
                          'e-mail-recipients':
@@ -600,7 +598,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             CrawlConfig.log(close=True)
             CrawlConfig.get_config(reset=True, soft=True)
 
-            logpath = os.path.basename(self.default_logpath)
+            logpath = os.path.basename(self.cls_logpath)
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
             d['crawler']['logpath'] = logpath

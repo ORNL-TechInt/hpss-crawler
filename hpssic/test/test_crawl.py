@@ -65,10 +65,10 @@ class CrawlTest(testhelp.HelpedTestCase):
     plugdir = '%s/plugins' % testdir
     piddir = "/tmp/crawler"
     pidglob = piddir + "/*"
-    default_logpath = '%s/test_default_hpss_crawl.log' % testdir
+    cls_logpath = '%s/test_default_hpss_crawl.log' % testdir
     ctx = 'TEST'
     cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
-                         'logpath': default_logpath,
+                         'logpath': cls_logpath,
                          'logsize': '5mb',
                          'logmax': '5',
                          'e-mail-recipients':
@@ -236,15 +236,14 @@ class CrawlMiscTest(CrawlTest):
         EXP: what is written to log matches what was written to
         cfgpath. output should go to log path named in cfg.
         """
+        self.dbgfunc()
         cfname = "%s/test_crawl_cfgdump_log_n.cfg" % self.testdir
         self.write_cfg_file(cfname, self.cdict)
         cmd = '%s cfgdump -c %s --to log' % (self.crawl_cmd(), cfname)
         result = pexpect.run(cmd)
-        # print(">>>\n%s\n<<<" % result)
         self.vassert_nin("Traceback", result)
-        # pdb.set_trace()
-        self.assertEqual(os.path.exists(self.default_logpath), True)
-        lcontent = util.contents(self.default_logpath)
+        self.assertEqual(os.path.exists(self.cls_logpath), True)
+        lcontent = util.contents(self.cls_logpath)
         for section in self.cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
