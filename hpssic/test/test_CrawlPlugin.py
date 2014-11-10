@@ -9,6 +9,7 @@ from hpssic import CrawlConfig
 from hpssic import CrawlPlugin
 import os
 import pdb
+import pytest
 import re
 import sys
 from hpssic import testhelp
@@ -18,12 +19,12 @@ import traceback as tb
 from hpssic import util
 
 
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
+# M = sys.modules['__main__']
+# if 'py.test' in M.__file__:
+#     import pytest
+#     attr = pytest.mark.attr
+# else:
+#     from nose.plugins.attrib import attr
 
 
 # -----------------------------------------------------------------------------
@@ -53,8 +54,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_fire(self):
         """
-        The plugin should fire and self.last_fired should be set
+        The plugin should fire and self.last_fired should be set. 'firing'
+        should be written to the log file.
         """
+        self.dbgfunc()
         pname = util.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname)
@@ -65,6 +68,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.assertEqual(os.path.exists(filename), True,
                          "File '%s' should exist but does not" % (filename))
         self.expected('my name is %s\n' % (pname), util.contents(filename))
+        logpath = c.get('crawler', 'logpath')
+        self.assertTrue(os.path.exists(logpath),
+                        "Expected logfile '%s' to exist" % logpath)
+        self.expected_in('firing', U.contents(logpath))
 
     # -------------------------------------------------------------------------
     def test_init_fire_false(self):
