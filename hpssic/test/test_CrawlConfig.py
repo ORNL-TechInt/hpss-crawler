@@ -994,6 +994,304 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         (exp, util.line_quote(result)))
 
     # -------------------------------------------------------------------------
+    def test_cc_new_logger_000(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath')
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = self.cls_logpath
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            CrawlConfig.get_config(reset=True, soft=True)
+            self.write_cfg_file(self.default_cfname, self.cdict)
+            x = CrawlConfig.new_logger()
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_001(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath')
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = os.path.join(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None)):
+            U.conditional_rm(self.cls_logpath)
+            self.assertFalse(os.path.exists(self.cls_logpath))
+
+            CrawlConfig.get_config(reset=True, soft=True)
+            self.write_cfg_file(self.default_cfname, self.cdict)
+
+            d = copy.deepcopy(self.cdict)
+            d['crawler']['logpath'] = exp_logpath
+            xcfg = CrawlConfig.CrawlConfig.dictor(d)
+
+            x = CrawlConfig.new_logger(cfg=xcfg)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_001a(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath')
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+
+        In case 001, if cfg.get('crawler', 'logpath') is not set, use the
+        default
+        """
+        self.dbgfunc()
+        exp_logpath = U.default_logpath()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            CrawlConfig.get_config(reset=True, soft=True)
+            self.write_cfg_file(self.default_cfname, self.cdict)
+
+            d = copy.deepcopy(self.cdict)
+            del d['crawler']['logpath']
+            xcfg = CrawlConfig.CrawlConfig.dictor(d)
+
+            x = CrawlConfig.new_logger(cfg=xcfg)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_010(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath') or default
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_LOG', exp_logpath)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            CrawlConfig.get_config(reset=True, soft=True)
+            self.write_cfg_file(self.default_cfname, self.cdict)
+
+            x = CrawlConfig.new_logger()
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_011(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath') or default
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_LOG', exp_logpath)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            CrawlConfig.get_config(reset=True, soft=True)
+            self.write_cfg_file(self.default_cfname, self.cdict)
+
+            d = copy.deepcopy(self.cdict)
+            d['crawler']['logpath'] = exp_logpath
+            xcfg = CrawlConfig.CrawlConfig.dictor(d)
+
+            x = CrawlConfig.new_logger(cfg=xcfg)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_100(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath') or default
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None),
+                        U.tmpenv('CRAWL_LOG', None)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            x = CrawlConfig.new_logger(logpath=exp_logpath)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_101(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath') or default
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None),
+                        U.tmpenv('CRAWL_LOG', None)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            xcfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
+
+            x = CrawlConfig.new_logger(logpath=exp_logpath, cfg=xcfg)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_110(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath') or default
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None),
+                        U.tmpenv('CRAWL_LOG', self.cls_logpath)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            x = CrawlConfig.new_logger(logpath=exp_logpath)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_new_logger_111(self):
+        """
+        Routine new_logger() can be called eight different ways:
+        logpath   env    cfg   || action
+           0       0      0    ||  use the default ('crawl.cfg')
+           0       0      1    ||  use cfg.get('crawler', 'logpath') or default
+           0       1      0    ||  use os.getenv('CRAWL_CONF')
+           0       1      1    ||  use os.getenv('CRAWL_CONF')
+           1       0      0    ||  use logpath
+           1       0      1    ||  use logpath
+           1       1      0    ||  use logpath
+           1       1      1    ||  use logpath
+
+        The returned logger should never have more than one handler
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv('CRAWL_CONF', None),
+                        U.tmpenv('CRAWL_LOG', self.cls_logpath)):
+            U.conditional_rm(exp_logpath)
+            self.assertFalse(os.path.exists(exp_logpath))
+
+            xcfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
+
+            x = CrawlConfig.new_logger(logpath=exp_logpath, cfg=xcfg)
+            self.expected(1, len(x.handlers))
+            self.expected(exp_logpath, x.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(exp_logpath))
+            self.expected_in('-' * 15, U.contents(exp_logpath))
+
+    # -------------------------------------------------------------------------
     def test_log_simple(self):
         """
         Tests for routine CrawlConfig.log():
