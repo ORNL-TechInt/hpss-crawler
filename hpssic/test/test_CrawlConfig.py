@@ -9,6 +9,7 @@ import logging
 import os
 import pdb
 import pytest
+import re
 import sys
 from hpssic import testhelp
 import time
@@ -848,19 +849,144 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.assertEqual('hen' in obj.options('sounds'), True)
 
     # -------------------------------------------------------------------------
-    def test_log_default(self):
+    def test_cc_log_0000(self):
         """
-        If CrawlConfig.log() is called with no logger already instantiated, and
-        no default config file available, it should resort to the default log
-        file names depending on the privilege of the running user.
+        CONDITIONS
+        open:  A logger is already open before the test payload is called
+        msg:   A message is passed to CrawlConfig.log()
+        close: In the call to CrawlConfig.log(), close=True
+        ohint: In the call to CrawlConfig.log(), logpath and/or cfg are passed
 
+        ACTIONS
+        C - Close the open logger, if any
+        N - Create a new logger
+        W - write the log message
+
+        The lines marked '!' are the cases most frequently used.
+
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     0      0       0    ||                        test_cc_log_0000
+           0     0      0       1    ||             n          test_cc_log_0001
+           0     0      1       0    ||          c             test_cc_log_0010
+           0     0      1       1    ||          c  n          test_cc_log_0011
+           0     1      0       0  ! ||             n  w       test_cc_log_0100
+           0     1      0       1    ||             n  w       test_cc_log_0101
+           0     1      1       0    ||          c  n  w       test_cc_log_0110
+           0     1      1       1    ||          c  n  w       test_cc_log_0111
+
+           1     0      0       0    ||                        test_cc_log_1000
+           1     0      0       1    ||                        test_cc_log_1001
+           1     0      1       0  ! ||          c             test_cc_log_1010
+           1     0      1       1  ! ||          c  n          test_cc_log_1011
+           1     1      0       0  ! ||                w       test_cc_log_1100
+           1     1      0       1    ||                w       test_cc_log_1101
+           1     1      1       0    ||          c  n  w       test_cc_log_1110
+           1     1      1       1    ||          c  n  w       test_cc_log_1111
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+
+            # test payload
+            l = CrawlConfig.log()
+
+            # test verification
+            self.validate_logger(None, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0001(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     0      0       1    ||             n
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+
+            # test payload
+            l = CrawlConfig.log(logpath=exp_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0010(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     0      1       0    ||          c
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+
+            # test payload
+            l = CrawlConfig.log(close=True)
+
+            # test verification
+            self.validate_logger(None, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0011(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     0      1       1    ||          c  n
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+
+            # test payload
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0100(self):
+        """
         The '+ 2' added to f_lineno just before logging the message is the
         number of lines from where f_lineno reference is to where the log call
         actually happens. If they move relative to each other, this value will
         have to be updated.
+
+        Case:
+         open   msg   close   ohint  || action:  C  N  W
+           0     1      0       0  ! ||             n  w
         """
+        def escpar(q):
+            if q.group(0) == '(':
+                return r'\('
+            elif q.group(0) == ')':
+                return r'\)'
+            else:
+                return ''
+
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir), U.tmpenv("CRAWL_CONF", None)):
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
             for filename in ["crawl.cfg", U.default_logpath()]:
                 if os.path.exists(filename):
                     os.unlink(filename)
@@ -869,18 +995,307 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
 
-            # now attempt to log a message to the default file
+            # now compose message for logging
             msg = "This is a test log message %s"
             arg = "with a format specifier"
             exp_logfile = U.default_logpath()
             loc = "(%s:%d): " % (sys._getframe().f_code.co_filename,
-                                 sys._getframe().f_lineno + 2)
+                                 sys._getframe().f_lineno + 4)
             exp = (util.my_name() + loc + msg % arg)
-            CrawlConfig.log(msg, arg)
-            result = util.contents(exp_logfile)
-            self.assertTrue(exp in result,
-                            "Expected '%s' in %s" %
-                            (exp, util.line_quote(result)))
+
+            # test payload
+            l = CrawlConfig.log(msg, arg)
+
+            # test verification
+            self.validate_logger(exp_logfile,
+                                 l,
+                                 msg=re.sub("[)(]", escpar, exp))
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0101(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     1      0       1    ||             n  w
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+
+            exp_msg = U.rstring()
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+
+            # test payload
+            l = CrawlConfig.log(exp_msg, logpath=exp_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l, msg=exp_msg)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0110(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     1      1       0    ||          c  n  w
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+            self.write_cfg_file(self.default_cfname, self.cdict)
+            exp_msg = U.rstring()
+
+            # test payload
+            l = CrawlConfig.log(exp_msg, close=True)
+
+            # test verification
+            self.validate_logger(self.cls_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_0111(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           0     1      1       1    ||          c  n  w
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True)
+            self.expected(None, l)
+            exp_msg = U.rstring()
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+
+            # test payload
+            l = CrawlConfig.log(exp_msg, close=True, logpath=exp_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1000(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     0      0       0    ||           no-op
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+            self.expected(exp_logpath, l.handlers[0].stream.name)
+
+            # test payload
+            l = CrawlConfig.log()
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1001(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     0      0       1    ||           no-op
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            ign_logpath = self.cls_logpath
+            U.conditional_rm(ign_logpath)
+
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+            self.validate_logger(exp_logpath, l)
+
+            # test payload
+            l = CrawlConfig.log(logpath=ign_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+            self.assertFalse(os.path.exists(ign_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1010(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     0      1       0    ||          c
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+            self.validate_logger(exp_logpath, l)
+
+            # test payload
+            l = CrawlConfig.log(close=True)
+
+            # test verification
+            self.validate_logger(None, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1011(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     0      1       1    ||          c  n
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            l = CrawlConfig.log(close=True, logpath=self.cls_logpath)
+            self.validate_logger(self.cls_logpath, l)
+
+            # test payload
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1100(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     1      0       0    ||                w
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+            self.validate_logger(exp_logpath, l)
+            exp_msg = U.rstring()
+
+            # test payload
+            l = CrawlConfig.log(exp_msg)
+
+            # test verification
+            self.validate_logger(exp_logpath, l, msg=exp_msg)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1101(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     1      0       1    ||                w
+
+        Since we already have a logger open and no close argument, the logpath
+        argument in the test payload should be ignored. The message should be
+        written to the log file that is already open.
+        """
+        self.dbgfunc()
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            U.conditional_rm(self.cls_logpath)
+            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            l = CrawlConfig.log(close=True, logpath=exp_logpath)
+            self.validate_logger(exp_logpath, l)
+            exp_msg = U.rstring()
+
+            # test payload
+            l = CrawlConfig.log(exp_msg, logpath=self.cls_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l, msg=exp_msg)
+            self.assertFalse(os.path.exists(self.cls_logpath))
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1110(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     1      1       0    ||          c  n  w
+
+        The test payload calls for the currently open logger to be closed and a
+        new one to be opened to receive the message. Since we're not passing
+        any hints (logpath or cfg), the newly opened logger will be determined
+        by either $CRAWL_LOG or the default config. In this case, we arrange
+        for $CRAWL_LOG to be set to a known value so we know which log file
+        should receive the message.
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", exp_logpath)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True, logpath=self.cls_logpath)
+            self.validate_logger(self.cls_logpath, l)
+            exp_msg = U.rstring()
+
+            # test payload
+            l = CrawlConfig.log(exp_msg, close=True)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def test_cc_log_1111(self):
+        """
+        Cases:
+         open   msg   close   ohint  || action:  C  N  W
+           1     1      1       1    ||          c  n  w
+
+        This is almost the same as test 1110 above except that this time we are
+        specifying a hint (logpath), so that will control the name of the newly
+        opened logger.
+        """
+        self.dbgfunc()
+        exp_logpath = U.pathjoin(self.testdir, U.my_name())
+        with ctx.nested(U.Chdir(self.testdir),
+                        U.tmpenv("CRAWL_CONF", None),
+                        U.tmpenv("CRAWL_LOG", None)):
+            CrawlConfig.get_config(reset=True, soft=True)
+            l = CrawlConfig.log(close=True, logpath=self.cls_logpath)
+            self.validate_logger(self.cls_logpath, l)
+            exp_msg = U.rstring()
+
+            # test payload
+            l = CrawlConfig.log(exp_msg, close=True, logpath=exp_logpath)
+
+            # test verification
+            self.validate_logger(exp_logpath, l)
+
+    # -------------------------------------------------------------------------
+    def validate_logger(self, expval, logger, msg=''):
+        if expval is None:
+            self.expected(None, logger)
+            if msg != '':
+                self.fail('TestError: No msg allowed when expval is None')
+        else:
+            self.expected(1, len(logger.handlers))
+            self.expected(expval, logger.handlers[0].stream.name)
+            self.assertTrue(os.path.exists(expval))
+            text = U.contents(expval)
+            self.expected_in('-' * 15, text)
+            if msg != '':
+                self.expected_in(msg, text)
 
     # -------------------------------------------------------------------------
     def test_log_rollover_archive(self):
