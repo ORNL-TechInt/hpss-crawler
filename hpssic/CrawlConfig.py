@@ -232,7 +232,7 @@ def log(*args, **kwargs):
             del h
         del log._logger
 
-    if logpath or cfg:
+    if not hasattr(log, '_logger') and (logpath or cfg):
         log._logger = new_logger(logpath=logpath, cfg=cfg)
 
     if 0 < len(args):
