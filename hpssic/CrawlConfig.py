@@ -136,7 +136,7 @@ def new_logger(logpath='', cfg=None):
         return rval
 
     # -------------------------------------------------------------------------
-    def raiseError():
+    def raiseError(record=None):
         raise
 
     envname = os.getenv('CRAWL_LOG')
