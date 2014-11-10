@@ -7,9 +7,11 @@ import logging.handlers as logh
 import messages as MSG
 import os
 import pdb
+import random
 import re
 import shutil
 import socket
+import string
 import sys
 import time
 import traceback as tb
@@ -706,6 +708,20 @@ def date_start(filename):
         line = f.readline()
 
     f.close()
+    return rval
+
+
+# -----------------------------------------------------------------------------
+def rstring():
+    """
+    Return a string of random characters of a random length between 10 and 25
+    """
+    size = random.randint(10, 25)
+    rval = ''
+    for jdx in range(size):
+        rval += random.choice(string.uppercase +
+                              string.lowercase +
+                              string.digits)
     return rval
 
 
