@@ -20,11 +20,6 @@ import warnings
 
 
 # -----------------------------------------------------------------------------
-def logErr(record):
-    raise
-
-
-# -----------------------------------------------------------------------------
 def setUpModule():
     """
     Set up for the tests.
@@ -1740,10 +1735,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
         log = CrawlConfig.log(logpath=fpath, close=True)
 
-        # this allows exceptions thrown from inside the logging handler to
-        # propagate up so we can catch it.
-        log.handlers[0].handleError = logErr
-
         # multiple % formatters in first arg
 
         argl = ["Here's a string: '%s'; here's an int: %d; " +
@@ -1777,10 +1768,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         # """
         fpath = "%s/%s.log" % (self.testdir, util.my_name())
         log = CrawlConfig.log(logpath=fpath, close=True)
-
-        # this allows exceptions thrown from inside the logging handler to
-        # propagate up so we can catch it.
-        log.handlers[0].handleError = logErr
 
         # multiple % formatters in first arg
         argl = ["Here's a string: '%s'; here's an int: %d; here's a float: %f",
