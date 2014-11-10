@@ -194,6 +194,10 @@ def new_logger(logpath='', cfg=None):
     fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
     fh.setFormatter(fmt)
     fh.handleError = raiseError
+
+    while 0 < len(rval.handlers):
+        z = U.pop0(rval.handlers)
+        del z
     rval.addHandler(fh)
 
     rval.info('-' * (55 - len(host)))
