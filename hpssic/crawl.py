@@ -281,7 +281,8 @@ def crl_start(argv):
         print("No exit path is specified in the configuration")
         sys.exit(1)
 
-    log = CrawlConfig.log(logpath=o.logfile, cfg=cfg)
+    vstr = "HPSS Integrity Crawler version %s" % version.__version__
+    log = CrawlConfig.log(vstr, logpath=o.logfile, cfg=cfg)
     pfpath = make_pidfile(os.getpid(),
                           cfg.get('crawler', 'context'),
                           exitpath,
