@@ -4,7 +4,9 @@ Tests for Checkable.py
 """
 from hpssic.Checkable import Checkable
 import copy
+from hpssic import CrawlConfig
 from hpssic import CrawlDBI
+from hpssic import dbschem
 from hpssic import Dimension
 import os
 import pdb
@@ -55,6 +57,21 @@ class CheckableTest(testhelp.HelpedTestCase):
                 ('/abc/bar', 'f', '', time.time())]
 
     # -------------------------------------------------------------------------
+    def populate_ttypes(self):
+        """
+        Create and populate table <pfx>_tape_types
+        """
+        dbschem.make_table("tape_types")
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.insert(table="tape_types",
+                  fields=['type', 'subtype', 'name'],
+                  data=[(16777235, 0, 'STK T10000/T10000A(500GB)'),
+                        (16777235, 1, 'STK T10000/T10000B(1000GB)'),
+                        (16777235, 2, 'STK T10000/T10000C(5000GB)'),
+                        (16777235, 3, 'STK T10000/T10000D(8000GB)')])
+        db.close()
+
+    # -------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),
                         reason="slow -- use --all to run this one")
     @pytest.mark.skipif('jenkins' in os.getcwd())
@@ -63,8 +80,15 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .check() on a directory should give us back a list of Checkable
         objects representing the entries in the directory
         """
+        self.dbgfunc()
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        cfg = CrawlConfig.get_config('hpssic_sqlite_test.cfg', reset=True)
+        cfg.set('crawler', 'logpath',
+                U.pathjoin(self.testdir, util.my_name()) + ".log")
+        cfg.set('dbi-crawler', 'dbname', U.pathjoin(self.testdir, 'test.db'))
+        cfg.set('cv', 'fire', 'no')
+        self.populate_ttypes()
+
         Checkable.ex_nihilo()
         testdir = '/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')

@@ -25,6 +25,7 @@ have a cos or a checksum.
 import Alert
 import CrawlConfig
 import CrawlDBI
+import cv_lib
 import dbschem
 import Dimension
 import glob
@@ -636,6 +637,13 @@ class Checkable(object):
             raise StandardError("%s has invalid type" % self)
 
         db = CrawlDBI.DBI(dbtype='crawler')
+
+        # Populate ttypes if appropriate
+        if self.type == 'f' and self.ttypes is None and self.cart is not None:
+            media = cv_lib.ttype_lookup(self.path, self.cart)
+            if media is not None:
+                self.ttypes = ','.join([x[1] for x in media])
+
         if not self.in_db:
             # insert it
             db.insert(table='checkables',

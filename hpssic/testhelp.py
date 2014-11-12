@@ -127,6 +127,9 @@ def all_tests(name, filter=None):
 
 # -----------------------------------------------------------------------------
 def db_config(tdir, tname, cfg_d=None):
+    """
+    Deprecated but still used in test_Checkable and test_Dimension
+    """
     cfname = '%s/%s.cfg' % (tdir, tname)
     if cfg_d is None:
         cfg_d = {'dbi-crawler': {'dbtype': 'sqlite',
@@ -144,6 +147,7 @@ def db_config(tdir, tname, cfg_d=None):
 def cfgfile(filename, data):
     """
     Turn a dict into a configuration file
+    Deprecated, used in db_config()
     """
     cfg = cfgobj(data)
     f = open(filename, 'w')
@@ -154,7 +158,9 @@ def cfgfile(filename, data):
 # -----------------------------------------------------------------------------
 def cfgobj(data):
     """
-    Turn a dict into a CrawlConfig object
+    Turn a dict into a CrawlConfig object -- this is what CrawlConfig.dictor()
+    does, so this can be deprecated.
+    Deprecated, used in cfgfile()
     """
     rval = CrawlConfig.CrawlConfig()
     for section in data:
