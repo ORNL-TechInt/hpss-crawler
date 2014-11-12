@@ -452,8 +452,13 @@ def cvv_ttype_lookup(argv):
 
     pwid = max([len(x) for x in rpt.keys()])
     for path in rpt.keys():
-        for (c, m) in rpt[path]:
-            print("%*s %s %s" % (-pwid, path, c, m))
+        if rpt[path]:
+            for (c, m) in rpt[path]:
+                print("%*s %s %s" % (-pwid, path, c, m))
+        else:
+            print("%*s %s %s" % (-pwid, path, 'None', 'None'))
+
+
 # -----------------------------------------------------------------------------
 def cvv_ttype_missing(argv):
     """ttype_missing - Report records missing ttype information
@@ -506,15 +511,18 @@ def cvv_ttype_populate(argv):
 
     # -------------------------------------------------------------------------
     def show_would_do(fields, data):
-        ddx = 0
-        zs = "\nwould set "
-        sep = ""
-        for f in fields:
-            zs += sep + "%s = %s" % (f, data[ddx])
-            ddx += 1
-            sep = ", "
-        zs += "\n   for path %s" % data[ddx]
-        print(zs)
+        if 0 < len(data):
+            ddx = 0
+            zs = "\nwould set "
+            sep = ""
+            for f in fields:
+                zs += sep + "%s = %s" % (f, data[ddx])
+                ddx += 1
+                sep = ", "
+            zs += "\n   for path %s" % data[ddx]
+            print(zs)
+        else:
+            "No data - nothing would be updated"
 
     # -------------------------------------------------------------------------
     def verify_update(path):
@@ -597,7 +605,7 @@ def cvv_ttype_populate(argv):
             break
 
     if o.dryrun:
-        show_would_do(data)
+        show_would_do(['ttypes', 'cart', 'path', 'last_check'], data)
     else:
         cv_lib.tpop_update_by_path(data)
         cv_lib.tpop_report_updates(data)
