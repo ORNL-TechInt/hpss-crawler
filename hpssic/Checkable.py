@@ -205,9 +205,10 @@ class Checkable(object):
                 CrawlConfig.log("%s votes against %s -- skipping" %
                                 (dn, self.path))
                 return False
-        if self.probability < random.random():
-            CrawlConfig.log("random votes against %s -- skipping" %
-                            (self.path))
+        randval = random.random()
+        if self.probability < randval:
+            CrawlConfig.log("random votes against %s -- skipping (%g < %g)" %
+                            (self.path, self.probability, randval))
             return False
         return True
 
