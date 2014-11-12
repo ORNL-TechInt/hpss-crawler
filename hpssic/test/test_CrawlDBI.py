@@ -37,7 +37,7 @@ def make_db2_tcfg(dbeng):
     Construct and return a config object for a db2 database
     """
     tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config(reset=True)
+    xcfg = CrawlConfig.get_config('hpssic_mysql_test.cfg', reset=True)
     section = 'dbi-hpss'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
@@ -54,7 +54,7 @@ def make_mysql_tcfg(dbeng):
     Construct and return a config object for a mysql database
     """
     tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config(reset=True)
+    xcfg = CrawlConfig.get_config('hpssic_mysql_test.cfg', reset=True)
     section = 'dbi-crawler'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
@@ -71,7 +71,7 @@ def make_sqlite_tcfg(dbeng):
     Construct and return a config object for an sqlite database
     """
     tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config(reset=True)
+    xcfg = CrawlConfig.get_config('hpssic_sqlite_test.cfg', reset=True)
     section = 'dbi-crawler'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
@@ -1988,6 +1988,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         DBImysqlTest:
         """
+        CrawlConfig.get_config("hpssic_mysql_test.cfg", reset=True)
         dbschem.drop_tables_matching("test_%")
 
     # -------------------------------------------------------------------------
@@ -2005,6 +2006,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBImysqlTest: Calling alter() to add a column with valid syntax should
         add the new column, honoring the *pos* argument.
         """
+        self.dbgfunc()
         tname = util.my_name().replace('test_', '')
         # create test table
         db = self.DBI()
