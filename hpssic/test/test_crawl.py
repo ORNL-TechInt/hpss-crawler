@@ -466,6 +466,7 @@ class CrawlMiscTest(CrawlTest):
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['plugins'] = 'plugin_A, other_plugin'
+        xdict['crawler']['logpath'] = logpath
         xdict['other_plugin'] = {'unplanned': 'silver',
                                  'simple': 'check for this',
                                  'module': 'other_plugin'}
@@ -620,6 +621,7 @@ class CrawlMiscTest(CrawlTest):
         xdict = copy.deepcopy(self.cdict)
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
+        xdict['crawler']['logpath'] = logpath
         xdict['other'] = {'frequency': '1s',
                           'fire': 'true',
                           'module': 'other'}
