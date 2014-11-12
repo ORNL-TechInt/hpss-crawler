@@ -220,7 +220,7 @@ def tpop_update_by_path(data):
 
 
 # -----------------------------------------------------------------------------
-def ttype_lookup(pathname, cart):
+def ttype_lookup(pathname, cart=None):
     """
     Use hsi to get the name of the cart where this file lives.
 
@@ -322,6 +322,28 @@ def ttype_map_insert(TT):
               fields=['type', 'subtype', 'name'],
               data=tt_tups)
     db.close()
+
+
+# -----------------------------------------------------------------------------
+def ttype_missing():
+    """
+    Return a list of records where type = 'f' and ttype is null
+    """
+    db = CrawlDBI.DBI(dbtype='crawler')
+    rows = db.select(table='checkables',
+                     fields=['rowid',
+                             'path',
+                             'type',
+                             'cos',
+                             'cart',
+                             'ttypes',
+                             'checksum',
+                             'last_check',
+                             'fails',
+                             'reported'],
+                     where="type = 'f' and ttypes is null")
+    db.close()
+    return rows
 
 
 # -----------------------------------------------------------------------------

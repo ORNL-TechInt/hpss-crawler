@@ -454,6 +454,34 @@ def cvv_ttype_lookup(argv):
     for path in rpt.keys():
         for (c, m) in rpt[path]:
             print("%*s %s %s" % (-pwid, path, c, m))
+# -----------------------------------------------------------------------------
+def cvv_ttype_missing(argv):
+    """ttype_missing - Report records missing ttype information
+
+    usage: cv ttype_missing [-d]
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-c', '--config',
+                 action='store', default='', dest='config',
+                 help='configuration to use')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    CrawlConfig.get_config(o.config)
+    rec_l = cv_lib.ttype_missing()
+    for rec in rec_l:
+        print("%-40s %-10s %s %s" % (rec[1],
+                                     rec[4],
+                                     rec[5],
+                                     U.ymdhms(int(rec[7]))))
 
 
 # -----------------------------------------------------------------------------
