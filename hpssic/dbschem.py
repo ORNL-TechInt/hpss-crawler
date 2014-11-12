@@ -127,11 +127,12 @@ def drop_tables_matching(tablike):
     Drop tables with names matching the *tablike* expression. At the time of
     writing, this is only used for drop test tables ('test_%')
     """
-    if CrawlDBI.mysql_available:
-        tcfg = CrawlConfig.get_config()
-        tcfg.set('dbi-crawler', 'tbl_prefix', '')
+    tcfg = CrawlConfig.get_config()
+    tcfg.set('dbi-crawler', 'tbl_prefix', '')
+    db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
+    if CrawlDBI.mysql_available and 'mysql' in str(db):
 
-        db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
+        # db = CrawlDBI.DBI(cfg=tcfg, dbtype='crawler')
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore",
                                     "Can't read dir of .*")
@@ -141,7 +142,7 @@ def drop_tables_matching(tablike):
             for (tname,) in tlist:
                 if db.table_exists(table=tname):
                     db.drop(table=tname)
-        db.close()
+    db.close()
 
 
 # -----------------------------------------------------------------------------
