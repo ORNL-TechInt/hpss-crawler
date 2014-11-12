@@ -70,13 +70,20 @@ def make_sqlite_tcfg(dbeng):
     """
     Construct and return a config object for an sqlite database
     """
-    tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config('hpssic_sqlite_test.cfg', reset=True)
-    section = 'dbi-crawler'
-    tcfg.add_section(section)
-    tcfg.set(section, 'dbtype', dbeng)
-    tcfg.set(section, 'dbname', DBITest.testdb)
-    tcfg.set(section, 'tbl_prefix', 'test')
+    cdata = {'crawler': {'context': 'TEST',
+                         'heartbeat': '10s',
+                         'exitpath': '/tmp/crawler/TEST.exit',
+                         'stopwait_timeout': '5.0',
+                         'sleep_time': '0.25',
+                         'logpath': '/tmp/hpssic_sqlite.log',
+                         'heartbeat': '10s',
+                         },
+             'dbi-crawler': {'dbtype': dbeng,
+                             'dbname': DBITest.testdb,
+                             'tbl_prefix': 'test',
+                             }
+             }
+    tcfg = CrawlConfig.add_config(close=True, dct=cdata)
     return tcfg
 
 

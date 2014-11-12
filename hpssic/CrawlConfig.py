@@ -34,8 +34,84 @@ import warnings
 
 
 # ------------------------------------------------------------------------------
+def add_config(filename=None, cfg=None, dct=None, close=False):
+    """
+    If close and everything else is None, destroy the config and return None
+
+    If close and something else, destroy the config and create a new one based
+    on the something else.
+
+    If not close, add whatever is specified to the current config.
+
+    If nothing is specified and we have a current config, return it.
+
+    If nothing is specified and we have no current config, create the default
+    config and return it.
+    """
+
+    if close:
+        if hasattr(get_config, "_config"):
+            del get_config._config
+        if filename is None and cfg is None and dct is None:
+            return None
+
+    if filename:
+        if not hasattr(get_config, '_config'):
+            get_config._config = defaults()
+        get_config._config.read(filename)
+        get_config._config.set('crawler', 'filename', filename)
+        return get_config._config
+    elif cfg:
+        if hasattr(get_config, '_config'):
+            for s in cfg.sections():
+                for o in cfg.options(s):
+                    get_config._config.set(s, o, cfg.get(s, o))
+        else:
+            get_config._config = cfg
+        return get_config._config
+    elif dct:
+        if hasattr(get_config, '_config'):
+            get_config._config.sum_dict(dct)
+        else:
+            get_config._config = CrawlConfig.dictor(dct)
+        return get_config._config
+    elif not close and hasattr(get_config, '_config'):
+        return get_config._config
+
+    filename = os.getenv('CRAWL_CONF')
+    if filename is None:
+        filename = 'crawl.cfg'
+
+    if not os.path.exists(filename):
+        raise SystemExit("""
+        No configuration found. Please do one of the following:
+         - cd to a directory with an appropriate crawl.cfg file,
+         - create crawl.cfg in the current working directory,
+         - set $CRAWL_CONF to the path of a valid crawler configuration, or
+         - use --cfg to specify a configuration file on the command line.
+        """)
+    elif not os.access(filename, os.R_OK):
+        raise HpssicError("%s is not readable" % filename)
+
+    rval = defaults()
+    rval.read(filename)
+    rval.set('crawler', 'filename', filename)
+    get_config._config = rval
+    return rval
+
+
+# ------------------------------------------------------------------------------
+def defaults():
+    rval = CrawlConfig({'fire': 'no',
+                        'frequency': '3600',
+                        'heartbeat': '10'})
+    return rval
+
+
+# ------------------------------------------------------------------------------
 def get_config(cfname='', reset=False, soft=False):
     """
+    @DEPRECATED@
     Open the config file based on cfname, $CRAWL_CONF, or the default, in that
     order. Construct a CrawlConfig object, cache it, and return it. Subsequent
     calls will retrieve the cached object unless reset=True, in which case the
@@ -83,37 +159,6 @@ def get_config(cfname='', reset=False, soft=False):
         rval.set('crawler', 'filename', cfname)
         get_config._config = rval
     return rval
-
-
-# ------------------------------------------------------------------------------
-def get_logcfg(cfg):
-    """
-    Return a dict containing values for filename, maxbytes, backupCount, and
-    archdir if they are provided in the cfg.
-    """
-    kwargs = {}
-    try:
-        kwargs['filename'] = cfg.get('crawler', 'logpath')
-    except:
-        pass
-
-    try:
-        maxbytes = cfg.get_size('crawler', 'logsize')
-        kwargs['maxBytes'] = maxbytes
-    except:
-        pass
-
-    try:
-        kwargs['backupCount'] = cfg.getint('crawler', 'logmax')
-    except:
-        pass
-
-    try:
-        kwargs['archdir'] = cfg.get_d('crawler', 'archive_dir')
-    except:
-        pass
-
-    return kwargs
 
 
 # ------------------------------------------------------------------------------
@@ -468,6 +513,25 @@ class CrawlConfig(ConfigParser.ConfigParser):
         for s in sorted(dict.keys()):
             self.add_section(s)
             for o in sorted(dict[s].keys()):
+                self.set(s, o, dict[s][o])
+
+    # -------------------------------------------------------------------------
+    def sum_dict(self, dct, defaults=None):
+        """
+        Add the contents of *dct* to self. If one of the keys in dict is
+        'defaults' or 'DEFAULTS', that sub-dict will be added to the _defaults
+        member. The new material may overwrite what's already present.
+        """
+        # If we got defaults, set them first
+        if defaults is not None:
+            for k in defaults.keys():
+                self._defaults[k] = defaults[k]
+
+        # Now fill the config with the material from the dict
+        for s in sorted(dct.keys()):
+            if not self.has_section(s):
+                self.add_section(s)
+            for o in sorted(dct[s].keys()):
                 self.set(s, o, dict[s][o])
 
     # -------------------------------------------------------------------------
