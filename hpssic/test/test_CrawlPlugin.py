@@ -16,15 +16,7 @@ from hpssic import testhelp
 import time
 from hpssic import toolframe
 import traceback as tb
-from hpssic import util
-
-
-# M = sys.modules['__main__']
-# if 'py.test' in M.__file__:
-#     import pytest
-#     attr = pytest.mark.attr
-# else:
-#     from nose.plugins.attrib import attr
+from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -58,7 +50,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         should be written to the log file.
         """
         self.dbgfunc()
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -67,7 +59,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         filename = "%s/%s" % (self.plugdir, pname)
         self.assertEqual(os.path.exists(filename), True,
                          "File '%s' should exist but does not" % (filename))
-        self.expected('my name is %s\n' % (pname), util.contents(filename))
+        self.expected('my name is %s\n' % (pname), U.contents(filename))
         logpath = c.get('crawler', 'logpath')
         self.assertTrue(os.path.exists(logpath),
                         "Expected logfile '%s' to exist" % logpath)
@@ -79,7 +71,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If option 'fire' is False in config, the object's firable attribute
         should be False and attempting to fire the plugin should do nothing
         """
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -97,7 +89,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If option 'fire' is True in config, the plugin's firable attribute
         should be True and attempting to fire the plugin should work
         """
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -115,7 +107,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If option 'fire' is not set in config, the firable attribute should be
         true in plugin object
         """
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=None)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -137,7 +129,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If frequency is set in config, plugin should match
         """
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -150,7 +142,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If frequency not set in config, should be 3600 (1 hour) in plugin
         """
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, freq=None)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -174,7 +166,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
         pre = copy.copy(sys.path)
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
 
@@ -190,7 +182,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir in sys.path:
             sys.path.remove(self.plugdir)
         pre = copy.copy(sys.path)
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -209,7 +201,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir in sys.path:
             sys.path.remove(self.plugdir)
         pre = copy.copy(sys.path)
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, plugdir=None, fire=False, freq=None)
         try:
@@ -231,7 +223,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
-        pname = 'z' + util.my_name()
+        pname = 'z' + U.my_name()
         self.make_plugin(pname)
 
         # get it into the module list, remove the .pyc file
@@ -265,7 +257,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
 
         # set up the config
@@ -285,7 +277,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # set up dir, plugin name, create plugin
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
-        pname = util.my_name()
+        pname = U.my_name()
 
         # set up the config
         c = self.make_cfg(pname)
@@ -307,7 +299,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
         pre = sys.path
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
 
         # create the config
@@ -336,7 +328,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.append(self.plugdir)
         pre = sys.path
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
 
         # create the config
@@ -366,7 +358,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.insert(0, self.plugdir)
         pre = sys.path
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
 
         # create the config
@@ -375,9 +367,9 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
         self.expected(self.plugdir, p.plugin_dir)
-        rgx = '%s/%s.pyc?' % (util.realpath(self.plugdir), pname)
+        rgx = '%s/%s.pyc?' % (U.realpath(self.plugdir), pname)
         self.assertTrue(re.findall(rgx,
-                                   util.realpath(sys.modules[pname].__file__)),
+                                   U.realpath(sys.modules[pname].__file__)),
                         "expected \n    %s\nto match \n    %s\n" %
                         (rgx, sys.modules[pname].__file__))
 
@@ -407,7 +399,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.insert(0, self.plugdir)
         pre = sys.path
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
 
         # create the config
@@ -431,7 +423,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         if self.plugdir not in sys.path:
             sys.path.insert(0, self.plugdir)
         pre = sys.path
-        pname = util.my_name()
+        pname = U.my_name()
         self.make_plugin(pname)
 
         # create the config
