@@ -90,12 +90,18 @@ not_in_nsobject_D = ("Object ID %d not found in table NSOBJECT")
 
 nothing_to_drop = ("table is None, nothing to drop")
 
+only_one = ("Only one of --show, --drop, or --pop is allowed")
+
 password_missing_rgx = ('Security processing failed with reason "\d" ' +
                         '\("PASSWORD MISSING"\)')
 
 table_already_mysql = ("1050: Table 'test_create_already' already exists")
 
 table_already_sqlite = ("table test_create_already already exists")
+
+table_created_S = ("Table '%s' created")
+
+table_already_S = ("Table '%s' already exists")
 
 tblpfx_required = ("A table prefix is required")
 

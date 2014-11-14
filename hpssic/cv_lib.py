@@ -1,6 +1,7 @@
 import CrawlDBI
 import dbschem
 import hpss
+import messages as MSG
 import pdb
 import time
 import util as U
@@ -110,11 +111,40 @@ def lscos_populate():
             hi_i = hi.replace(',', '')
             data.append((cos, desc, copies, lo_i, hi_i))
 
-        db.insert(table='lscos',
+        tabname = 'lscos'
+        db.insert(table=tabname,
                   fields=['cos', 'name', 'copies', 'min_size', 'max_size'],
                   data=data)
+        rval = MSG.table_created_S % tabname
+    else:
+        rval = MSG.table_already_S % tabname
 
     db.close()
+    return rval
+
+
+# -----------------------------------------------------------------------------
+def lscos_show():
+    """
+    Report the contents of the lscos table if it exists
+    """
+    db = CrawlDBI.DBI(dbtype="crawler")
+    if not db.table_exists(table='lscos'):
+        rval = "\n    Table lscos does not exist\n"
+    else:
+        rows = db.select(table='lscos',
+                         fields=['cos',
+                                 'name',
+                                 'copies',
+                                 'min_size',
+                                 'max_size'])
+        db.close()
+
+        rval = ""
+        for r in rows:
+            rval += "%s %-35s %3d %10d %10d\n" % r
+
+    return rval
 
 
 # -----------------------------------------------------------------------------

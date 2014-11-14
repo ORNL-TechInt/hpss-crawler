@@ -6,6 +6,7 @@ import cv_lib
 import dbschem
 import Dimension
 import hpss
+import messages as MSG
 import optparse
 import os
 import pdb
@@ -64,6 +65,55 @@ def cvv_dropcart(argv):
 
     result = dbschem.alter_table(table="checkables", dropcol="cart")
     print(result)
+
+
+# -----------------------------------------------------------------------------
+def cvv_lscos(argv):
+    """lscos - Manage the lscos table
+
+    usage: cv lscos [--show/-S|--drop/-D|--pop/-P]
+
+    With this function you can create and populate the lscos table, drop it, or
+    report its contents.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-D', '--drop',
+                 action='store_true', default=False, dest='drop',
+                 help='drop the table')
+    p.add_option('-P', '--pop',
+                 action='store_true', default=False, dest='pop',
+                 help='create and populate the table')
+    p.add_option('-S', '--show',
+                 action='store_true', default=False, dest='show',
+                 help='report the contents of the table')
+    try:
+        (o, a) = p.parse_args(argv)
+    except SystemExit:
+        return
+
+    if o.debug:
+        pdb.set_trace()
+
+    if o.show:
+        if o.pop or o.drop:
+            raise SystemExit(MSG.only_one)
+
+        print cv_lib.lscos_show()
+
+    elif o.drop:
+        if o.pop or o.show:
+            raise SystemExit(MSG.only_one)
+
+        print dbschem.drop_table(table='lscos')
+
+    elif o.pop:
+        if o.drop or o.show:
+            raise SystemExit(MSG.only_one)
+
+        print "\n    " + cv_lib.lscos_populate() + "\n"
 
 
 # -----------------------------------------------------------------------------
