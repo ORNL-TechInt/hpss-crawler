@@ -78,6 +78,42 @@ def lookup_nulls():
 
 
 # -----------------------------------------------------------------------------
+def lscos_populate():
+    """
+    If table lscos already exists, we're done. Otherwise, retrieve the lscos
+    info from hsi, create the table, and fill the table in.
+    """
+    db = CrawlDBI.DBI(dbtype="crawler")
+    st = dbschem.make_table("lscos")
+    if "Created" == st:
+        H = hpss.HSI()
+        raw = H.lscos()
+        H.quit()
+
+        z = [x.strip() for x in raw.split('\r')]
+        rules = [q for q in z if '----------' in q]
+        first = z.index(rules[0]) + 1
+        second = z[first:].index(rules[0]) + first
+        lines = z[first:second]
+        data = []
+        for line in lines:
+            (cos, desc, copies, lo, hi) = (line[0:4],
+                                           line[5:34].strip(),
+                                           int(line[36:44].strip()),
+                                           line[60:].split('-')[0],
+                                           line[60:].split('-')[1])
+            lo_i = int(lo.replace(',', ''))
+            hi_i = int(hi.replace(',', ''))
+            data.append((cos, desc, copies, lo_i, hi_i))
+
+        db.insert(table='lscos',
+                  fields=['cos', 'name', 'copies', 'min_size', 'max_size'],
+                  data=data)
+
+    db.close()
+
+
+# -----------------------------------------------------------------------------
 def nulls_from_checkables():
     """
     Return rows from table checkables that contain null values

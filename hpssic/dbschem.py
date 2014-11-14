@@ -21,6 +21,16 @@ tdefs = {
                               'reported    int'
                               ]
                    },
+
+    'lscos':      {'fields': ['rowid       integer primary key autoincrement',
+                              'cos         text',
+                              'name        text',
+                              'copies      int',
+                              'min_size    int',
+                              'max_size    int'
+                              ]
+                   },
+
     'mpra':       {'fields': ['rowid       integer primary key autoincrement',
                               'type        text',
                               'scan_time   integer',
@@ -29,16 +39,19 @@ tdefs = {
                               'hits        integer',
                               ]
                    },
+
     'report':     {'fields': ['rowid       integer primary key autoincrement',
                               'report_time integer',
                               ]
                    },
+
     'tape_types': {'fields': ['rowid       integer primary key autoincrement',
                               "type        int",
                               "subtype     int",
                               "name        text"
                               ]
                    },
+
     'tcc_data':   {'fields': ['rowid       integer primary key autoincrement',
                               'check_time  integer',
                               'low_nsobj_id  integer',
