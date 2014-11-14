@@ -187,6 +187,21 @@ class hpssCtorTest(hpssBaseTest):
 
         CrawlConfig.get_config(reset=True, soft=True)
 
+    # -------------------------------------------------------------------------
+    def test_ctor_no_cv_section(self):
+        """
+        If there is no cv section in the config, reset_atime and hash_algorithm
+        should take on their default values.
+        """
+        self.dbgfunc()
+        cfg = copy.deepcopy(self.cfg_d)
+        del cfg['cv']
+        zcfg = CrawlConfig.add_config(close=True, dct=cfg)
+        self.assertFalse(zcfg.has_section('cv'))
+        h = hpss.HSI(connect=False)
+        self.expected(False, h.reset_atime)
+        self.expected(None, h.hash_algorithm)
+
 
 # -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())

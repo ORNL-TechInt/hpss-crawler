@@ -57,10 +57,7 @@ class HSI(object):
             self.reset_atime = cfg.getboolean('cv', 'reset_atime')
 
         if not hasattr(self, 'hash_algorithm'):
-            try:
-                self.hash_algorithm = cfg.get('cv', 'hash_algorithm')
-            except CrawlConfig.NoOptionError as e:
-                self.hash_algorithm = None
+            self.hash_algorithm = cfg.get_d('cv', 'hash_algorithm', None)
 
         self.cmd = "./hsi " + cmdopts
         if connect:
