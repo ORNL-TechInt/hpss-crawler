@@ -361,7 +361,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         return rval
 
     # -------------------------------------------------------------------------
-    def get_d(self, section, option, default=None):
+    def get_d(self, section, option, default='get_d.nothing'):
         """
         Return the section/option value from the config. If the section or
         option is not defined, return the default value. If the default value
@@ -371,13 +371,13 @@ class CrawlConfig(ConfigParser.ConfigParser):
         try:
             value = self.get(section, option)
         except ConfigParser.NoSectionError as e:
-            if default is not None:
+            if default != 'get_d.nothing':
                 value = default
             else:
                 e.message += " in %s" % self.filename
                 raise
         except ConfigParser.NoOptionError as e:
-            if default is not None:
+            if default != 'get_d.nothing':
                 value = default
             else:
                 e.message += " in %s" % self.filename

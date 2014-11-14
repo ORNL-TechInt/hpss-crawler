@@ -381,6 +381,38 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
 
     # -------------------------------------------------------------------------
+    def test_get_d_none(self):
+        """
+        Changing get_d() to support None as a default value
+        """
+        obj = CrawlConfig.CrawlConfig()
+        obj.load_dict(self.sample)
+
+        # section and option are in the config object
+        self.expected('quack', obj.get_d('sounds', 'duck', 'foobar'))
+
+        # section is defined, option is not, should get the default
+        self.expected(None, obj.get_d('sounds', 'dolphin', None))
+
+        # section defined, option not, no default -- should throw exception
+        self.assertRaisesMsg(CrawlConfig.NoOptionError,
+                             "No option '%s' in section: '%s' in <???>" %
+                             ("dolphin", "sounds"),
+                             obj.get_d,
+                             'sounds',
+                             'dolphin')
+
+        # section not defined, should get the default
+        self.expected(None, obj.get_d('malename', 'deer', None))
+
+        # section not defined, no default -- should throw exception
+        self.assertRaisesMsg(CrawlConfig.NoSectionError,
+                             "No section: 'malename' in <???>",
+                             obj.get_d,
+                             'malename',
+                             'deer')
+
+    # -------------------------------------------------------------------------
     def test_get_d_with(self):
         """
         Calling get_d() with a default value should
