@@ -124,14 +124,13 @@ def drop_table(cfg=None, prefix=None, table=None):
 
     db = CrawlDBI.DBI(dbtype="crawler", cfg=cfg)
     if not db.table_exists(table=table):
-        rval = ("Table '%s_%s' does not exist" % (prefix, table))
+        rval = ("Table '%s' does not exist" % (table))
     else:
         db.drop(table=table)
         if db.table_exists(table=table):
-            rval = ("Attempt to drop table '%s_%s' failed" % (prefix, table))
+            rval = ("Attempt to drop table '%s' failed" % (table))
         else:
-            rval = ("Attempt to drop table '%s_%s' was successful" %
-                    (prefix, table))
+            rval = ("Attempt to drop table '%s' was successful" % (table))
 
     db.close()
     return rval

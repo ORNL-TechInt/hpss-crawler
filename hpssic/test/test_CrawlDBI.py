@@ -1278,19 +1278,19 @@ class DBI_out_Base(object):
         DBI_out_Base: dbschem.drop_table should return a failure message if the
         table does not exist, or drop the table if it does.
         """
+        self.dbgfunc()
         tname = util.my_name()
         tcfg = make_tcfg(self.dbtype)
         db = self.DBI()
 
         rv = dbschem.drop_table(table=tname, cfg=tcfg)
-        self.assertEqual(rv, "Table 'test_%s' does not exist" % tname)
+        self.expected("Table '%s' does not exist" % tname, rv)
 
         db.create(table=tname, fields=self.fdef)
         self.assertTrue(db.table_exists(table=tname))
 
         rv = dbschem.drop_table(table=tname, cfg=tcfg)
-        self.assertEqual(rv, "Attempt to drop table 'test_%s' was successful"
-                         % tname)
+        self.expected("Attempt to drop table '%s' was successful" % tname, rv)
 
     # -------------------------------------------------------------------------
     def test_dbschem_make_table(self):
