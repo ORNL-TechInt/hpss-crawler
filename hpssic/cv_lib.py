@@ -82,6 +82,10 @@ def lscos_populate():
     """
     If table lscos already exists, we're done. Otherwise, retrieve the lscos
     info from hsi, create the table, and fill the table in.
+
+    We store the min_size and max_size for each COS as text strings containing
+    digits because the largest sizes are already within three orders of
+    magnitude of a mysql bigint and growing.
     """
     db = CrawlDBI.DBI(dbtype="crawler")
     st = dbschem.make_table("lscos")
@@ -102,8 +106,8 @@ def lscos_populate():
                                            int(line[36:44].strip()),
                                            line[60:].split('-')[0],
                                            line[60:].split('-')[1])
-            lo_i = int(lo.replace(',', ''))
-            hi_i = int(hi.replace(',', ''))
+            lo_i = lo.replace(',', '')
+            hi_i = hi.replace(',', '')
             data.append((cos, desc, copies, lo_i, hi_i))
 
         db.insert(table='lscos',

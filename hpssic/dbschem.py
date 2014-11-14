@@ -22,12 +22,15 @@ tdefs = {
                               ]
                    },
 
+    # In lscos, COS min and max sizes are stored as text because the max sizes
+    # already exceed what an int can hold and are pushing the size of a bigint
+
     'lscos':      {'fields': ['rowid       integer primary key autoincrement',
                               'cos         text',
                               'name        text',
                               'copies      int',
-                              'min_size    int',
-                              'max_size    int'
+                              'min_size    text',
+                              'max_size    text'
                               ]
                    },
 
