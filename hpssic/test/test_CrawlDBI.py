@@ -1699,6 +1699,7 @@ class DBI_out_Base(object):
         DBI_out_Base: Calling insert with good arguments should put the data in
         the table
         """
+        self.dbgfunc()
         tname = util.my_name().replace('test_', '')
         self.reset_db(tname)
         fdef = ['id integer primary key autoincrement',
@@ -1711,7 +1712,9 @@ class DBI_out_Base(object):
         db = self.DBI()
         db.create(table=tname, fields=fdef)
         db.insert(table=tname, fields=fnames, data=testdata)
+        db.close()
 
+        db = self.DBI()
         dbc = db.cursor()
         dbc.execute("""
         select * from test_insert_yes

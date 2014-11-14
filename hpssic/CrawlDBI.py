@@ -758,6 +758,7 @@ if mysql_available:
                                   user=username,
                                   passwd=password,
                                   db=self.dbname)
+            self.dbh.autocommit(True)
 
         # ---------------------------------------------------------------------
         def __repr__(self):
