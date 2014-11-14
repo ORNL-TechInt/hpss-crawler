@@ -122,10 +122,8 @@ class CrawlMiscTest(CrawlTest):
         db.create(table=tname,
                   fields=['rowid integer primary key autoincrement'])
         actual = dbschem.drop_table(table=tname)
-        exp = ("Attempt to drop table '%s_%s' was successful" %
-               (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+        exp = ("Attempt to drop table '%s' was successful" % tname)
+        self.expected(exp, actual)
 
     # --------------------------------------------------------------------------
     def test_crawl_lib_drop_table_010(self):
@@ -150,12 +148,12 @@ class CrawlMiscTest(CrawlTest):
         cfg = CrawlConfig.get_config()
         cfg.set('dbi-crawler', 'tbl_prefix', 'test')
         db = CrawlDBI.DBI(dbtype='crawler')
-        db.create(table=tname,
-                  fields=['rowid integer primary key autoincrement'])
+        if not db.table_exists(table=tname):
+            db.create(table=tname,
+                      fields=['rowid integer primary key autoincrement'])
         actual = dbschem.drop_table(prefix=pfx, table=tname)
-        exp = ("Table '%s_%s' does not exist" % (pfx, tname))
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+        exp = ("Table '%s' does not exist" % (tname))
+        self.expected(exp, actual)
         db.drop(table=tname)
 
     # --------------------------------------------------------------------------
@@ -184,10 +182,8 @@ class CrawlMiscTest(CrawlTest):
         db.create(table=tname,
                   fields=['rowid integer primary key autoincrement'])
         actual = dbschem.drop_table(cfg=cfg, table=tname)
-        exp = ("Attempt to drop table '%s_%s' was successful" %
-               (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+        exp = ("Attempt to drop table '%s' was successful" % tname)
+        self.expected(exp, actual)
 
     # --------------------------------------------------------------------------
     def test_crawl_lib_drop_table_110(self):
@@ -217,15 +213,12 @@ class CrawlMiscTest(CrawlTest):
                   fields=['rowid integer primary key autoincrement'])
 
         actual = dbschem.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
-        exp = ("Table '%s_%s' does not exist" % (pfx+'x', tname))
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+        exp = ("Table '%s' does not exist" % (tname))
+        self.expected(exp, actual)
 
         actual = dbschem.drop_table(cfg=cfg, prefix=pfx, table=tname)
-        exp = ("Attempt to drop table '%s_%s' was successful" %
-               (cfg.get('dbi-crawler', 'tbl_prefix'), tname))
-        self.assertEqual(exp, actual,
-                         "Expected '%s', got '%s'" % (exp, actual))
+        exp = ("Attempt to drop table '%s' was successful" % tname)
+        self.expected(exp, actual)
 
     # --------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),
