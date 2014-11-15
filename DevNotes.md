@@ -152,3 +152,32 @@ be imported by both rpt_lib and html_lib. Etc.
 7   util    version    daemon
 
 8          messages
+
+#### 2014-11-15
+
+Updating software stack -- moving Dimension from layer 4 up to layer 3
+so it can call routines in cv_lib(3). The stack rule:
+
+ * A file may only import files at its own and lower levels in the
+   stack, never files at a higher level than itself.
+
+0                                         test/test_*.py
+0.1                                         fakesmtp
+
+ 1   crawl   cv   rpt   tcc     mpra      html
+
+ 2   crawl_lib  cv_lib   tcc_lib   mpra_lib   html_lib
+
+ 3   Checkable         toolframe    rpt_lib
+
+ 4   Alert       Dimension     testhelp(?)
+
+ 5       {cv,tcc,mpra,rpt}_sublib     dbschem
+
+ 6               hpss      CrawlDBI   CrawlMail   CrawlPlugin
+
+ 7       CrawlConfig
+
+ 8          util
+
+ 9          messages    version     daemon
