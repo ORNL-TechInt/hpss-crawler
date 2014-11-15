@@ -18,3 +18,5 @@ def cos_description(name):
     else:
         rval = "???"
     db.close()
+
+    return rval

@@ -4,6 +4,7 @@ Track stratum proportions in a sample against a population
 """
 import CrawlDBI
 import pdb
+import rpt_sublib
 
 
 # -----------------------------------------------------------------------------
@@ -158,7 +159,8 @@ class Dimension(object):
                                                 17 * '-',
                                                 17 * '-'))
         for cval in self.p_sum:
-            rval += ("\n   %-30.30s  " % cval +
+            show = cval + " - " + rpt_sublib.cos_description(cval)
+            rval += ("\n   %-30.30s  " % show +
                      "   %8d" % self.p_sum[cval]['count'] +
                      "   %6.2f" % self.p_sum[cval]['pct'] +
                      "   %8d" % self.s_sum[cval]['count'] +
