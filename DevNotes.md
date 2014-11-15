@@ -172,12 +172,16 @@ so it can call routines in cv_lib(3). The stack rule:
 
  4   Alert       Dimension     testhelp(?)
 
- 5       {cv,tcc,mpra,rpt}_sublib     dbschem
+ 5       {tcc,mpra,rpt}_sublib
 
- 6               hpss      CrawlDBI   CrawlMail   CrawlPlugin
+ 6               cv_sublib
 
- 7       CrawlConfig
+ 7               dbschem
 
- 8          util
+ 8               hpss      CrawlDBI   CrawlMail   CrawlPlugin
 
- 9          messages    version     daemon
+ 9       CrawlConfig
+
+10          util
+
+11          messages    version     daemon
