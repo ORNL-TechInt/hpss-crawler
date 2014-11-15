@@ -2,8 +2,9 @@
 Tests for html.py
 """
 from hpssic import CrawlConfig
+from hpssic import CrawlDBI
 from hpssic import cv_sublib
-# from hpssic import html
+from hpssic import dbschem
 from hpssic import html_lib
 from hpssic import mpra_sublib
 import os
@@ -44,7 +45,15 @@ class HtmlTest(testhelp.HelpedTestCase):
         Call html_lib.get_html_report() directly
         """
         self.dbgfunc()
+
+        db = CrawlDBI.DBI(dbtype="crawler")
+        dbschem.drop_table(table="lscos")
+        self.expected(False, db.table_exists(table="lscos"))
+
         result = html_lib.get_html_report('')
+
+        self.expected(True, db.table_exists(table="lscos"))
+        db.close()
         self.validate_report(result)
 
     # -------------------------------------------------------------------------
