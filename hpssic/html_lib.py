@@ -20,7 +20,7 @@ def get_html_report(cfg_file):
     cfg = CrawlConfig.get_config(cfg_file)
     db = CrawlDBI.DBI(dbtype="crawler")
 
-    last_rpt_time = rpt_sublib.get_last_rpt_time(db)
+    last_rpt_time = rpt_lib.get_last_rpt_time(db)
     rval += ('<head><meta http-equiv="refresh" content="60">\n')
     rval += ("<title>HPSSIC Dashboard</title></head>")
     rval += ("<body><center><h1>HPSS Integrity Crawler Dashboard</h1>" +
