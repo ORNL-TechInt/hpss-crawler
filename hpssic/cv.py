@@ -3,6 +3,7 @@ import crawl_lib
 import CrawlConfig
 import CrawlDBI
 import cv_lib
+import cv_sublib
 import dbschem
 import Dimension
 import hpss
@@ -113,7 +114,7 @@ def cvv_lscos(argv):
         if o.drop or o.show:
             raise SystemExit(MSG.only_one)
 
-        print "\n    " + cv_lib.lscos_populate() + "\n"
+        print "\n    " + cv_sublib.lscos_populate() + "\n"
 
 
 # -----------------------------------------------------------------------------

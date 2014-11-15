@@ -16,7 +16,7 @@ to an sqlite database or a functional mysql server.
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
-from hpssic import cv_lib
+from hpssic import cv_sublib
 from hpssic import dbschem
 from hpssic import messages as MSG
 import os
@@ -2564,12 +2564,12 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                         reason="slow -- use --all to run this one")
     def test_cvlib_lscos_populate(self):
         """
-        Try running cv_lib.lscos_populate(). It should create the lscos table
-        and populate it with data. Only available when we have hpss.
+        Try running cv_sublib.lscos_populate(). It should create the lscos
+        table and populate it with data. Only available when we have hpss.
         """
         self.dbgfunc()
         db = self.DBI()
-        cv_lib.lscos_populate()
+        cv_sublib.lscos_populate()
         self.assertTrue(db.table_exists(table='lscos'),
                         "Expected table 'lscos' to be present")
         data = db.select(table="lscos",
