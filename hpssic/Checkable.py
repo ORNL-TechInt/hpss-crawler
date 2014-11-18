@@ -432,25 +432,29 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def get_list(cls, prob=0.1, rootlist=[]):
+    def get_list(cls, how_many, prob=0.1, rootlist=[]):
         """
         Return the current list of Checkables from the database.
         """
         # Checkable.dbname = filename
         rval = Checkable.load_priority_list()
         db = CrawlDBI.DBI(dbtype='crawler')
-        rows = db.select(table='checkables',
-                         fields=['rowid',
-                                 'path',
-                                 'type',
-                                 'cos',
-                                 'cart',
-                                 'ttypes',
-                                 'checksum',
-                                 'last_check',
-                                 'fails',
-                                 'reported'],
-                         orderby='last_check')
+        kw = {'table': 'checkables',
+              'fields': ['rowid',
+                         'path',
+                         'type',
+                         'cos',
+                         'cart',
+                         'ttypes',
+                         'checksum',
+                         'last_check',
+                         'fails',
+                         'reported'],
+              'orderby': 'last_check'}
+        if 0 < how_many:
+            kw['limit'] = how_many
+
+        rows = db.select(**kw)
 
         # check whether any roots from rootlist are missing and if so, add them
         # to the table
@@ -464,18 +468,7 @@ class Checkable(object):
                 reselect = True
 
         if reselect:
-            rows = db.select(table='checkables',
-                             fields=['rowid',
-                                     'path',
-                                     'type',
-                                     'cos',
-                                     'cart',
-                                     'ttypes',
-                                     'checksum',
-                                     'last_check',
-                                     'fails',
-                                     'reported'],
-                             orderby='last_check')
+            rows = db.select(**kw)
 
         for row in rows:
             tmp = list(row)
@@ -493,7 +486,9 @@ class Checkable(object):
                             in_db=True,
                             dirty=False)
             rval.append(new)
+
         db.close()
+        CrawlConfig.log("returning %d items" % len(rval))
         return rval
 
     # -------------------------------------------------------------------------

@@ -11,6 +11,7 @@ from hpssic import Dimension
 import os
 import pdb
 import pytest
+import random
 import stat
 import sys
 from hpssic import testhelp
@@ -1183,3 +1184,254 @@ class CheckableTest(testhelp.HelpedTestCase):
                   fields=['path', 'type', 'cos', 'last_check'],
                   data=[('/abc/def', 'd', '', 0)])
         db.close()
+
+
+# -----------------------------------------------------------------------------
+def fuzztime(days):
+    """
+    Get a random time between 1:00am and 11:00pm on the day indicated
+    """
+    base = int(U.day_offset(days))
+    rval = random.randrange(base, base + 22 * 3600)
+    return rval
+
+
+# -----------------------------------------------------------------------------
+class test_get_list(testhelp.HelpedTestCase):
+    # test directory and database name
+    testdir = testhelp.testdata(__name__)
+    testdb = U.pathjoin(testdir, 'test.db')
+
+    # these fields don't change
+    rtype = 'f'
+    cos = '6002'
+    cart = 'X0352700'
+    ttypes = 'STK T10000/T10000A(500GB)'
+    fails = reported = 0
+
+    fld_list = ['path',
+                'type',
+                'cos',
+                'cart',
+                'ttypes',
+                'checksum',
+                'last_check',
+                'fails',
+                'reported',
+                ]
+
+    # changing fields: path, checksum, last_check
+    testdata = [("/home/tpb/hic_test/test_001", 0, 0),
+                ("/home/tpb/hic_test/test_002", 0, 0),
+                ("/home/tpb/hic_test/test_003", 0, 0),
+                ("/home/tpb/hic_test/test_004", 0, 0),
+                ("/home/tpb/hic_test/test_005", 0, 0),
+                ("/home/tpb/hic_test/test_006", 0, 0),
+                ("/home/tpb/hic_test/test_007", 0, 0),
+                ("/home/tpb/hic_test/test_008", 0, 0),
+                ("/home/tpb/hic_test/test_009", 0, 0),
+                ("/home/tpb/hic_test/test_010", 0, 0),
+                ("/home/tpb/hic_test/test_011", 0, 0),
+                ("/home/tpb/hic_test/test_012", 0, 0),
+
+                ("/home/tpb/hic_test/test_100", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_101", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_102", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_103", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_104", 1, fuzztime(-2)),
+                ("/home/tpb/hic_test/test_105", 1, fuzztime(-2)),
+                ("/home/tpb/hic_test/test_106", 1, fuzztime(-2)),
+                ("/home/tpb/hic_test/test_107", 1, fuzztime(-3)),
+                ("/home/tpb/hic_test/test_108", 1, fuzztime(-4)),
+                ("/home/tpb/hic_test/test_109", 1, fuzztime(-5)),
+                ("/home/tpb/hic_test/test_110", 1, fuzztime(-5)),
+                ]
+
+    cfg = {'crawler':
+           {
+               'exitpath': '/tmp/foobar',
+               'logpath':  U.pathjoin(testdir, 'hpssic-getlist-test.log'),
+           },
+
+           'cv':
+           {
+               'recheck_fraction': '0.3',
+               'recheck_age': '1d',
+               'operations': '10',
+           },
+
+           'dbi-crawler':
+           {
+               'dbtype': 'sqlite',
+               'dbname': testdb,
+               'tbl_prefix': 'test',
+           }
+          }
+
+    # -------------------------------------------------------------------------
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up the default config for all the tests in this class
+        """
+        cfg = CrawlConfig.add_config(close=True, dct=cls.cfg)
+
+    # -------------------------------------------------------------------------
+    def setUp(self):
+        """
+        The default config should be pointing us to an sqlite database.
+
+        Drop the checkables table if it exists, then populate it with our test
+        data.
+        """
+        super(test_get_list, self).setUp()
+        cfg = CrawlConfig.add_config()
+
+        db = CrawlDBI.DBI(dbtype='crawler')
+        self.assertTrue(isinstance(db._dbobj, CrawlDBI.DBIsqlite),
+                        "Expected an SQLITE db object, got %s" %
+                        type(db._dbobj))
+
+        if db.table_exists(table="checkables"):
+            dbschem.drop_table(table='checkables', cfg=cfg)
+        dbschem.make_table('checkables', cfg=cfg)
+
+        fulldata = [(x[0],
+                     self.rtype,
+                     self.cos,
+                     self.cart,
+                     self.ttypes,
+                     x[1],
+                     x[2],
+                     self.fails,
+                     self.reported)
+                    for x in self.testdata]
+        db.insert(table='checkables',
+                  fields=self.fld_list,
+                  data=fulldata)
+        db.close()
+
+    # -------------------------------------------------------------------------
+    def tearDown(self):
+        """
+        Drop the checkables table to clear the way for the next test.
+        """
+        dbschem.drop_table(table='checkables')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_0__1d(self):
+        """
+        recheck_fraction = 0.0
+        recheck_age = 1d
+        ==> all 10 from last_check = 0 (lc=0)
+        ==> 2 from lc = 0, 8 ordered by last_check (oblc)
+        """
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config()
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.expected(ops, len(z))
+        for item in z:
+            self.expected(0, item.last_check)
+            item.last_check = int(time.time())
+            item.dirty = True
+            item.persist()
+
+        z = Checkable.get_list(ops)
+        self.expected(ops, len(z))
+        zeros_expected = 2
+        prev = 0
+        for item in z:
+            if zeros_expected:
+                self.expected(0, int(item.last_check))
+                zeros_expected -= 1
+            else:
+                self.assertTrue(prev <= item.last_check,
+                                "Expected %d to be less than %d" %
+                                (prev, item.last_check))
+                self.assertTrue(0 != item.last_check,
+                                "Expected non-zero, got %d" %
+                                item.last_check)
+                self.expected(1, item.checksum)
+                prev = int(item.last_check)
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_3__5d(self):
+        """
+        recheck_fraction = 0.3
+        recheck_age = 5d
+        ==> 1 recheck, 9 lc=0
+        ==> 3 lc=0, 7 oblc
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_3__4d(self):
+        """
+        recheck_fraction = 0.3
+        recheck_age = 4d
+        ==> 2 rechecks, 8 lc=0
+        ==> 4 lc=0, 6 oblc
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_3__3d(self):
+        """
+        recheck_fraction = 0.3
+        recheck_age = 3d
+        ==> 3 rechecks, 7 lc=0
+        ==> 5 lc=0, 5 oblc
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_3__2d(self):
+        """
+        recheck_fraction = 0.3
+        recheck_age = 2d
+        ==> 3 rechecks, 7 lc=0
+        ==> 3 rechecks, 5 lc=0, 2 oblc
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_3__1d(self):
+        """
+        recheck_fraction = 0.3
+        recheck_age = 1d
+        ==> 3 rechecks, 7 lc=0
+        ==> 3 rechecks, 5 lc=0, 1 oblc
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_4__1d(self):
+        """
+        recheck_fraction = 0.4
+        recheck_age = 1d
+        ==> 4 rechecks, 6 lc=0
+        ==> 4 rechecks, 6 lc=0
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_0_5__1d(self):
+        """
+        recheck_fraction = 0.5
+        recheck_age = 1d
+        ==> 5 rechecks, 5 lc=0
+        ==> 5 rechecks, 5 lc=0
+        """
+        self.fail('construction')
+
+    # -------------------------------------------------------------------------
+    def test_recheck_1_0__1d(self):
+        """
+        recheck_fraction = 1.0
+        recheck_age = 1d
+        ==> 10 rechecks
+        ==> 1 recheck, 9 lc=0
+        """
+        self.fail('construction')
