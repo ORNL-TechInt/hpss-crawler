@@ -185,3 +185,27 @@ so it can call routines in cv_lib(3). The stack rule:
 10          util
 
 11          messages    version     daemon
+
+
+#### 2014-11-18  Running py.test -- options
+
+   --all    run all the tests; without this, many will be skipped. The
+            full set of tests takes about three minutes to run. The subset
+            run without --all takes less than a minute.
+
+   -x       exit on the first failing test.
+
+   --nolog  don't log results. Without this, test results are written to
+            hpssic/test/hpssic_test.log
+
+   -rs      report the reason that each skipped test was skipped
+
+   --dbg TEST|all
+            drop into the debugger when running any test whose name contains
+            TEST. If all is specified, drop into the debugger for each test
+            run.
+
+   -k EXP   run only tests whose names match EXP, which can be a python
+            expression
+
+   -v       report test names as they are run
