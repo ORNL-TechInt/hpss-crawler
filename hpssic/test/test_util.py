@@ -150,6 +150,31 @@ class UtilTest(testhelp.HelpedTestCase):
         self.expected("2014.0412", util.date_start(tfilename))
 
     # -------------------------------------------------------------------------
+    def test_day_offset(self):
+        """
+        The routine day_offset(arg) returns the following. ('today' is the time
+        index of the beginning of the current day. now is the current time
+        index.)
+
+        arg == 0   =>  now
+        arg <> 0   =>  today + arg days < return val < today + (arg+1) days
+        """
+        def validate(days):
+            daylen = 24 * 3600
+            low = U.daybase(time.time()) + days * daylen
+            high = low + daylen
+            r = U.day_offset(days)
+            self.assertTrue(low < r and r < high,
+                            "Expected in range %f, %f, got %f" %
+                            (low/daylen, high/daylen, r/daylen))
+        self.dbgfunc()
+        validate(-2)
+        validate(-1)
+        validate(0)
+        validate(1)
+        validate(2)
+
+    # -------------------------------------------------------------------------
     def test_env_add_folded_none(self):
         """
         TEST: add to an undefined environment variable from a folded [env]

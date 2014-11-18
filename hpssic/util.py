@@ -326,9 +326,22 @@ def csv_list(value, delimiter=","):
 
 
 # -----------------------------------------------------------------------------
+def day_offset(days):
+    """
+    Return the epoch of 1:00am *days* days from today. If *days* is 0, we get
+    1:00am today. If
+    *days* is -1, it's 1:00am yesterday. And *days* == 1 means
+    1:00am tomorrow.
+    """
+    rval = daybase(time.time()) + days * 3600 * 24 + 3600
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def daybase(epoch):
     """
-    Given an epoch time, return the beginning of the day containing the input.
+    Given an epoch time, *epoch*, return the beginning of the day containing
+    the input.
     """
     tm = time.localtime(epoch)
     return time.mktime([tm.tm_year, tm.tm_mon, tm.tm_mday,
