@@ -5,7 +5,9 @@ from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import cv_sublib
 from hpssic import dbschem
+from hpssic import hpss
 from hpssic import html_lib
+from hpssic import messages as MSG
 from hpssic import mpra_sublib
 import os
 import pexpect
@@ -50,7 +52,11 @@ class HtmlTest(testhelp.HelpedTestCase):
         dbschem.drop_table(table="lscos")
         self.expected(False, db.table_exists(table="lscos"))
 
-        result = html_lib.get_html_report('')
+        try:
+            result = html_lib.get_html_report('')
+        except hpss.HSIerror as e:
+            if MSG.hpss_unavailable in str(e):
+                pytest.skip(str(e))
 
         self.expected(True, db.table_exists(table="lscos"))
         db.close()

@@ -18,6 +18,7 @@ from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic import cv_sublib
 from hpssic import dbschem
+from hpssic import hpss
 from hpssic import messages as MSG
 import os
 import pdb
@@ -2569,7 +2570,11 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         self.dbgfunc()
         db = self.DBI()
-        cv_sublib.lscos_populate()
+        try:
+            cv_sublib.lscos_populate()
+        except hpss.HSIerror as e:
+            if MSG.hpss_unavailable in str(e):
+                pytest.skip(str(e))
         self.assertTrue(db.table_exists(table='lscos'),
                         "Expected table 'lscos' to be present")
         data = db.select(table="lscos",
