@@ -62,6 +62,9 @@ readme: $(WWW)/README.html
 
 refman: $(WWW)/ReferenceManual.html
 
+reset:
+	rm -rf hpssic/test/__pycache__
+
 uguide: $(WWW)/UserGuide.html
 
 $(WWW)/README.html: README.md
