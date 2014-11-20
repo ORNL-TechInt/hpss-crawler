@@ -1191,7 +1191,6 @@ def fuzztime(days, cfg=None):
     """
     Get a random time between 0:00am and current time on the day indicated
     """
-    zcf = CrawlConfig.add_config(dct=cfg)
     base = int(U.day_offset(days))        # 0:00am on the day desired
     today = int(U.daybase(time.time()))   # 0:00am today
     offs = int(time.time()) - today       # secs since 0:00

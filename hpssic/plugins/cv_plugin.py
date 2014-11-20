@@ -30,21 +30,21 @@ def main(cfg):
     # Fetch the list of HPSS objects that we're looking at from the
     # database
     try:
-        clist = Checkable.Checkable.get_list(odds, rootlist=dataroot)
+        clist = Checkable.Checkable.get_list(prob=odds, rootlist=dataroot)
     except CrawlDBI.DBIerror as e:
         if any([util.rgxin(msg, str(e))
                 for msg in ["no such table: checkables",
                             "Table '.*' doesn't exist"]]):
             CrawlConfig.log("calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
-            clist = Checkable.Checkable.get_list(odds)
+            clist = Checkable.Checkable.get_list(prob=odds)
         else:
             raise
     except StandardError as e:
         if 'Please call .ex_nihilo()' in str(e):
             CrawlConfig.log("calling ex_nihilo")
             Checkable.Checkable.ex_nihilo(dataroot=dataroot)
-            clist = Checkable.Checkable.get_list(odds)
+            clist = Checkable.Checkable.get_list(prob=odds)
         else:
             raise
 

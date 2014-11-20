@@ -152,21 +152,17 @@ class UtilTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_day_offset(self):
         """
-        The routine day_offset(arg) returns the following. ('today' is the time
-        index of the beginning of the current day. now is the current time
-        index.)
-
-        arg == 0   =>  now
-        arg <> 0   =>  today + arg days < return val < today + (arg+1) days
+        The routine day_offset(arg) returns the epoch time of the beginning of
+        the day (i.e., midnight) that is *args* days from today.
         """
         def validate(days):
             daylen = 24 * 3600
             low = U.daybase(time.time()) + days * daylen
             high = low + daylen
-            r = U.day_offset(days)
-            self.assertTrue(low < r and r < high,
-                            "Expected in range %f, %f, got %f" %
-                            (low/daylen, high/daylen, r/daylen))
+            r = U.day_offset(days) + 30   # 30 seconds into the day
+            self.assertTrue(low <= r and r < high,
+                            "Expected %s <= %s < %s" %
+                            (U.ymdhms(low), U.ymdhms(r), U.ymdhms(high)))
         self.dbgfunc()
         validate(-2)
         validate(-1)
