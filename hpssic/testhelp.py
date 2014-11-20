@@ -282,11 +282,12 @@ def module_test_setup(dir):
     directories).
     """
     module_test_setup.crawl_conf_orig = os.getenv('CRAWL_CONF')
-    if type(dir) == str:
-        reset_directory(dir, force=True)
-    elif type(dir) == list:
-        for dirname in dir:
-            reset_directory(dirname, force=True)
+    if not keepfiles():
+        if type(dir) == str:
+            reset_directory(dir, force=True)
+        elif type(dir) == list:
+            for dirname in dir:
+                reset_directory(dirname, force=True)
 
 
 # -----------------------------------------------------------------------------
@@ -538,6 +539,30 @@ class HelpedTestCase(unittest.TestCase):
                 self.assertTrue(exprgx in actual, msg % (exprgx, actual))
         else:
             self.assertTrue(util.rgxin(exprgx, actual), msg % (exprgx, actual))
+
+    # -------------------------------------------------------------------------
+    def unexpected(self, expval, actual):
+        """
+        Compare the expected value (expval) and the actual value (actual). If
+        there are no differences, fail.
+        """
+        msg = "\nUnexpected: "
+        if type(expval) == int:
+            msg += "%d"
+        elif type(expval) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+
+        msg += "\n    Actual: "
+        if type(actual) == int:
+            msg += "%d"
+        elif type(actual) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+
+        self.assertNotEqual(expval, actual, msg % (expval, actual))
 
     # -------------------------------------------------------------------------
     def noop(self):

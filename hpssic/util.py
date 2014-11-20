@@ -328,12 +328,11 @@ def csv_list(value, delimiter=","):
 # -----------------------------------------------------------------------------
 def day_offset(days):
     """
-    Return the epoch of 1:00am *days* days from today. If *days* is 0, we get
-    1:00am today. If
-    *days* is -1, it's 1:00am yesterday. And *days* == 1 means
-    1:00am tomorrow.
+    Return the epoch of 0:00am *days* days from today. If *days* is 0, we get
+    0:00am today. If *days* is -1, it's 0:00am yesterday. And *days* == 1 means
+    0:00am tomorrow.
     """
-    rval = daybase(time.time()) + days * 3600 * 24 + 3600
+    rval = daybase(time.time()) + days * 3600 * 24
     return rval
 
 

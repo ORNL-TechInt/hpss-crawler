@@ -603,7 +603,7 @@ class Checkable(object):
         return rval
 
     # -------------------------------------------------------------------------
-    def persist(self):
+    def persist(self, dirty=False):
         """
         Insert or update the object's entry in the database.
 
@@ -662,7 +662,7 @@ class Checkable(object):
                              self.fails,
                              self.reported)])
             self.in_db = True
-        elif self.dirty:
+        elif self.dirty or dirty:
             # update it
             if self.rowid is not None:
                 db.update(table='checkables',

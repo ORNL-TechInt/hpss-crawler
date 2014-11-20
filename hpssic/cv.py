@@ -342,15 +342,21 @@ def cvv_fail_reset(argv):
 def cvv_show_next(argv):
     """show_next - Report the Checkables in the order they will be checked
 
-    usage: cvtool shownext
+    usage: cvtool show_next
     """
     p = optparse.OptionParser()
+    p.add_option('-c', '--config',
+                 action='store', default='', dest='config',
+                 help='alternate configuration')
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
     p.add_option('-i', '--id',
                  action='store', default='', dest='id',
                  help='id of entry to be checked')
+    p.add_option('-l', '--limit',
+                 action='store', default=-1, dest='limit', type=int,
+                 help='max records to get')
     p.add_option('-p', '--path',
                  action='store', default='', dest='path',
                  help='name of path to be checked')
@@ -365,7 +371,17 @@ def cvv_show_next(argv):
     if o.debug:
         pdb.set_trace()
 
-    clist = Checkable.Checkable.get_list()
+    if o.config:
+        cfg = CrawlConfig.add_config(close=True, filename=o.config)
+    else:
+        cfg = CrawlConfig.add_config()
+
+    if o.limit < 0:
+        limit = int(cfg.get_d('cv', 'operations', '10'))
+    else:
+        limit = o.limit
+
+    clist = Checkable.Checkable.get_list(limit)
     for c in clist:
         if c.last_check == 0:
             print("%18d %s %s" % (c.last_check,
