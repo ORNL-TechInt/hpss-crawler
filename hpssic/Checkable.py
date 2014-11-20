@@ -576,6 +576,64 @@ class Checkable(object):
 
         db.close()
 
+
+    # -------------------------------------------------------------------------
+    @classmethod
+    def load_recheck_list(cls, how_many):
+        """
+        Look to see whether any of the already checksummed items in the
+        database have a last check time over the threshold for rechecking. If
+        so, we'll shove some of them to the front of the list based on the
+        configuration.
+        """
+        cfg = CrawlConfig.add_config()
+        r_fraction = float(cfg.get_d('cv', 'recheck_fraction', '0.0'))
+        r_age = cfg.get_time('cv', 'recheck_age', 365*24*3600)
+        threshold = int(time.time() - r_age)
+        CrawlConfig.log("threshold = %s (%d)", U.ymdhms(threshold), threshold)
+        if r_fraction == 0.0:
+            return []
+
+        limit = round(r_fraction * how_many)
+
+        db = CrawlDBI.DBI(dbtype='crawler')
+        kw = {'table': 'checkables',
+              'fields': ['rowid',
+                         'path',
+                         'type',
+                         'cos',
+                         'cart',
+                         'ttypes',
+                         'checksum',
+                         'last_check',
+                         'fails',
+                         'reported'],
+              'where': 'checksum <> 0 and last_check < %d' % threshold,
+              'orderby': 'last_check',
+              'limit': limit}
+
+        rows = db.select(**kw)
+        db.close()
+
+        rval = []
+        for row in rows:
+            tmp = list(row)
+            new = Checkable(rowid=tmp.pop(0),
+                            path=tmp.pop(0),
+                            type=tmp.pop(0),
+                            cos=tmp.pop(0),
+                            cart=tmp.pop(0),
+                            ttypes=tmp.pop(0),
+                            checksum=tmp.pop(0),
+                            last_check=tmp.pop(0),
+                            fails=tmp.pop(0),
+                            reported=tmp.pop(0),
+                            in_db=True,
+                            dirty=False)
+            rval.append(new)
+        return rval
+
+
     # -------------------------------------------------------------------------
     @classmethod
     def load_priority_list(cls):
