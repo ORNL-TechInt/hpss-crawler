@@ -1187,12 +1187,21 @@ class CheckableTest(testhelp.HelpedTestCase):
 
 
 # -----------------------------------------------------------------------------
-def fuzztime(days):
+def fuzztime(days, cfg=None):
     """
-    Get a random time between 1:00am and 11:00pm on the day indicated
+    Get a random time between 0:00am and current time on the day indicated
     """
-    base = int(U.day_offset(days))
-    rval = random.randrange(base, base + 22 * 3600)
+    zcf = CrawlConfig.add_config(dct=cfg)
+    base = int(U.day_offset(days))        # 0:00am on the day desired
+    today = int(U.daybase(time.time()))   # 0:00am today
+    offs = int(time.time()) - today       # secs since 0:00
+    top = base + offs - 10   # 10 sec before current tod on target day
+    rval = random.randrange(base, top)
+    CrawlConfig.log("last_check = %s (%d); top = %s (%d)",
+                    U.ymdhms(rval),
+                    rval,
+                    U.ymdhms(top),
+                    top)
     return rval
 
 
@@ -1220,33 +1229,6 @@ class test_get_list(testhelp.HelpedTestCase):
                 'reported',
                 ]
 
-    # changing fields: path, checksum, last_check
-    testdata = [("/home/tpb/hic_test/test_001", 0, 0),
-                ("/home/tpb/hic_test/test_002", 0, 0),
-                ("/home/tpb/hic_test/test_003", 0, 0),
-                ("/home/tpb/hic_test/test_004", 0, 0),
-                ("/home/tpb/hic_test/test_005", 0, 0),
-                ("/home/tpb/hic_test/test_006", 0, 0),
-                ("/home/tpb/hic_test/test_007", 0, 0),
-                ("/home/tpb/hic_test/test_008", 0, 0),
-                ("/home/tpb/hic_test/test_009", 0, 0),
-                ("/home/tpb/hic_test/test_010", 0, 0),
-                ("/home/tpb/hic_test/test_011", 0, 0),
-                ("/home/tpb/hic_test/test_012", 0, 0),
-
-                ("/home/tpb/hic_test/test_100", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_101", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_102", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_103", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_104", 1, fuzztime(-2)),
-                ("/home/tpb/hic_test/test_105", 1, fuzztime(-2)),
-                ("/home/tpb/hic_test/test_106", 1, fuzztime(-2)),
-                ("/home/tpb/hic_test/test_107", 1, fuzztime(-3)),
-                ("/home/tpb/hic_test/test_108", 1, fuzztime(-4)),
-                ("/home/tpb/hic_test/test_109", 1, fuzztime(-5)),
-                ("/home/tpb/hic_test/test_110", 1, fuzztime(-5)),
-                ]
-
     cfg = {'crawler':
            {
                'exitpath': '/tmp/foobar',
@@ -1267,6 +1249,33 @@ class test_get_list(testhelp.HelpedTestCase):
                'tbl_prefix': 'test',
            }
           }
+
+    # changing fields: path, checksum, last_check
+    testdata = [("/home/tpb/hic_test/test_001", 0, 0),
+                ("/home/tpb/hic_test/test_002", 0, 0),
+                ("/home/tpb/hic_test/test_003", 0, 0),
+                ("/home/tpb/hic_test/test_004", 0, 0),
+                ("/home/tpb/hic_test/test_005", 0, 0),
+                ("/home/tpb/hic_test/test_006", 0, 0),
+                ("/home/tpb/hic_test/test_007", 0, 0),
+                ("/home/tpb/hic_test/test_008", 0, 0),
+                ("/home/tpb/hic_test/test_009", 0, 0),
+                ("/home/tpb/hic_test/test_010", 0, 0),
+                ("/home/tpb/hic_test/test_011", 0, 0),
+                ("/home/tpb/hic_test/test_012", 0, 0),
+
+                ("/home/tpb/hic_test/test_100", 1, fuzztime(-1, cfg=cfg)),
+                ("/home/tpb/hic_test/test_101", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_102", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_103", 1, fuzztime(-1)),
+                ("/home/tpb/hic_test/test_104", 1, fuzztime(-2)),
+                ("/home/tpb/hic_test/test_105", 1, fuzztime(-2)),
+                ("/home/tpb/hic_test/test_106", 1, fuzztime(-2)),
+                ("/home/tpb/hic_test/test_107", 1, fuzztime(-3)),
+                ("/home/tpb/hic_test/test_108", 1, fuzztime(-3)),
+                ("/home/tpb/hic_test/test_109", 1, fuzztime(-4)),
+                ("/home/tpb/hic_test/test_110", 1, fuzztime(-5)),
+                ]
 
     # -------------------------------------------------------------------------
     @classmethod
@@ -1316,7 +1325,54 @@ class test_get_list(testhelp.HelpedTestCase):
         """
         Drop the checkables table to clear the way for the next test.
         """
-        dbschem.drop_table(table='checkables')
+        if not testhelp.keepfiles():
+            dbschem.drop_table(table='checkables')
+
+    # -------------------------------------------------------------------------
+    def check_result(self,
+                     list,
+                     len_expected=0,
+                     rechecks_expected=0,
+                     zeros_expected=0):
+        """
+        What get_list() returns is:
+         - rechecks forced by out of date last_checks, if any
+         - records with last_check == 0
+         - records with last_check <> 0, in monotonic order
+        After running get_list(), if there are no rechecks forced by out of
+        date last checks, all last_checks and checksums in the list will be 0.
+        """
+        # validate the length of the list
+        self.expected(len_expected, len(list))
+
+        # validate the correct number of rechecks at the front
+        for idx in range(rechecks_expected):
+            item = U.pop0(list)
+            self.expected(1, item.checksum)
+            self.unexpected(0, item.last_check)
+            item.last_check = int(time.time())
+            item.persist(dirty=True)
+
+        # validate the correct number of zero records in the middle
+        for idx in range(zeros_expected):
+            item = U.pop0(list)
+            self.expected(0, item.checksum)
+            self.expected(0, item.last_check)
+            item.last_check = int(time.time())
+            item.persist(dirty=True)
+
+        # for the rest, last_check should rise monotonically
+        prev = 0
+        for item in list:
+            self.assertTrue(prev <= item.last_check,
+                            "Expected %d to be less than %d" %
+                            (prev, item.last_check))
+            self.unexpected(0, item.last_check)
+            self.expected(1, item.checksum)
+            prev = int(item.last_check)
+
+            item.last_check = int(time.time())
+            item.persist(dirty=True)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_0__1d(self):
@@ -1327,34 +1383,23 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 2 from lc = 0, 8 ordered by last_check (oblc)
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config()
+        xcfg = copy.deepcopy(self.cfg)
+        xcfg['cv']['recheck_fraction'] = '0.0'
+
+        cfg = CrawlConfig.add_config(close=True, dct=xcfg)
         ops = int(cfg.get('cv', 'operations'))
 
         z = Checkable.get_list(ops)
-        self.expected(ops, len(z))
-        for item in z:
-            self.expected(0, item.last_check)
-            item.last_check = int(time.time())
-            item.dirty = True
-            item.persist()
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=0,
+                          zeros_expected=10)
 
         z = Checkable.get_list(ops)
-        self.expected(ops, len(z))
-        zeros_expected = 2
-        prev = 0
-        for item in z:
-            if zeros_expected:
-                self.expected(0, int(item.last_check))
-                zeros_expected -= 1
-            else:
-                self.assertTrue(prev <= item.last_check,
-                                "Expected %d to be less than %d" %
-                                (prev, item.last_check))
-                self.assertTrue(0 != item.last_check,
-                                "Expected non-zero, got %d" %
-                                item.last_check)
-                self.expected(1, item.checksum)
-                prev = int(item.last_check)
+        self.check_result(z,
+                          ops,
+                          rechecks_expected=0,
+                          zeros_expected=2)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_3__5d(self):
@@ -1364,7 +1409,22 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 1 recheck, 9 lc=0
         ==> 3 lc=0, 7 oblc
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_age', '5d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=1,
+                          zeros_expected=9)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=0,
+                          zeros_expected=3)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_3__4d(self):
@@ -1374,7 +1434,22 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 2 rechecks, 8 lc=0
         ==> 4 lc=0, 6 oblc
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_age', '4d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=2,
+                          zeros_expected=8)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=0,
+                          zeros_expected=4)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_3__3d(self):
@@ -1382,9 +1457,24 @@ class test_get_list(testhelp.HelpedTestCase):
         recheck_fraction = 0.3
         recheck_age = 3d
         ==> 3 rechecks, 7 lc=0
-        ==> 5 lc=0, 5 oblc
+        ==> 1 recheck, 5 lc=0, 4 oblc
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_age', '3d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=3,
+                          zeros_expected=7)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=1,
+                          zeros_expected=5)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_3__2d(self):
@@ -1394,7 +1484,22 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 3 rechecks, 7 lc=0
         ==> 3 rechecks, 5 lc=0, 2 oblc
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_age', '2d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=3,
+                          zeros_expected=7)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=3,
+                          zeros_expected=5)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_3__1d(self):
@@ -1404,7 +1509,22 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 3 rechecks, 7 lc=0
         ==> 3 rechecks, 5 lc=0, 1 oblc
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_age', '1d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=3,
+                          zeros_expected=7)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=3,
+                          zeros_expected=5)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_4__1d(self):
@@ -1414,7 +1534,23 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 4 rechecks, 6 lc=0
         ==> 4 rechecks, 6 lc=0
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_fraction', '0.4')
+        cfg.set('cv', 'recheck_age', '1d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=4,
+                          zeros_expected=6)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=4,
+                          zeros_expected=6)
 
     # -------------------------------------------------------------------------
     def test_recheck_0_5__1d(self):
@@ -1424,7 +1560,23 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 5 rechecks, 5 lc=0
         ==> 5 rechecks, 5 lc=0
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_fraction', '0.5')
+        cfg.set('cv', 'recheck_age', '1d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=5,
+                          zeros_expected=5)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=5,
+                          zeros_expected=5)
 
     # -------------------------------------------------------------------------
     def test_recheck_1_0__1d(self):
@@ -1434,4 +1586,20 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 10 rechecks
         ==> 1 recheck, 9 lc=0
         """
-        self.fail('construction')
+        self.dbgfunc()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg.set('cv', 'recheck_fraction', '1.0')
+        cfg.set('cv', 'recheck_age', '1d')
+        ops = int(cfg.get('cv', 'operations'))
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=10,
+                          zeros_expected=0)
+
+        z = Checkable.get_list(ops)
+        self.check_result(z,
+                          len_expected=ops,
+                          rechecks_expected=1,
+                          zeros_expected=9)
