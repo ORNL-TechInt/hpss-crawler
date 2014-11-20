@@ -432,12 +432,22 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     @classmethod
-    def get_list(cls, how_many, prob=0.1, rootlist=[]):
+    def get_list(cls, how_many=-1, prob=0.1, rootlist=[]):
         """
         Return the current list of Checkables from the database.
         """
-        # Checkable.dbname = filename
+        if how_many < 0:
+            cfg = CrawlConfig.add_config()
+            how_many = int(cfg.get_d('cv', 'operations', '30'))
+
         rval = Checkable.load_priority_list()
+        if how_many <= len(rval):
+            return rval
+
+        rval.extend(Checkable.load_recheck_list(how_many))
+        if how_many <= len(rval):
+            return rval
+
         db = CrawlDBI.DBI(dbtype='crawler')
         kw = {'table': 'checkables',
               'fields': ['rowid',
@@ -485,7 +495,10 @@ class Checkable(object):
                             probability=prob,
                             in_db=True,
                             dirty=False)
-            rval.append(new)
+            if new not in rval:
+                rval.append(new)
+            if how_many <= len(rval):
+                break
 
         db.close()
         CrawlConfig.log("returning %d items" % len(rval))
