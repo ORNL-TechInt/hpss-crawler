@@ -260,6 +260,7 @@ class CrawlMiscTest(CrawlTest):
         cfname = "%s/test_crawl_cfgdump_log_p.cfg" % self.testdir
         logpath = "%s/test_local.log" % self.testdir
         self.write_cfg_file(cfname, self.cdict)
+        self.dbgfunc()
         cmd = ('%s cfgdump -c %s --to log --logpath %s'
                % (self.crawl_cmd(), cfname, logpath))
         result = pexpect.run(cmd)

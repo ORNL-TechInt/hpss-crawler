@@ -71,6 +71,7 @@ class MpraResetTest(th.HelpedTestCase):
         Test 'mpra reset --force'
         EXP: no prompt, table is dropped, report file unlinked
         """
+        self.dbgfunc()
         cmd = ("%s reset --cfg %s --force" % (self.cmd, self.cfgname))
         S = pexpect.spawn(cmd)
         S.expect(pexpect.EOF)

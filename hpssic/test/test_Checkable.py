@@ -310,6 +310,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.expected(0, rows[0][5])                   # checksum
         self.expected(0, rows[0][6])                   # last_check
         self.expected(0, rows[0][7])                   # fails
+        self.dbgfunc()
 
     # -------------------------------------------------------------------------
     @pytest.mark.skipif(not pytest.config.getvalue("all"),
@@ -722,6 +723,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # set up data, filenames, etc
         pri_pending = U.pathjoin(self.testdir, 'pending')
+        self.dbgfunc()
         pri_glob = U.pathjoin(pri_pending, '*')
         pri_complete = U.pathjoin(self.testdir, 'completed')
         pri_d = [{'ppath': U.pathjoin(pri_pending, 'test1'),
@@ -807,6 +809,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         util.conditional_rm(self.testdb)
         testhelp.db_config(self.testdir, util.my_name())
+        self.dbgfunc()
         Checkable.ex_nihilo()
         self.db_duplicates()
         x = Checkable.get_list()

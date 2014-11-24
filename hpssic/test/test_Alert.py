@@ -46,6 +46,7 @@ class AlertTest(testhelp.HelpedTestCase):
         """
         Get an Alert object and make sure it has the correct attributes
         """
+        self.dbgfunc()
         x = Alert.Alert('this is the message',
                         caller=util.my_name(),
                         dispatch=False)
@@ -60,6 +61,7 @@ class AlertTest(testhelp.HelpedTestCase):
         correct log file.
         """
         logfile = '%s/alert_log.log' % self.testdir
+        self.dbgfunc()
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
         cfg.add_section('AlertTest')
@@ -80,6 +82,7 @@ class AlertTest(testhelp.HelpedTestCase):
         logfile = '%s/alert_shell.log' % self.testdir
         outfile = '%s/alert_shell.out' % self.testdir
         runfile = '%s/runme' % self.testdir
+        self.dbgfunc()
         f = open(runfile, 'w')
         f.write("#!/bin/bash\n")
         f.write("echo \"ALERT: $*\" > %s\n" % outfile)
@@ -113,6 +116,7 @@ class AlertTest(testhelp.HelpedTestCase):
         logfile = '%s/alert_shell.log' % self.testdir
         outfile = '%s/alert_shell.out' % self.testdir
         runfile = '%s/runme' % self.testdir
+        self.dbgfunc()
         f = open(runfile, 'w')
         f.write("#!/bin/bash\n")
         f.write("echo \"ALERT: $*\" > %s\n" % outfile)
@@ -178,6 +182,7 @@ class AlertTest(testhelp.HelpedTestCase):
         Generate an e-mail alert and verify that it was sent (this is where we
         use 'monkey patching'). For this case, caller is ''.
         """
+        self.dbgfunc()
         fakesmtp.inbox = []
         logfile = '%s/alert_email.log' % self.testdir
         targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
@@ -232,6 +237,7 @@ class AlertTest(testhelp.HelpedTestCase):
         file.
         """
         logfile = '%s/alert_use.log' % self.testdir
+        self.dbgfunc()
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
         cfg.add_section('AlertTest')
@@ -254,6 +260,7 @@ class AlertTest(testhelp.HelpedTestCase):
         correct log file.
         """
         logfile = '%s/alert_use.log' % self.testdir
+        self.dbgfunc()
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
         cfg.add_section('AlertTest')

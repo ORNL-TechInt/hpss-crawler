@@ -2231,6 +2231,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: Calling alter() to add a column with valid syntax should
         add column at end. Argument *pos* is ignored.
         """
+        self.dbgfunc()
         tname = util.my_name().replace('test_', '')
         # create test table
         db = self.DBI()

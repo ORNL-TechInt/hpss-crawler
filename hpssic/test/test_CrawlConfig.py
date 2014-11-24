@@ -83,6 +83,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         crawl_write()
         """
         cfgfile = '%s/test_changed.cfg' % self.testdir
+        self.dbgfunc()
 
         obj = CrawlConfig.CrawlConfig()
         obj.load_dict(self.sample)
@@ -204,6 +205,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
         EXP: get_config() or get_config('') should load the config
         """
+        self.dbgfunc()
         CrawlConfig.get_config(reset=True, soft=True)
         with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
             d = copy.deepcopy(self.cdict)
