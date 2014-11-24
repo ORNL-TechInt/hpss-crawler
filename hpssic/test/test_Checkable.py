@@ -812,7 +812,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo()
         self.db_duplicates()
         x = Checkable.get_list()
-        self.expected(3, len(x))
+        self.expected(2, len(x))
 
         foo = Checkable(path='/abc/def', type='d')
         self.assertRaisesMsg(StandardError,
@@ -820,12 +820,12 @@ class CheckableTest(testhelp.HelpedTestCase):
                              foo.load)
 
         x = Checkable.get_list()
-        self.expected(3, len(x))
-        self.assertEqual(foo in x, True,
-                         "Object foo not found in database")
+        self.expected(2, len(x))
+
+        self.expected_in(foo, x)
+
         root = Checkable(path='/', type='d')
-        self.assertEqual(root in x, True,
-                         "Object root not found in database")
+        self.expected_in(root, x)
 
     # -------------------------------------------------------------------------
     def test_persist_dir_new(self):
@@ -985,16 +985,14 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file with path matching a duplicate in database (rowid ==
         None, last_check == 0, type == 'f'). Exception should be thrown.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_add_one(path=self.testpath, type='f')
         self.db_add_one(path=self.testpath, type='f')
 
         x = Checkable.get_list()
-        self.expected(3, len(x))
-        self.assertEqual(x[1], x[2],
-                         "There should be a duplicate entry in the database.")
+        self.expected(2, len(x))
 
         foo = Checkable(path=self.testpath, type='f')
         self.assertRaisesMsg(StandardError,
@@ -1002,14 +1000,10 @@ class CheckableTest(testhelp.HelpedTestCase):
                              foo.load)
 
         x = Checkable.get_list()
-        self.expected(3, len(x))
-        self.assertEqual(foo in x, True,
-                         "Object foo not found in database")
+        self.expected(2, len(x))
+        self.expected_in(foo, x)
         root = Checkable(path='/', type='d')
-        self.assertEqual(root in x, True,
-                         "Object root not found in database")
-        self.assertEqual(x[1], x[2],
-                         "There should be a duplicate entry in the database.")
+        self.expected_in(root, x)
 
     # -------------------------------------------------------------------------
     def test_persist_file_new(self):

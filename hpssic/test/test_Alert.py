@@ -215,7 +215,8 @@ class AlertTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         fakesmtp.inbox = []
-        with U.tmpenv('CRAWL_CONF', 'crawl_cfg'):
+        CrawlConfig.add_config(close=True)
+        with U.tmpenv('CRAWL_CONF', 'hpssic_test.cfg'):
             logfile = '%s/alert_email.log' % self.testdir
             targets = "addr1@domain.gov, addr2@domain.gov"
             payload = 'this is an e-mail alert'
