@@ -34,7 +34,7 @@ import warnings
 
 
 # -----------------------------------------------------------------------------
-def make_db2_tcfg(dbeng):
+def make_db2_tcfg(dbeng, obj):
     """
     Construct and return a config object for a db2 database
     """
@@ -51,7 +51,7 @@ def make_db2_tcfg(dbeng):
 
 
 # -----------------------------------------------------------------------------
-def make_mysql_tcfg(dbeng):
+def make_mysql_tcfg(dbeng, obj):
     """
     Construct and return a config object for a mysql database
     """
@@ -68,7 +68,7 @@ def make_mysql_tcfg(dbeng):
 
 
 # -----------------------------------------------------------------------------
-def make_sqlite_tcfg(dbeng):
+def make_sqlite_tcfg(dbeng, obj):
     """
     Construct and return a config object for an sqlite database
     """
@@ -81,7 +81,7 @@ def make_sqlite_tcfg(dbeng):
                          'heartbeat': '10s',
                          },
              'dbi-crawler': {'dbtype': dbeng,
-                             'dbname': DBITest.testdb,
+                             'dbname': obj.dbname(),
                              'tbl_prefix': 'test',
                              }
              }
@@ -90,13 +90,13 @@ def make_sqlite_tcfg(dbeng):
 
 
 # -----------------------------------------------------------------------------
-def make_tcfg(dbtype):
+def make_tcfg(dbtype, obj):
     """
     Construct and return a config object suitable for a *dbtype* database by
     calling make_*dbtype*_tcfg()
     """
     func = getattr(sys.modules[__name__], 'make_%s_tcfg' % dbtype)
-    rval = func(dbtype)
+    rval = func(dbtype, obj)
     return rval
 
 
@@ -141,12 +141,12 @@ class DBITestRoot(testhelp.HelpedTestCase):
             self._use_args = True
 
         if self._use_args:
-            args = [make_tcfg(self.dbtype)]
+            args = [make_tcfg(self.dbtype, self)]
             kw = {'dbtype': self.dbctype,
                   'timeout': 10.0}
         else:
             args = []
-            kw = {'cfg': make_tcfg(self.dbtype),
+            kw = {'cfg': make_tcfg(self.dbtype, self),
                   'dbtype': self.dbctype,
                   'timeout': 10.0}
 
@@ -209,7 +209,7 @@ class DBITest(DBITestRoot):
         DBITest: An attempt to update a table in a closed database should throw
         an exception.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite', self), dbtype='crawler')
         a.close()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.db_closed,
@@ -234,7 +234,7 @@ class DBITest(DBITestRoot):
         that if the configuration says to get us an sqlite database connection,
         DBI doesn't hand us back a mysql connection.
         """
-        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite'), dbtype='crawler')
+        a = CrawlDBI.DBI(cfg=make_tcfg('sqlite', self), dbtype='crawler')
         self.assertTrue(hasattr(a, '_dbobj'),
                         "Expected to find a _dbobj attribute on %s" % a)
         self.assertTrue(isinstance(a._dbobj, CrawlDBI.DBIsqlite),
@@ -392,7 +392,7 @@ class DBI_in_Base(object):
         self.assertRaisesRegex(CrawlDBI.DBIerror,
                                MSG.invalid_attr_rgx,
                                CrawlDBI.DBI,
-                               cfg=make_tcfg(self.dbtype),
+                               cfg=make_tcfg(self.dbtype, self),
                                badattr='frooble')
 
     # -------------------------------------------------------------------------
@@ -1235,7 +1235,7 @@ class DBI_out_Base(object):
         DBI_out_Base: Attempt to create an object with no dbname should get an
         exception
         """
-        tcfg = make_tcfg(self.dbtype)
+        tcfg = make_tcfg(self.dbtype, self)
         tcfg.remove_option(CrawlDBI.CRWL_SECTION, 'dbname')
         exp = "No option 'dbname' in section: '%s'" % CrawlDBI.CRWL_SECTION
         self.assertRaisesMsg(CrawlDBI.DBIerror,
@@ -1281,7 +1281,7 @@ class DBI_out_Base(object):
         """
         self.dbgfunc()
         tname = util.my_name()
-        tcfg = make_tcfg(self.dbtype)
+        tcfg = make_tcfg(self.dbtype, self)
         db = self.DBI()
 
         rv = dbschem.drop_table(table=tname, cfg=tcfg)
@@ -1300,7 +1300,7 @@ class DBI_out_Base(object):
         not already exist. If the table does exist, dbschem.make_table() should
         do nothing and return the string 'Already'.
         """
-        tcfg = make_tcfg(self.dbtype)
+        tcfg = make_tcfg(self.dbtype, self)
         result = dbschem.make_table('tcc_data', cfg=tcfg)
         db = self.DBI()
         self.assertTrue(db.table_exists(table='tcc_data'))
@@ -1680,8 +1680,8 @@ class DBI_out_Base(object):
         exception
         """
         self.dbgfunc()
-        mcfg = make_tcfg(self.dbtype)
-        util.conditional_rm(self.testdb)
+        mcfg = make_tcfg(self.dbtype, self)
+        util.conditional_rm(self.dbname())
         db = self.DBI()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              ["no such table: test_tnox",
@@ -2111,7 +2111,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesRegex(CrawlDBI.DBIerror,
                                MSG.invalid_attr_rgx,
                                CrawlDBI.DBImysql,
-                               cfg=make_tcfg(self.dbtype),
+                               cfg=make_tcfg(self.dbtype, self),
                                badattr='frooble')
 
     # -------------------------------------------------------------------------
@@ -2146,7 +2146,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
            an exception
         """
         tname = util.my_name()
-        tcfg = make_tcfg(self.dbtype)
+        tcfg = make_tcfg(self.dbtype, self)
         db = self.DBI()
         db.create(table=tname, fields=self.fdef)
         rv = dbschem.alter_table(table=tname,
@@ -2316,7 +2316,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesRegex(CrawlDBI.DBIerror,
                                MSG.invalid_attr_rgx,
                                CrawlDBI.DBIsqlite,
-                               cfg=make_tcfg(self.dbtype),
+                               cfg=make_tcfg(self.dbtype, self),
                                badattr='frooble')
 
     # -------------------------------------------------------------------------
@@ -2358,7 +2358,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype),
+                             cfg=make_tcfg(self.dbtype, self),
                              dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
@@ -2390,7 +2390,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "disk I/O error",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype),
+                             cfg=make_tcfg(self.dbtype, self),
                              dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
@@ -2435,7 +2435,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         sockname = '%s/%s' % (self.testdir, util.my_name())
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sockname)
-        tcfg = make_tcfg(self.dbtype)
+        tcfg = make_tcfg(self.dbtype, self)
         tcfg.set(CrawlDBI.CRWL_SECTION, 'dbname', sockname)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
@@ -2456,7 +2456,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype),
+                             cfg=make_tcfg(self.dbtype, self),
                              dbtype=self.dbctype)
 
     # -------------------------------------------------------------------------
@@ -2518,7 +2518,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "file is encrypted or is not a database",
                              CrawlDBI.DBI,
-                             cfg=make_tcfg(self.dbtype),
+                             cfg=make_tcfg(self.dbtype, self),
                              dbtype='crawler')
 
         os.unlink(self.testdb)
@@ -2592,7 +2592,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
            exception
         """
         tname = util.my_name()
-        tcfg = make_tcfg(self.dbtype)
+        tcfg = make_tcfg(self.dbtype, self)
         db = self.DBI()
         db.create(table=tname, fields=self.fdef)
         db.close()
@@ -2709,7 +2709,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         self.assertRaisesRegex(CrawlDBI.DBIerror,
                                MSG.invalid_attr_rgx,
                                CrawlDBI.DBIdb2,
-                               cfg=make_tcfg(self.dbtype),
+                               cfg=make_tcfg(self.dbtype, self),
                                badattr='frooble')
 
     # -------------------------------------------------------------------------
@@ -2746,7 +2746,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Called with no dbname, constructor should throw exception
         """
         self.dbgfunc()
-        cfg = make_tcfg(self.dbtype)
+        cfg = make_tcfg(self.dbtype, self)
         cfg.remove_option('dbi-hpss', 'username')
         cfg.remove_option('dbi-hpss', 'password')
         self.assertRaisesRegex(CrawlDBI.DBIerror,
