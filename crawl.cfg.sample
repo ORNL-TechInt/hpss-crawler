@@ -81,6 +81,16 @@ frequency     = 1 hour
 # max number of operations in a single run
 operations    = 20
 
+# For age-based rechecks, recheck_fraction determines what fraction of
+# operations will be used to process rechecks. It should be a floating
+# point value between 0.0 and 1.0. The default if not specified is 0.0.
+recheck_fraction = 0.3
+
+# recheck_age determines how long a checkable in the sample can go without
+# being rechecked. The default if not specified is 365d.
+recheck_age = 30d
+
+# section containing alert definitions
 alerts = alert_targets
 
 # -------------------------------------------------------
