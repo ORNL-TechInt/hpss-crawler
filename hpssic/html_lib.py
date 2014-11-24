@@ -17,7 +17,7 @@ def get_html_report(cfg_file):
     Format a report in HTML
     """
     rval = ""
-    cfg = CrawlConfig.get_config(cfg_file)
+    cfg = CrawlConfig.add_config()
     db = CrawlDBI.DBI(dbtype="crawler")
 
     last_rpt_time = rpt_lib.get_last_rpt_time(db)

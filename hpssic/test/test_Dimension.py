@@ -89,7 +89,7 @@ class DimensionTest(testhelp.HelpedTestCase):
             > load
         """
         dimname = 'cos'
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
         a = Dimension(name=dimname,
                       sampsize=0.005)
@@ -111,7 +111,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         settable list should get an exception.
         """
         dimname = 'bad_attr'
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         got_exception = False
         self.assertRaisesMsg(StandardError,
                              "Attribute 'catl' is not valid",
@@ -128,7 +128,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         defaults.
         """
         dimname = 'cos'
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         a = Dimension(name=dimname)
         self.expected(dimname, a.name)
         self.expected(0.01, a.sampsize)
@@ -155,7 +155,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
         chk = Checkable.Checkable
         testdata = [
@@ -214,7 +214,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         # reboot the database and call persist() to create the table without
         # adding any data
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
 
         ignore = Dimension(name='foobar')
@@ -240,7 +240,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         Method __repr__ should return <Dimension(name='foo')>.
         """
 
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         exp = "Dimension(name='foo')"
         a = eval(exp)
         self.expected(exp, a.__repr__())
@@ -251,7 +251,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         Return the sum of all the 'count' values in either the p_sum or s_sum
         dictionary.
         """
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
         a = Dimension(name='sum_total')
         a.p_sum = {'6001': {'count': 2, 'pct': 50.0},

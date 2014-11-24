@@ -131,7 +131,7 @@ class DBI(object):
         elif 'cfg' in kwargs and kwargs['cfg'] is not None:
             cfg = kwargs['cfg']
         else:
-            cfg = CrawlConfig.get_config()
+            cfg = CrawlConfig.add_config()
 
         dbtype = ''
         dbname = ''

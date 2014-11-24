@@ -136,7 +136,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             raise SkipTest('HPSS not available on jenkins')
         util.conditional_rm(self.testdb)
         Dimension.get_dim('ignore', reset=True)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         testdir = '/home/tpb/hic_test'
         self.db_add_one(path=testdir, type='d')
@@ -330,7 +330,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create a dummy .db file and set its mtime back by 500 seconds
         util.touch(self.testdb)
@@ -368,7 +368,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create a dummy .db file and set its mtime back by 500 seconds
         util.touch(self.testdb)
@@ -609,7 +609,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Calling .get_list() before .ex_nihilo() should cause an exception
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         try:
             Checkable.get_list()
@@ -627,7 +627,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create some test data (path, type, cos, last_check)
         tdcopy = copy.deepcopy(self.testdata)
@@ -676,7 +676,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         # make sure the .db file does not exist
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create some test data (path, type, cos, last_check)
         tdcopy = copy.deepcopy(self.testdata)
@@ -786,8 +786,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Verify that last_check gets stored by persist().
         """
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         testpath = 'Checkable.py'
         Checkable.ex_nihilo(dataroot=testpath)
 
@@ -808,8 +807,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         thrown.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
         self.dbgfunc()
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_duplicates()
         x = Checkable.get_list()
@@ -835,7 +834,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         path does not match). New record should be added.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         x = Checkable.get_list()
         self.expected(1, len(x))
@@ -858,7 +857,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'd'). Existing path should not be updated.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
         now = time.time()
@@ -889,7 +888,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         updated.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
         now = time.time()
@@ -922,7 +921,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         'd'). Exception should be thrown.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         t1 = time.time()
         self.db_add_one(path='/home', type='d', last_check=t1)
@@ -963,7 +962,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         should be updated.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
         x = Checkable.get_list()
@@ -987,7 +986,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         None, last_check == 0, type == 'f'). Exception should be thrown.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_add_one(path=self.testpath, type='f')
         self.db_add_one(path=self.testpath, type='f')
@@ -1019,7 +1018,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         match, type == 'f'). New record should be added.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
         x = Checkable.get_list()
@@ -1042,7 +1041,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'f'). Existing path should be updated.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         now = time.time()
         self.db_add_one(last_check=now, type='d')
@@ -1076,7 +1075,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         doesn't change
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         now = time.time()
         self.db_add_one(last_check=now, type='f', cos='1111')
@@ -1104,7 +1103,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         type == 'f') No exception should be thrown.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_add_one()
         x = Checkable.get_list()
@@ -1126,7 +1125,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         be updated.
         """
         util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_add_one()
         x = Checkable.get_list()
