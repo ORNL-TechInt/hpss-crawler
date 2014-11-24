@@ -589,7 +589,6 @@ class Checkable(object):
 
         db.close()
 
-
     # -------------------------------------------------------------------------
     @classmethod
     def load_recheck_list(cls, how_many):
@@ -645,7 +644,6 @@ class Checkable(object):
                             dirty=False)
             rval.append(new)
         return rval
-
 
     # -------------------------------------------------------------------------
     @classmethod
