@@ -104,6 +104,7 @@ def add_config(filename=None, cfg=None, dct=None, close=False):
 def defaults():
     rval = CrawlConfig({'fire': 'no',
                         'frequency': '3600',
+                        'pid': "%05d" % os.getpid(),
                         'heartbeat': '10'})
     return rval
 
@@ -820,6 +821,8 @@ class CrawlConfig(ConfigParser.ConfigParser):
         for section in section_l:
             fp.write("[%s]\n" % section)
             for item in self.options(section):
+                if 'include' == item:
+                    continue
                 val = self.get(section, item).replace("\n", "")
                 fp.write("%s = %s\n" % (item, val))
             fp.write("\n")
