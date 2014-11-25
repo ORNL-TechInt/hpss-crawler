@@ -57,14 +57,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_changed(self):
         """
-        Routines exercised: __init__(), changed(), load_dict(), and
-        crawl_write()
+        Routines exercised: __init__(), changed(), and crawl_write()
         """
         self.dbgfunc()
         cfgfile = self.tmpdir('test_changed.cfg')
 
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         f = open(cfgfile, 'w')
         obj.crawl_write(f)
         f.close()
@@ -90,12 +88,33 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                                  cfg.get(sect, opt))
 
     # -------------------------------------------------------------------------
+    def test_dictor_alt(self):
+        """
+        Routines exercised: dictor()
+        """
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
+
+        self.assertEqual(obj.filename, '<???>')
+        self.assertEqual(obj.loadtime, 0.0)
+
+        self.assertEqual('crawler' in obj.sections(), True)
+        self.assertEqual('sounds' in obj.sections(), True)
+
+        self.assertEqual('opt1' in obj.options('crawler'), True)
+        self.assertEqual('opt2' in obj.options('crawler'), True)
+        self.assertEqual('opt2' in obj.options('crawler'), True)
+
+        self.assertEqual('duck' in obj.options('sounds'), True)
+        self.assertEqual('dog' in obj.options('sounds'), True)
+        self.assertEqual('hen' in obj.options('sounds'), True)
+
+    # -------------------------------------------------------------------------
     def test_dump_nodef(self):
         """
-        Routines exercised: __init__(), load_dict(), dump().
+        Routines exercised: __init__(), dump().
         """
-        obj = CrawlConfig.CrawlConfig({'goose': 'honk'})
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample,
+                                             defaults={'goose': 'honk'})
         dumpstr = obj.dump()
 
         self.assertEqual("[DEFAULT]" in dumpstr, False)
@@ -112,11 +131,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_dump_withdef(self):
         """
-        Routines exercised: __init__(), load_dict(), dump().
+        Routines exercised: __init__(), dump().
         """
         defaults = {'goose': 'honk'}
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample, defaults)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample, defaults=defaults)
         dumpstr = obj.dump(with_defaults=True)
 
         self.assertEqual("[DEFAULT]" in dumpstr, True)
@@ -364,8 +382,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Changing get_d() to support None as a default value
         """
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
 
         # section and option are in the config object
         self.expected('quack', obj.get_d('sounds', 'duck', 'foobar'))
@@ -402,8 +419,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         If a default value is provided, get_d should not throw NoOptionError or
         NoSectionError
         """
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         # section and option are in the config object
         self.expected('quack', obj.get_d('sounds', 'duck', 'foobar'))
         # section is defined, option is not, should get the default
@@ -419,9 +435,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
           1) return the option value if it's defined
           2) otherwise throw a NoOptionError when the option is missing
         """
-        obj = CrawlConfig.CrawlConfig()
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         fname = util.my_name()
-        obj.load_dict(self.sample)
         obj.filename = fname
         # section and option are in the config object
         self.expected('quack', obj.get_d('sounds', 'duck'))
@@ -442,8 +457,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
           1) return the option value if it's defined
           2) otherwise throw a NoSectionError or NoOptionError
         """
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         # section and option are in the config object
         self.expected('quack', obj.get_d('sounds', 'duck'))
 
@@ -734,10 +748,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def test_get_time(self):
         """
-        Routines exercised: __init__(), load_dict(), get_time().
+        Routines exercised: __init__(), get_time().
         """
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         self.assertEqual(obj.get_time('crawler', 'heartbeat'), 3600)
         self.assertEqual(obj.get_time('crawler', 'frequency'), 300)
 
@@ -746,8 +759,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Call get_time so it throws NoOptionError but provide a default
         """
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         self.assertEqual(388, obj.get_time('crawler', 'dumpling', 388))
         self.assertEqual(47, obj.get_time('crawler', 'strawberry', 47))
 
@@ -756,8 +768,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Call get_time so it throws NoSectionError but provide a default
         """
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(self.sample)
+        obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         self.assertEqual(82, obj.get_time('crawlerfoo', 'heartbeat', 82))
         self.assertEqual(19, obj.get_time('crawlerfoo', 'frequency', 19))
 
@@ -812,8 +823,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     def test_interpolation_ok(self):
         d = copy.deepcopy(self.cdict)
         d['crawler']['logpath'] = "%(root)s/fiddle.log"
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(d, {'root': '/the/root/directory'})
+        obj = CrawlConfig.CrawlConfig.dictor(d,
+                                             defaults={'root':
+                                                       '/the/root/directory'})
         exp = "/the/root/directory/fiddle.log"
         actual = obj.get('crawler', 'logpath')
         self.assertEqual(exp, actual, "Expected '%s', got '%s'")
@@ -822,38 +834,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     def test_interpolation_fail(self):
         d = copy.deepcopy(self.cdict)
         d['crawler']['logpath'] = "%(root)s/fiddle.log"
-        obj = CrawlConfig.CrawlConfig()
-        obj.load_dict(d, {'xroot': '/there/is/no/root'})
+        obj = CrawlConfig.CrawlConfig.dictor(d,
+                                             defaults={'xroot':
+                                                       '/there/is/no/root'})
         exp = "/the/root/directory/fiddle.log"
         self.assertRaisesMsg(CrawlConfig.InterpolationMissingOptionError,
                              "Bad value substitution",
                              obj.get, 'crawler', 'logpath')
-
-    # -------------------------------------------------------------------------
-    def test_load_dict(self):
-        """
-        Routines exercised: __init__(), load_dict().
-        """
-        obj = CrawlConfig.CrawlConfig()
-        obj.add_section("remove_me")
-
-        self.assertEqual(obj.filename, '<???>')
-        self.assertEqual(obj.loadtime, 0.0)
-        obj.load_dict(self.sample)
-
-        self.assertEqual(obj.filename, '<???>')
-        self.assertEqual(obj.loadtime, 0.0)
-
-        self.assertEqual('crawler' in obj.sections(), True)
-        self.assertEqual('sounds' in obj.sections(), True)
-
-        self.assertEqual('opt1' in obj.options('crawler'), True)
-        self.assertEqual('opt2' in obj.options('crawler'), True)
-        self.assertEqual('opt2' in obj.options('crawler'), True)
-
-        self.assertEqual('duck' in obj.options('sounds'), True)
-        self.assertEqual('dog' in obj.options('sounds'), True)
-        self.assertEqual('hen' in obj.options('sounds'), True)
 
     # -------------------------------------------------------------------------
     def test_cc_log_0000(self):
@@ -1323,8 +1310,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                               'logsize': '500',
                               'archive_dir': archdir,
                               'logmax': '10'}}
-        lcfg = CrawlConfig.CrawlConfig()
-        lcfg.load_dict(lcfg_d)
+        lcfg = CrawlConfig.CrawlConfig.dictor(lcfg_d)
         CrawlConfig.log(cfg=lcfg, close=True)
         lmsg = "This is a test " + "-" * 35
         for x in range(0, 5):
@@ -1352,8 +1338,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         lcfg_d = {'crawler': {'logpath': logpath,
                               'logsize': '500',
                               'logmax': '10'}}
-        lcfg = CrawlConfig.CrawlConfig()
-        lcfg.load_dict(lcfg_d)
+        lcfg = CrawlConfig.CrawlConfig.dictor(lcfg_d)
         CrawlConfig.log(cfg=lcfg, close=True)
         lmsg = "This is a test " + "-" * 35
         for x in range(0, 5):
@@ -1839,8 +1824,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "19:17-19:17"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # front of day
         self.try_qt_spec(cfg, False, "2014.0331 23:59:59")
@@ -1864,8 +1848,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "14:00-19:00"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # non-interval time
         self.try_qt_spec(cfg, False, "2014.0101 11:19:58")
@@ -1890,8 +1873,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "19:00-03:00"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # front of day
         self.try_qt_spec(cfg, True, "2014.0331 23:59:59")
@@ -1929,8 +1911,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "2013.0428,fri"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # leading edge of date
         self.try_qt_spec(cfg, False, "2013.0427 23:59:59")
@@ -1968,8 +1949,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "2014.0401"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # before date
         self.try_qt_spec(cfg, False, "2014.0331 23:00:00")
@@ -1995,8 +1975,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         When the config item is missing, quiet_time() should always return
         False
         """
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(self.cdict)
+        cfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
 
         # before date
         self.try_qt_spec(cfg, False, "2014.0331 23:00:00")
@@ -2023,8 +2002,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "2014.0401, 17:00 - 23:00"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # day before, before interval
         self.try_qt_spec(cfg, False, "2014.0331 03:07:18")
@@ -2084,8 +2062,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "14:00-19:00,2012.0117,Wednes"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # before any of them, on Monday
         self.try_qt_spec(cfg, False, "2012.0116 11:38:02")
@@ -2134,8 +2111,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "14:00-19:00,sat,Wednes"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # 2014.0301 is a saturday -- all times quiet
         self.try_qt_spec(cfg, True, "2014.0301 13:59:59")
@@ -2164,8 +2140,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "19:00-8:15,2015.0217"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # in the early interval the day before
         self.try_qt_spec(cfg, True, "2015.0216 08:00:00")
@@ -2221,8 +2196,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "14:00-19:00,sat"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # 2014.0301 is a saturday
         self.try_qt_spec(cfg, True, "2014.0301 13:59:59")
@@ -2256,8 +2230,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "sat, sunday, 20:17 -06:45"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # Friday before 20:17
         self.try_qt_spec(cfg, False, "2012.0224 20:00:05")
@@ -2323,8 +2296,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         ldict = copy.deepcopy(self.cdict)
         ldict['crawler']['quiet_time'] = "Wednes"
-        cfg = CrawlConfig.CrawlConfig()
-        cfg.load_dict(ldict)
+        cfg = CrawlConfig.CrawlConfig.dictor(ldict)
 
         # 2014.0305 is a wednesday -- beginning of day
         self.try_qt_spec(cfg, False, "2014.0304 23:59:59")

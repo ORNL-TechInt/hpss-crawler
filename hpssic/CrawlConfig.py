@@ -479,9 +479,9 @@ class CrawlConfig(ConfigParser.ConfigParser):
     @classmethod
     def dictor(cls, dict, defaults=None):
         """
-        Constructor initialized from a dict. If one of the keys in dict is
-        'defaults' or 'DEFAULTS', that sub-dict will be used to initialize the
-        _defaults member
+        Constructor initialized from a dict. If something is passed to
+        *defaults*, it will be forwarded to __init__() as the defaults dict for
+        initializing the _defaults member of the object.
         """
         rval = CrawlConfig(defaults=defaults)
 
@@ -491,30 +491,6 @@ class CrawlConfig(ConfigParser.ConfigParser):
             for o in sorted(dict[s].keys()):
                 rval.set(s, o, dict[s][o])
         return rval
-
-    # -------------------------------------------------------------------------
-    def load_dict(self, dict, defaults=None):
-        """
-        Initialize the config from dict. If one of the keys in dict is
-        'defaults' or 'DEFAULTS', that sub-dict will be used to initialize the
-        _defaults member
-        """
-        # make sure self is cleaned out
-        for k in self._defaults.keys():
-            del self._defaults[k]
-        for s in self.sections():
-            self.remove_section(s)
-
-        # If we got defaults, set them first
-        if defaults is not None:
-            for k in defaults.keys():
-                self._defaults[k] = defaults[k]
-
-        # Now fill the config with the material from the dict
-        for s in sorted(dict.keys()):
-            self.add_section(s)
-            for o in sorted(dict[s].keys()):
-                self.set(s, o, dict[s][o])
 
     # -------------------------------------------------------------------------
     def sum_dict(self, dct, defaults=None):

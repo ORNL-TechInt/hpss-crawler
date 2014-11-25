@@ -577,8 +577,7 @@ class HelpedTestCase(unittest.TestCase):
             raise StandardError("cfgdict has invalid type %s" % type(cfgdict))
 
         elif isinstance(cfgdict, dict):
-            cfg = CrawlConfig.CrawlConfig()
-            cfg.load_dict(cfgdict)
+            cfg = CrawlConfig.CrawlConfig.dictor(cfgdict)
 
         elif isinstance(cfgdict, CrawlConfig.CrawlConfig):
             cfg = cfgdict
