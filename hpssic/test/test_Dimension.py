@@ -51,7 +51,8 @@ class DimensionTest(testhelp.HelpedTestCase):
         Given a set of values in a Dimension object, verify that addone does
         the right thing.
         """
-        a = Dimension(name='addone')
+        self.dbgfunc()
+        a = Dimension(name='addone', load=False)
         a.p_sum = {'6001': {'count': 10, 'pct': 50.0},
                    '5081': {'count': 10, 'pct': 50.0}
                    }

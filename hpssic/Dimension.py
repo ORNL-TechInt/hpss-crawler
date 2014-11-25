@@ -62,7 +62,7 @@ class Dimension(object):
     settable_attrl = ['name', 'sampsize']
 
     # -------------------------------------------------------------------------
-    def __init__(self, *args, **kwargs):
+    def __init__(self, load=True, *args, **kwargs):
         """
         Initialize/create a Dimension object - we expect a name, to be used as
         a database key, and a sample size parameter relative to the population
@@ -83,7 +83,8 @@ class Dimension(object):
                                     " is not valid for Dimension")
         if self.name == '':
             raise StandardError("Caller must set attribute 'name'")
-        self.load()
+        if load:
+            self.load()
 
     # -------------------------------------------------------------------------
     def __repr__(self):
