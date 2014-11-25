@@ -4,6 +4,7 @@ Track stratum proportions in a sample against a population
 """
 import copy
 from hpssic import Checkable
+from hpssic import CrawlConfig
 from hpssic import CrawlDBI
 from hpssic.Dimension import Dimension
 import os
@@ -12,7 +13,7 @@ import sys
 from hpssic import testhelp
 from hpssic import toolframe
 import traceback as tb
-from hpssic import util
+from hpssic import util as U
 
 mself = sys.modules[__name__]
 logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
@@ -148,7 +149,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         last_check <> 0.
         """
         self.dbgfunc()
-        util.conditional_rm(self.dbname())
+        U.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
         chk = Checkable.Checkable
@@ -207,7 +208,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         # reboot the database and call persist() to create the table without
         # adding any data
-        util.conditional_rm(self.dbname())
+        U.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
 
