@@ -257,45 +257,49 @@ class CheckableTest(testhelp.HelpedTestCase):
         If the database file does not already exist, calling ex_nihilo() should
         create it. For this test, we specify and verify a dataroot value.
         """
-        # make sure the .db file does not exist
-        util.conditional_rm(self.dbname())
-        testhelp.db_config(self.testdir, util.my_name())
-
-        # this call should create it
-        Checkable.ex_nihilo(dataroot="/home/somebody")
-
-        # check that it exists
-        self.assertEqual(os.path.exists(self.dbname()), True,
-                         "File '%s' should be created by ex_nihilo()" %
-                         (self.dbname()))
-
-        # assuming it does, look inside and make sure the checkables table got
-        # initialized correctly
-        db = CrawlDBI.DBI(dbtype='crawler')
-
-        # there should be one row
-        rows = db.select(table='checkables', fields=['rowid',
-                                                     'path',
-                                                     'type',
-                                                     'cos',
-                                                     'cart',
-                                                     'checksum',
-                                                     'last_check',
-                                                     'fails',
-                                                     ])
-        self.expected(1, len(rows))
-
-        # the one row should reference the root directory
-        [(max_id,)] = db.select(table='checkables', fields=['max(rowid)'])
-        self.expected(1, max_id)                       # id
-        self.expected('/home/somebody', rows[0][1])    # path
-        self.expected('d', rows[0][2])                 # type
-        self.expected('', rows[0][3])                  # cos
-        self.expected(None, rows[0][4])                # cart
-        self.expected(0, rows[0][5])                   # checksum
-        self.expected(0, rows[0][6])                   # last_check
-        self.expected(0, rows[0][7])                   # fails
         self.dbgfunc()
+        cfname = self.tmpdir(util.my_name())
+        CrawlConfig.add_config(close=True)
+        with U.tmpenv('CRAWL_CONF', cfname):
+            # make sure the .db file does not exist
+            util.conditional_rm(self.dbname())
+
+            self.write_cfg_file(cfname, self.cfg_dict())
+
+            # this call should create it
+            Checkable.ex_nihilo(dataroot="/home/somebody")
+
+            # check that it exists
+            self.assertEqual(os.path.exists(self.dbname()), True,
+                             "File '%s' should be created by ex_nihilo()" %
+                             (self.dbname()))
+
+            # assuming it does, look inside and make sure the checkables table
+            # got initialized correctly
+            db = CrawlDBI.DBI(dbtype='crawler')
+
+            # there should be one row
+            rows = db.select(table='checkables', fields=['rowid',
+                                                         'path',
+                                                         'type',
+                                                         'cos',
+                                                         'cart',
+                                                         'checksum',
+                                                         'last_check',
+                                                         'fails',
+                                                         ])
+            self.expected(1, len(rows))
+
+            # the one row should reference the root directory
+            [(max_id,)] = db.select(table='checkables', fields=['max(rowid)'])
+            self.expected(1, max_id)                       # id
+            self.expected('/home/somebody', rows[0][1])    # path
+            self.expected('d', rows[0][2])                 # type
+            self.expected('', rows[0][3])                  # cos
+            self.expected(None, rows[0][4])                # cart
+            self.expected(0, rows[0][5])                   # checksum
+            self.expected(0, rows[0][6])                   # last_check
+            self.expected(0, rows[0][7])                   # fails
 
     # -------------------------------------------------------------------------
     @pytest.mark.skipif(pytest.config.getvalue("fast"),
@@ -731,40 +735,45 @@ class CheckableTest(testhelp.HelpedTestCase):
         cfg = copy.deepcopy(self.cfg_dict())
         cfg['cv']['priority'] = pri_glob
         cfg['cv']['completed'] = pri_complete
-        testhelp.db_config(self.testdir, U.my_name(), cfg_d=cfg)
+        cfname = self.tmpdir(U.my_name())
+        self.write_cfg_file(cfname, cfg)
+        CrawlConfig.add_config(close=True, filename=cfname)
+        with U.tmpenv('CRAWL_CONF', cfname):
+            # initialize the database from scratch with some known testdata
+            U.conditional_rm(self.dbname())
+            Checkable.ex_nihilo()
+            db = CrawlDBI.DBI(dbtype='crawler')
+            db.insert(table='checkables',
+                      fields=['path', 'type', 'cos', 'last_check', ],
+                      data=self.testdata[1:])
+            db.close()
 
-        # initialize the database from scratch with some known testdata
-        U.conditional_rm(self.dbname())
-        Checkable.ex_nihilo()
-        db = CrawlDBI.DBI(dbtype='crawler')
-        db.insert(table='checkables',
-                  fields=['path', 'type', 'cos', 'last_check', ],
-                  data=self.testdata[1:])
-        db.close()
+            # write out some priority files
+            for path in [pri_pending, pri_complete]:
+                if not os.path.exists(path):
+                    os.mkdir(path)
 
-        # write out some priority files
-        os.mkdir(pri_pending)
-        os.mkdir(pri_complete)
-        for z in pri_d:
-            testhelp.write_file(z['ppath'], content=z['data'])
+            for z in pri_d:
+                testhelp.write_file(z['ppath'], content=z['data'])
 
-        # run get_list
-        x = Checkable.get_list()
+            # run get_list
+            x = Checkable.get_list()
 
-        # verify that the priority file contents are at the top of the list
-        for exp in explist:
-            if type(exp) == tuple:
-                self.expected(Checkable(path=exp[0], type=exp[1]), U.pop0(x))
-            else:
-                self.expected(Checkable(path=exp, type='f'), U.pop0(x))
+            # verify that the priority file contents are at the top of the list
+            for exp in explist:
+                if type(exp) == tuple:
+                    self.expected(Checkable(path=exp[0], type=exp[1]),
+                                  U.pop0(x))
+                else:
+                    self.expected(Checkable(path=exp, type='f'), U.pop0(x))
 
-        for z in pri_d:
-            self.assertFalse(os.path.exists(z['ppath']),
-                             "%s should have been moved to %s"
-                             % (z['ppath'], z['cpath']))
-            self.assertTrue(os.path.exists(z['cpath']),
-                            "%s should have been moved from %s"
-                            % (z['cpath'], z['ppath']))
+            for z in pri_d:
+                self.assertFalse(os.path.exists(z['ppath']),
+                                 "%s should have been moved to %s"
+                                 % (z['ppath'], z['cpath']))
+                self.assertTrue(os.path.exists(z['cpath']),
+                                "%s should have been moved from %s"
+                                % (z['cpath'], z['ppath']))
 
     # -------------------------------------------------------------------------
     def test_persist_last_check(self):
