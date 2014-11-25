@@ -1965,6 +1965,7 @@ class DBI_out_Base(object):
 
 # -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())
+@pytest.mark.skipif('mysql' in pytest.config.getvalue("skip"))
 class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbtype = 'mysql'
     dbctype = 'crawler'
