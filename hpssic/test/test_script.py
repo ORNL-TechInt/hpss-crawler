@@ -307,8 +307,8 @@ class Test_MISC(th.HelpedTestCase):
             self.fail(rpt)
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(not pytest.config.getvalue("all"),
-                        reason="slow -- use --all to run this one")
+    @pytest.mark.skipif(pytest.config.getvalue("fast"),
+                        reason="slow -- omit --fast to run this one")
     def test_pep8(self):
         full_result = ""
         for r, d, f in os.walk('hpssic'):

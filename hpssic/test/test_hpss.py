@@ -63,8 +63,8 @@ class hpssBaseTest(testhelp.HelpedTestCase):
 
 # -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())
-@pytest.mark.skipif(not pytest.config.getvalue("all"),
-                    reason="slow -- use --all to run this one")
+@pytest.mark.skipif(pytest.config.getvalue("fast"),
+                    reason="slow -- omit --fast to run this one")
 class hpssCtorTest(hpssBaseTest):
     """
     Tests specifically for the constructor of the hpss.HSI class
@@ -205,8 +205,8 @@ class hpssCtorTest(hpssBaseTest):
 
 # -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())
-@pytest.mark.skipif(not pytest.config.getvalue("all"),
-                    reason="slow -- use --all to run this one")
+@pytest.mark.skipif(pytest.config.getvalue("fast"),
+                    reason="slow -- omit --fast to run this one")
 class hpssTest(hpssBaseTest):
     """
     Tests for the hpss.HSI class
@@ -1011,8 +1011,8 @@ class hpssTest(hpssBaseTest):
 
 # -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())
-@pytest.mark.skipif(not pytest.config.getvalue("all"),
-                    reason="slow -- use --all to run this one")
+@pytest.mark.skipif(pytest.config.getvalue("fast"),
+                    reason="slow -- omit --fast to run this one")
 class hpssHashAlgTest(hpssBaseTest):
     """
     Tests for the hash_algorithm config item in hpss.HSI class

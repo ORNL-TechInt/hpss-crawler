@@ -73,8 +73,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         db.close()
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(not pytest.config.getvalue("all"),
-                        reason="slow -- use --all to run this one")
+    @pytest.mark.skipif(pytest.config.getvalue("fast"),
+                        reason="slow -- omit --fast to run this one")
     @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_check_dir(self):
         """
@@ -100,32 +100,32 @@ class CheckableTest(testhelp.HelpedTestCase):
         if type(dirlist) == str and dirlist == "unavailable":
             return
 
-        c = Checkable(path=testdir + '/crawler.tar', type='f')
+        c = Checkable(path=archdir + '/crawler.tar', type='f')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
-        c = Checkable(path=testdir + '/crawler.tar.idx', type='f')
+        c = Checkable(path=archdir + '/crawler.tar.idx', type='f')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
-        c = Checkable(path=testdir + '/subdir1', type='d')
+        c = Checkable(path=archdir + '/subdir1', type='d')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
-        c = Checkable(path=testdir + '/subdir2', type='d')
+        c = Checkable(path=archdir + '/subdir2', type='d')
         self.assertTrue(c in dirlist,
                         "expected to find %s in %s" % (c, dirlist))
 
         for c in dirlist:
-            if c.path == "%s/crawler.tar" % testdir:
+            if c.path == "%s/crawler.tar" % archdir:
                 self.expected(0, c.checksum)
-            elif c.path == "%s/crawler.tar.idx" % testdir:
+            elif c.path == "%s/crawler.tar.idx" % archdir:
                 self.expected(0, c.checksum)
-            elif c.path == "%s/subdir1" % testdir:
+            elif c.path == "%s/subdir1" % archdir:
                 self.expected(0, c.checksum)
-            elif c.path == "%s/subdir2" % testdir:
+            elif c.path == "%s/subdir2" % archdir:
                 self.expected(0, c.checksum)
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(not pytest.config.getvalue("all"),
-                        reason="slow -- use --all to run this one")
+    @pytest.mark.skipif(pytest.config.getvalue("fast"),
+                        reason="slow -- omit --fast to run this one")
     @pytest.mark.skipif('jenkins' in os.getcwd())
     def test_check_file(self):
         """
@@ -313,8 +313,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         self.dbgfunc()
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(not pytest.config.getvalue("all"),
-                        reason="slow -- use --all to run this one")
+    @pytest.mark.skipif(pytest.config.getvalue("fast"),
+                        reason="slow -- omit --fast to run this one")
     def test_ex_nihilo_exist(self):
         """
         If the database file and the checkables table already exists, calling

@@ -2562,8 +2562,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     # -------------------------------------------------------------------------
     @pytest.mark.skipif('jenkins' in os.getcwd(),
                         reason="HPSS is not available")
-    @pytest.mark.skipif(not pytest.config.getvalue("all"),
-                        reason="slow -- use --all to run this one")
+    @pytest.mark.skipif(pytest.config.getvalue("fast"),
+                        reason="slow -- omit --fast to run this one")
     def test_cvlib_lscos_populate(self):
         """
         Try running cv_sublib.lscos_populate(). It should create the lscos

@@ -26,6 +26,8 @@ def pytest_addoption(parser):
     global attr
     parser.addoption("--all", action="store_true",
                      help="run all tests")
+    parser.addoption("--fast", action="store_true",
+                     help="run only the fast tests")
     parser.addoption("--nolog", action="store_true", default=False,
                      help="suppress test logging")
     parser.addoption("--dbg", action="append", default=[],
@@ -73,7 +75,7 @@ def pytest_runtest_setup(item):
     """
     Decide whether to skip a test under consideration
     """
-    if 'attr' in item.keywords and not item.config.getoption("--all"):
+    if 'attr' in item.keywords and item.config.getoption("--fast"):
         pytest.skip('slow')
 
 
