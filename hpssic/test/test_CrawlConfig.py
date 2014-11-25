@@ -557,8 +557,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                              'logmax': '13'
                              }
                  }
-        c = CrawlConfig.CrawlConfig()
-        c.load_dict(cdict)
+        c = CrawlConfig.CrawlConfig.dictor(cdict)
 
         # reset any logger that has been initialized and ask for one that
         # matches the configuration

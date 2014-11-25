@@ -92,125 +92,12 @@ class CrawlMiscTest(CrawlTest):
     Tests for the code in crawl.py
     """
     # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_000(self):
-        """
-        TEST: crawl_lib.drop_table()
-        EXP: MSG.nothing_to_drop returned
-        """
-        rsp = dbschem.drop_table()
-        self.assertEqual(MSG.nothing_to_drop, rsp,
-                         "Expected '%s', got '%s'" %
-                         (MSG.nothing_to_drop, rsp))
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_001(self):
-        """
-        TEST: crawl_lib.drop_table(table=NAME)
-        EXP: table NAME is dropped
-        """
-        tname = util.my_name()
-        cfg = CrawlConfig.get_config()
-        db = CrawlDBI.DBI(dbtype='crawler')
-        db.create(table=tname,
-                  fields=['rowid integer primary key autoincrement'])
-        actual = dbschem.drop_table(table=tname)
-        exp = ("Attempt to drop table '%s' was successful" % tname)
-        self.expected(exp, actual)
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_010(self):
-        """
-        TEST: crawl_lib.drop_table(prefix=PFX)
-        EXP: MSG.nothing_to_drop returned
-        """
-        rsp = dbschem.drop_table(prefix="BORF")
-        self.assertEqual(MSG.nothing_to_drop, rsp,
-                         "Expected '%s', got '%s'" %
-                         (MSG.nothing_to_drop, rsp))
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_011(self):
-        """
-        TEST: crawl_lib.drop_table(prefix=PFX, table=NAME)
-        EXP: table PFX.NAME already does not exist, fails because PFX does not
-        match cfg
-        """
-        tname = util.my_name()
-        pfx = "nosuch"
-        cfg = CrawlConfig.get_config()
-        cfg.set('dbi-crawler', 'tbl_prefix', 'test')
-        db = CrawlDBI.DBI(dbtype='crawler')
-        if not db.table_exists(table=tname):
-            db.create(table=tname,
-                      fields=['rowid integer primary key autoincrement'])
-        actual = dbschem.drop_table(prefix=pfx, table=tname)
-        exp = ("Table '%s' does not exist" % (tname))
-        self.expected(exp, actual)
-        db.drop(table=tname)
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_100(self):
-        """
-        TEST: crawl_lib.drop_table(cfg=CFG)
-        EXP: MSG.nothing_to_drop returned
-        """
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
-        rsp = dbschem.drop_table(cfg=t)
-        self.assertEqual(MSG.nothing_to_drop, rsp,
-                         "Expected '%s', got '%s'" %
-                         (MSG.nothing_to_drop, rsp))
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_101(self):
-        """
-        TEST: crawl_lib.drop_table(cfg=CFG, table=NAME)
-        EXP: table NAME is dropped
-        """
-        tname = util.my_name()
-        cfg = CrawlConfig.get_config()
-        cfg.set('dbi-crawler', 'tbl_prefix', 'DTST')
-        db = CrawlDBI.DBI(dbtype='crawler')
-        db.create(table=tname,
-                  fields=['rowid integer primary key autoincrement'])
-        actual = dbschem.drop_table(cfg=cfg, table=tname)
-        exp = ("Attempt to drop table '%s' was successful" % tname)
-        self.expected(exp, actual)
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_110(self):
-        """
-        TEST: crawl_lib.drop_table(cfg=CFG, prefix=PFX)
-        EXP: MSG.nothing_to_drop returned
-        """
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
-        rsp = dbschem.drop_table(cfg=t, prefix="SEVEN")
-        self.assertEqual(MSG.nothing_to_drop, rsp,
-                         "Expected '%s', got '%s'" %
-                         (MSG.nothing_to_drop, rsp))
-
-    # --------------------------------------------------------------------------
-    def test_crawl_lib_drop_table_111(self):
-        """
-        TEST: crawl_lib.drop_table(cfg=CFG, prefix=PFX, table=NAME)
-        EXP: table named PFX_NAME is dropped if PFX matches cfg
-        """
-        tname = util.my_name()
-        pfx = 'DTST'
-        cfg = CrawlConfig.get_config()
-        cfg.set('dbi-crawler', 'tbl_prefix', pfx)
-        db = CrawlDBI.DBI(dbtype='crawler')
-        db.create(table=tname,
-                  fields=['rowid integer primary key autoincrement'])
-
-        actual = dbschem.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
-        exp = ("Table '%s' does not exist" % (tname))
-        self.expected(exp, actual)
-
-        actual = dbschem.drop_table(cfg=cfg, prefix=pfx, table=tname)
-        exp = ("Attempt to drop table '%s' was successful" % tname)
-        self.expected(exp, actual)
+    def crawl_test_setup(self):
+        cfname = self.tmpdir('hpssic_test.cfg')
+        lfname = self.logpath()
+        exitpath = self.tmpdir("%s.exit" % self._testMethodName)
+        plugdir = self.tmpdir("plugins")
+        return(cfname, lfname, exitpath, plugdir)
 
     # --------------------------------------------------------------------------
     @pytest.mark.skipif(pytest.config.getvalue("fast"),
@@ -351,8 +238,7 @@ class CrawlMiscTest(CrawlTest):
         self.write_plugmod(plugdir, plugname)
 
         # add the plug module to the config
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
+        t = CrawlConfig.CrawlConfig.dictor(self.cfg_dict())
         t.add_section(plugname)
         t.set(plugname, 'frequency', '1m')
         f = open(cfname, 'w')
@@ -392,6 +278,129 @@ class CrawlMiscTest(CrawlTest):
         result = pexpect.run("%s fire %s" % (self.crawl_cmd(), plugname))
         exp = "'-p <plugin-name>' is required"
         self.vassert_in(exp, result)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_000(self):
+        """
+        TEST: crawl_lib.drop_table()
+        EXP: MSG.nothing_to_drop returned
+        """
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        rsp = dbschem.drop_table()
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_001(self):
+        """
+        TEST: crawl_lib.drop_table(table=NAME)
+        EXP: table NAME is dropped
+        """
+        self.dbgfunc()
+        tname = util.my_name()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid integer primary key autoincrement'])
+        actual = dbschem.drop_table(table=tname)
+        exp = ("Attempt to drop table '%s' was successful" % tname)
+        self.expected(exp, actual)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_010(self):
+        """
+        TEST: crawl_lib.drop_table(prefix=PFX)
+        EXP: MSG.nothing_to_drop returned
+        """
+        self.dbgfunc()
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        rsp = dbschem.drop_table(prefix="BORF")
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_011(self):
+        """
+        TEST: crawl_lib.drop_table(prefix=PFX, table=NAME)
+        EXP: table PFX.NAME already does not exist, fails because PFX does not
+        match cfg
+        """
+        self.dbgfunc()
+        tname = util.my_name()
+        pfx = "nosuch"
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        db = CrawlDBI.DBI(dbtype='crawler')
+        if not db.table_exists(table=tname):
+            db.create(table=tname,
+                      fields=['rowid integer primary key autoincrement'])
+        actual = dbschem.drop_table(prefix=pfx, table=tname)
+        exp = ("Table '%s' does not exist" % (tname))
+        self.expected(exp, actual)
+        db.drop(table=tname)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_100(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG)
+        EXP: MSG.nothing_to_drop returned
+        """
+        t = CrawlConfig.CrawlConfig.dictor(self.cfg_dict())
+        rsp = dbschem.drop_table(cfg=t)
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_101(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG, table=NAME)
+        EXP: table NAME is dropped
+        """
+        tname = util.my_name()
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        cfg.set('dbi-crawler', 'tbl_prefix', 'DTST')
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid integer primary key autoincrement'])
+        actual = dbschem.drop_table(cfg=cfg, table=tname)
+        exp = ("Attempt to drop table '%s' was successful" % tname)
+        self.expected(exp, actual)
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_110(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG, prefix=PFX)
+        EXP: MSG.nothing_to_drop returned
+        """
+        t = CrawlConfig.CrawlConfig.dictor(self.cfg_dict())
+        rsp = dbschem.drop_table(cfg=t, prefix="SEVEN")
+        self.assertEqual(MSG.nothing_to_drop, rsp,
+                         "Expected '%s', got '%s'" %
+                         (MSG.nothing_to_drop, rsp))
+
+    # --------------------------------------------------------------------------
+    def test_crawl_lib_drop_table_111(self):
+        """
+        TEST: crawl_lib.drop_table(cfg=CFG, prefix=PFX, table=NAME)
+        EXP: table named PFX_NAME is dropped if PFX matches cfg
+        """
+        tname = util.my_name()
+        pfx = 'DTST'
+        cfg = CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        cfg.set('dbi-crawler', 'tbl_prefix', pfx)
+        db = CrawlDBI.DBI(dbtype='crawler')
+        db.create(table=tname,
+                  fields=['rowid integer primary key autoincrement'])
+
+        actual = dbschem.drop_table(cfg=cfg, prefix=pfx+'x', table=tname)
+        exp = ("Table '%s' does not exist" % (tname))
+        self.expected(exp, actual)
+
+        actual = dbschem.drop_table(cfg=cfg, prefix=pfx, table=tname)
+        exp = ("Attempt to drop table '%s' was successful" % tname)
+        self.expected(exp, actual)
 
     # --------------------------------------------------------------------------
     def test_crawl_log(self):
@@ -1013,207 +1022,6 @@ class CrawlMiscTest(CrawlTest):
         self.assertEqual(os.path.exists(pidfile), False)
 
     # --------------------------------------------------------------------------
-    def test_make_pidfile_nodir(self):
-        """
-        Preconditions:
-         - /tmp/crawler does not exist
-        Postconditions to be checked:
-         - /tmp/crawler exists
-         - /tmp/crawler contains a pid file with the right file name
-         - the pid file contains the right context and exitpath
-        """
-        # make sure /tmp/crawler does not exist
-        util.conditional_rm(self.piddir, tree=True)
-
-        # run the target routine
-        pid = 6700
-        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
-        crawl.make_pidfile(pid, self.ctx, exitpath)
-
-        # verify the post conditions
-        self.assertTrue(os.path.isdir(self.piddir),
-                        "Directory %s should exist" % self.piddir)
-        [pidfile] = glob.glob("%s/%d" % (self.piddir, pid))
-        self.assertTrue(pidfile == ("%s/6700" % self.piddir),
-                        "Pidfile '%s' does not look right" % pidfile)
-        (rctx, rxpath) = util.contents(pidfile).strip().split()
-        self.assertEqual(rctx, self.ctx,
-                         "'%s' should match '%s'" % (rctx, self.ctx))
-        self.assertEqual(rxpath, exitpath,
-                         "'%s' should match '%s'" % (rxpath, exitpath))
-
-    # --------------------------------------------------------------------------
-    def test_make_pidfile_mtdir(self):
-        """
-        Preconditions:
-         - /tmp/crawler does exist and is empty
-        Postconditions to be checked:
-         - /tmp/crawler exists
-         - /tmp/crawler contains a pid file with the right file name
-         - the pid file contains the right context and exitpath
-        """
-        # make sure /tmp/crawler exists and is empty
-        util.conditional_rm(self.piddir, tree=True)
-        os.mkdir(self.piddir)
-
-        # run the target routine
-        pid = 6700
-        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
-        crawl.make_pidfile(pid, self.ctx, exitpath)
-
-        # verify the post conditions
-        self.assertTrue(os.path.isdir(self.piddir),
-                        "Directory %s should exist" % self.piddir)
-        [pidfile] = glob.glob("%s/%d" % (self.piddir, pid))
-        exp = "%s/6700" % self.piddir
-        self.assertEqual(pidfile, exp,
-                         "Pidfile: '%s' should match '%s'" % (pidfile, exp))
-        (rctx, rxpath) = util.contents(pidfile).strip().split()
-        self.assertEqual(rctx, self.ctx,
-                         "context: '%s' should match '%s'" % (rctx, self.ctx))
-        self.assertEqual(rxpath, exitpath,
-                         "exitpath: '%s' should match '%s'" %
-                         (rxpath, exitpath))
-
-    # --------------------------------------------------------------------------
-    def test_make_pidfile_ctx(self):
-        """
-        Preconditions:
-         - /tmp/crawler does exist and contains a pid file with known context
-        Postconditions to be checked:
-         - make_pidfile() throws an exception with message
-           "The pidfile for context XXX exists"
-        """
-        # make sure /tmp/crawler exists and is empty
-        util.conditional_rm(self.piddir, tree=True)
-        os.mkdir(self.piddir)
-        pid = 6700
-        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
-        with open("%s/%d" % (self.piddir, pid), 'w') as f:
-            f.write("%s %s\n" % (self.ctx, exitpath))
-
-        # run the target routine
-        try:
-            crawl.make_pidfile(pid, self.ctx, exitpath)
-            self.fail("Expected exception was not thrown")
-        except StandardError as e:
-            exp = "The pidfile for context TEST exists"
-            self.assertTrue(exp in str(e),
-                            "Expected '%s', got '%s'" % (exp, str(e)))
-
-    # --------------------------------------------------------------------------
-    def test_running_pid_nodir(self):
-        """
-        Preconditions:
-         - /tmp/crawler does not exist
-        Postconditions:
-         - running_pid() returns an empty list
-        """
-        # make sure /tmp/crawler does not exist
-        util.conditional_rm(self.piddir, tree=True)
-
-        # run the target routine
-        result = crawl.running_pid()
-
-        # verify postconditions
-        self.assertEqual(result, [],
-                         "Expected [], got '%s'" % result)
-
-    # --------------------------------------------------------------------------
-    def test_running_pid_mtdir(self):
-        """
-        Preconditions:
-         - /tmp/crawler exists but is empty
-        Postconditions:
-         - running_pid() returns an empty list
-        """
-        # make sure /tmp/crawler is empty
-        util.conditional_rm(self.piddir, tree=True)
-        os.mkdir(self.piddir)
-
-        # run the target routine
-        result = crawl.running_pid()
-
-        # verify postconditions
-        self.assertEqual(result, [],
-                         "Expected [], got '%s'" % result)
-
-    # --------------------------------------------------------------------------
-    def test_running_pid_proc1(self):
-        """
-        Preconditions:
-         - /tmp/crawler contains a single pid file, pid not running (use
-           make_pidfile to set up pidfile)
-         - running_pid() called with proc_required=True
-        Postconditions:
-         - running_pid() returns an empty list
-        """
-        # set up single pidfile
-        util.conditional_rm(self.piddir, tree=True)
-        pid = 6700
-        context = 'TEST'
-        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
-        crawl.make_pidfile(pid, context, exitpath)
-
-        # run the target routine
-        result = crawl.running_pid()
-
-        # verify postconditions
-        self.assertEqual(result, [],
-                         "Expected [], got '%s'" % result)
-
-    # --------------------------------------------------------------------------
-    def test_running_pid_proc2(self):
-        """
-        Preconditions:
-         - /tmp/crawler contains a two pid files, procs not running (use
-           make_pidfile to set up pidfiles)
-         - running_pid() called with proc_required=True
-        Postconditions:
-         - running_pid() returns an empty list
-        """
-        testdata = [(6700, 'TEST', '%s/first.exit' % self.piddir),
-                    (6701, 'DEV',  '%s/other.exit' % self.piddir)]
-        # set up two pidfiles
-        util.conditional_rm(self.piddir, tree=True)
-        for tup in testdata:
-            crawl.make_pidfile(*tup)
-
-        # run the target routine
-        result = crawl.running_pid()
-
-        # verify postconditions
-        exp = []
-        self.assertEqual(result, exp,
-                         "Expected '%s', got '%s'" % (exp, result))
-
-    # --------------------------------------------------------------------------
-    def test_running_pid_noproc1(self):
-        """
-        Preconditions:
-         - /tmp/crawler contains a two pid files, procs not running (use
-           make_pidfile to set up pidfiles)
-         - running_pid() called with proc_required=False
-        Postconditions:
-         - running_pid() returns list containing two tuples with pid,
-           context, exitpath
-        """
-        testdata = [(6700, 'TEST', '%s/first.exit' % self.piddir),
-                    (6701, 'DEV',  '%s/other.exit' % self.piddir)]
-        # set up two pidfiles
-        util.conditional_rm(self.piddir, tree=True)
-        for tup in testdata:
-            crawl.make_pidfile(*tup)
-
-        # run the target routine
-        result = crawl.running_pid(proc_required=False)
-
-        # verify postconditions
-        exp = testdata
-        self.assertEqual(result, exp,
-                         "Expected '%s', got '%s'" % (exp, result))
-
-    # --------------------------------------------------------------------------
     @pytest.mark.skipif(pytest.config.getvalue("fast"),
                         reason="slow -- omit --fast to run this one")
     def test_crawl_stop_ctxoth(self):
@@ -1395,8 +1203,7 @@ class CrawlMiscTest(CrawlTest):
         EXP: correct number of seconds returned
         """
         with util.tmpenv('CRAWL_LOG', self.tmpdir('test_get_timeval.log')):
-            t = CrawlConfig.CrawlConfig()
-            t.load_dict(self.cdict)
+            t = CrawlConfig.CrawlConfig.dictor(self.cfg_dict())
             result = t.get_time('plugin_A', 'frequency', 1900)
             self.assertEqual(type(result), int,
                              '%s should return %s but got %s (%s)'
@@ -1445,6 +1252,95 @@ class CrawlMiscTest(CrawlTest):
                              % (t.get('plugin_A', 'frequency'), result))
 
     # --------------------------------------------------------------------------
+    def test_make_pidfile_ctx(self):
+        """
+        Preconditions:
+         - /tmp/crawler does exist and contains a pid file with known context
+        Postconditions to be checked:
+         - make_pidfile() throws an exception with message
+           "The pidfile for context XXX exists"
+        """
+        # make sure /tmp/crawler exists and is empty
+        util.conditional_rm(self.piddir, tree=True)
+        os.mkdir(self.piddir)
+        pid = 6700
+        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
+        with open("%s/%d" % (self.piddir, pid), 'w') as f:
+            f.write("%s %s\n" % (self.ctx, exitpath))
+
+        # run the target routine
+        try:
+            crawl.make_pidfile(pid, self.ctx, exitpath)
+            self.fail("Expected exception was not thrown")
+        except StandardError as e:
+            exp = "The pidfile for context TEST exists"
+            self.assertTrue(exp in str(e),
+                            "Expected '%s', got '%s'" % (exp, str(e)))
+
+    # --------------------------------------------------------------------------
+    def test_make_pidfile_mtdir(self):
+        """
+        Preconditions:
+         - /tmp/crawler does exist and is empty
+        Postconditions to be checked:
+         - /tmp/crawler exists
+         - /tmp/crawler contains a pid file with the right file name
+         - the pid file contains the right context and exitpath
+        """
+        # make sure /tmp/crawler exists and is empty
+        util.conditional_rm(self.piddir, tree=True)
+        os.mkdir(self.piddir)
+
+        # run the target routine
+        pid = 6700
+        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
+        crawl.make_pidfile(pid, self.ctx, exitpath)
+
+        # verify the post conditions
+        self.assertTrue(os.path.isdir(self.piddir),
+                        "Directory %s should exist" % self.piddir)
+        [pidfile] = glob.glob("%s/%d" % (self.piddir, pid))
+        exp = "%s/6700" % self.piddir
+        self.assertEqual(pidfile, exp,
+                         "Pidfile: '%s' should match '%s'" % (pidfile, exp))
+        (rctx, rxpath) = util.contents(pidfile).strip().split()
+        self.assertEqual(rctx, self.ctx,
+                         "context: '%s' should match '%s'" % (rctx, self.ctx))
+        self.assertEqual(rxpath, exitpath,
+                         "exitpath: '%s' should match '%s'" %
+                         (rxpath, exitpath))
+
+    # --------------------------------------------------------------------------
+    def test_make_pidfile_nodir(self):
+        """
+        Preconditions:
+         - /tmp/crawler does not exist
+        Postconditions to be checked:
+         - /tmp/crawler exists
+         - /tmp/crawler contains a pid file with the right file name
+         - the pid file contains the right context and exitpath
+        """
+        # make sure /tmp/crawler does not exist
+        util.conditional_rm(self.piddir, tree=True)
+
+        # run the target routine
+        pid = 6700
+        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
+        crawl.make_pidfile(pid, self.ctx, exitpath)
+
+        # verify the post conditions
+        self.assertTrue(os.path.isdir(self.piddir),
+                        "Directory %s should exist" % self.piddir)
+        [pidfile] = glob.glob("%s/%d" % (self.piddir, pid))
+        self.assertTrue(pidfile == ("%s/6700" % self.piddir),
+                        "Pidfile '%s' does not look right" % pidfile)
+        (rctx, rxpath) = util.contents(pidfile).strip().split()
+        self.assertEqual(rctx, self.ctx,
+                         "'%s' should match '%s'" % (rctx, self.ctx))
+        self.assertEqual(rxpath, exitpath,
+                         "'%s' should match '%s'" % (rxpath, exitpath))
+
+    # --------------------------------------------------------------------------
     def test_map_time_unit(self):
         """
         TEST: return value from map_time_unit should reflect the number of
@@ -1471,6 +1367,118 @@ class CrawlMiscTest(CrawlTest):
                 unit += '_x'
                 result = cfg.map_time_unit(unit)
                 self.assertEqual(result, 1)
+
+    # --------------------------------------------------------------------------
+    def test_running_pid_mtdir(self):
+        """
+        Preconditions:
+         - /tmp/crawler exists but is empty
+        Postconditions:
+         - running_pid() returns an empty list
+        """
+        # make sure /tmp/crawler is empty
+        util.conditional_rm(self.piddir, tree=True)
+        os.mkdir(self.piddir)
+
+        # run the target routine
+        result = crawl.running_pid()
+
+        # verify postconditions
+        self.assertEqual(result, [],
+                         "Expected [], got '%s'" % result)
+
+    # --------------------------------------------------------------------------
+    def test_running_pid_nodir(self):
+        """
+        Preconditions:
+         - /tmp/crawler does not exist
+        Postconditions:
+         - running_pid() returns an empty list
+        """
+        # make sure /tmp/crawler does not exist
+        util.conditional_rm(self.piddir, tree=True)
+
+        # run the target routine
+        result = crawl.running_pid()
+
+        # verify postconditions
+        self.assertEqual(result, [],
+                         "Expected [], got '%s'" % result)
+
+    # --------------------------------------------------------------------------
+    def test_running_pid_noproc1(self):
+        """
+        Preconditions:
+         - /tmp/crawler contains a two pid files, procs not running (use
+           make_pidfile to set up pidfiles)
+         - running_pid() called with proc_required=False
+        Postconditions:
+         - running_pid() returns list containing two tuples with pid,
+           context, exitpath
+        """
+        testdata = [(6700, 'TEST', '%s/first.exit' % self.piddir),
+                    (6701, 'DEV',  '%s/other.exit' % self.piddir)]
+        # set up two pidfiles
+        util.conditional_rm(self.piddir, tree=True)
+        for tup in testdata:
+            crawl.make_pidfile(*tup)
+
+        # run the target routine
+        result = crawl.running_pid(proc_required=False)
+
+        # verify postconditions
+        exp = testdata
+        self.assertEqual(result, exp,
+                         "Expected '%s', got '%s'" % (exp, result))
+
+    # --------------------------------------------------------------------------
+    def test_running_pid_proc1(self):
+        """
+        Preconditions:
+         - /tmp/crawler contains a single pid file, pid not running (use
+           make_pidfile to set up pidfile)
+         - running_pid() called with proc_required=True
+        Postconditions:
+         - running_pid() returns an empty list
+        """
+        # set up single pidfile
+        util.conditional_rm(self.piddir, tree=True)
+        pid = 6700
+        context = 'TEST'
+        exitpath = "%s/%s.exit" % (self.piddir, util.my_name())
+        crawl.make_pidfile(pid, context, exitpath)
+
+        # run the target routine
+        result = crawl.running_pid()
+
+        # verify postconditions
+        self.assertEqual(result, [],
+                         "Expected [], got '%s'" % result)
+
+    # --------------------------------------------------------------------------
+    def test_running_pid_proc2(self):
+        """
+        Preconditions:
+         - /tmp/crawler contains a two pid files, procs not running (use
+           make_pidfile to set up pidfiles)
+         - running_pid() called with proc_required=True
+        Postconditions:
+         - running_pid() returns an empty list
+        """
+        testdata = [(6700, 'TEST', '%s/first.exit' % self.piddir),
+                    (6701, 'DEV',  '%s/other.exit' % self.piddir)]
+        # set up two pidfiles
+        util.conditional_rm(self.piddir, tree=True)
+        for tup in testdata:
+            crawl.make_pidfile(*tup)
+
+        # run the target routine
+        result = crawl.running_pid()
+
+        # verify postconditions
+        exp = []
+        self.assertEqual(result, exp,
+                         "Expected '%s', got '%s'" % (exp, result))
 
     # --------------------------------------------------------------------------
     @util.memoize
@@ -1546,8 +1554,7 @@ class CrawlGiveUpYetTest(CrawlTest):
     def setUp(self):
         fakesmtp.inbox = []
         self.email_targets = 'tbarron@ornl.gov, tusculum@gmail.com'
-        t = CrawlConfig.CrawlConfig()
-        t.load_dict(self.cdict)
+        t = CrawlConfig.CrawlConfig.dictor(self.cfg_dict())
         t.set('crawler', 'xlim_time', "2.0")
         t.set('crawler', 'xlim_count', "7")
         t.set('crawler', 'xlim_ident', "3")
