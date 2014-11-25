@@ -23,34 +23,16 @@ else:
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for testing
-    """
-    testhelp.module_test_setup(daemonTest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after testing
-    """
-    testhelp.module_test_teardown(daemonTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class daemonTest(testhelp.HelpedTestCase):
     """
     Tests for the daemon class
     """
-    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
-
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
         """
         Verify that a newly created daemon object has the right attributes
         """
-        a = daemon.Daemon('%s/daemon_pid' % self.testdir)
+        a = daemon.Daemon(self.tmpdir('daemon_pid'))
 
         for attr in ['origdir', 'stdin', 'stdout', 'stderr', 'pidfile',
                      'logger', '__repr__', 'workdir', 'daemonize',
@@ -65,17 +47,16 @@ class daemonTest(testhelp.HelpedTestCase):
         """
         Call get_max_fd on a daemon object.
         """
-        a = daemon.Daemon("%s/daemon_pid" % self.testdir)
+        a = daemon.Daemon(self.tmpdir("daemon_pid"))
         exp = 4096
         val = a.get_max_fd()
         self.expected(exp, val)
 
     # -------------------------------------------------------------------------
     def test_dlog(self):
-        lfname = '%s/daemon.dlog.log' % self.testdir
+        lfname = self.tmpdir('daemon.dlog.log')
         lf = CrawlConfig.log(logpath=lfname)
-        a = daemon.Daemon("%s/daemon_pid" % self.testdir,
-                          logger=lf)
+        a = daemon.Daemon(self.tmpdir("daemon_pid"), logger=lf)
         logmsg = "testing the dlog method of %s" % a
         a.dlog(logmsg)
         self.assertTrue(logmsg in util.contents(lfname),

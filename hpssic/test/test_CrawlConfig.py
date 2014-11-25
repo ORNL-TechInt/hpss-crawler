@@ -20,24 +20,6 @@ import warnings
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for the tests.
-    """
-    testhelp.module_test_setup(CrawlConfigTest.testdir)
-    CrawlConfig.log(logpath=CrawlConfigTest.cls_logpath, close=True)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after the tests, restore the previous value of $CRAWL_CONF
-    """
-    CrawlConfig.log(close=True)
-    testhelp.module_test_teardown(CrawlConfigTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class CrawlConfigTest(testhelp.HelpedTestCase):
     """
     Test class for CrawlConfig
@@ -45,11 +27,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
     default_cfname = 'crawl.cfg'
     env_cfname = 'envcrawl.cfg'
     exp_cfname = 'explicit.cfg'
-    testdir = testhelp.testdata(__name__)
-    cls_logpath = '%s/test_default_hpss_crawl.log' % testdir
-    cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
-                         'logpath': cls_logpath,
-                         'logsize': '5mb',
+    cdict = {'crawler': {'logsize': '5mb',
                          'logmax': '5',
                          'e-mail-recipients':
                          'tbarron@ornl.gov, tusculum@gmail.com',
@@ -82,8 +60,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Routines exercised: __init__(), changed(), load_dict(), and
         crawl_write()
         """
-        cfgfile = '%s/test_changed.cfg' % self.testdir
         self.dbgfunc()
+        cfgfile = self.tmpdir('test_changed.cfg')
 
         obj = CrawlConfig.CrawlConfig()
         obj.load_dict(self.sample)
@@ -162,10 +140,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
-            d = copy.deepcopy(self.cdict)
-            d['crawler']['filename'] = self.default_cfname
             self.write_cfg_file(self.default_cfname, self.cdict)
             os.chmod(self.default_cfname, 0000)
 
@@ -187,7 +163,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
+        with ctx.nested(U.Chdir(self.tmpdir()), U.tmpenv('CRAWL_CONF', None)):
             util.conditional_rm(self.default_cfname)
 
             # test with no argument
@@ -207,9 +183,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
+        with ctx.nested(U.Chdir(self.tmpdir()), U.tmpenv('CRAWL_CONF', None)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
+            d['crawler']['logpath'] = self.logpath()
             self.write_cfg_file(self.default_cfname, d)
             os.chmod(self.default_cfname, 0644)
 
@@ -243,7 +220,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -266,7 +243,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', self.env_cfname)):
             util.conditional_rm(self.env_cfname)
 
@@ -288,7 +265,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config(), get_config('') should load the config
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -317,7 +294,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
              readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -344,7 +321,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
              about the file not existing or not being readable
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -367,7 +344,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: get_config('explicit.cfg') should load the explicit.cfg
         """
         CrawlConfig.get_config(reset=True, soft=True)
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', self.env_cfname)):
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.env_cfname
@@ -487,21 +464,20 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.dbgfunc()
         # throw away any logger that has been set
         # and get a new one
-        actual = CrawlConfig.log(logpath='%s/CrawlConfig.log' % self.testdir,
-                                 close=True)
+        trg_logpath = self.tmpdir('CrawlConfig.log')
+        exp_logpath = U.abspath(trg_logpath)
+        actual = CrawlConfig.log(logpath=trg_logpath, close=True)
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
-                      actual.handlers[0].baseFilename)
+        self.expected(exp_logpath, actual.handlers[0].baseFilename)
 
         # now ask for a logger with a different name, with close=False. Since
         # one has already been created, the new name should be ignored and we
         # should get back the one already cached.
-        actual = CrawlConfig.log(logpath='%s/util_foobar.log' % self.testdir)
+        actual = CrawlConfig.log(logpath=self.tmpdir('util_foobar.log'))
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
-                      actual.handlers[0].baseFilename)
+        self.expected(exp_logpath, actual.handlers[0].baseFilename)
 
     # -------------------------------------------------------------------------
     def test_logging_01(self):
@@ -515,14 +491,15 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected(None, actual)
 
         # now create a logger
-        CrawlConfig.log(logpath='%s/CrawlConfig.log' % self.testdir)
+        trg_logpath = self.tmpdir('CrawlConfig.log')
+        exp_logpath = U.abspath(trg_logpath)
+        CrawlConfig.log(logpath=trg_logpath)
 
         # now retrieving the logger should get the one just set
         actual = CrawlConfig.log()
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
-        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
-                      actual.handlers[0].baseFilename)
+        self.expected(exp_logpath, actual.handlers[0].baseFilename)
 
     # -------------------------------------------------------------------------
     def test_logging_10(self):
@@ -532,26 +509,28 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         # throw away any logger that has been set and create one to be
         # overridden
-        tmp = CrawlConfig.log(logpath='%s/throwaway.log' % self.testdir,
-                              close=True)
+        throwaway = self.tmpdir('throwaway.log')
+        abs_throwaway = U.abspath(throwaway)
+
+        override = self.tmpdir('CrawlConfig.log')
+        abs_override = U.abspath(override)
+
+        tmp = CrawlConfig.log(logpath=throwaway, close=True)
 
         # verify that it's there with the expected attributes
         self.assertTrue(isinstance(tmp, logging.Logger),
                         "Expected logging.Logger, got %s" % (tmp))
         self.expected(1, len(tmp.handlers))
-        self.expected(os.path.abspath("%s/throwaway.log" % self.testdir),
-                      tmp.handlers[0].baseFilename)
+        self.expected(abs_throwaway, tmp.handlers[0].baseFilename)
 
         # now override it
-        actual = CrawlConfig.log(logpath='%s/CrawlConfig.log' % self.testdir,
-                                 close=True)
+        actual = CrawlConfig.log(logpath=override, close=True)
 
         # and verify that it got replaced
         self.assertTrue(isinstance(actual, logging.Logger),
                         "Expected logging.Logger, got %s" % (actual))
         self.expected(1, len(actual.handlers))
-        self.expected(os.path.abspath("%s/CrawlConfig.log" % self.testdir),
-                      actual.handlers[0].baseFilename)
+        self.expected(abs_override, actual.handlers[0].baseFilename)
 
     # -------------------------------------------------------------------------
     def test_logging_11(self):
@@ -571,8 +550,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         for log file name, log file size, and max log files on disk. Verify
         that the resulting logger has the correct parameters.
         """
-        cfname = "%s/%s.cfg" % (self.testdir, util.my_name())
-        lfname = "%s/%s.log" % (self.testdir, util.my_name())
+        cfname = self.tmpdir("%s.cfg" % util.my_name())
+        lfname = self.tmpdir("%s.log" % util.my_name())
         cdict = {'crawler': {'logpath': lfname,
                              'logsize': '17mb',
                              'logmax': '13'
@@ -604,12 +583,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         CrawlConfig.get_config()).
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
+        with ctx.nested(U.Chdir(self.tmpdir()), U.tmpenv('CRAWL_CONF', None)):
             # reset any logger that has been initialized
             CrawlConfig.log(close=True)
             CrawlConfig.get_config(reset=True, soft=True)
 
-            logpath = os.path.basename(self.cls_logpath)
+            logpath = os.path.basename(self.logpath())
             d = copy.deepcopy(self.cdict)
             d['crawler']['filename'] = self.default_cfname
             d['crawler']['logpath'] = logpath
@@ -635,7 +614,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         '/tmp/crawl.log' if we can't access the protected file
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
+        with ctx.nested(U.Chdir(self.tmpdir()), U.tmpenv('CRAWL_CONF', None)):
             util.conditional_rm('crawl.cfg')
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
@@ -649,7 +628,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         the resulting logger has the correct parameters.
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir), U.tmpenv('CRAWL_CONF', None)):
+        with ctx.nested(U.Chdir(self.tmpdir()), U.tmpenv('CRAWL_CONF', None)):
             # reset any logger and config that has been initialized
             CrawlConfig.get_config(reset=True, soft=True)
             CrawlConfig.log(close=True)
@@ -671,7 +650,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         EXP: Attempts to log to pathname
         """
         CrawlConfig.log(close=True)
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
+        logpath = '%s/%s.log' % (self.tmpdir(), util.my_name())
         util.conditional_rm(logpath)
         self.assertEqual(os.path.exists(logpath), False,
                          '%s should not exist but does' % logpath)
@@ -914,7 +893,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            1     1      1       1    ||          c  n  w       test_cc_log_1111
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
@@ -935,8 +914,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            0     0      0       1    ||             n
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
@@ -957,7 +936,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            0     0      1       0    ||          c
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
@@ -978,13 +957,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            0     0      1       1    ||          c  n
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
             l = CrawlConfig.log(close=True)
             self.expected(None, l)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            exp_logpath = self.tmpdir(U.my_name())
 
             # test payload
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
@@ -1013,7 +992,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                 return ''
 
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             for filename in ["crawl.cfg", U.default_logpath()]:
@@ -1048,7 +1027,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            0     1      0       1    ||             n  w
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
@@ -1056,7 +1035,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.expected(None, l)
 
             exp_msg = U.rstring()
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            exp_logpath = self.tmpdir(U.my_name())
 
             # test payload
             l = CrawlConfig.log(exp_msg, logpath=exp_logpath)
@@ -1072,20 +1051,22 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            0     1      1       0    ||          c  n  w
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
             l = CrawlConfig.log(close=True)
             self.expected(None, l)
-            self.write_cfg_file(self.default_cfname, self.cdict)
+            d = copy.deepcopy(self.cdict)
+            d['crawler']['logpath'] = self.logpath()
+            self.write_cfg_file(self.default_cfname, d)
             exp_msg = U.rstring()
 
             # test payload
             l = CrawlConfig.log(exp_msg, close=True)
 
             # test verification
-            self.validate_logger(self.cls_logpath, l)
+            self.validate_logger(self.logpath(), l)
 
     # -------------------------------------------------------------------------
     def test_cc_log_0111(self):
@@ -1095,14 +1076,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            0     1      1       1    ||          c  n  w
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
             l = CrawlConfig.log(close=True)
             self.expected(None, l)
             exp_msg = U.rstring()
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            exp_logpath = self.tmpdir(U.my_name())
 
             # test payload
             l = CrawlConfig.log(exp_msg, close=True, logpath=exp_logpath)
@@ -1118,11 +1099,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            1     0      0       0    ||           no-op
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            exp_logpath = self.tmpdir(U.my_name())
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
             self.expected(exp_logpath, l.handlers[0].stream.name)
 
@@ -1140,12 +1121,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            1     0      0       1    ||           no-op
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
-            ign_logpath = self.cls_logpath
+            exp_logpath = self.tmpdir(U.my_name())
+            ign_logpath = self.logpath()
             U.conditional_rm(ign_logpath)
 
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
@@ -1166,11 +1147,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            1     0      1       0    ||          c
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            exp_logpath = self.tmpdir(U.my_name())
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
             self.validate_logger(exp_logpath, l)
 
@@ -1188,13 +1169,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            1     0      1       1    ||          c  n
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
-            l = CrawlConfig.log(close=True, logpath=self.cls_logpath)
-            self.validate_logger(self.cls_logpath, l)
+            exp_logpath = self.tmpdir(U.my_name())
+            l = CrawlConfig.log(close=True, logpath=self.logpath())
+            self.validate_logger(self.logpath(), l)
 
             # test payload
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
@@ -1210,11 +1191,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
            1     1      0       0    ||                w
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            exp_logpath = self.tmpdir(U.my_name())
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
             self.validate_logger(exp_logpath, l)
             exp_msg = U.rstring()
@@ -1237,22 +1218,22 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         written to the log file that is already open.
         """
         self.dbgfunc()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            U.conditional_rm(self.cls_logpath)
-            exp_logpath = U.pathjoin(self.testdir, U.my_name())
+            U.conditional_rm(self.logpath())
+            exp_logpath = self.tmpdir(U.my_name())
             l = CrawlConfig.log(close=True, logpath=exp_logpath)
             self.validate_logger(exp_logpath, l)
             exp_msg = U.rstring()
 
             # test payload
-            l = CrawlConfig.log(exp_msg, logpath=self.cls_logpath)
+            l = CrawlConfig.log(exp_msg, logpath=self.logpath())
 
             # test verification
             self.validate_logger(exp_logpath, l, msg=exp_msg)
-            self.assertFalse(os.path.exists(self.cls_logpath))
+            self.assertFalse(os.path.exists(self.logpath()))
 
     # -------------------------------------------------------------------------
     def test_cc_log_1110(self):
@@ -1269,13 +1250,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         should receive the message.
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", exp_logpath)):
             CrawlConfig.get_config(reset=True, soft=True)
-            l = CrawlConfig.log(close=True, logpath=self.cls_logpath)
-            self.validate_logger(self.cls_logpath, l)
+            l = CrawlConfig.log(close=True, logpath=self.logpath())
+            self.validate_logger(self.logpath(), l)
             exp_msg = U.rstring()
 
             # test payload
@@ -1296,13 +1277,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         opened logger.
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv("CRAWL_CONF", None),
                         U.tmpenv("CRAWL_LOG", None)):
             CrawlConfig.get_config(reset=True, soft=True)
-            l = CrawlConfig.log(close=True, logpath=self.cls_logpath)
-            self.validate_logger(self.cls_logpath, l)
+            l = CrawlConfig.log(close=True, logpath=self.logpath())
+            self.validate_logger(self.logpath(), l)
             exp_msg = U.rstring()
 
             # test payload
@@ -1334,9 +1315,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         correctly.
         """
         logbase = '%s.log' % util.my_name()
-        logpath = "%s/%s" % (self.testdir, logbase)
+        logpath = self.tmpdir(logbase)
         logpath_1 = logpath + ".1"
-        archdir = "%s/history" % (self.testdir)
+        archdir = self.tmpdir("history")
         ym = time.strftime("%Y.%m%d")
         archlogpath = '%s/%s.%s-%s' % (archdir, logbase, ym, ym)
         lcfg_d = {'crawler': {'logpath': logpath,
@@ -1365,10 +1346,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         correctly.
         """
         logbase = '%s.log' % util.my_name()
-        logpath = "%s/%s" % (self.testdir, logbase)
+        logpath = self.tmpdir(logbase)
         logpath_1 = logpath + ".1"
         ym = time.strftime("%Y.%m%d")
-        archlogpath = '%s/%s.%s-%s' % (self.testdir, logbase, ym, ym)
+        archlogpath = self.tmpdir('%s.%s-%s' % (logbase, ym, ym))
         lcfg_d = {'crawler': {'logpath': logpath,
                               'logsize': '500',
                               'logmax': '10'}}
@@ -1394,7 +1375,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many % formatters for args
         #  - too many args for % formatters
         # """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        fpath = self.tmpdir("%s.log" % util.my_name())
         CrawlConfig.log(close=True)
         log = CrawlConfig.log(logpath=fpath)
 
@@ -1422,7 +1403,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many % formatters for args
         #  - too many args for % formatters
         # """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        fpath = self.tmpdir("%s.log" % util.my_name())
         CrawlConfig.log(logpath=fpath, close=True)
 
         # 1 % formatter in first arg
@@ -1454,14 +1435,16 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = self.cls_logpath
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.logpath()
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
             U.conditional_rm(exp_logpath)
             self.assertFalse(os.path.exists(exp_logpath))
 
             CrawlConfig.get_config(reset=True, soft=True)
-            self.write_cfg_file(self.default_cfname, self.cdict)
+            d = copy.deepcopy(self.cdict)
+            d['crawler']['logpath'] = self.logpath()
+            self.write_cfg_file(self.default_cfname, d)
             x = CrawlConfig.new_logger()
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
@@ -1485,11 +1468,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = os.path.join(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
-            U.conditional_rm(self.cls_logpath)
-            self.assertFalse(os.path.exists(self.cls_logpath))
+            U.conditional_rm(self.logpath())
+            self.assertFalse(os.path.exists(self.logpath()))
 
             CrawlConfig.get_config(reset=True, soft=True)
             self.write_cfg_file(self.default_cfname, self.cdict)
@@ -1525,7 +1508,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         exp_logpath = U.default_logpath()
-        with ctx.nested(U.Chdir(self.testdir),
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
             U.conditional_rm(exp_logpath)
             self.assertFalse(os.path.exists(exp_logpath))
@@ -1534,7 +1517,6 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.default_cfname, self.cdict)
 
             d = copy.deepcopy(self.cdict)
-            del d['crawler']['logpath']
             xcfg = CrawlConfig.CrawlConfig.dictor(d)
 
             x = CrawlConfig.new_logger(cfg=xcfg)
@@ -1560,8 +1542,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_LOG', exp_logpath)):
             U.conditional_rm(exp_logpath)
             self.assertFalse(os.path.exists(exp_logpath))
@@ -1592,8 +1574,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_LOG', exp_logpath)):
             U.conditional_rm(exp_logpath)
             self.assertFalse(os.path.exists(exp_logpath))
@@ -1628,8 +1610,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None),
                         U.tmpenv('CRAWL_LOG', None)):
             U.conditional_rm(exp_logpath)
@@ -1658,8 +1640,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None),
                         U.tmpenv('CRAWL_LOG', None)):
             U.conditional_rm(exp_logpath)
@@ -1690,10 +1672,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None),
-                        U.tmpenv('CRAWL_LOG', self.cls_logpath)):
+                        U.tmpenv('CRAWL_LOG', self.logpath())):
             U.conditional_rm(exp_logpath)
             self.assertFalse(os.path.exists(exp_logpath))
 
@@ -1720,10 +1702,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         The returned logger should never have more than one handler
         """
         self.dbgfunc()
-        exp_logpath = U.pathjoin(self.testdir, U.my_name())
-        with ctx.nested(U.Chdir(self.testdir),
+        exp_logpath = self.tmpdir(U.my_name())
+        with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None),
-                        U.tmpenv('CRAWL_LOG', self.cls_logpath)):
+                        U.tmpenv('CRAWL_LOG', self.logpath())):
             U.conditional_rm(exp_logpath)
             self.assertFalse(os.path.exists(exp_logpath))
 
@@ -1745,7 +1727,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
          - too many % formatters for args
          - too many args for % formatters
         """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        fpath = self.tmpdir("%s.log" % util.my_name())
         CrawlConfig.log(logpath=fpath, close=True)
 
         # simple string in first arg
@@ -1766,7 +1748,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many % formatters for args
         #  - too many args for % formatters
         # """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        fpath = self.tmpdir("%s.log" % util.my_name())
         log = CrawlConfig.log(logpath=fpath, close=True)
 
         # multiple % formatters in first arg
@@ -1800,7 +1782,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         #  - too many % formatters for args
         #  - too many args for % formatters
         # """
-        fpath = "%s/%s.log" % (self.testdir, util.my_name())
+        fpath = self.tmpdir("%s.log" % util.my_name())
         log = CrawlConfig.log(logpath=fpath, close=True)
 
         # multiple % formatters in first arg
@@ -2365,9 +2347,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         Read a config file which contains an include option
         """
-        cfname_root = "%s/%s.cfg" % (self.testdir, "inclroot")
-        cfname_inc1 = "%s/%s.cfg" % (self.testdir, "include1")
-        cfname_inc2 = "%s/%s.cfg" % (self.testdir, "include2")
+        cfname_root = self.tmpdir("inclroot.cfg")
+        cfname_inc1 = self.tmpdir("include1.cfg")
+        cfname_inc2 = self.tmpdir("include2.cfg")
 
         root_d = copy.deepcopy(self.cdict)
         root_d['crawler']['include'] = cfname_inc1
@@ -2402,9 +2384,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Read a config file which contains an include option. If some included
         files don't exist, we should get a warning that they were not loaded.
         """
-        cfname_root = "%s/%s.cfg" % (self.testdir, "inclroot")
-        cfname_inc1 = "%s/%s.cfg" % (self.testdir, "include1")
-        cfname_inc2 = "%s/%s.cfg" % (self.testdir, "includez")
+        cfname_root = self.tmpdir("inclroot.cfg")
+        cfname_inc1 = self.tmpdir("include1.cfg")
+        cfname_inc2 = self.tmpdir("include2.cfg")
 
         root_d = copy.deepcopy(self.cdict)
         root_d['crawler']['include'] = cfname_inc1

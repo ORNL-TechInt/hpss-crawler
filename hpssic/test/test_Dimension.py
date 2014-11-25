@@ -27,28 +27,22 @@ else:
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for testing
-    """
-    testhelp.module_test_setup(DimensionTest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after testing
-    """
-    testhelp.module_test_teardown(DimensionTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class DimensionTest(testhelp.HelpedTestCase):
     """
     Tests for the Dimension class
     """
-    testdir = '%s/test.d' % os.path.dirname(mself.__file__)
-    testdb = '%s/test.db' % testdir
+    # -------------------------------------------------------------------------
+    def cfg_dict(self, tname='test_Dimension'):
+        """
+        Return the basic config for these tests
+        """
+        cfg_d = {'dbi-crawler': {'dbtype': 'sqlite',
+                                 'dbname': self.tmpdir('test.db'),
+                                 'tbl_prefix': 'test'},
+                 'crawler': {'logpath': self.tmpdir('%s.log' % (tname))},
+                 'cv': {'fire': 'no'}
+                 }
+        return cfg_d
 
     # -------------------------------------------------------------------------
     def test_addone(self):
@@ -154,7 +148,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         last_check <> 0.
         """
         self.dbgfunc()
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
         chk = Checkable.Checkable
@@ -213,7 +207,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         """
         # reboot the database and call persist() to create the table without
         # adding any data
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict(U.my_name()))
         Checkable.Checkable.ex_nihilo()
 

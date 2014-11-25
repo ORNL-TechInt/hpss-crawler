@@ -60,7 +60,7 @@ def make_mysql_tcfg(dbeng, obj):
     section = 'dbi-crawler'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
-    tcfg.set(section, 'dbname', DBITest.testdb)
+    tcfg.set(section, 'dbname', xcfg.get('dbi-crawler', 'dbname'))
     tcfg.set(section, 'tbl_prefix', 'test')
     for dbparm in ['dbname', 'hostname', 'username', 'password']:
         tcfg.set(section, dbparm, xcfg.get(section, dbparm))
@@ -101,22 +101,6 @@ def make_tcfg(dbtype, obj):
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for testing
-    """
-    testhelp.module_test_setup(DBITest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after testing
-    """
-    testhelp.module_test_teardown(DBITest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class DBITestRoot(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def setup_select(self, table_name):
@@ -124,7 +108,7 @@ class DBITestRoot(testhelp.HelpedTestCase):
         DBITestRoot:
         """
         self.reset_db(table_name)
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         db = self.DBI()
         db.create(table=table_name, fields=self.fdef)
         db.insert(table=table_name, fields=self.nk_fnames, data=self.testdata)
@@ -162,10 +146,6 @@ class DBITest(DBITestRoot):
     """
     Tests for the DBI class
     """
-    testdir = testhelp.testdata(__name__)
-    cfgfile = '%s/dbitest.cfg' % testdir
-    testdb = '%s/test.db' % testdir
-
     # -------------------------------------------------------------------------
     def test_ctor_nodbname(self):
         """
@@ -258,8 +238,6 @@ class DBI_in_Base(object):
     mysql database.
     """
 
-    testdir = DBITest.testdir
-    testdb = '%s/test.db' % testdir
     fdef = ['rowid integer primary key autoincrement',
             'name text',
             'size int',
@@ -830,8 +808,6 @@ class DBI_out_Base(object):
     The mySql and sqlite test classes will inherit this one in addition to
     DBI_in_Base.
     """
-    testdir = DBITest.testdir
-    testdb = '%s/test.db' % testdir
     fdef = ['rowid integer primary key autoincrement',
             'name text',
             'size int',
@@ -1219,7 +1195,7 @@ class DBI_out_Base(object):
         DBI_out_Base: Calling create() with correct arguments should create the
         table
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         db = self.DBI()
         if db.table_exists(table='create_yes'):
             db.drop(table='create_yes')
@@ -2208,24 +2184,6 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
     dbctype = 'crawler'
 
     # -------------------------------------------------------------------------
-    @classmethod
-    def setUpClass(cls):
-        """
-        DBIsqliteTest:
-        """
-        # testhelp.module_test_setup(DBITest.testdir)
-        pass
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def tearDownClass(cls):
-        """
-        DBIsqliteTest:
-        """
-        # testhelp.module_test_teardown(DBITest.testdir)
-        pass
-
-    # -------------------------------------------------------------------------
     def test_alter_add_after(self):
         """
         DBIsqliteTest: Calling alter() to add a column with valid syntax should
@@ -2327,26 +2285,28 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         it.
         """
         # first, we create a database file from scratch
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         tabname = util.my_name()
         dba = self.DBI()
         dba.create(table=tabname, fields=['field1 text'])
         dba.close()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected %s to exists but it does not" % self.testdb)
-        s = os.stat(self.testdb)
+        self.assertTrue(os.path.exists(self.dbname()),
+                        "Expected %s to exists but it does not" %
+                        self.dbname())
+        s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
-                            "Expected %s to contain some data" % self.testdb)
+                            "Expected %s to contain some data" % self.dbname())
 
         # now, when we try to access it, it should be there
         dbb = self.DBI()
         self.assertTrue(dbb.table_exists(table=tabname))
         dbb.close()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected %s to exists but it does not" % self.testdb)
-        s = os.stat(self.testdb)
+        self.assertTrue(os.path.exists(self.dbname()),
+                        "Expected %s to exists but it does not" %
+                        self.dbname())
+        s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
-                            "Expected %s to contain some data" % self.testdb)
+                            "Expected %s to contain some data" % self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_dir(self):
@@ -2354,8 +2314,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: File dbname exists and is a directory -- we throw an
         exception.
         """
-        util.conditional_rm(self.testdb)
-        os.mkdir(self.testdb, 0777)
+        util.conditional_rm(self.dbname())
+        os.mkdir(self.dbname(), 0777)
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
                              CrawlDBI.DBI,
@@ -2368,17 +2328,18 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: File dbname exists and is empty -- we will use it as a
         database.
         """
-        util.conditional_rm(self.testdb)
-        util.touch(self.testdb)
+        util.conditional_rm(self.dbname())
+        util.touch(self.dbname())
         db = self.DBI()
         db.create(table='testtab',
                   fields=['rowid integer primary key autoincrement'])
         db.close()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected %s to exists but it does not" % self.testdb)
-        s = os.stat(self.testdb)
+        self.assertTrue(os.path.exists(self.dbname()),
+                        "Expected %s to exists but it does not" %
+                        self.dbname())
+        s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
-                            "Expected %s to contain some data" % self.testdb)
+                            "Expected %s to contain some data" % self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_fifo(self):
@@ -2386,8 +2347,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: File dbname exists and is a fifo -- we throw an
         exception
         """
-        util.conditional_rm(self.testdb)
-        os.mkfifo(self.testdb)
+        util.conditional_rm(self.dbname())
+        os.mkfifo(self.dbname())
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "disk I/O error",
                              CrawlDBI.DBI,
@@ -2421,19 +2382,20 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: File dbname does not exist -- initializing a db
         connection to it should create it.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         db = self.DBI()
         db.close()
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected %s to exists but it does not" % self.testdb)
+        self.assertTrue(os.path.exists(self.dbname()),
+                        "Expected %s to exists but it does not" %
+                        self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sock(self):
         """
         DBIsqliteTest: File dbname is a socket -- we throw an exception
         """
-        util.conditional_rm(self.testdb)
-        sockname = '%s/%s' % (self.testdir, util.my_name())
+        util.conditional_rm(self.dbname())
+        sockname = self.tmpdir(util.my_name())
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(sockname)
         tcfg = make_tcfg(self.dbtype, self)
@@ -2451,9 +2413,9 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         the symlink points at. If it's a directory, we throw an exception.
         """
         # the symlink points at a directory
-        util.conditional_rm(self.testdb + '_xyz')
-        os.mkdir(self.testdb + '_xyz', 0777)
-        os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
+        util.conditional_rm(self.dbname() + '_xyz')
+        os.mkdir(self.dbname() + '_xyz', 0777)
+        os.symlink(os.path.basename(self.dbname() + '_xyz'), self.dbname())
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              "unable to open database file",
                              CrawlDBI.DBI,
@@ -2467,21 +2429,21 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         file. We use it.
         """
         # the symlink points at a directory
-        util.conditional_rm(self.testdb)
-        util.conditional_rm(self.testdb + '_xyz')
-        util.touch(self.testdb + '_xyz')
-        os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
+        util.conditional_rm(self.dbname())
+        util.conditional_rm(self.dbname() + '_xyz')
+        util.touch(self.dbname() + '_xyz')
+        os.symlink(os.path.basename(self.dbname() + '_xyz'), self.dbname())
         db = self.DBI()
         db.create(table='testtab',
                   fields=['rowid integer primary key autoincrement'])
         db.close
 
-        self.assertTrue(os.path.exists(self.testdb + '_xyz'),
+        self.assertTrue(os.path.exists(self.dbname() + '_xyz'),
                         "Expected %s to exist" %
-                        self.testdb + '_xyz')
-        s = os.stat(self.testdb)
+                        self.dbname() + '_xyz')
+        s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
-                            "Expected %s to contain some data" % self.testdb)
+                            "Expected %s to contain some data" % self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sym_nosuch(self):
@@ -2490,20 +2452,20 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         non-existent file. We create it.
         """
         # the symlink points at a non-existent file
-        util.conditional_rm(self.testdb)
-        util.conditional_rm(self.testdb + '_xyz')
-        os.symlink(os.path.basename(self.testdb + '_xyz'), self.testdb)
+        util.conditional_rm(self.dbname())
+        util.conditional_rm(self.dbname() + '_xyz')
+        os.symlink(os.path.basename(self.dbname() + '_xyz'), self.dbname())
         db = self.DBI()
         db.create(table='testtab',
                   fields=['rowid integer primary key autoincrement'])
         db.close
 
-        self.assertTrue(os.path.exists(self.testdb + '_xyz'),
+        self.assertTrue(os.path.exists(self.dbname() + '_xyz'),
                         "Expected %s to exist" %
-                        self.testdb + '_xyz')
-        s = os.stat(self.testdb)
+                        self.dbname() + '_xyz')
+        s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
-                            "Expected %s to contain some data" % self.testdb)
+                            "Expected %s to contain some data" % self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_text(self):
@@ -2511,8 +2473,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: File dbname exists and contains text. We should throw an
         exception
         """
-        util.conditional_rm(self.testdb)
-        f = open(self.testdb, 'w')
+        util.conditional_rm(self.dbname())
+        f = open(self.dbname(), 'w')
         f.write('This is a text file, not a database file\n')
         f.close()
 
@@ -2522,7 +2484,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              cfg=make_tcfg(self.dbtype, self),
                              dbtype='crawler')
 
-        os.unlink(self.testdb)
+        os.unlink(self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_sqlite_dbnreq(self):
@@ -2644,7 +2606,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         type, calling __repr__ on a DBI object should produce a representation
         that looks like a DBIsqlite object.
         """
-        exp = "DBIsqlite(dbname='%s')" % self.testdb
+        exp = "DBIsqlite(dbname='%s')" % self.dbname()
         a = self.DBI()
         self.expected(exp, repr(a))
         a.close()
@@ -2656,34 +2618,16 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         DBIsqliteTest: reset the database
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
 
 
 # -----------------------------------------------------------------------------
 @pytest.mark.skipif('jenkins' in os.getcwd())
-@pytest.mark.skipif(not pytest.config.getvalue("all"),
-                    reason="slow -- use --all to run this one")
+@pytest.mark.skipif(pytest.config.getvalue("fast"),
+                    reason="slow -- omit --fast to run this one")
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbctype = 'hpss'   # the function of the database
     dbtype = 'db2'     # which database engine it uses
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def setUpClass(cls):
-        """
-        DBIdb2Test: !@! should we be calling *module* test setup here?!
-        """
-        # testhelp.module_test_setup(DBITest.testdir)
-        pass
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def tearDownClass(cls):
-        """
-        DBIdb2Test:
-        """
-        # testhelp.module_test_teardown(DBITest.testdir)
-        pass
 
     # -------------------------------------------------------------------------
     def test_alter_unsupported(self):

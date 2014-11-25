@@ -27,30 +27,10 @@ else:
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for testing
-    """
-    testhelp.module_test_setup(UtilTest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after testing
-    """
-    if not testhelp.keepfiles():
-        util.conditional_rm("/tmp/crawl.log")
-    testhelp.module_test_teardown(UtilTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class UtilTest(testhelp.HelpedTestCase):
     """
     Tests for util.py
     """
-    testdir = testhelp.testdata(__name__)
-
     # -------------------------------------------------------------------------
     def test_Chdir(self):
         """
@@ -125,7 +105,7 @@ class UtilTest(testhelp.HelpedTestCase):
                  "with no timestamp so we'll be forced to read\n",
                  "backward a time or two, not just find the timestamp\n",
                  "on the first read so we exercise revread.\n"]
-        tfilename = "%s/%s.data" % (self.testdir, util.my_name())
+        tfilename = self.tmpdir("%s.data" % util.my_name())
         f = open(tfilename, 'w')
         f.writelines(tdata)
         f.close()
@@ -142,7 +122,7 @@ class UtilTest(testhelp.HelpedTestCase):
         tdata = ["This line should be ignored\n",
                  "2014.0412 12:25:50 This is the timestamp to return\n",
                  "2014.0430 19:30:00 This should not be returned\n"]
-        tfilename = "%s/%s.data" % (self.testdir, util.my_name())
+        tfilename = self.tmpdir("%s.data" % (util.my_name()))
         f = open(tfilename, 'w')
         f.writelines(tdata)
         f.close()
@@ -753,7 +733,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Test the reverse read file class
         """
         self.dbgfunc()
-        tdfile = os.path.join(self.testdir, util.my_name())
+        tdfile = self.tmpdir(util.my_name())
         clist = [chr(ord('a') + x) for x in range(0, 16)]
         with open(tdfile, 'w') as f:
             for c in clist:
@@ -777,7 +757,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Test the reverse read file class
         """
         self.dbgfunc()
-        tdfile = os.path.join(self.testdir, util.my_name())
+        tdfile = self.tmpdir(util.my_name())
         clist = [chr(ord('a') + x) for x in range(0, 4)]
         with open(tdfile, 'w') as f:
             for c in clist:
@@ -803,7 +783,7 @@ class UtilTest(testhelp.HelpedTestCase):
         mtime rather than rounding them.
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(), new=True)
 
     # -------------------------------------------------------------------------
@@ -812,7 +792,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does not exist with atime, no mtime
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(-75, None), new=True)
 
     # -------------------------------------------------------------------------
@@ -821,7 +801,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does not exist with mtime, no atime
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(None, -32), new=True)
 
     # -------------------------------------------------------------------------
@@ -830,7 +810,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does not exist with both atime and mtime
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(-175, -3423), new=True)
 
     # -------------------------------------------------------------------------
@@ -839,7 +819,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does exist with no amtime tuple
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=())
 
     # -------------------------------------------------------------------------
@@ -848,7 +828,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does exist with atime, no mtime
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(-75, None))
 
     # -------------------------------------------------------------------------
@@ -857,7 +837,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does exist with mtime, no atime
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(None, -32))
 
     # -------------------------------------------------------------------------
@@ -866,7 +846,7 @@ class UtilTest(testhelp.HelpedTestCase):
         Call touch on a path that does exist with both atime and mtime
         """
         self.dbgfunc()
-        testpath = util.pathjoin(self.testdir, util.my_name())
+        testpath = self.tmpdir(util.my_name())
         self.touch_payload(testpath, offs=(-175, -3423))
 
     # -------------------------------------------------------------------------

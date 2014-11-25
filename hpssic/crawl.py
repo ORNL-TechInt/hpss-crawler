@@ -84,8 +84,8 @@ def crl_cleanup(argv):
     if o.debug:
         pdb.set_trace()
 
-    testdirs = glob.glob("/tmp/hpss-crawl.*")
-    for td in testdirs:
+    tdirs = glob.glob("/tmp/hpss-crawl.*")
+    for td in tdirs:
         if o.dryrun:
             print("would do 'shutil.rmtree(%s)'" % td)
         else:

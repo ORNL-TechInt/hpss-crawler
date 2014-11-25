@@ -23,39 +23,25 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Create the test directory in preparation to run the tests.
-    """
-    testhelp.module_test_setup(CheckableTest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up the test directory after a test run.
-    """
-    testhelp.module_test_teardown(CheckableTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class CheckableTest(testhelp.HelpedTestCase):
-    testdir = testhelp.testdata(__name__)
-    testdb = '%s/test.db' % testdir
     methods = ['__init__', 'ex_nihilo', 'get_list', 'check', 'persist']
     testpath = '/home/tpb/TODO'
-    testcfg = {'dbi-crawler': {'dbtype': 'sqlite',
-                               'dbname': testdb,
-                               'tbl_prefix': 'test'},
-               'crawler': {'logpath': '%s/test.log' % (testdir)},
-               'cv': {'fire': 'no'}
-               }
 
     testdata = [('/', 'd', '', 0),
                 ('/abc', 'd', '', 17),
                 ('/xyz', 'f', '', 92),
                 ('/abc/foo', 'f', '', 5),
                 ('/abc/bar', 'f', '', time.time())]
+
+    # -------------------------------------------------------------------------
+    def cfg_dict(self):
+        rval = {'dbi-crawler': {'dbtype': 'sqlite',
+                                'dbname': self.dbname(),
+                                'tbl_prefix': 'test'},
+                'crawler': {'logpath': self.tmpdir("test.log")},
+                'cv': {'fire': 'no'}
+                }
+        return rval
 
     # -------------------------------------------------------------------------
     def populate_ttypes(self):
@@ -82,17 +68,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         objects representing the entries in the directory
         """
         self.dbgfunc()
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         cfg = CrawlConfig.get_config('hpssic_sqlite_test.cfg', reset=True)
-        cfg.set('crawler', 'logpath',
-                U.pathjoin(self.testdir, util.my_name()) + ".log")
-        cfg.set('dbi-crawler', 'dbname', U.pathjoin(self.testdir, 'test.db'))
+        cfg.set('crawler', 'logpath', self.tmpdir(util.my_name() + ".log"))
+        cfg.set('dbi-crawler', 'dbname', self.tmpdir('test.db'))
         cfg.set('cv', 'fire', 'no')
         self.populate_ttypes()
 
         Checkable.ex_nihilo()
-        testdir = '/home/tpb/hic_test'
-        self.db_add_one(path=testdir, type='d')
+        archdir = '/home/tpb/hic_test'
+        self.db_add_one(path=archdir, type='d')
         x = Checkable.get_list()
 
         self.expected(2, len(x))
@@ -134,14 +119,14 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         if 'jenkins' in os.getcwd():
             raise SkipTest('HPSS not available on jenkins')
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         Dimension.get_dim('ignore', reset=True)
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
-        testdir = '/home/tpb/hic_test'
-        self.db_add_one(path=testdir, type='d')
-        self.db_add_one(path=testdir + '/crawler.tar', type='f')
-        self.db_add_one(path=testdir + '/crawler.tar.idx', type='f')
+        archdir = '/home/tpb/hic_test'
+        self.db_add_one(path=archdir, type='d')
+        self.db_add_one(path=archdir + '/crawler.tar', type='f')
+        self.db_add_one(path=archdir + '/crawler.tar.idx', type='f')
 
         x = Checkable.get_list()
         checked = []
@@ -273,16 +258,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         create it. For this test, we specify and verify a dataroot value.
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         testhelp.db_config(self.testdir, util.my_name())
 
         # this call should create it
         Checkable.ex_nihilo(dataroot="/home/somebody")
 
         # check that it exists
-        self.assertEqual(os.path.exists(self.testdb), True,
+        self.assertEqual(os.path.exists(self.dbname()), True,
                          "File '%s' should be created by ex_nihilo()" %
-                         (self.testdb))
+                         (self.dbname()))
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
@@ -329,25 +314,25 @@ class CheckableTest(testhelp.HelpedTestCase):
         Note: the use of unacceptable database files is tested in CrawlDBI.py.
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create a dummy .db file and set its mtime back by 500 seconds
-        util.touch(self.testdb)
-        s = os.stat(self.testdb)
+        util.touch(self.dbname())
+        s = os.stat(self.dbname())
         newtime = s[stat.ST_MTIME] - 500
-        os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
+        os.utime(self.dbname(), (s[stat.ST_ATIME], newtime))
 
         # create a dummy 'checkables' table in the test database
         Checkable.ex_nihilo()
-        pre = os.stat(self.testdb)
+        pre = os.stat(self.dbname())
 
         # call the test target routine
         time.sleep(1.0)
         Checkable.ex_nihilo()
 
         # verify that the file's mtime is unchanged and its size is unchanged
-        post = os.stat(self.testdb)
+        post = os.stat(self.dbname())
         self.expected(util.ymdhms(pre[stat.ST_MTIME]),
                       util.ymdhms(post[stat.ST_MTIME]))
         self.expected(pre[stat.ST_SIZE], post[stat.ST_SIZE])
@@ -367,21 +352,21 @@ class CheckableTest(testhelp.HelpedTestCase):
         Note: the use of unacceptable database files is tested in CrawlDBI.py.
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create a dummy .db file and set its mtime back by 500 seconds
-        util.touch(self.testdb)
-        s = os.stat(self.testdb)
+        util.touch(self.dbname())
+        s = os.stat(self.dbname())
         newtime = s[stat.ST_MTIME] - 500
-        os.utime(self.testdb, (s[stat.ST_ATIME], newtime))
+        os.utime(self.dbname(), (s[stat.ST_ATIME], newtime))
 
         # call the test target routine
         Checkable.ex_nihilo()
 
         # verify that the file exists and the table does also
-        self.assertTrue(os.path.exists(self.testdb),
-                        "Expected %s to exist" % self.testdb)
+        self.assertTrue(os.path.exists(self.dbname()),
+                        "Expected %s to exist" % self.dbname())
         db = CrawlDBI.DBI(dbtype='crawler')
         self.assertTrue(db.table_exists(table='checkables'),
                         "Expected table 'checkables' to exist in db")
@@ -393,16 +378,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         create it.
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        util.conditional_rm(self.dbname())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # this call should create it
         Checkable.ex_nihilo()
 
         # check that it exists
-        self.assertEqual(os.path.exists(self.testdb), True,
+        self.assertEqual(os.path.exists(self.dbname()), True,
                          "File '%s' should be created by ex_nihilo()" %
-                         (self.testdb))
+                         (self.dbname()))
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
@@ -437,16 +422,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         Method ex_nihilo() must be able to take a list in its dataroot argument
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
-        testhelp.db_config(self.testdir, util.my_name())
+        util.conditional_rm(self.dbname())
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # this call should create it
         Checkable.ex_nihilo(dataroot=['abc', 'def'])
 
         # check that it exists
-        self.assertEqual(os.path.exists(self.testdb), True,
+        self.assertEqual(os.path.exists(self.dbname()), True,
                          "File '%s' should be created by ex_nihilo()" %
-                         (self.testdb))
+                         (self.dbname()))
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
@@ -608,7 +593,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Calling .get_list() before .ex_nihilo() should cause an exception
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         try:
@@ -626,7 +611,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         representing what is in the table
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create some test data (path, type, cos, last_check)
@@ -675,7 +660,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         fine.
         """
         # make sure the .db file does not exist
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
         # create some test data (path, type, cos, last_check)
@@ -722,10 +707,10 @@ class CheckableTest(testhelp.HelpedTestCase):
         the list with the content of the priority file(s) at the top.
         """
         # set up data, filenames, etc
-        pri_pending = U.pathjoin(self.testdir, 'pending')
         self.dbgfunc()
+        pri_pending = self.tmpdir('pending')
         pri_glob = U.pathjoin(pri_pending, '*')
-        pri_complete = U.pathjoin(self.testdir, 'completed')
+        pri_complete = self.tmpdir('completed')
         pri_d = [{'ppath': U.pathjoin(pri_pending, 'test1'),
                   'cpath': U.pathjoin(pri_complete, 'test1'),
                   'data': ['/this/should/come/first',
@@ -743,13 +728,13 @@ class CheckableTest(testhelp.HelpedTestCase):
         explist.append(self.testdata[1])
 
         # write out the config file with info about the priority files
-        cfg = copy.deepcopy(self.testcfg)
+        cfg = copy.deepcopy(self.cfg_dict())
         cfg['cv']['priority'] = pri_glob
         cfg['cv']['completed'] = pri_complete
         testhelp.db_config(self.testdir, U.my_name(), cfg_d=cfg)
 
         # initialize the database from scratch with some known testdata
-        U.conditional_rm(self.testdb)
+        U.conditional_rm(self.dbname())
         Checkable.ex_nihilo()
         db = CrawlDBI.DBI(dbtype='crawler')
         db.insert(table='checkables',
@@ -806,8 +791,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         (rowid == None, last_check == 0, type == 'd'). Exception should be
         thrown.
         """
-        util.conditional_rm(self.testdb)
         self.dbgfunc()
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_duplicates()
@@ -833,7 +818,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new directory (rowid == None, last_check == 0, type == 'd',
         path does not match). New record should be added.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         x = Checkable.get_list()
@@ -856,7 +841,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new directory with matching path (rowid == None, last_check
         == 0, type == 'd'). Existing path should not be updated.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
@@ -887,7 +872,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         == 0, type == 'f'), changing type (f -> d). Existing path should be
         updated.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
@@ -920,7 +905,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in an invalid directory (rowid == None, last_check != 0, type ==
         'd'). Exception should be thrown.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         t1 = time.time()
@@ -961,7 +946,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         None, path exists, type == 'd', last_check changed). Last check time
         should be updated.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
@@ -1011,7 +996,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file (rowid == None, last_check == 0, path does not
         match, type == 'f'). New record should be added.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
 
@@ -1034,7 +1019,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a new file with matching path (rowid == None, last_check
         == 0, type == 'f'). Existing path should be updated.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         now = time.time()
@@ -1068,7 +1053,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         !@! last_check should not be persisted when it's already set and type
         doesn't change
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         now = time.time()
@@ -1096,7 +1081,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Send in a (formerly invalid) file (rowid != None, last_check == 0,
         type == 'f') No exception should be thrown.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_add_one()
@@ -1118,7 +1103,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         path exists, type == 'f', last_check changed). Last check time should
         be updated.
         """
-        util.conditional_rm(self.testdb)
+        util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         Checkable.ex_nihilo()
         self.db_add_one()
@@ -1202,10 +1187,6 @@ def fuzztime(days, cfg=None):
 
 # -----------------------------------------------------------------------------
 class test_get_list(testhelp.HelpedTestCase):
-    # test directory and database name
-    testdir = testhelp.testdata(__name__)
-    testdb = U.pathjoin(testdir, 'test.db')
-
     # these fields don't change
     rtype = 'f'
     cos = '6002'
@@ -1224,62 +1205,6 @@ class test_get_list(testhelp.HelpedTestCase):
                 'reported',
                 ]
 
-    cfg = {'crawler':
-           {
-               'exitpath': '/tmp/foobar',
-               'logpath':  U.pathjoin(testdir, 'hpssic-getlist-test.log'),
-           },
-
-           'cv':
-           {
-               'recheck_fraction': '0.3',
-               'recheck_age': '1d',
-               'operations': '10',
-           },
-
-           'dbi-crawler':
-           {
-               'dbtype': 'sqlite',
-               'dbname': testdb,
-               'tbl_prefix': 'test',
-           }
-          }
-
-    # changing fields: path, checksum, last_check
-    testdata = [("/home/tpb/hic_test/test_001", 0, 0),
-                ("/home/tpb/hic_test/test_002", 0, 0),
-                ("/home/tpb/hic_test/test_003", 0, 0),
-                ("/home/tpb/hic_test/test_004", 0, 0),
-                ("/home/tpb/hic_test/test_005", 0, 0),
-                ("/home/tpb/hic_test/test_006", 0, 0),
-                ("/home/tpb/hic_test/test_007", 0, 0),
-                ("/home/tpb/hic_test/test_008", 0, 0),
-                ("/home/tpb/hic_test/test_009", 0, 0),
-                ("/home/tpb/hic_test/test_010", 0, 0),
-                ("/home/tpb/hic_test/test_011", 0, 0),
-                ("/home/tpb/hic_test/test_012", 0, 0),
-
-                ("/home/tpb/hic_test/test_100", 1, fuzztime(-1, cfg=cfg)),
-                ("/home/tpb/hic_test/test_101", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_102", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_103", 1, fuzztime(-1)),
-                ("/home/tpb/hic_test/test_104", 1, fuzztime(-2)),
-                ("/home/tpb/hic_test/test_105", 1, fuzztime(-2)),
-                ("/home/tpb/hic_test/test_106", 1, fuzztime(-2)),
-                ("/home/tpb/hic_test/test_107", 1, fuzztime(-3)),
-                ("/home/tpb/hic_test/test_108", 1, fuzztime(-3)),
-                ("/home/tpb/hic_test/test_109", 1, fuzztime(-4)),
-                ("/home/tpb/hic_test/test_110", 1, fuzztime(-5)),
-                ]
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def setUpClass(cls):
-        """
-        Set up the default config for all the tests in this class
-        """
-        cfg = CrawlConfig.add_config(close=True, dct=cls.cfg)
-
     # -------------------------------------------------------------------------
     def setUp(self):
         """
@@ -1289,7 +1214,7 @@ class test_get_list(testhelp.HelpedTestCase):
         data.
         """
         super(test_get_list, self).setUp()
-        cfg = CrawlConfig.add_config()
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
 
         db = CrawlDBI.DBI(dbtype='crawler')
         self.assertTrue(isinstance(db._dbobj, CrawlDBI.DBIsqlite),
@@ -1300,6 +1225,7 @@ class test_get_list(testhelp.HelpedTestCase):
             dbschem.drop_table(table='checkables', cfg=cfg)
         dbschem.make_table('checkables', cfg=cfg)
 
+        td = self.checkables_data()
         fulldata = [(x[0],
                      self.rtype,
                      self.cos,
@@ -1309,11 +1235,71 @@ class test_get_list(testhelp.HelpedTestCase):
                      x[2],
                      self.fails,
                      self.reported)
-                    for x in self.testdata]
+                    for x in td]
         db.insert(table='checkables',
                   fields=self.fld_list,
                   data=fulldata)
         db.close()
+
+    # -------------------------------------------------------------------------
+    def gl_cfg_dict(self):
+        """
+        Here's the configuration these tests expect
+        """
+        cfg = {'crawler':
+               {
+                   'exitpath': '/tmp/foobar',
+                   'logpath':  self.tmpdir('hpssic-getlist-test.log'),
+               },
+
+               'cv':
+               {
+                   'recheck_fraction': '0.3',
+                   'recheck_age': '1d',
+                   'operations': '10',
+               },
+
+               'dbi-crawler':
+               {
+                   'dbtype': 'sqlite',
+                   'dbname': self.dbname(),
+                   'tbl_prefix': 'test',
+               }
+               }
+        return cfg
+
+    # -------------------------------------------------------------------------
+    def checkables_data(self):
+        """
+        Here's the data these tests expect in the database
+        """
+        cfg = CrawlConfig.add_config()
+        testdata = [("/home/tpb/hic_test/test_001", 0, 0),
+                    ("/home/tpb/hic_test/test_002", 0, 0),
+                    ("/home/tpb/hic_test/test_003", 0, 0),
+                    ("/home/tpb/hic_test/test_004", 0, 0),
+                    ("/home/tpb/hic_test/test_005", 0, 0),
+                    ("/home/tpb/hic_test/test_006", 0, 0),
+                    ("/home/tpb/hic_test/test_007", 0, 0),
+                    ("/home/tpb/hic_test/test_008", 0, 0),
+                    ("/home/tpb/hic_test/test_009", 0, 0),
+                    ("/home/tpb/hic_test/test_010", 0, 0),
+                    ("/home/tpb/hic_test/test_011", 0, 0),
+                    ("/home/tpb/hic_test/test_012", 0, 0),
+
+                    ("/home/tpb/hic_test/test_100", 1, fuzztime(-1, cfg=cfg)),
+                    ("/home/tpb/hic_test/test_101", 1, fuzztime(-1)),
+                    ("/home/tpb/hic_test/test_102", 1, fuzztime(-1)),
+                    ("/home/tpb/hic_test/test_103", 1, fuzztime(-1)),
+                    ("/home/tpb/hic_test/test_104", 1, fuzztime(-2)),
+                    ("/home/tpb/hic_test/test_105", 1, fuzztime(-2)),
+                    ("/home/tpb/hic_test/test_106", 1, fuzztime(-2)),
+                    ("/home/tpb/hic_test/test_107", 1, fuzztime(-3)),
+                    ("/home/tpb/hic_test/test_108", 1, fuzztime(-3)),
+                    ("/home/tpb/hic_test/test_109", 1, fuzztime(-4)),
+                    ("/home/tpb/hic_test/test_110", 1, fuzztime(-5)),
+                    ]
+        return testdata
 
     # -------------------------------------------------------------------------
     def tearDown(self):
@@ -1378,7 +1364,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 2 from lc = 0, 8 ordered by last_check (oblc)
         """
         self.dbgfunc()
-        xcfg = copy.deepcopy(self.cfg)
+        xcfg = copy.deepcopy(self.gl_cfg_dict())
         xcfg['cv']['recheck_fraction'] = '0.0'
 
         cfg = CrawlConfig.add_config(close=True, dct=xcfg)
@@ -1405,7 +1391,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 3 lc=0, 7 oblc
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_age', '5d')
         ops = int(cfg.get('cv', 'operations'))
 
@@ -1430,7 +1416,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 4 lc=0, 6 oblc
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_age', '4d')
         ops = int(cfg.get('cv', 'operations'))
 
@@ -1455,7 +1441,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 1 recheck, 5 lc=0, 4 oblc
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_age', '3d')
         ops = int(cfg.get('cv', 'operations'))
 
@@ -1480,7 +1466,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 3 rechecks, 5 lc=0, 2 oblc
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_age', '2d')
         ops = int(cfg.get('cv', 'operations'))
 
@@ -1505,7 +1491,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 3 rechecks, 5 lc=0, 1 oblc
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_age', '1d')
         ops = int(cfg.get('cv', 'operations'))
 
@@ -1530,7 +1516,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 4 rechecks, 6 lc=0
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_fraction', '0.4')
         cfg.set('cv', 'recheck_age', '1d')
         ops = int(cfg.get('cv', 'operations'))
@@ -1556,7 +1542,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 5 rechecks, 5 lc=0
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_fraction', '0.5')
         cfg.set('cv', 'recheck_age', '1d')
         ops = int(cfg.get('cv', 'operations'))
@@ -1582,7 +1568,7 @@ class test_get_list(testhelp.HelpedTestCase):
         ==> 1 recheck, 9 lc=0
         """
         self.dbgfunc()
-        cfg = CrawlConfig.add_config(close=True, dct=self.cfg)
+        cfg = CrawlConfig.add_config(close=True, dct=self.gl_cfg_dict())
         cfg.set('cv', 'recheck_fraction', '1.0')
         cfg.set('cv', 'recheck_age', '1d')
         ops = int(cfg.get('cv', 'operations'))

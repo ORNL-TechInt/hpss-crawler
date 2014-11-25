@@ -21,8 +21,6 @@ from hpssic import util as U
 @pytest.mark.skipif('jenkins' in os.getcwd(),
                     reason="html report not yet supported on jenkins")
 class HtmlTest(testhelp.HelpedTestCase):
-    # testdir = testhelp.testdata(__name__)
-
     # -----------------------------------------------------------------------------
     def setUp(self):
         """

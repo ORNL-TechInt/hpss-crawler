@@ -12,7 +12,6 @@ Extensions to python's standard unittest module
  - Test selection from the command line.
 
  - HelpedTestCase:
-    > self.cd() into testdir creates testdir if it does not exist
     > self.expected() compares an expected and actual value and reports diffs
 
 """
@@ -28,6 +27,7 @@ import shutil
 import sys
 import unittest
 import util
+import util as U
 
 tlogger = None
 
@@ -484,6 +484,13 @@ class HelpedTestCase(unittest.TestCase):
             self.fail('Expected exception %s not thrown' % exception)
 
     # -------------------------------------------------------------------------
+    def dbname(self):
+        """
+        Set an sqlite database name for this test object
+        """
+        return self.tmpdir("test.db")
+
+    # -------------------------------------------------------------------------
     def expected(self, expval, actual):
         """
         Compare the expected value (expval) and the actual value (actual). If
@@ -579,6 +586,30 @@ class HelpedTestCase(unittest.TestCase):
             self.dbgfunc = pdb.set_trace
         else:
             self.dbgfunc = lambda: None
+
+    # -------------------------------------------------------------------------
+    @pytest.fixture(autouse=True)
+    def tmpdir_setup(self, tmpdir):
+        self.pytest_tmpdir = str(tmpdir)
+
+    # ------------------------------------------------------------------------
+    def tmpdir(self, base=''):
+        if base:
+            rval = U.pathjoin(self.pytest_tmpdir, base)
+        else:
+            rval = U.pathjoin(self.pytest_tmpdir)
+        return rval
+
+    # ------------------------------------------------------------------------
+    def logpath(self, basename=''):
+        if basename == '':
+            basename = "test_default_hpss_crawl.log"
+        rval = self.tmpdir(basename)
+        return rval
+
+    # -------------------------------------------------------------------------
+    def plugin_dir(self):
+        return self.tmpdir("plugins")
 
     # ------------------------------------------------------------------------
     def write_cfg_file(self, fname, cfgdict, includee=False):

@@ -23,23 +23,7 @@ import time
 import tempfile
 from hpssic import toolframe
 from hpssic import util
-
-
-# ------------------------------------------------------------------------------
-def setUpModule():
-    """
-    Setup for running the tests.
-    """
-    grepo = util.git_repo('.')
-    if grepo != '' and grepo != os.getcwd():
-        os.chdir(grepo)
-    cfgl = glob.glob("*.cfg")
-    if 0 == len(cfgl):
-        print("You need to create a configuration before you can run tests.")
-        print("Do 'cp crawl.cfg.sample crawl.cfg' and then edit crawl.cfg.")
-        sys.exit(1)
-
-    testhelp.module_test_setup(CrawlTest.testdir)
+from hpssic import util as U
 
 
 # ------------------------------------------------------------------------------
@@ -48,7 +32,6 @@ def tearDownModule():
     Clean up after a sequence of tests.
     """
     CrawlConfig.log(close=True)
-    testhelp.module_test_teardown(CrawlTest.testdir)
 
     if crawl.is_running(context=CrawlTest.ctx):
         rpl = crawl.running_pid()
@@ -61,28 +44,9 @@ class CrawlTest(testhelp.HelpedTestCase):
     """
     Tests for the code in crawl.py
     """
-    testdir = testhelp.testdata(__name__)
-    plugdir = '%s/plugins' % testdir
     piddir = "/tmp/crawler"
     pidglob = piddir + "/*"
-    cls_logpath = '%s/test_default_hpss_crawl.log' % testdir
     ctx = 'TEST'
-    cdict = {'crawler': {'plugin-dir': '%s/plugins' % testdir,
-                         'logpath': cls_logpath,
-                         'logsize': '5mb',
-                         'logmax': '5',
-                         'e-mail-recipients':
-                         'tbarron@ornl.gov, tusculum@gmail.com',
-                         'trigger': '<command-line>',
-                         'plugins': 'plugin_A',
-                         'sleep_time': '0.25',
-                         'stopwait_timeout': '5.0',
-                         },
-             'plugin_A': {'module': 'plugin_A',
-                          'frequency': '1h',
-                          'operations': '15'
-                          },
-             }
     # more or less constant strings
     cstr = {
         'traceback': 'Traceback',
@@ -92,6 +56,34 @@ class CrawlTest(testhelp.HelpedTestCase):
         'prepstop': 'Preparing to stop TEST crawler. Proceed\? > ',
         'ldaemon': 'leaving daemonize',
         }
+
+    # --------------------------------------------------------------------------
+    def cfg_dict(self):
+        cdict = {'crawler': {'plugin-dir': self.tmpdir('plugins'),
+                             'logpath': self.logpath(),
+                             'logsize': '5mb',
+                             'logmax': '5',
+                             'e-mail-recipients':
+                             'tbarron@ornl.gov, tusculum@gmail.com',
+                             'trigger': '<command-line>',
+                             'plugins': 'plugin_A',
+                             'sleep_time': '0.25',
+                             'stopwait_timeout': '5.0',
+                             },
+                 'plugin_A': {'module': 'plugin_A',
+                              'frequency': '1h',
+                              'operations': '15'
+                              },
+                 'dbi-crawler': {'dbtype': 'sqlite',
+                                 'dbname': self.dbname(),
+                                 'tbl_prefix': 'test'
+                                 }
+                 }
+        return cdict
+
+    # --------------------------------------------------------------------------
+    def logpath(self, tname='test_default_hpss_crawl'):
+        return self.tmpdir('hpssic_crawl.log')
 
 
 # -----------------------------------------------------------------------------
@@ -230,19 +222,20 @@ class CrawlMiscTest(CrawlTest):
         cfgpath. output should go to log path named in cfg.
         """
         self.dbgfunc()
-        cfname = "%s/test_crawl_cfgdump_log_n.cfg" % self.testdir
-        self.write_cfg_file(cfname, self.cdict)
+        cfname = self.tmpdir('crawl.cfg')
+        cdict = self.cfg_dict()
+        self.write_cfg_file(cfname, cdict)
         cmd = '%s cfgdump -c %s --to log' % (self.crawl_cmd(), cfname)
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        self.assertEqual(os.path.exists(self.cls_logpath), True)
-        lcontent = util.contents(self.cls_logpath)
-        for section in self.cdict.keys():
+        self.assertEqual(os.path.exists(self.logpath()), True)
+        lcontent = util.contents(self.logpath())
+        for section in cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
-            for item in self.cdict[section].keys():
+            for item in cdict[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cdict[section][item]), lcontent)
+                                (item, cdict[section][item]), lcontent)
 
         self.vassert_nin('heartbeat', lcontent)
         self.vassert_nin('fire', lcontent)
@@ -257,22 +250,22 @@ class CrawlMiscTest(CrawlTest):
         cfgpath. output should go to logpath specified on command
         line.
         """
-        cfname = "%s/test_crawl_cfgdump_log_p.cfg" % self.testdir
-        logpath = "%s/test_local.log" % self.testdir
-        self.write_cfg_file(cfname, self.cdict)
         self.dbgfunc()
+        cfname = self.tmpdir('crawl.cfg')
+        cdict = self.cfg_dict()
+        self.write_cfg_file(cfname, cdict)
         cmd = ('%s cfgdump -c %s --to log --logpath %s'
-               % (self.crawl_cmd(), cfname, logpath))
+               % (self.crawl_cmd(), cfname, self.logpath()))
         result = pexpect.run(cmd)
         self.vassert_nin("Traceback", result)
-        self.assertEqual(os.path.exists(logpath), True)
-        lcontent = util.contents(logpath)
-        for section in self.cdict.keys():
+        self.assertEqual(os.path.exists(self.logpath()), True)
+        lcontent = util.contents(self.logpath())
+        for section in cdict.keys():
             self.vassert_in('[%s]' % section, lcontent)
 
-            for item in self.cdict[section].keys():
+            for item in cdict[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cdict[section][item]), lcontent)
+                                (item, cdict[section][item]), lcontent)
 
         self.vassert_nin('heartbeat', lcontent)
         self.vassert_nin('fire', lcontent)
@@ -285,7 +278,7 @@ class CrawlMiscTest(CrawlTest):
         TEST: "crawl cfgdump -c test.d/nosuch.cfg"
         EXP: attempting to open a nonexistent config file throws an error
         """
-        cfname = '%s/nosuch.cfg' % self.testdir
+        cfname = self.tmpdir('nosuch.cfg')
         util.conditional_rm(cfname)
         cmd = '%s cfgdump -c %s' % (self.crawl_cmd(), cfname)
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
@@ -300,7 +293,7 @@ class CrawlMiscTest(CrawlTest):
         TEST: "crawl cfgdump -c test.d/unreadable.cfg"
         EXP: attempting to open an unreadable config file throws an error
         """
-        cfname = '%s/unreadable.cfg' % self.testdir
+        cfname = self.tmpdir('unreadable.cfg')
         open(cfname, 'w').close()
         os.chmod(cfname, 0000)
 
@@ -316,16 +309,17 @@ class CrawlMiscTest(CrawlTest):
         TEST: "crawl cfgdump -c <cfgpath> --to stdout"
         EXP: what is written to stdout matches what was written to cfgpath
         """
-        cfname = "%s/test_crawl_cfgdump_stdout.cfg" % self.testdir
-        self.write_cfg_file(cfname, self.cdict)
+        cfname = self.tmpdir("test_crawl.cfg")
+        cdict = self.cfg_dict()
+        self.write_cfg_file(cfname, cdict)
         cmd = '%s cfgdump -c %s --to stdout' % (self.crawl_cmd(), cfname)
         result = pexpect.run(cmd)
-        for section in self.cdict.keys():
+        for section in cdict.keys():
             self.vassert_in('[%s]' % section, result)
 
-            for item in self.cdict[section].keys():
+            for item in cdict[section].keys():
                 self.vassert_in('%s = %s' %
-                                (item, self.cdict[section][item]), result)
+                                (item, cdict[section][item]), result)
 
     # --------------------------------------------------------------------------
     def test_crawl_fire_badplug(self):
@@ -333,10 +327,14 @@ class CrawlMiscTest(CrawlTest):
         TEST: crawl fire -p <not-a-plugmod>
         EXP: error message that plugin not found in config
         """
-        plugname = 'no_such_plugin'
-        result = pexpect.run("%s fire -p %s" % (self.crawl_cmd(), plugname))
-        exp = "No plugin named '%s' found in configuration" % plugname
-        self.vassert_in(exp, result)
+        cfname = self.tmpdir("crawl.cfg")
+        self.write_cfg_file(cfname, self.cfg_dict())
+        with U.Chdir(self.tmpdir()):
+            plugname = 'no_such_plugin'
+            result = pexpect.run("%s fire -p %s" % (self.crawl_cmd(),
+                                                    plugname))
+            exp = "No plugin named '%s' found in configuration" % plugname
+            self.vassert_in(exp, result)
 
     # --------------------------------------------------------------------------
     @pytest.mark.skipif(pytest.config.getvalue("fast"),
@@ -346,12 +344,11 @@ class CrawlMiscTest(CrawlTest):
         TEST: crawl fire --plugin <plugmod>
         EXP: plugin fired and output went to specified log path
         """
-        cfname = "%s/test_crawl_fire_log.cfg" % self.testdir
-        lfname = "%s/test_crawl_fire.log" % self.testdir
+        (cfname, lfname, exitpath, plugdir) = self.crawl_test_setup()
         plugname = 'plugin_1'
 
         # create a plug module
-        self.write_plugmod(self.plugdir, plugname)
+        self.write_plugmod(plugdir, plugname)
 
         # add the plug module to the config
         t = CrawlConfig.CrawlConfig()
@@ -373,11 +370,12 @@ class CrawlMiscTest(CrawlTest):
         # test.d/plugins/plugin_1.py should exist
         if not plugname.endswith('.py'):
             plugname += '.py'
-        self.assertTrue(os.path.exists('%s/%s' % (self.plugdir, plugname)))
+        self.assertTrue(os.path.exists('%s/%s' % (plugdir, plugname)))
 
-        # test.d/fired should exist and contain 'plugin plugin_1 fired'
-        filename = '%s/fired' % self.testdir
-        self.assertEqual(os.path.exists(filename), True)
+        # fired should exist and contain 'plugin plugin_1 fired'
+        filename = self.tmpdir('fired')
+        self.assertTrue(os.path.exists(filename),
+                        "Expected file '%s' to exist" % filename)
         self.vassert_in('plugin plugin_1 fired', util.contents(filename))
 
         # lfname should exist and contain specific strings
@@ -400,7 +398,7 @@ class CrawlMiscTest(CrawlTest):
         """
         TEST: "crawl log --log filename message" will write message to filename
         """
-        lfname = '%s/test_crawl.log' % self.testdir
+        lfname = self.logpath()
         msg = "this is a test log message"
         cmd = ("%s log --log %s %s" % (self.crawl_cmd(), lfname, msg))
         result = pexpect.run(cmd)
@@ -414,14 +412,13 @@ class CrawlMiscTest(CrawlTest):
         """
         TEST: If the crawler is already running, decline to run a second copy.
         """
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        logpath = '%s/test_start.log' % self.testdir
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         cmd = ('%s start --log %s --cfg %s --context %s' %
                (self.crawl_cmd(), logpath, cfgpath, self.ctx))
         result = pexpect.run(cmd)
@@ -453,10 +450,9 @@ class CrawlMiscTest(CrawlTest):
         when the exit file is touched. Verify that the correct config
         file is loaded.
         """
-        cfgpath = '%s/test_stcfg.cfg' % self.testdir
-        logpath = '%s/test_stcfg.log' % self.testdir
-        exitpath = '%s/%s.exit' % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['plugins'] = 'plugin_A, other_plugin'
@@ -465,8 +461,8 @@ class CrawlMiscTest(CrawlTest):
                                  'simple': 'check for this',
                                  'module': 'other_plugin'}
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
-        self.write_plugmod(self.plugdir, 'other_plugin')
+        self.write_plugmod(plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'other_plugin')
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s'
                % (self.crawl_cmd(), logpath, cfgpath, self.ctx))
@@ -513,14 +509,13 @@ class CrawlMiscTest(CrawlTest):
         when the exit file is touched. Verify that the crawler is started with
         the context specified in the config file.
         """
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        logpath = '%s/test_start.log' % self.testdir
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s'
                % (self.crawl_cmd(), logpath, cfgpath))
@@ -559,14 +554,13 @@ class CrawlMiscTest(CrawlTest):
         when the exit file is touched. Verify that the crawler is started with
         the context provided on the command line.
         """
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        logpath = '%s/test_start.log' % self.testdir
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s' %
                (self.crawl_cmd(), logpath, cfgpath, self.ctx))
@@ -609,10 +603,9 @@ class CrawlMiscTest(CrawlTest):
         when the exit file is touched. Verify that at least one plugin
         fires and produces some output.
         """
-        cfgpath = '%s/test_fire.cfg' % self.testdir
-        logpath = '%s/test_fire.log' % self.testdir
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['logpath'] = logpath
@@ -623,7 +616,7 @@ class CrawlMiscTest(CrawlTest):
         xdict['crawler']['plugins'] = 'other'
         del xdict['plugin_A']
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'other')
+        self.write_plugmod(plugdir, 'other')
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s'
                % (self.crawl_cmd(), logpath, cfgpath, self.ctx))
@@ -641,11 +634,11 @@ class CrawlMiscTest(CrawlTest):
         time.sleep(2)
         self.assertEqual('other: firing' in util.contents(logpath), True,
                          "Log file does not indicate plugin was fired")
-        self.assertEqual(os.path.exists('%s/fired' % self.testdir), True,
-                         "File %s/fired does not exist" % self.testdir)
+        self.assertTrue(self.tmpdir('fired'),
+                        "File %s/fired does not exist" % self.tmpdir())
         self.assertEqual('plugin other fired\n',
-                         util.contents('%s/fired' % self.testdir),
-                         "Contents of %s/fired is not right" % self.testdir)
+                         util.contents(self.tmpdir('fired')),
+                         "Contents of %s/fired is not right" % self.tmpdir())
 
         util.touch(exitpath)
 
@@ -661,7 +654,7 @@ class CrawlMiscTest(CrawlTest):
         'crawl start' with no configuration available should throw an exception
         """
         with util.tmpenv('CRAWL_CONF', None):
-            where = tempfile.mkdtemp(dir=self.testdir)
+            where = tempfile.mkdtemp(dir=self.tmpdir())
             exp = util.squash(MSG.no_cfg_found)
             cmd = "%s start" % self.crawl_cmd()
             with util.Chdir(where):
@@ -679,11 +672,10 @@ class CrawlMiscTest(CrawlTest):
         'crawl start' with no exit path in the config file should throw an
         exception.
         """
-        cfgpath = '%s/%s.cfg' % (self.testdir, util.my_name())
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
 
-        self.write_cfg_file(cfgpath, self.cdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_cfg_file(cfgpath, self.cfg_dict())
+        self.write_plugmod(plugdir, 'plugin_A')
 
         cmd = ('%s start --log %s --cfg %s --context %s' %
                (self.crawl_cmd(), logpath, cfgpath, self.ctx))
@@ -707,17 +699,16 @@ class CrawlMiscTest(CrawlTest):
         the 'plugin' option in the 'crawler' section should not be loaded as
         plugins.
         """
-        cfgpath = '%s/test_nonplugin.cfg' % self.testdir
-        logpath = '%s/test_nonplugin.log' % self.testdir
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['alerts'] = {}
         xdict['alerts']['email'] = 'one@somewhere.com, two@elsewhere.org'
         xdict['alerts']['log'] = '!!!ALERT!!! %s'
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
 
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s' %
@@ -750,14 +741,13 @@ class CrawlMiscTest(CrawlTest):
         when the exit file is touched. Verify that crawler_pid exists
         while crawler is running and that it is removed when it stops.
         """
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        logpath = '%s/test_start.log' % self.testdir
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['exitpath'] = exitpath
         xdict['crawler']['context'] = self.ctx
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s' %
                (self.crawl_cmd(), logpath, cfgpath, self.ctx))
@@ -791,14 +781,13 @@ class CrawlMiscTest(CrawlTest):
         TEST: 'crawl status' should report the crawler status correctly.
         """
         self.dbgfunc()
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        cfgpath = '%s/%s.cfg' % (self.testdir, util.my_name())
-        exitpath = "%s/%s.exit" % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         cmd = '%s status' % (self.crawl_cmd())
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
@@ -843,16 +832,18 @@ class CrawlMiscTest(CrawlTest):
         """
         TEST: 'crawl status' should report the crawler status correctly.
         """
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        cfgpath_a = '%s/%s_a.cfg' % (self.testdir, util.my_name())
-        exitpath_a = "%s/%s.exit_a" % (self.testdir, util.my_name())
+        logpath = self.logpath()
+        cfgpath_a = self.tmpdir('%s_a.cfg' % (util.my_name()))
+        exitpath_a = self.tmpdir("%s.exit_a" % (util.my_name()))
         ctx_a = self.ctx
 
-        cfgpath_b = "%s/%s_b.cfg" % (self.testdir, util.my_name())
-        exitpath_b = "%s/%s.exit_b" % (self.testdir, util.my_name())
+        cfgpath_b = self.tmpdir("%s_b.cfg" % util.my_name())
+        exitpath_b = self.tmpdir("%s.exit_b" % util.my_name())
         ctx_b = 'DEV'
 
-        xdict = copy.deepcopy(self.cdict)
+        plugdir = self.tmpdir("plugins")
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = ctx_a
         xdict['crawler']['exitpath'] = exitpath_a
         cfg_a = CrawlConfig.CrawlConfig.dictor(xdict)
@@ -863,7 +854,7 @@ class CrawlMiscTest(CrawlTest):
         cfg_b = CrawlConfig.CrawlConfig.dictor(xdict)
         self.write_cfg_file(cfgpath_b, xdict)
 
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         cmd = '%s status' % self.crawl_cmd()
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
@@ -935,14 +926,13 @@ class CrawlMiscTest(CrawlTest):
         TEST: 'crawl stop' should cause a running daemon to shut down. If no
         context is specified, the user should be asked to confirm the shutdown.
         """
-        logpath = '%s/test_start.log' % self.testdir
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        exitpath = '%s/%s.exit' % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
 
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s' %
@@ -990,14 +980,13 @@ class CrawlMiscTest(CrawlTest):
         correct context is specified, the crawler will be shutdown without
         prompting.
         """
-        logpath = '%s/test_start.log' % self.testdir
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        exitpath = '%s/%s.exit' % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
 
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s' %
@@ -1232,14 +1221,12 @@ class CrawlMiscTest(CrawlTest):
         TEST: 'crawl stop' with a context other than the running crawler will
         do nothing.
         """
-        logpath = '%s/test_start.log' % self.testdir
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        exitpath = '%s/%s.exit' % (self.testdir, util.my_name())
-        xdict = copy.deepcopy(self.cdict)
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = self.ctx
         xdict['crawler']['exitpath'] = exitpath
         self.write_cfg_file(cfgpath, xdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
 
         pre_l = glob.glob(self.pidglob)
         cmd = ('%s start --log %s --cfg %s --context %s' %
@@ -1280,16 +1267,18 @@ class CrawlMiscTest(CrawlTest):
         TEST: 'crawl stop' with multiple crawlers running and no args should
         ask the user to specify a context.
         """
-        logpath = '%s/%s.log' % (self.testdir, util.my_name())
-        cfgpath_a = '%s/%s_a.cfg' % (self.testdir, util.my_name())
-        exitpath_a = '%s/%s_a.exit' % (self.testdir, util.my_name())
+        logpath = self.logpath()
+        cfgpath_a = self.tmpdir('%s_a.cfg' % util.my_name())
+        exitpath_a = self.tmpdir('%s_a.exit' % util.my_name())
         ctx_a = self.ctx
 
-        cfgpath_b = "%s/%s_b.cfg" % (self.testdir, util.my_name())
-        exitpath_b = "%s/%s_b.exit" % (self.testdir, util.my_name())
+        cfgpath_b = self.tmpdir("%s_b.cfg" % util.my_name())
+        exitpath_b = self.tmpdir("%s_b.exit" % util.my_name())
         ctx_b = 'DEV'
 
-        xdict = copy.deepcopy(self.cdict)
+        plugdir = self.tmpdir('plugins')
+
+        xdict = copy.deepcopy(self.cfg_dict())
         xdict['crawler']['context'] = ctx_a
         xdict['crawler']['exitpath'] = exitpath_a
         cfg_a = CrawlConfig.CrawlConfig.dictor(xdict)
@@ -1300,7 +1289,7 @@ class CrawlMiscTest(CrawlTest):
         cfg_b = CrawlConfig.CrawlConfig.dictor(xdict)
         self.write_cfg_file(cfgpath_b, xdict)
 
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        self.write_plugmod(plugdir, 'plugin_A')
         cmd = '%s status' % self.crawl_cmd()
         result = testhelp.rm_cov_warn(pexpect.run(cmd))
         self.assertEqual(result.strip(), self.cstr['cdown'])
@@ -1382,11 +1371,12 @@ class CrawlMiscTest(CrawlTest):
         TEST: 'crawl stop' when no crawler is running should report that there
         is nothing to do.
         """
-        logpath = '%s/test_start.log' % self.testdir
-        cfgpath = '%s/test_start.cfg' % self.testdir
-        self.cdict['crawler']['context'] = self.ctx
-        self.write_cfg_file(cfgpath, self.cdict)
-        self.write_plugmod(self.plugdir, 'plugin_A')
+        (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
+
+        cdict = copy.deepcopy(self.cfg_dict())
+        cdict['crawler']['context'] = self.ctx
+        self.write_cfg_file(cfgpath, cdict)
+        self.write_plugmod(plugdir, 'plugin_A')
 
         cmd = '%s stop --log %s --context %s' % (self.crawl_cmd(),
                                                  logpath, self.ctx)
@@ -1404,8 +1394,7 @@ class CrawlMiscTest(CrawlTest):
 
         EXP: correct number of seconds returned
         """
-        with util.tmpenv('CRAWL_LOG',
-                         '%s/test_get_timeval.log' % self.testdir):
+        with util.tmpenv('CRAWL_LOG', self.tmpdir('test_get_timeval.log')):
             t = CrawlConfig.CrawlConfig()
             t.load_dict(self.cdict)
             result = t.get_time('plugin_A', 'frequency', 1900)
@@ -1463,8 +1452,7 @@ class CrawlMiscTest(CrawlTest):
 
         EXP: expected return values encoded in umap
         """
-        with util.tmpenv('CRAWL_LOG',
-                         '%s/test_map_time_unit.log' % self.testdir):
+        with util.tmpenv('CRAWL_LOG', self.tmpdir('test_map_time_unit.log')):
             umap = {'s': 1, 'sec': 1, 'second': 1, 'seconds': 1,
                     'm': 60, 'min': 60, 'minute': 60, 'minutes': 60,
                     'h': 3600, 'hr': 3600, 'hour': 3600, 'hours': 3600,
@@ -1526,7 +1514,7 @@ class CrawlMiscTest(CrawlTest):
         f = open('%s/%s' % (plugdir, plugfname), 'w')
         f.write("#!/bin/env python\n")
         f.write("def main(cfg):\n")
-        f.write("    q = open('%s/fired', 'w')\n" % self.testdir)
+        f.write("    q = open('%s/fired', 'w')\n" % self.tmpdir())
         f.write(r"    q.write('plugin %s fired\n')" % plugname)
         f.write("\n")
         f.write("    q.close()\n")
@@ -1557,7 +1545,6 @@ class CrawlGiveUpYetTest(CrawlTest):
     # --------------------------------------------------------------------------
     def setUp(self):
         fakesmtp.inbox = []
-        self.logpath = '%s/%s.log' % (self.testdir, self._testMethodName)
         self.email_targets = 'tbarron@ornl.gov, tusculum@gmail.com'
         t = CrawlConfig.CrawlConfig()
         t.load_dict(self.cdict)
@@ -1568,9 +1555,8 @@ class CrawlGiveUpYetTest(CrawlTest):
         t.add_section('alerts')
         t.set('alerts', 'email', self.email_targets)
 
-        self.D = crawl.CrawlDaemon("fake_pidfile",
-                                   logger=CrawlConfig.log(logpath=self.logpath,
-                                                          close=True))
+        logobj = CrawlConfig.log(logpath=self.logpath(), close=True)
+        self.D = crawl.CrawlDaemon("fake_pidfile", logger=logobj)
         self.D.cfg = t
         self.sender = 'hpssic@%s' % util.hostname(long=True)
         self.tbstr = ["abc", 'def', 'ghi', 'jkl', 'mno', 'pqr', "xyz"]
@@ -1590,8 +1576,8 @@ class CrawlGiveUpYetTest(CrawlTest):
         self.assertEqual(True, self.D.give_up_yet(self.tbstr[1]))
 
         shutdown_msg = "shutting down because we got 3 identical errors"
-        self.expected_in(shutdown_msg, util.contents(self.logpath))
-        self.expected_in("sent mail to ", util.contents(self.logpath))
+        self.expected_in(shutdown_msg, util.contents(self.logpath()))
+        self.expected_in("sent mail to ", util.contents(self.logpath()))
 
         for m in fakesmtp.inbox:
             self.expected(self.email_targets, ', '.join(m.to_address))
@@ -1615,8 +1601,8 @@ class CrawlGiveUpYetTest(CrawlTest):
         self.assertEqual(True, self.D.give_up_yet(self.tbstr[5]))
 
         shutdown_msg = "shutting down because we got 6 total errors"
-        self.expected_in(shutdown_msg, util.contents(self.logpath))
-        self.expected_in("sent mail to ", util.contents(self.logpath))
+        self.expected_in(shutdown_msg, util.contents(self.logpath()))
+        self.expected_in("sent mail to ", util.contents(self.logpath()))
 
         for m in fakesmtp.inbox:
             self.expected(self.email_targets, ', '.join(m.to_address))
@@ -1644,8 +1630,8 @@ class CrawlGiveUpYetTest(CrawlTest):
         self.assertEqual(True, self.D.give_up_yet(self.tbstr[4]))
 
         shutdown_msg = "shutting down because we got 4 exceptions in "
-        self.expected_in(shutdown_msg, util.contents(self.logpath))
-        self.expected_in("sent mail to ", util.contents(self.logpath))
+        self.expected_in(shutdown_msg, util.contents(self.logpath()))
+        self.expected_in("sent mail to ", util.contents(self.logpath()))
 
         for m in fakesmtp.inbox:
             self.expected(self.email_targets, ', '.join(m.to_address))

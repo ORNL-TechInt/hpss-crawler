@@ -20,28 +20,13 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for testing
-    """
-    testhelp.module_test_setup(CrawlPluginTest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after testing
-    """
-    testhelp.module_test_teardown(CrawlPluginTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class CrawlPluginTest(testhelp.HelpedTestCase):
     """
     This class contains the tests for the CrawlPlugin class.
     """
-    testdir = testhelp.testdata(__name__)
-    plugdir = '%s/test_plugins' % testdir
+    # -------------------------------------------------------------------------
+    def plugdir(self):
+        return self.tmpdir('plugins')
 
     # -------------------------------------------------------------------------
     def test_fire(self):
@@ -56,7 +41,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         p = CrawlPlugin.CrawlPlugin(pname, c)
 
         p.fire()
-        filename = "%s/%s" % (self.plugdir, pname)
+        filename = "%s/%s" % (self.plugdir(), pname)
         self.assertEqual(os.path.exists(filename), True,
                          "File '%s' should exist but does not" % (filename))
         self.expected('my name is %s\n' % (pname), U.contents(filename))
@@ -79,7 +64,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.assertEqual(p.firable, False,
                          "p.firable should be False, is True")
         p.fire()
-        filename = "%s/%s" % (self.plugdir, pname)
+        filename = "%s/%s" % (self.plugdir(), pname)
         self.assertEqual(os.path.exists(filename), False,
                          "'%s' should not exist, but does" % (filename))
 
@@ -97,7 +82,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         self.assertEqual(p.firable, True,
                          "p.firable should be True, is False")
         p.fire()
-        filename = "%s/%s" % (self.plugdir, pname)
+        filename = "%s/%s" % (self.plugdir(), pname)
         self.assertEqual(os.path.exists(filename), True,
                          "'%s' should exist but does not" % (filename))
 
@@ -163,11 +148,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If plugin_dir set in config and in sys.path, sys.path should not change
         """
-        if self.plugdir not in sys.path:
-            sys.path.append(self.plugdir)
-        pre = copy.copy(sys.path)
         pname = U.my_name()
         self.make_plugin(pname)
+        if self.plugdir() not in sys.path:
+            sys.path.append(self.plugdir())
+        pre = copy.copy(sys.path)
         c = self.make_cfg(pname, fire=False)
 
         p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -179,18 +164,18 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If plugin_dir set in config and not in sys.path, should be added to
         sys.path
         """
-        if self.plugdir in sys.path:
-            sys.path.remove(self.plugdir)
-        pre = copy.copy(sys.path)
         pname = U.my_name()
         self.make_plugin(pname)
+        if self.plugdir() in sys.path:
+            sys.path.remove(self.plugdir())
+        pre = copy.copy(sys.path)
         c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
         self.assertNotEqual(pre, sys.path,
                             "pre and sys.path should not be equal, but are")
-        self.assertTrue(self.plugdir in sys.path,
+        self.assertTrue(self.plugdir() in sys.path,
                         "sys.path should contain '%s' but does not" %
-                        self.plugdir)
+                        self.plugdir())
 
     # -------------------------------------------------------------------------
     def test_init_plugdir_unset(self):
@@ -198,11 +183,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If plugin_dir not set in config, attempting to create a plugin object
         should throw an exception
         """
-        if self.plugdir in sys.path:
-            sys.path.remove(self.plugdir)
-        pre = copy.copy(sys.path)
         pname = U.my_name()
         self.make_plugin(pname)
+        if self.plugdir() in sys.path:
+            sys.path.remove(self.plugdir())
+        pre = copy.copy(sys.path)
         c = self.make_cfg(pname, plugdir=None, fire=False, freq=None)
         try:
             p = CrawlPlugin.CrawlPlugin(pname, c)
@@ -221,10 +206,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         prevents it being reloaded.
         """
         # set up dir, plugin name, create plugin
-        if self.plugdir not in sys.path:
-            sys.path.append(self.plugdir)
         pname = 'z' + U.my_name()
         self.make_plugin(pname)
+        if self.plugdir() not in sys.path:
+            sys.path.append(self.plugdir())
 
         # get it into the module list, remove the .pyc file
         __import__(pname)
@@ -232,7 +217,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
                         "%s not found in %s" % (pname, sys.modules.keys()))
 
         # update the plugin so we can tell whether it gets reloaded
-        f = open('%s/%s.py' % (self.plugdir, pname), 'a')
+        f = open('%s/%s.py' % (self.plugdir(), pname), 'a')
         f.write("\n")
         f.write("def added():\n")
         f.write("    pass\n")
@@ -255,10 +240,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If plugin does exists and not in module list, should be imported
         """
         # set up dir, plugin name, create plugin
-        if self.plugdir not in sys.path:
-            sys.path.append(self.plugdir)
         pname = U.my_name()
         self.make_plugin(pname)
+        if self.plugdir() not in sys.path:
+            sys.path.append(self.plugdir())
 
         # set up the config
         c = self.make_cfg(pname)
@@ -275,8 +260,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If plugin does not exist, should get ImportError
         """
         # set up dir, plugin name, create plugin
-        if self.plugdir not in sys.path:
-            sys.path.append(self.plugdir)
+        if self.plugdir() not in sys.path:
+            sys.path.append(self.plugdir())
         pname = U.my_name()
 
         # set up the config
@@ -296,8 +281,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         firable attribute.
         """
         # set up the plugin
-        if self.plugdir not in sys.path:
-            sys.path.append(self.plugdir)
+        if self.plugdir() not in sys.path:
+            sys.path.append(self.plugdir())
         pre = sys.path
         pname = U.my_name()
         self.make_plugin(pname)
@@ -325,8 +310,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         frequency attribute.
         """
         # set up the plugin
-        if self.plugdir not in sys.path:
-            sys.path.append(self.plugdir)
+        if self.plugdir() not in sys.path:
+            sys.path.append(self.plugdir())
         pre = sys.path
         pname = U.my_name()
         self.make_plugin(pname)
@@ -355,8 +340,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         from the old dir? No, just the one being reloaded.
         """
         # set up the plugin
-        if self.plugdir not in sys.path:
-            sys.path.insert(0, self.plugdir)
+        if self.plugdir() not in sys.path:
+            sys.path.insert(0, self.plugdir())
         pre = sys.path
         pname = U.my_name()
         self.make_plugin(pname)
@@ -366,15 +351,15 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
-        self.expected(self.plugdir, p.plugin_dir)
-        rgx = '%s/%s.pyc?' % (U.realpath(self.plugdir), pname)
+        self.expected(self.plugdir(), p.plugin_dir)
+        rgx = '%s/%s.pyc?' % (U.realpath(self.plugdir()), pname)
         self.assertTrue(re.findall(rgx,
                                    U.realpath(sys.modules[pname].__file__)),
                         "expected \n    %s\nto match \n    %s\n" %
                         (rgx, sys.modules[pname].__file__))
 
         # alternate plugin in alternate directory
-        apdir = self.plugdir + "_alt"
+        apdir = self.plugdir() + "_alt"
         if apdir not in sys.path:
             sys.path.insert(0, apdir)
         self.make_plugin(pname, pdir=apdir)
@@ -396,8 +381,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If time.time() - last_fired <= freq, time_to_fire() should return False
         """
         # set up the plugin
-        if self.plugdir not in sys.path:
-            sys.path.insert(0, self.plugdir)
+        if self.plugdir() not in sys.path:
+            sys.path.insert(0, self.plugdir())
         pre = sys.path
         pname = U.my_name()
         self.make_plugin(pname)
@@ -420,8 +405,8 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If freq < time.time() - last_fired, time_to_fire() should return True
         """
         # set up the plugin
-        if self.plugdir not in sys.path:
-            sys.path.insert(0, self.plugdir)
+        if self.plugdir() not in sys.path:
+            sys.path.insert(0, self.plugdir())
         pre = sys.path
         pname = U.my_name()
         self.make_plugin(pname)
@@ -453,10 +438,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         rval = CrawlConfig.CrawlConfig()
         rval.add_section(pname)
         rval.add_section('crawler')
-        rval.set('crawler', 'logpath', "%s/test.log" % self.testdir)
+        rval.set('crawler', 'logpath', self.tmpdir("test.log"))
         if plugdir is not None:
             if plugdir == '':
-                rval.set('crawler', 'plugin-dir', self.plugdir)
+                rval.set('crawler', 'plugin-dir', self.plugdir())
             else:
                 rval.set('crawler', 'plugin-dir', plugdir)
         if freq is not None:
@@ -475,7 +460,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         Create a plugin for testing
         """
         if None == pdir:
-            pdir = self.plugdir
+            pdir = self.plugdir()
         if not os.path.isdir(pdir):
             os.mkdir(pdir)
         if not pname.endswith('.py'):

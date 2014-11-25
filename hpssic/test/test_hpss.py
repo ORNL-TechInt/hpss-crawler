@@ -19,37 +19,10 @@ from hpssic import util
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up for testing
-
-    The test files for this suite currently live in my home directory. Instead,
-    what should happen is that this class should get a root directory for
-    testing from the default configuration. Then, this routine should check
-    whether the test files exist in that directory and create them if they do
-    not.
-
-    Once they're set up, we'll leave them in place and just reuse them.
-    """
-    testhelp.module_test_setup(hpssTest.testdir)
-    CrawlConfig.log(logpath="%s/hpssTest.log" % hpssTest.testdir, close=True)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up after testing
-    """
-    CrawlConfig.log(close=True)
-    testhelp.module_test_teardown(hpssTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class hpssBaseTest(testhelp.HelpedTestCase):
     """
     Common stuff for hpss.HSI tests
     """
-    testdir = testhelp.testdata(__name__)
     hdir = "/home/tpb/hic_test"
     stem = "hashable"
     plist = ["%s/%s%d" % (hdir, stem, x) for x in range(1, 4)]
@@ -89,7 +62,7 @@ class hpssCtorTest(hpssBaseTest):
         If reset_atime is not specified in the config or argument list, it
         should default to False
         """
-        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+        cf_name = self.tmpdir(util.my_name() + ".cfg")
 
         # write out a config file with no reset_atime spec
         cd = copy.deepcopy(self.cfg_d)
@@ -110,7 +83,7 @@ class hpssCtorTest(hpssBaseTest):
         """
         If reset_atime is specified in the config as True, it should be True
         """
-        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+        cf_name = self.tmpdir(util.my_name() + ".cfg")
 
         # write out a config file with no reset_atime spec
         self.write_cfg_file(cf_name, self.cfg_d)
@@ -129,7 +102,7 @@ class hpssCtorTest(hpssBaseTest):
         """
         If reset_atime is specified in the config as False, it should be False
         """
-        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+        cf_name = self.tmpdir(util.my_name() + ".cfg")
 
         # write out a config file with no reset_atime spec
         cfg = copy.deepcopy(self.cfg_d)
@@ -151,7 +124,7 @@ class hpssCtorTest(hpssBaseTest):
         If reset_atime is specified in the call as True, it should be True,
         even if it's specified as False in the config
         """
-        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+        cf_name = self.tmpdir(util.my_name() + ".cfg")
 
         # write out a config file with no reset_atime spec
         cfg = copy.deepcopy(self.cfg_d)
@@ -173,7 +146,7 @@ class hpssCtorTest(hpssBaseTest):
         If reset_atime is specified in the call as False, it should be False,
         even if the config has it as True
         """
-        cf_name = util.pathjoin(self.testdir, util.my_name() + ".cfg")
+        cf_name = self.tmpdir(util.my_name() + ".cfg")
 
         # write out a config file with no reset_atime spec
         self.write_cfg_file(cf_name, self.cfg_d)
@@ -1089,7 +1062,7 @@ class hpssHashAlgTest(hpssBaseTest):
             checkfor = alg
 
         # generate a config file and make it the default config
-        cf_name = util.pathjoin(self.testdir, cf_stem + ".cfg")
+        cf_name = self.tmpdir(cf_stem + ".cfg")
         cd = copy.deepcopy(self.cfg_d)
         if alg == '(none)':
             del cd['cv']['hash_algorithm']

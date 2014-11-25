@@ -12,7 +12,6 @@ Extensions to python's standard unittest module
  - Test selection from the command line.
 
  - HelpedTestCase:
-    > self.cd() into testdir creates testdir if it does not exist
     > self.expected() compares an expected and actual value and reports diffs
 
 """

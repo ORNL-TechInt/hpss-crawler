@@ -24,46 +24,28 @@ else:
 # -----------------------------------------------------------------------------
 class MpraResetTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
-    @classmethod
-    def setUpClass(cls):
-        """
-        Set up for all tests: get a test dir, create the config
-        """
-        cls.testdir = tempfile.mkdtemp(dir="/tmp")
-        cls.cfgname = os.path.join(cls.testdir, "mpra_test.cfg")
-        cls.rptname = os.path.join(cls.testdir, "mpra_report.txt")
-
-        if pexpect.which("mpra"):
-            cls.cmd = "mpra"
-        elif os.path.exists("bin/mpra"):
-            cls.cmd = "bin/mpra"
-        else:
-            raise HpssicError("mpra command not found")
-
-        cls.cfg = CrawlConfig.get_config(cfname="crawl.cfg", reset=True)
-        cls.cfg.set('dbi-crawler', 'tbl_prefix', 'test')
-        cls.cfg.set('mpra', 'report_file', cls.rptname)
-        cls.cfg.crawl_write(open(cls.cfgname, 'w'))
-
-    # -------------------------------------------------------------------------
     def setUp(self):
         """
         Set up for each test: create the mpra table with prefix 'test', touch
-        the mpra test file in the testdir
+        the mpra test file in the tmpdir
         """
+        super(MpraResetTest, self).setUp()
+        if pexpect.which("mpra"):
+            self.cmd = "mpra"
+        elif os.path.exists("bin/mpra"):
+            self.cmd = "bin/mpra"
+        else:
+            raise HpssicError("mpra command not found")
+
+        self.cfgname = self.tmpdir("mpra_test.cfg")
+        self.rptname = self.tmpdir("mpra_report.txt")
+        self.cfg = CrawlConfig.add_config(close=True,
+                                          filename="hpssic_mysql_test.cfg")
+        self.cfg.set('dbi-crawler', 'tbl_prefix', 'test')
+        self.cfg.set('mpra', 'report_file', self.rptname)
+        self.cfg.crawl_write(open(self.cfgname, 'w'))
         dbschem.make_table("mpra", cfg=self.cfg)
         U.touch(self.rptname)
-
-    # -------------------------------------------------------------------------
-    @classmethod
-    def tearDownClass(cls):
-        """
-        Tear down after all tests: drop the mpra table if it's still there,
-        remove the temp test directory
-        """
-        if not th.keepfiles():
-            shutil.rmtree(cls.testdir)
-            dbschem.drop_tables_matching("test_mpra")
 
     # -------------------------------------------------------------------------
     def test_mpra_reset_force(self):

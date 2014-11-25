@@ -22,24 +22,7 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
-def setUpModule():
-    """
-    Set up test directory.
-    """
-    testhelp.module_test_setup(AlertTest.testdir)
-
-
-# -----------------------------------------------------------------------------
-def tearDownModule():
-    """
-    Clean up test directory, removing any test data left in it.
-    """
-    testhelp.module_test_teardown(AlertTest.testdir)
-
-
-# -----------------------------------------------------------------------------
 class AlertTest(testhelp.HelpedTestCase):
-    testdir = testhelp.testdata(__name__)
 
     # -------------------------------------------------------------------------
     def test_init(self):
@@ -60,8 +43,8 @@ class AlertTest(testhelp.HelpedTestCase):
         Generate a log alert and verify that the message was written to the
         correct log file.
         """
-        logfile = '%s/alert_log.log' % self.testdir
         self.dbgfunc()
+        logfile = self.tmpdir('alert_log.log')
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
         cfg.add_section('AlertTest')
@@ -79,10 +62,10 @@ class AlertTest(testhelp.HelpedTestCase):
         """
         Generate a shell alert and verify that it ran.
         """
-        logfile = '%s/alert_shell.log' % self.testdir
-        outfile = '%s/alert_shell.out' % self.testdir
-        runfile = '%s/runme' % self.testdir
         self.dbgfunc()
+        logfile = self.tmpdir('alert_shell.log')
+        outfile = self.tmpdir('alert_shell.out')
+        runfile = self.tmpdir('runme')
         f = open(runfile, 'w')
         f.write("#!/bin/bash\n")
         f.write("echo \"ALERT: $*\" > %s\n" % outfile)
@@ -97,7 +80,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.add_section('alert_section')
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
-        cfg.set('alert_section', 'shell', '%s/runme' % self.testdir + " %s")
+        cfg.set('alert_section', 'shell', runfile + " %s")
         CrawlConfig.log(logpath=logfile, close=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
@@ -113,10 +96,10 @@ class AlertTest(testhelp.HelpedTestCase):
         Generate a shell alert and verify that it ran. With no '%s' in the
         shell alert string, no message should be offered for formatting.
         """
-        logfile = '%s/alert_shell.log' % self.testdir
-        outfile = '%s/alert_shell.out' % self.testdir
-        runfile = '%s/runme' % self.testdir
         self.dbgfunc()
+        logfile = self.tmpdir('alert_shell.log')
+        outfile = self.tmpdir('alert_shell.out')
+        runfile = self.tmpdir('runme')
         f = open(runfile, 'w')
         f.write("#!/bin/bash\n")
         f.write("echo \"ALERT: $*\" > %s\n" % outfile)
@@ -131,7 +114,7 @@ class AlertTest(testhelp.HelpedTestCase):
         cfg.add_section('alert_section')
         cfg.set('crawler', 'logpath', logfile)
         cfg.set('AlertTest', 'alerts', 'alert_section')
-        cfg.set('alert_section', 'shell', '%s/runme' % self.testdir)
+        cfg.set('alert_section', 'shell', runfile)
         CrawlConfig.log(logpath=logfile, close=True)
         x = Alert.Alert(caller='AlertTest', msg='this is a test message',
                         cfg=cfg)
@@ -149,7 +132,7 @@ class AlertTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         fakesmtp.inbox = []
-        logfile = '%s/alert_email.log' % self.testdir
+        logfile = self.tmpdir('alert_email.log')
         targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
         payload = 'this is an e-mail alert'
         sender = 'hpssic@' + util.hostname(long=True)
@@ -184,7 +167,7 @@ class AlertTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         fakesmtp.inbox = []
-        logfile = '%s/alert_email.log' % self.testdir
+        logfile = self.tmpdir('alert_email.log')
         targets = "addr1@somewhere.com, addr2@other.org, addr3@else.net"
         payload = 'this is an e-mail alert'
         sender = 'hpssic@' + util.hostname(long=True)
@@ -217,7 +200,7 @@ class AlertTest(testhelp.HelpedTestCase):
         fakesmtp.inbox = []
         CrawlConfig.add_config(close=True)
         with U.tmpenv('CRAWL_CONF', 'hpssic_test.cfg'):
-            logfile = '%s/alert_email.log' % self.testdir
+            logfile = self.tmpdir('alert_email.log')
             targets = "addr1@domain.gov, addr2@domain.gov"
             payload = 'this is an e-mail alert'
             sender = 'hpssic@' + util.hostname(long=True)
@@ -237,8 +220,8 @@ class AlertTest(testhelp.HelpedTestCase):
         log alert and verify that the message was written to the correct log
         file.
         """
-        logfile = '%s/alert_use.log' % self.testdir
         self.dbgfunc()
+        logfile = self.tmpdir('alert_use.log')
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
         cfg.add_section('AlertTest')
@@ -260,8 +243,8 @@ class AlertTest(testhelp.HelpedTestCase):
         Generate a log alert and verify that the message was written to the
         correct log file.
         """
-        logfile = '%s/alert_use.log' % self.testdir
         self.dbgfunc()
+        logfile = self.tmpdir('alert_use.log')
         cfg = CrawlConfig.CrawlConfig()
         cfg.add_section('crawler')
         cfg.add_section('AlertTest')
