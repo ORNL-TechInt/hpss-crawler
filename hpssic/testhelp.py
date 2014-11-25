@@ -246,16 +246,6 @@ def testlog(mname):
 
 
 # -----------------------------------------------------------------------------
-def testdata(mname):
-    return "%s/test.d" % os.path.dirname(sys.modules[mname].__file__)
-
-
-# -----------------------------------------------------------------------------
-def testroot(mname):
-    return os.path.dirname(sys.modules[mname].__file__)
-
-
-# -----------------------------------------------------------------------------
 def list_tests(a, final, testlist):
     """
     Print a list of tests
@@ -272,42 +262,6 @@ def list_tests(a, final, testlist):
                     print c
                 if final != '' and final in c:
                     break
-
-
-# -----------------------------------------------------------------------------
-def module_test_setup(dir):
-    """
-    Set up for testing by deleting and recreating any directories named in dir.
-    The argument may be a string (a single directory) or a list (one or more
-    directories).
-    """
-    module_test_setup.crawl_conf_orig = os.getenv('CRAWL_CONF')
-    if not keepfiles():
-        if type(dir) == str:
-            reset_directory(dir, force=True)
-        elif type(dir) == list:
-            for dirname in dir:
-                reset_directory(dirname, force=True)
-
-
-# -----------------------------------------------------------------------------
-def module_test_teardown(dir):
-    """
-    Clean up after testing by removing any directories named in dir. The
-    argument may be a string or a list.
-    """
-    if not keepfiles():
-        # close and release any open logging files
-        if type(dir) == str:
-            reset_directory(dir, make=False)
-        elif type(dir) == list:
-            for dirname in dir:
-                reset_directory(dirname, make=False)
-    if all([module_test_setup.crawl_conf_orig is None,
-            os.getenv('CRAWL_CONF') is not None]):
-        del os.environ['CRAWL_CONF']
-    elif module_test_setup.crawl_conf_orig != os.getenv('CRAWL_CONF'):
-        os.environ['CRAWL_CONF'] = module_test_setup.crawl_conf_orig
 
 
 # -----------------------------------------------------------------------------

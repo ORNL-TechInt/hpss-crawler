@@ -1977,7 +1977,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         DBImysqlTest:
         """
-        CrawlConfig.get_config("hpssic_mysql_test.cfg", reset=True)
+        CrawlConfig.add_config(filename="hpssic_mysql_test.cfg", close=True)
         dbschem.drop_tables_matching("test_%")
 
     # -------------------------------------------------------------------------
@@ -1986,7 +1986,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         """
         DBImysqlTest:
         """
-        if not testhelp.keepfiles():
+        if not pytest.config.getvalue("keep"):
             dbschem.drop_tables_matching("test_%")
 
     # -------------------------------------------------------------------------

@@ -26,14 +26,16 @@ def pytest_addoption(parser):
     global attr
     parser.addoption("--all", action="store_true",
                      help="run all tests")
-    parser.addoption("--fast", action="store_true",
-                     help="run only the fast tests")
-    parser.addoption("--skip", action="store", default='',
-                     help="skip tests with matching tags")
-    parser.addoption("--nolog", action="store_true", default=False,
-                     help="suppress test logging")
     parser.addoption("--dbg", action="append", default=[],
                      help="start debugger on named test or all")
+    parser.addoption("--fast", action="store_true",
+                     help="run only the fast tests")
+    parser.addoption("--keep", action="store_true",
+                     help="preserve test tables")
+    parser.addoption("--nolog", action="store_true", default=False,
+                     help="suppress test logging")
+    parser.addoption("--skip", action="store", default='',
+                     help="skip tests with matching tags")
     attr = pytest.mark.attr
 
 

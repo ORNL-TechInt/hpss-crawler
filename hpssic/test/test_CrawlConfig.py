@@ -2454,10 +2454,3 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                           tval,
                           exp,
                           actual))
-
-    # ------------------------------------------------------------------------
-    def tearDown(self):
-        """
-        Clean up after every test.
-        """
-        util.conditional_rm(self.env_cfname)
