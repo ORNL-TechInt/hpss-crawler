@@ -11,7 +11,7 @@ cd $HOME/prj/hpssic/dev
 . $HOME/venv/hpssic/bin/activate
 echo "Activating environment hpssic" >> $CRONOUT 2>&1
 
-/usr/bin/py.test --cov hpssic --all >> $CRONOUT 2>&1
+/usr/bin/py.test --cov hpssic >> $CRONOUT 2>&1
 /usr/bin/coverage report -m > coverage/$YMDHM
 
 /bin/date "+%Y.%m%d %H:%M:%S" >> $CRONOUT 2>&1

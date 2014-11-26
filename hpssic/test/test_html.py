@@ -97,6 +97,7 @@ class HtmlTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.add_config(close=True,
                                      filename='hpssic_sqlite_test.cfg')
         cfg.set('dbi-crawler', 'dbname', self.tmpdir("test.db"))
+        cfg.set('crawler', 'logpath', self.tmpdir("crawl.log"))
 
         db = CrawlDBI.DBI(dbtype='crawler')
         for table in ['checkables', 'mpra', 'tcc_data']:
@@ -122,7 +123,9 @@ class HtmlTest(testhelp.HelpedTestCase):
         cfpath = self.tmpdir("crawl.cfg")
         cfg = CrawlConfig.add_config()
         cfg.crawl_write(open(cfpath, 'w'))
-        result = pexpect.run("html report --config %s" % cfpath)
+        cmd = "html report --config %s" % cfpath
+        CrawlConfig.log(cmd, close=True)
+        result = pexpect.run(cmd)
         self.validate_report(result)
 
     # -------------------------------------------------------------------------
