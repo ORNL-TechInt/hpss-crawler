@@ -415,9 +415,7 @@ class DBI_in_Base(object):
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=['size', 'weight'])
-        self.assertEqual(len(rows[0]), 2,
-                         "Expected two fields in each row, got %d" %
-                         len(rows[0]))
+        self.expected(2, len(rows[0]))
         for tup in self.testdata:
             self.assertTrue((tup[1], tup[2]) in rows,
                             "Expected %s in %s but it's not there" %
@@ -568,9 +566,7 @@ class DBI_in_Base(object):
 
         rlim = 3
         rows = db.select(table=tname, fields=self.nk_fnames, limit=rlim)
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
+        self.expected(3, len(rows[0]))
         self.expected(rlim, len(rows))
         for tup in self.testdata[0:int(rlim)]:
             self.assertTrue(tup in rows,
@@ -588,9 +584,7 @@ class DBI_in_Base(object):
 
         rlim = 2.7
         rows = db.select(table=tname, fields=self.nk_fnames, limit=rlim)
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
+        self.expected(3, len(rows[0]))
         self.expected(int(rlim), len(rows))
         for tup in self.testdata[0:int(rlim)]:
             self.assertTrue(tup in rows,
@@ -622,12 +616,8 @@ class DBI_in_Base(object):
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=self.nk_fnames, orderby='')
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(self.testdata), list(rows),
-                         "Expected %s and %s to match" %
-                         (list(self.testdata), list(rows)))
+        self.expected(3, len(rows[0]))
+        self.expected(list(self.testdata), list(rows))
 
     # -------------------------------------------------------------------------
     def test_select_mtt(self):
@@ -653,12 +643,8 @@ class DBI_in_Base(object):
         db = self.setup_select(tname)
 
         rows = db.select(table=tname, fields=self.nk_fnames, where='')
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(self.testdata), list(rows),
-                         "Expected %s and %s to match" %
-                         (list(self.testdata), list(rows)))
+        self.expected(3, len(rows[0]))
+        self.expected(list(self.testdata), list(rows))
 
     # -------------------------------------------------------------------------
     def test_select_nld(self):
@@ -746,12 +732,8 @@ class DBI_in_Base(object):
                self.testdata[3], self.testdata[1]]
 
         rows = db.select(table=tname, fields=self.nk_fnames, orderby='weight')
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(exp), list(rows),
-                         "Expected %s to match %s" % (str(exp),
-                                                      str(rows)))
+        self.expected(3, len(rows[0]))
+        self.expected(list(exp), list(rows))
 
     # -------------------------------------------------------------------------
     def test_select_w(self):
@@ -764,11 +746,8 @@ class DBI_in_Base(object):
         exp = [self.testdata[0], self.testdata[2], self.testdata[3]]
 
         rows = db.select(table=tname, fields=self.nk_fnames, where="size < 50")
-        self.assertEqual(len(rows[0]), 3,
-                         "Expected three fields in each row, got %d" %
-                         len(rows[0]))
-        self.assertEqual(list(exp), list(rows),
-                         "Expected %s to match %s" % (str(exp), str(rows)))
+        self.expected(3, len(rows[0]))
+        self.expected(list(exp), list(rows))
 
     # -------------------------------------------------------------------------
     def test_table_exists_yes(self):
@@ -1278,9 +1257,9 @@ class DBI_out_Base(object):
         result = dbschem.make_table('tcc_data', cfg=tcfg)
         db = self.DBI()
         self.assertTrue(db.table_exists(table='tcc_data'))
-        self.assertEqual("Created", result)
+        self.expected("Created", result)
         result = dbschem.make_table('tcc_data', cfg=tcfg)
-        self.assertEqual("Already", result)
+        self.expected("Already", result)
 
     # -------------------------------------------------------------------------
     def test_delete_except(self):
@@ -2128,7 +2107,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                                  addcol="missing int",
                                  pos="first",
                                  cfg=tcfg)
-        self.assertEqual("Successful", rv)
+        self.expected("Successful", rv)
         z = db.describe(table=tname)
         self.assertTrue(any(['missing' in x for x in z]),
                         "Expected field 'missing' in %s" % repr(z))
@@ -2136,7 +2115,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         rv = dbschem.alter_table(table=tname,
                                  dropcol="missing",
                                  cfg=tcfg)
-        self.assertEqual("Successful", rv)
+        self.expected("Successful", rv)
         z = db.describe(table=tname)
         self.assertFalse(any(['missing' in x for x in z]),
                          "Field 'missing' should not appear in %s" % repr(z))
@@ -2289,9 +2268,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         dba = self.DBI()
         dba.create(table=tabname, fields=['field1 text'])
         dba.close()
-        self.assertTrue(os.path.exists(self.dbname()),
-                        "Expected %s to exists but it does not" %
-                        self.dbname())
+        self.assertPathPresent(self.dbname())
         s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.dbname())
@@ -2300,9 +2277,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         dbb = self.DBI()
         self.assertTrue(dbb.table_exists(table=tabname))
         dbb.close()
-        self.assertTrue(os.path.exists(self.dbname()),
-                        "Expected %s to exists but it does not" %
-                        self.dbname())
+        self.assertPathPresent(self.dbname())
         s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.dbname())
@@ -2333,9 +2308,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         db.create(table='testtab',
                   fields=['rowid integer primary key autoincrement'])
         db.close()
-        self.assertTrue(os.path.exists(self.dbname()),
-                        "Expected %s to exists but it does not" %
-                        self.dbname())
+        self.assertPathPresent(self.dbname())
         s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.dbname())
@@ -2384,9 +2357,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         util.conditional_rm(self.dbname())
         db = self.DBI()
         db.close()
-        self.assertTrue(os.path.exists(self.dbname()),
-                        "Expected %s to exists but it does not" %
-                        self.dbname())
+        self.assertPathPresent(self.dbname())
 
     # -------------------------------------------------------------------------
     def test_ctor_dbn_sock(self):
@@ -2437,9 +2408,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                   fields=['rowid integer primary key autoincrement'])
         db.close
 
-        self.assertTrue(os.path.exists(self.dbname() + '_xyz'),
-                        "Expected %s to exist" %
-                        self.dbname() + '_xyz')
+        self.assertPathPresent(self.dbname() + '_xyz')
         s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.dbname())
@@ -2459,9 +2428,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                   fields=['rowid integer primary key autoincrement'])
         db.close
 
-        self.assertTrue(os.path.exists(self.dbname() + '_xyz'),
-                        "Expected %s to exist" %
-                        self.dbname() + '_xyz')
+        self.assertPathPresent(self.dbname() + '_xyz')
         s = os.stat(self.dbname())
         self.assertNotEqual(0, s.st_size,
                             "Expected %s to contain some data" % self.dbname())
@@ -2562,7 +2529,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                                  addcol="missing int",
                                  pos="first",
                                  cfg=tcfg)
-        self.assertEqual("Successful", rv)
+        self.expected("Successful", rv)
 
         db = self.DBI()
         z = db.describe(table=tname)
@@ -2817,9 +2784,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         db = self.DBI()
         rows = db.select(table='hpss.cos',
                          fields=['cos_id', 'hier_id'])
-        self.assertEqual(len(rows[0].keys()), 2,
-                         "Expected two fields in each row, got %d" %
-                         len(rows[0].keys()))
+        self.expected(2, len(rows[0].keys()))
         for exp in ['HIER_ID', 'COS_ID']:
             self.assertTrue(exp in rows[0].keys(),
                             "Expected key '%s' in each row, not found" %
@@ -2837,9 +2802,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                          fields=['max(bfid) as mbf',
                                  'bfattr_cos_id'],
                          groupby='bfattr_cos_id')
-        self.assertEqual(len(rows[0].keys()), 2,
-                         "Expected two fields in each row, got %d" %
-                         len(rows[0].keys()))
+        self.expected(2, len(rows[0].keys()))
         for exp in ['MBF', 'BFATTR_COS_ID']:
             self.assertTrue(exp in rows[0].keys(),
                             "Expected key '%s' in each row, not found" %

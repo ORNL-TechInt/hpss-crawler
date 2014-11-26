@@ -66,13 +66,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         f.close()
 
         changeable = CrawlConfig.CrawlConfig()
-        self.assertEqual(changeable.filename, '<???>')
-        self.assertEqual(changeable.loadtime, 0.0)
+        self.expected('<???>', changeable.filename)
+        self.expected(0.0, changeable.loadtime)
         changeable.read(cfgfile)
-        self.assertEqual(changeable.changed(), False)
+        self.assertFalse(changeable.changed())
         os.utime(cfgfile, (time.time() + 5, time.time() + 5))
-        self.assertEqual(changeable.changed(), True)
-        self.assertEqual(changeable.filename, cfgfile)
+        self.assertTrue(changeable.changed())
+        self.expected(cfgfile, changeable.filename)
 
     # -------------------------------------------------------------------------
     def test_dictor(self):
@@ -82,8 +82,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         cfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
         for sect in self.cdict:
             for opt in self.cdict[sect]:
-                self.assertEqual(self.cdict[sect][opt],
-                                 cfg.get(sect, opt))
+                self.expected(self.cdict[sect][opt], cfg.get(sect, opt))
 
     # -------------------------------------------------------------------------
     def test_dictor_alt(self):
@@ -92,19 +91,19 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         """
         obj = CrawlConfig.CrawlConfig.dictor(self.sample)
 
-        self.assertEqual(obj.filename, '<???>')
-        self.assertEqual(obj.loadtime, 0.0)
+        self.expected('<???>', obj.filename)
+        self.expected(0.0, obj.loadtime)
 
-        self.assertEqual('crawler' in obj.sections(), True)
-        self.assertEqual('sounds' in obj.sections(), True)
+        self.expected_in('crawler', obj.sections())
+        self.expected_in('sounds', obj.sections())
 
-        self.assertEqual('opt1' in obj.options('crawler'), True)
-        self.assertEqual('opt2' in obj.options('crawler'), True)
-        self.assertEqual('opt2' in obj.options('crawler'), True)
+        self.expected_in('opt1', obj.options('crawler'))
+        self.expected_in('opt2', obj.options('crawler'))
+        self.expected_in('opt3', obj.options('crawler'))
 
-        self.assertEqual('duck' in obj.options('sounds'), True)
-        self.assertEqual('dog' in obj.options('sounds'), True)
-        self.assertEqual('hen' in obj.options('sounds'), True)
+        self.expected_in('duck', obj.options('sounds'))
+        self.expected_in('dog', obj.options('sounds'))
+        self.expected_in('hen', obj.options('sounds'))
 
     # -------------------------------------------------------------------------
     def test_dump_nodef(self):
@@ -115,16 +114,16 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                                              defaults={'goose': 'honk'})
         dumpstr = obj.dump()
 
-        self.assertEqual("[DEFAULT]" in dumpstr, False)
-        self.assertEqual("goose = honk" in dumpstr, False)
-        self.assertEqual("[crawler]" in dumpstr, True)
-        self.assertEqual("opt1 = foo" in dumpstr, True)
-        self.assertEqual("opt2 = fribble" in dumpstr, True)
-        self.assertEqual("opt3 = nice" in dumpstr, True)
-        self.assertEqual("[sounds]" in dumpstr, True)
-        self.assertEqual("dog = bark" in dumpstr, True)
-        self.assertEqual("duck = quack" in dumpstr, True)
-        self.assertEqual("hen = cluck" in dumpstr, True)
+        self.assertFalse("[DEFAULT]" in dumpstr)
+        self.assertFalse("goose = honk" in dumpstr)
+        self.expected_in("[crawler]", dumpstr)
+        self.expected_in("opt1 = foo", dumpstr)
+        self.expected_in("opt2 = fribble", dumpstr)
+        self.expected_in("opt3 = nice", dumpstr)
+        self.expected_in("[sounds]", dumpstr)
+        self.expected_in("dog = bark", dumpstr)
+        self.expected_in("duck = quack", dumpstr)
+        self.expected_in("hen = cluck", dumpstr)
 
     # -------------------------------------------------------------------------
     def test_dump_withdef(self):
@@ -135,16 +134,16 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj = CrawlConfig.CrawlConfig.dictor(self.sample, defaults=defaults)
         dumpstr = obj.dump(with_defaults=True)
 
-        self.assertEqual("[DEFAULT]" in dumpstr, True)
-        self.assertEqual("goose = honk" in dumpstr, True)
-        self.assertEqual("[crawler]" in dumpstr, True)
-        self.assertEqual("opt1 = foo" in dumpstr, True)
-        self.assertEqual("opt2 = fribble" in dumpstr, True)
-        self.assertEqual("opt3 = nice" in dumpstr, True)
-        self.assertEqual("[sounds]" in dumpstr, True)
-        self.assertEqual("dog = bark" in dumpstr, True)
-        self.assertEqual("duck = quack" in dumpstr, True)
-        self.assertEqual("hen = cluck" in dumpstr, True)
+        self.expected_in("[DEFAULT]", dumpstr)
+        self.expected_in("goose = honk", dumpstr)
+        self.expected_in("[crawler]", dumpstr)
+        self.expected_in("opt1 = foo", dumpstr)
+        self.expected_in("opt2 = fribble", dumpstr)
+        self.expected_in("opt3 = nice", dumpstr)
+        self.expected_in("[sounds]", dumpstr)
+        self.expected_in("dog = bark", dumpstr)
+        self.expected_in("duck = quack", dumpstr)
+        self.expected_in("hen = cluck", dumpstr)
 
     # --------------------------------------------------------------------------
     def test_get_config_def_noread(self):
@@ -206,25 +205,13 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.default_cfname, d)
             os.chmod(self.default_cfname, 0644)
 
-            got_exception = False
-            try:
-                cfg = CrawlConfig.get_config()
-            except:
-                got_exception = True
-            self.assertEqual(got_exception, False)
-            self.assertEqual(cfg.get('crawler', 'filename'),
-                             self.default_cfname)
-            self.assertEqual(cfg.filename, self.default_cfname)
+            cfg = CrawlConfig.get_config()
+            self.expected(self.default_cfname, cfg.get('crawler', 'filename'))
+            self.expected(self.default_cfname, cfg.filename)
 
-            got_exception = False
-            try:
-                cfg = CrawlConfig.get_config('')
-            except:
-                got_exception = True
-            self.assertEqual(got_exception, False)
-            self.assertEqual(cfg.get('crawler', 'filename'),
-                             self.default_cfname)
-            self.assertEqual(cfg.filename, self.default_cfname)
+            cfg = CrawlConfig.get_config('')
+            self.expected(self.default_cfname, cfg.get('crawler', 'filename'))
+            self.expected(self.default_cfname, cfg.filename)
 
     # --------------------------------------------------------------------------
     def test_get_config_env_noread(self):
@@ -288,16 +275,11 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.write_cfg_file(self.env_cfname, d)
             os.chmod(self.env_cfname, 0644)
 
-            got_exception = False
-            try:
-                cfg = CrawlConfig.get_config()
-            except:
-                got_exception = True
-            self.assertEqual(got_exception, False)
-            self.assertEqual(cfg.get('crawler', 'filename'), self.env_cfname)
+            cfg = CrawlConfig.get_config()
+            self.expected(self.env_cfname, cfg.get('crawler', 'filename'))
 
             cfg = CrawlConfig.get_config('')
-            self.assertEqual(cfg.get('crawler', 'filename'), self.env_cfname)
+            self.expected(self.env_cfname, cfg.get('crawler', 'filename'))
 
     # --------------------------------------------------------------------------
     def test_get_config_exp_noread(self):
@@ -373,7 +355,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             os.chmod(self.exp_cfname, 0644)
 
             cfg = CrawlConfig.get_config(self.exp_cfname)
-            self.assertEqual(cfg.get('crawler', 'filename'), self.exp_cfname)
+            self.expected(self.exp_cfname, cfg.get('crawler', 'filename'))
 
     # -------------------------------------------------------------------------
     def test_get_d_none(self):
@@ -582,8 +564,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected(17*1000*1000, l.handlers[0].maxBytes)
         self.expected(13, l.handlers[0].backupCount)
 
-        self.assertTrue(os.path.exists(lfname),
-                        "%s should exist but does not" % lfname)
+        self.assertPathPresent(lfname)
 
     # -------------------------------------------------------------------------
     def test_logging_def_cfg(self):
@@ -663,11 +644,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         CrawlConfig.log(close=True)
         logpath = '%s/%s.log' % (self.tmpdir(), util.my_name())
         util.conditional_rm(logpath)
-        self.assertEqual(os.path.exists(logpath), False,
-                         '%s should not exist but does' % logpath)
+        self.assertPathNotPresent(logpath)
         lobj = CrawlConfig.log(logpath=logpath)
-        self.assertEqual(os.path.exists(logpath), True,
-                         '%s should exist but does not' % logpath)
+        self.assertPathPresent(logpath)
 
     # -------------------------------------------------------------------------
     def test_get_size(self):
@@ -749,8 +728,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Routines exercised: __init__(), get_time().
         """
         obj = CrawlConfig.CrawlConfig.dictor(self.sample)
-        self.assertEqual(obj.get_time('crawler', 'heartbeat'), 3600)
-        self.assertEqual(obj.get_time('crawler', 'frequency'), 300)
+        self.expected(3600, obj.get_time('crawler', 'heartbeat'))
+        self.expected(300, obj.get_time('crawler', 'frequency'))
 
     # -------------------------------------------------------------------------
     def test_get_time_opt_def(self):
@@ -758,8 +737,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Call get_time so it throws NoOptionError but provide a default
         """
         obj = CrawlConfig.CrawlConfig.dictor(self.sample)
-        self.assertEqual(388, obj.get_time('crawler', 'dumpling', 388))
-        self.assertEqual(47, obj.get_time('crawler', 'strawberry', 47))
+        self.expected(388, obj.get_time('crawler', 'dumpling', 388))
+        self.expected(47, obj.get_time('crawler', 'strawberry', 47))
 
     # -------------------------------------------------------------------------
     def test_get_time_sect_def(self):
@@ -767,8 +746,8 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Call get_time so it throws NoSectionError but provide a default
         """
         obj = CrawlConfig.CrawlConfig.dictor(self.sample)
-        self.assertEqual(82, obj.get_time('crawlerfoo', 'heartbeat', 82))
-        self.assertEqual(19, obj.get_time('crawlerfoo', 'frequency', 19))
+        self.expected(82, obj.get_time('crawlerfoo', 'heartbeat', 82))
+        self.expected(19, obj.get_time('crawlerfoo', 'frequency', 19))
 
     # -------------------------------------------------------------------------
     def test_get_time_opt(self):
@@ -826,7 +805,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                                                        '/the/root/directory'})
         exp = "/the/root/directory/fiddle.log"
         actual = obj.get('crawler', 'logpath')
-        self.assertEqual(exp, actual, "Expected '%s', got '%s'")
+        self.expected(exp, actual)
 
     # -------------------------------------------------------------------------
     def test_interpolation_fail(self):
@@ -1121,7 +1100,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             # test verification
             self.validate_logger(exp_logpath, l)
-            self.assertFalse(os.path.exists(ign_logpath))
+            self.assertPathNotPresent(ign_logpath)
 
     # -------------------------------------------------------------------------
     def test_cc_log_1010(self):
@@ -1217,7 +1196,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
             # test verification
             self.validate_logger(exp_logpath, l, msg=exp_msg)
-            self.assertFalse(os.path.exists(self.logpath()))
+            self.assertPathNotPresent(self.logpath())
 
     # -------------------------------------------------------------------------
     def test_cc_log_1110(self):
@@ -1285,7 +1264,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         else:
             self.expected(1, len(logger.handlers))
             self.expected(expval, logger.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(expval))
+            self.assertPathPresent(expval)
             text = U.contents(expval)
             self.expected_in('-' * 15, text)
             if msg != '':
@@ -1421,7 +1400,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             CrawlConfig.get_config(reset=True, soft=True)
             d = copy.deepcopy(self.cdict)
@@ -1430,7 +1409,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             x = CrawlConfig.new_logger()
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1454,7 +1433,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
             U.conditional_rm(self.logpath())
-            self.assertFalse(os.path.exists(self.logpath()))
+            self.assertPathNotPresent(self.logpath())
 
             CrawlConfig.get_config(reset=True, soft=True)
             self.write_cfg_file(self.default_cfname, self.cdict)
@@ -1466,7 +1445,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             x = CrawlConfig.new_logger(cfg=xcfg)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1493,7 +1472,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_CONF', None)):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             CrawlConfig.get_config(reset=True, soft=True)
             self.write_cfg_file(self.default_cfname, self.cdict)
@@ -1504,7 +1483,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             x = CrawlConfig.new_logger(cfg=xcfg)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1528,7 +1507,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_LOG', exp_logpath)):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             CrawlConfig.get_config(reset=True, soft=True)
             self.write_cfg_file(self.default_cfname, self.cdict)
@@ -1536,7 +1515,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             x = CrawlConfig.new_logger()
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1560,7 +1539,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         with ctx.nested(U.Chdir(self.tmpdir()),
                         U.tmpenv('CRAWL_LOG', exp_logpath)):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             CrawlConfig.get_config(reset=True, soft=True)
             self.write_cfg_file(self.default_cfname, self.cdict)
@@ -1572,7 +1551,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             x = CrawlConfig.new_logger(cfg=xcfg)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1597,12 +1576,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         U.tmpenv('CRAWL_CONF', None),
                         U.tmpenv('CRAWL_LOG', None)):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             x = CrawlConfig.new_logger(logpath=exp_logpath)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1627,14 +1606,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         U.tmpenv('CRAWL_CONF', None),
                         U.tmpenv('CRAWL_LOG', None)):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             xcfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
 
             x = CrawlConfig.new_logger(logpath=exp_logpath, cfg=xcfg)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1659,12 +1638,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         U.tmpenv('CRAWL_CONF', None),
                         U.tmpenv('CRAWL_LOG', self.logpath())):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             x = CrawlConfig.new_logger(logpath=exp_logpath)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1689,14 +1668,14 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
                         U.tmpenv('CRAWL_CONF', None),
                         U.tmpenv('CRAWL_LOG', self.logpath())):
             U.conditional_rm(exp_logpath)
-            self.assertFalse(os.path.exists(exp_logpath))
+            self.assertPathNotPresent(exp_logpath)
 
             xcfg = CrawlConfig.CrawlConfig.dictor(self.cdict)
 
             x = CrawlConfig.new_logger(logpath=exp_logpath, cfg=xcfg)
             self.expected(1, len(x.handlers))
             self.expected(exp_logpath, x.handlers[0].stream.name)
-            self.assertTrue(os.path.exists(exp_logpath))
+            self.assertPathPresent(exp_logpath)
             self.expected_in('-' * 15, U.contents(exp_logpath))
 
     # -------------------------------------------------------------------------
@@ -1791,29 +1770,29 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         Routines exercised: __init__(), map_time_unit().
         """
         obj = CrawlConfig.CrawlConfig()
-        self.assertEqual(obj.map_time_unit(''), 1)
-        self.assertEqual(obj.map_time_unit('s'), 1)
-        self.assertEqual(obj.map_time_unit('sec'), 1)
-        self.assertEqual(obj.map_time_unit('seconds'), 1)
-        self.assertEqual(obj.map_time_unit('m'), 60)
-        self.assertEqual(obj.map_time_unit('min'), 60)
-        self.assertEqual(obj.map_time_unit('minute'), 60)
-        self.assertEqual(obj.map_time_unit('minutes'), 60)
-        self.assertEqual(obj.map_time_unit('h'), 3600)
-        self.assertEqual(obj.map_time_unit('hr'), 3600)
-        self.assertEqual(obj.map_time_unit('hour'), 3600)
-        self.assertEqual(obj.map_time_unit('hours'), 3600)
-        self.assertEqual(obj.map_time_unit('d'), 24*3600)
-        self.assertEqual(obj.map_time_unit('day'), 24*3600)
-        self.assertEqual(obj.map_time_unit('days'), 24*3600)
-        self.assertEqual(obj.map_time_unit('w'), 7*24*3600)
-        self.assertEqual(obj.map_time_unit('week'), 7*24*3600)
-        self.assertEqual(obj.map_time_unit('weeks'), 7*24*3600)
-        self.assertEqual(obj.map_time_unit('month'), 30*24*3600)
-        self.assertEqual(obj.map_time_unit('months'), 30*24*3600)
-        self.assertEqual(obj.map_time_unit('y'), 365*24*3600)
-        self.assertEqual(obj.map_time_unit('year'), 365*24*3600)
-        self.assertEqual(obj.map_time_unit('years'), 365*24*3600)
+        self.expected(1, obj.map_time_unit(''))
+        self.expected(1, obj.map_time_unit('s'))
+        self.expected(1, obj.map_time_unit('sec'))
+        self.expected(1, obj.map_time_unit('seconds'))
+        self.expected(60, obj.map_time_unit('m'))
+        self.expected(60, obj.map_time_unit('min'))
+        self.expected(60, obj.map_time_unit('minute'))
+        self.expected(60, obj.map_time_unit('minutes'))
+        self.expected(3600, obj.map_time_unit('h'))
+        self.expected(3600, obj.map_time_unit('hr'))
+        self.expected(3600, obj.map_time_unit('hour'))
+        self.expected(3600, obj.map_time_unit('hours'))
+        self.expected(24*3600, obj.map_time_unit('d'))
+        self.expected(24*3600, obj.map_time_unit('day'))
+        self.expected(24*3600, obj.map_time_unit('days'))
+        self.expected(7*24*3600, obj.map_time_unit('w'))
+        self.expected(7*24*3600, obj.map_time_unit('week'))
+        self.expected(7*24*3600, obj.map_time_unit('weeks'))
+        self.expected(30*24*3600, obj.map_time_unit('month'))
+        self.expected(30*24*3600, obj.map_time_unit('months'))
+        self.expected(365*24*3600, obj.map_time_unit('y'))
+        self.expected(365*24*3600, obj.map_time_unit('year'))
+        self.expected(365*24*3600, obj.map_time_unit('years'))
 
     # --------------------------------------------------------------------------
     def test_quiet_time_bound_mt(self):

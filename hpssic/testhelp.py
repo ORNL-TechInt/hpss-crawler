@@ -389,6 +389,24 @@ class HelpedTestCase(unittest.TestCase):
     This class adds some goodies to the standard unittest.TestCase
     """
     # -------------------------------------------------------------------------
+    def assertPathPresent(self, pathname, umsg=''):
+        """
+        Verify that a path exists or throw an assertion error
+        """
+        msg = (umsg or "Expected file '%s' to exist to but it does not" %
+               pathname)
+        self.assertTrue(os.path.exists(pathname), msg)
+
+    # -------------------------------------------------------------------------
+    def assertPathNotPresent(self, pathname, umsg=''):
+        """
+        Verify that a path does not exist or throw an assertion error
+        """
+        msg = (umsg or "Expected file '%s' to exist to but it does not" %
+               pathname)
+        self.assertFalse(os.path.exists(pathname), msg)
+
+    # -------------------------------------------------------------------------
     def assertRaisesRegex(self, exception, message, func, *args, **kwargs):
         """
         A more precise version of assertRaises so we can validate the content
@@ -523,6 +541,40 @@ class HelpedTestCase(unittest.TestCase):
             msg += "'%s'"
 
         self.assertNotEqual(expval, actual, msg % (expval, actual))
+
+    # -------------------------------------------------------------------------
+    def unexpected_in(self, exprgx, actual):
+        """
+        If the unexpected regex (exprgx) appears in the actual value (actual),
+        report the assertion failure.
+        """
+        msg = "\nUnexpected_in: "
+        if type(exprgx) == int:
+            msg += "%d"
+            exprgx = "%d" % exprgx
+        elif type(exprgx) == float:
+            msg += "%g"
+            exprgx = "%g" % exprgx
+        else:
+            msg += "'%s'"
+
+        msg += "\n     Actual: "
+        if type(actual) == int:
+            msg += "%d"
+        elif type(actual) == float:
+            msg += "%g"
+        else:
+            msg += "'%s'"
+
+        if type(actual) == list:
+            if type(exprgx) == str:
+                self.assertFalse(all([util.rgxin(exprgx, x) for x in actual]),
+                                 msg % (exprgx, actual))
+            else:
+                self.assertFalse(exprgx in actual, msg % (exprgx, actual))
+        else:
+            self.assertFalse(util.rgxin(exprgx, actual),
+                             msg % (exprgx, actual))
 
     # -------------------------------------------------------------------------
     def noop(self):

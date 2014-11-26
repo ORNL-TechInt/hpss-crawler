@@ -61,8 +61,7 @@ class MpraResetTest(th.HelpedTestCase):
         db = CrawlDBI.DBI(dbtype="crawler", cfg=self.cfg)
         self.assertFalse(db.table_exists(table="mpra"),
                          "Expected the mpra table to be dropped")
-        self.assertFalse(os.path.exists(self.rptname),
-                         "Expected %s to be unlinked" % self.rptname)
+        self.assertPathNotPresent(self.rptname)
 
     # -------------------------------------------------------------------------
     def test_mpra_reset_prompt_no(self):
@@ -78,7 +77,7 @@ class MpraResetTest(th.HelpedTestCase):
         S.close()
         db = CrawlDBI.DBI(dbtype="crawler", cfg=self.cfg)
         self.assertTrue(db.table_exists(table="mpra"))
-        self.assertTrue(os.path.exists(self.rptname))
+        self.assertPathPresent(self.rptname)
 
     # -------------------------------------------------------------------------
     def test_mpra_reset_prompt_yes(self):
@@ -94,4 +93,4 @@ class MpraResetTest(th.HelpedTestCase):
         S.close()
         db = CrawlDBI.DBI(dbtype="crawler", cfg=self.cfg)
         self.assertFalse(db.table_exists(table="mpra"))
-        self.assertFalse(os.path.exists(self.rptname))
+        self.assertPathNotPresent(self.rptname)

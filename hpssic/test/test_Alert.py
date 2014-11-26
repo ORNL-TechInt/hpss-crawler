@@ -84,9 +84,7 @@ class AlertTest(testhelp.HelpedTestCase):
                         cfg=cfg)
         expected = "ran: '%s this is a test message'" % runfile
         self.expected_in(expected, util.contents(logfile))
-        self.assertTrue(os.path.exists(outfile),
-                        "expected %s to exist but it's not found" %
-                        outfile)
+        self.assertPathPresent(outfile)
 
     # -------------------------------------------------------------------------
     def test_alert_shell_nospec(self):
@@ -118,9 +116,7 @@ class AlertTest(testhelp.HelpedTestCase):
                         cfg=cfg)
         expected = "ran: '%s'" % runfile
         self.expected_in(expected, util.contents(logfile))
-        self.assertTrue(os.path.exists(outfile),
-                        "expected %s to exist but it's not found" %
-                        outfile)
+        self.assertPathPresent(outfile)
 
     # -------------------------------------------------------------------------
     def test_alert_email(self):
@@ -147,13 +143,8 @@ class AlertTest(testhelp.HelpedTestCase):
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)
         m = fakesmtp.inbox[0]
-        self.assertEqual(', '.join(m.to_address),
-                         targets,
-                         "'%s' does not match '%s'" %
-                         (', '.join(m.to_address), targets))
-        self.assertEqual(m.from_address, sender,
-                         "from address '%s' does not match sender '%s'" %
-                         (m.from_address, sender))
+        self.expected(targets, ', '.join(m.to_address))
+        self.expected(sender, m.from_address)
         self.expected_in('sent mail to', util.contents(logfile))
         self.expected_in(payload, m.fullmessage)
 
@@ -180,10 +171,7 @@ class AlertTest(testhelp.HelpedTestCase):
         x = Alert.Alert(caller='', msg=payload,
                         cfg=cfg)
         m = fakesmtp.inbox[0]
-        self.assertEqual(', '.join(m.to_address),
-                         targets,
-                         "'%s' does not match '%s'" %
-                         (', '.join(m.to_address), targets))
+        self.expected(targets, ', '.join(m.to_address))
         self.expected(m.from_address, sender)
         self.expected_in('sent mail to', util.contents(logfile))
         self.expected_in(payload, m.fullmessage)

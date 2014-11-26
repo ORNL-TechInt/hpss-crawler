@@ -28,7 +28,7 @@ class ScriptBase(th.HelpedTestCase):
 
         tdir = improot(__file__, __name__)
         mdir = improot(mod.__file__, modname)
-        self.assertEqual(tdir, mdir, "Expected '%s', got '%s'" % (tdir, mdir))
+        self.expected(tdir, mdir)
 
     # -------------------------------------------------------------------------
     def script_which_command(self, cmdname):
@@ -323,7 +323,7 @@ class Test_MISC(th.HelpedTestCase):
                 continue
             result = pexpect.run("pep8 %s" % inputs)
             full_result += result.replace(MSG.cov_no_data, "")
-        self.assertEqual("", full_result, "\n" + full_result)
+        self.expected("", full_result)
 
 
 # -----------------------------------------------------------------------------

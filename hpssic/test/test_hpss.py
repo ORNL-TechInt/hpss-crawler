@@ -403,7 +403,7 @@ class hpssTest(hpssBaseTest):
             # check the atime -- it should be recent
             atime = h.access_time(filename)
             delta = time.time() - atime
-            self.assertTrue(delta < 10,
+            self.assertTrue(delta < 60,
                             "Expected a recent time, got '%s'" %
                             util.ymdhms(atime))
         except hpss.HSIerror as e:

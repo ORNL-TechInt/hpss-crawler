@@ -40,12 +40,10 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
         p.fire()
         filename = "%s/%s" % (self.plugdir(), pname)
-        self.assertEqual(os.path.exists(filename), True,
-                         "File '%s' should exist but does not" % (filename))
+        self.assertPathPresent(filename)
         self.expected('my name is %s\n' % (pname), U.contents(filename))
         logpath = c.get('crawler', 'logpath')
-        self.assertTrue(os.path.exists(logpath),
-                        "Expected logfile '%s' to exist" % logpath)
+        self.assertPathPresent(logpath)
         self.expected_in('firing', U.contents(logpath))
 
     # -------------------------------------------------------------------------
@@ -59,12 +57,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         c = self.make_cfg(pname, fire=False)
         p = CrawlPlugin.CrawlPlugin(pname, c)
 
-        self.assertEqual(p.firable, False,
+        self.assertFalse(p.firable,
                          "p.firable should be False, is True")
         p.fire()
         filename = "%s/%s" % (self.plugdir(), pname)
-        self.assertEqual(os.path.exists(filename), False,
-                         "'%s' should not exist, but does" % (filename))
+        self.assertPathNotPresent(filename)
 
     # -------------------------------------------------------------------------
     def test_init_fire_true(self):
@@ -77,12 +74,11 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         c = self.make_cfg(pname)
         p = CrawlPlugin.CrawlPlugin(pname, c)
 
-        self.assertEqual(p.firable, True,
-                         "p.firable should be True, is False")
+        self.assertTrue(p.firable,
+                        "p.firable should be True, is False")
         p.fire()
         filename = "%s/%s" % (self.plugdir(), pname)
-        self.assertEqual(os.path.exists(filename), True,
-                         "'%s' should exist but does not" % (filename))
+        self.assertPathPresent(filename)
 
     # -------------------------------------------------------------------------
     def test_init_fire_unset(self):
@@ -96,16 +92,16 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         p = CrawlPlugin.CrawlPlugin(pname, c)
 
         # make sure 'fire' was not set in the config
-        try:
-            x = c.get(pname, 'fire')
-            self.fail("Expected NoOptionError but didn't get it")
-        except CrawlConfig.NoOptionError:
-            pass
+        self.assertRaisesMsg(CrawlConfig.NoOptionError,
+                             "No option 'fire' in section: '%s'" %
+                             'test_init_fire_unset',
+                             c.get,
+                             pname,
+                             'fire')
 
         # if 'fire' is not set in the config, it should default to True in the
         # plugin
-        self.assertEqual(p.firable, True,
-                         "p.firable should be True but is not")
+        self.assertTrue(p.firable, "p.firable should be True but is not")
 
     # -------------------------------------------------------------------------
     def test_init_freq_set(self):
@@ -290,16 +286,14 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
 
         # instantiate the plugin object
         p = CrawlPlugin.CrawlPlugin(pname, c)
-        self.assertEqual(p.firable, False,
-                         "Expected p.firable() to be false")
+        self.assertFalse(p.firable, "Expected p.firable() to be false")
 
         # change the config
         c.set(pname, 'fire', 'true')
 
         # re-init the plugin object
         p.reload(c)
-        self.assertEqual(p.firable, True,
-                         "Expected p.firables() to be true")
+        self.assertTrue(p.firable, "Expected p.firables() to be true")
 
     # -------------------------------------------------------------------------
     def test_reload_freq(self):

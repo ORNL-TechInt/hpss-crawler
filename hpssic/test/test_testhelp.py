@@ -33,7 +33,8 @@ else:
 
 
 # -----------------------------------------------------------------------------
-class TesthelpTest(unittest.TestCase):
+# class TesthelpTest(unittest.TestCase):
+class TesthelpTest(testhelp.HelpedTestCase):
     """
     Tests for testhelp code.
     """
@@ -89,9 +90,7 @@ class TesthelpTest(unittest.TestCase):
 
         r = s.getvalue()
         s.close()
-        self.assertEqual(expected, r,
-                         "Expected '%s', got '%s'" %
-                         (expected, r))
+        self.expected(expected, r)
 
     # -------------------------------------------------------------------------
     def test_expected_vs_got(self):

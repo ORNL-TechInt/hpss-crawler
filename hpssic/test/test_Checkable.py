@@ -84,17 +84,13 @@ class CheckableTest(testhelp.HelpedTestCase):
             return
 
         c = Checkable(path=archdir + '/crawler.tar', type='f')
-        self.assertTrue(c in dirlist,
-                        "expected to find %s in %s" % (c, dirlist))
+        self.expected_in(c, dirlist)
         c = Checkable(path=archdir + '/crawler.tar.idx', type='f')
-        self.assertTrue(c in dirlist,
-                        "expected to find %s in %s" % (c, dirlist))
+        self.expected_in(c, dirlist)
         c = Checkable(path=archdir + '/subdir1', type='d')
-        self.assertTrue(c in dirlist,
-                        "expected to find %s in %s" % (c, dirlist))
+        self.expected_in(c, dirlist)
         c = Checkable(path=archdir + '/subdir2', type='d')
-        self.assertTrue(c in dirlist,
-                        "expected to find %s in %s" % (c, dirlist))
+        self.expected_in(c, dirlist)
 
         for c in dirlist:
             if c.path == "%s/crawler.tar" % archdir:
@@ -148,8 +144,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         x = Checkable()
         for method in self.methods:
-            self.assertEqual(method in dir(x), True,
-                             "Checkable object is missing %s method" % method)
+            self.expected_in(method, dir(x))
         self.expected('---', x.path)
         self.expected('-', x.type)
         self.expected(0, x.checksum)
@@ -168,8 +163,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         x = Checkable(rowid=3, path='/one/two/three', type='f', cos='6002',
                       last_check=72, probability=0.01)
         for method in self.methods:
-            self.assertEqual(method in dir(x), True,
-                             "Checkable object is missing %s method" % method)
+            self.expected_in(method, dir(x))
         self.expected(3, x.rowid)
         self.expected('/one/two/three', x.path)
         self.expected('f', x.type)
@@ -183,14 +177,12 @@ class CheckableTest(testhelp.HelpedTestCase):
         """
         Verify that the constructor rejects invalid arguments
         """
-        try:
-            x = Checkable(path_x='/one/two/three', type='f', last_check=72)
-            self.fail("Expected an exception but didn't get one.")
-        except StandardError as e:
-            self.assertEqual('Attribute path_x is invalid for Checkable'
-                             in str(e), True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(StandardError,
+                             'Attribute path_x is invalid for Checkable',
+                             Checkable,
+                             path_x='/one/two/three',
+                             type='f',
+                             last_check=72)
 
     # -------------------------------------------------------------------------
     def test_eq(self):
@@ -232,22 +224,14 @@ class CheckableTest(testhelp.HelpedTestCase):
                       cos='739',
                       cart=None,
                       last_check=now-19)
-        self.assertEqual(a, b,
-                         "'%s' and '%s' should be equal" % (a, b))
-        self.assertNotEqual(a, c,
-                            "'%s' and '%s' should not be equal" % (a, c))
-        self.assertNotEqual(a, d,
-                            "'%s' and '%s' should not be equal" % (a, d))
-        self.assertNotEqual(a, e,
-                            "'%s' and '%s' should not be equal" % (a, e))
-        self.assertNotEqual(c, d,
-                            "'%s' and '%s' should not be equal" % (c, d))
-        self.assertNotEqual(c, e,
-                            "'%s' and '%s' should not be equal" % (c, e))
-        self.assertNotEqual(d, e,
-                            "'%s' and '%s' should not be equal" % (d, e))
-        self.assertNotEqual(e, f,
-                            "'%s' and '%s' should not be equal" % (e, f))
+        self.expected(a, b)
+        self.unexpected(a, c)
+        self.unexpected(a, d)
+        self.unexpected(a, e)
+        self.unexpected(c, d)
+        self.unexpected(c, e)
+        self.unexpected(d, e)
+        self.unexpected(e, f)
 
     # -------------------------------------------------------------------------
     def test_ex_nihilo_drspec(self):
@@ -268,9 +252,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             Checkable.ex_nihilo(dataroot="/home/somebody")
 
             # check that it exists
-            self.assertEqual(os.path.exists(self.dbname()), True,
-                             "File '%s' should be created by ex_nihilo()" %
-                             (self.dbname()))
+            self.assertPathPresent(self.dbname())
 
             # assuming it does, look inside and make sure the checkables table
             # got initialized correctly
@@ -367,8 +349,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo()
 
         # verify that the file exists and the table does also
-        self.assertTrue(os.path.exists(self.dbname()),
-                        "Expected %s to exist" % self.dbname())
+        self.assertPathPresent(self.dbname())
         db = CrawlDBI.DBI(dbtype='crawler')
         self.assertTrue(db.table_exists(table='checkables'),
                         "Expected table 'checkables' to exist in db")
@@ -387,9 +368,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo()
 
         # check that it exists
-        self.assertEqual(os.path.exists(self.dbname()), True,
-                         "File '%s' should be created by ex_nihilo()" %
-                         (self.dbname()))
+        self.assertPathPresent(self.dbname())
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
@@ -431,9 +410,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Checkable.ex_nihilo(dataroot=['abc', 'def'])
 
         # check that it exists
-        self.assertEqual(os.path.exists(self.dbname()), True,
-                         "File '%s' should be created by ex_nihilo()" %
-                         (self.dbname()))
+        self.assertPathPresent(self.dbname())
 
         # assuming it does, look inside and make sure the checkables table got
         # initialized correctly
@@ -598,13 +575,9 @@ class CheckableTest(testhelp.HelpedTestCase):
         util.conditional_rm(self.dbname())
         CrawlConfig.add_config(close=True, dct=self.cfg_dict())
 
-        try:
-            Checkable.get_list()
-            self.fail("Expected an exception but didn't get one.")
-        except CrawlDBI.DBIerror as e:
-            self.assertEqual("no such table: test_checkables" in str(e), True,
-                             "Got the wrong DBIerror: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             "no such table: test_checkables",
+                             Checkable.get_list)
 
     # -------------------------------------------------------------------------
     def test_get_list_known(self):
@@ -766,12 +739,8 @@ class CheckableTest(testhelp.HelpedTestCase):
                     self.expected(Checkable(path=exp, type='f'), U.pop0(x))
 
             for z in pri_d:
-                self.assertFalse(os.path.exists(z['ppath']),
-                                 "%s should have been moved to %s"
-                                 % (z['ppath'], z['cpath']))
-                self.assertTrue(os.path.exists(z['cpath']),
-                                "%s should have been moved from %s"
-                                % (z['cpath'], z['ppath']))
+                self.assertPathNotPresent(z['ppath'])
+                self.assertPathPresent(z['cpath'])
 
     # -------------------------------------------------------------------------
     def test_persist_last_check(self):
@@ -836,11 +805,9 @@ class CheckableTest(testhelp.HelpedTestCase):
 
         x = Checkable.get_list()
         self.expected(2, len(x))
-        self.assertEqual(foo in x, True,
-                         "Object foo not found in database")
+        self.expected_in(foo, x)
         root = Checkable(path='/', type='d')
-        self.assertEqual(root in x, True,
-                         "Object root not found in database")
+        self.expected_in(root, x)
 
     # -------------------------------------------------------------------------
     def test_persist_dir_exist_dd(self):
@@ -929,21 +896,16 @@ class CheckableTest(testhelp.HelpedTestCase):
         x[0].rowid = None
         x[0].last_check = t0 = time.time()
 
-        try:
-            x[0].persist()
-            self.fail("Expected an exception but didn't get one.")
-        except StandardError as e:
-            self.assertEqual("has rowid == None, last_check != 0.0" in str(e),
-                             True,
-                             "Got the wrong StandardError: %s" %
-                             util.line_quote(tb.format_exc()))
+        self.assertRaisesMsg(StandardError,
+                             "has rowid == None, last_check != 0.0",
+                             x[0].persist)
 
         x = Checkable.get_list()
         self.expected(2, len(x))
         c = Checkable(path='/', type='d')
-        self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
+        self.expected_in(c, x)
         c = Checkable(path='/home', type='d')
-        self.assertTrue(c in x, "expected to find '%s' in '%s'" % (c, x))
+        self.expected_in(c, x)
         self.expected(util.ymdhms(t1), util.ymdhms(x[1].last_check))
 
     # -------------------------------------------------------------------------

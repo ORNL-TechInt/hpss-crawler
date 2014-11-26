@@ -39,8 +39,8 @@ class UtilTest(testhelp.HelpedTestCase):
         self.dbgfunc()
         start = os.getcwd()
         with util.Chdir("/tmp"):
-            self.assertEqual("/tmp", os.getcwd())
-        self.assertEqual(start, os.getcwd())
+            self.expected("/tmp", os.getcwd())
+        self.expected(start, os.getcwd())
 
     # -------------------------------------------------------------------------
     def test_csv_list(self):
@@ -65,12 +65,8 @@ class UtilTest(testhelp.HelpedTestCase):
         self.dbgfunc()
         filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
         x = util.contents(filename, string=False)
-        self.assertEqual(type(x), list,
-                         "Expected a string but got a %s" % type(x))
-        expected = 'def contents('
-        self.assertTrue(any([expected in ln for ln in x]),
-                        "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
-                        (expected, x))
+        self.expected(type(x), list)
+        self.expected_in('def contents\(', x)
 
     # -------------------------------------------------------------------------
     def test_content_str(self):
@@ -81,12 +77,8 @@ class UtilTest(testhelp.HelpedTestCase):
         self.dbgfunc()
         filename = sys.modules['hpssic.util'].__file__.replace(".pyc", ".py")
         x = util.contents(filename)
-        self.assertEqual(type(x), str,
-                         "Expected a string but got a %s" % type(x))
-        expected = 'def contents('
-        self.assertTrue(expected in x,
-                        "Expected to find '%s' in \"\"\"\n%s\n\"\"\"" %
-                        (expected, x))
+        self.expected(str, type(x))
+        self.expected_in('def contents\(', x)
 
     # -------------------------------------------------------------------------
     def test_date_end(self):
@@ -407,20 +399,17 @@ class UtilTest(testhelp.HelpedTestCase):
             bare_str = "before  $%s   after" % vname
             exp = "before     after"
             actual = util.expand(bare_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
             braced_str = "before/${%s}/after" % vname
             exp = "before//after"
             actual = util.expand(braced_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
             def_str = "before.${%s:-default-value}.after" % vname
             exp = "before.default-value.after"
             actual = util.expand(def_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
     # -------------------------------------------------------------------------
     def test_expand_empty(self):
@@ -434,20 +423,17 @@ class UtilTest(testhelp.HelpedTestCase):
             bare_str = "before  $%s   after" % vname
             exp = "before     after"
             actual = util.expand(bare_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
             braced_str = "before/${%s}/after" % vname
             exp = "before//after"
             actual = util.expand(braced_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
             def_str = "before.${%s:-default-value}.after" % vname
             exp = "before..after"
             actual = util.expand(def_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
     # -------------------------------------------------------------------------
     def test_expand_filled(self):
@@ -468,20 +454,17 @@ class UtilTest(testhelp.HelpedTestCase):
             bare_str = "before  $%s   after" % vname
             exp = "before  SOMETHING   after"
             actual = util.expand(bare_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
             braced_str = "before/${%s}/after" % vname
             exp = "before/SOMETHING/after"
             actual = util.expand(braced_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
             def_str = "before.${%s:-default-value}.after" % vname
             exp = "before.SOMETHING.after"
             actual = util.expand(def_str)
-            self.assertEqual(exp, actual,
-                             "Expected '%s', got '%s'" % (exp, actual))
+            self.expected(exp, actual)
 
     # -------------------------------------------------------------------------
     def test_git_repo(self):
@@ -550,18 +533,15 @@ class UtilTest(testhelp.HelpedTestCase):
         self.dbgfunc()
         exp = '\n"""\nabc\n"""'
         act = util.line_quote('abc')
-        self.assertEqual(exp, act,
-                         "Expected %s, got %s" % (exp, act))
+        self.expected(exp, act)
 
         exp = '\n"""\nabc\n"""'
         act = util.line_quote("'abc'")
-        self.assertEqual(exp, act,
-                         "Expected %s, got %s" % (exp, act))
+        self.expected(exp, act)
 
         exp = '\n"""\nabc\n"""'
         act = util.line_quote('"abc"')
-        self.assertEqual(exp, act,
-                         "Expected %s, got %s" % (exp, act))
+        self.expected(exp, act)
 
     # -------------------------------------------------------------------------
     def test_lsp_parse_bogus(self):
@@ -683,9 +663,7 @@ class UtilTest(testhelp.HelpedTestCase):
         self.dbgfunc()
         actual = util.my_name()
         expected = 'test_my_name'
-        self.assertEqual(expected, actual,
-                         "Expected '%s' to match '%s'" %
-                         (expected, actual))
+        self.expected(expected, actual)
 
     # -------------------------------------------------------------------------
     def test_pop0(self):
@@ -764,11 +742,9 @@ class UtilTest(testhelp.HelpedTestCase):
         rf = util.RRfile.open(tdfile, 'r')
         zlist = clist
         buf = rf.revread()
-        self.assertEqual(64, len(buf),
-                         "Expected 64 bytes in the file, got %d" % len(buf))
+        self.expected(64, len(buf))
         for exp in ["aaa", "bbb", "ccc", "ddd"]:
-            self.assertTrue(exp in buf,
-                            "Expected exp in '%s'" % buf)
+            self.expected_in(exp, buf)
 
         rf.close()
 
@@ -883,8 +859,7 @@ class UtilTest(testhelp.HelpedTestCase):
         util.touch(*args)
 
         # verify that the file exists
-        self.assertTrue(os.path.exists(testpath),
-                        "Expected file %s to be created" % testpath)
+        self.assertPathPresent(testpath)
 
         # verify that both atime and mtime are close to the correct time
         s = os.stat(testpath)
