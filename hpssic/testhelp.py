@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Extensions to python's standard unittest module
 
@@ -241,8 +240,8 @@ def testargs(value=''):
 
 
 # -----------------------------------------------------------------------------
-def testlog(mname):
-    return "%s/crawl_test.log" % os.path.dirname(sys.modules[mname].__file__)
+# def testlog(mname):
+#     return "%s/crawl_test.log" % os.path.dirname(sys.modules[mname].__file__)
 
 
 # -----------------------------------------------------------------------------

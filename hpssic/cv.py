@@ -15,7 +15,6 @@ import pexpect
 from pprint import pprint
 import re
 import time
-import toolframe
 import util as U
 
 prefix = "cvv"

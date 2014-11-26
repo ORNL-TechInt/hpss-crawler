@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Tests for Checkable.py
 """
@@ -16,7 +15,6 @@ import stat
 import sys
 from hpssic import testhelp
 import time
-from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 from hpssic import util as U

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Tests for hpss.py
 """
@@ -13,7 +12,6 @@ import re
 import sys
 from hpssic import testhelp
 import time
-from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 

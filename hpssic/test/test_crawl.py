@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Tests for code in crawl.py
 """
@@ -21,7 +20,6 @@ import sys
 from hpssic import testhelp
 import time
 import tempfile
-from hpssic import toolframe
 from hpssic import util
 from hpssic import util as U
 
@@ -1644,7 +1642,3 @@ class CrawlGiveUpYetTest(CrawlTest):
             self.expected(self.email_targets, ', '.join(m.to_address))
             self.expected(self.sender, m.from_address)
             self.expected_in("crawl: %s" % shutdown_msg, m.fullmessage)
-
-
-# ------------------------------------------------------------------------------
-toolframe.ez_launch(test='CrawlTest', logfile=testhelp.testlog(__name__))

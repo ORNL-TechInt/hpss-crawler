@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import base64
 import crawl_lib
 import CrawlConfig
@@ -12,7 +11,6 @@ import re
 import sys
 import tcc_lib
 import time
-import toolframe
 import util
 import util as U
 
@@ -462,7 +460,3 @@ def cos_parse(line):
     else:
         rval = None
     return rval
-
-
-# -----------------------------------------------------------------------------
-toolframe.tf_launch('tccp', __name__)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Dispatch messages via log, email, or external program
 

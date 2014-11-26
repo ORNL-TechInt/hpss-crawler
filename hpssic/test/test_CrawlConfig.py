@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Test class for CrawlConfig.py
 """
@@ -13,7 +12,6 @@ import re
 import sys
 from hpssic import testhelp
 import time
-from hpssic import toolframe
 from hpssic import util
 from hpssic import util as U
 import warnings

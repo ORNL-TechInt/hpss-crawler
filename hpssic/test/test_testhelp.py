@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Extensions to python's standard unittest module
 
@@ -20,7 +19,6 @@ import pdb
 import sys
 import StringIO
 from hpssic import testhelp
-from hpssic import toolframe
 import unittest
 
 tlogger = None
@@ -139,8 +137,3 @@ class TesthelpTest(unittest.TestCase):
         except AssertionError:
             print "expected: '''\n%s'''" % expected
             print "got:      '''\n%s'''" % r
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='TesthelpTest',
-                        logfile=testhelp.testlog(__name__))

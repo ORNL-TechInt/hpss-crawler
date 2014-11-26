@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from hpssic import CrawlConfig
 from hpssic import mpra_lib
 import time

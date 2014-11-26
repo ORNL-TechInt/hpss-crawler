@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Tests for the Alert class
 
@@ -16,7 +15,6 @@ import socket
 import stat
 import sys
 from hpssic import testhelp
-from hpssic import toolframe
 from hpssic import util
 from hpssic import util as U
 
@@ -258,9 +256,3 @@ class AlertTest(testhelp.HelpedTestCase):
         x = Alert.Alert(caller='AlertTest', msg=payload,
                         cfg=cfg)
         self.expected_in(payload, util.contents(logfile))
-
-
-# -----------------------------------------------------------------------------
-if __name__ == '__main__':
-    toolframe.ez_launch(test='AlertTest',
-                        logfile=testhelp.testlog(__name__))

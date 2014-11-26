@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import crawl_lib
 import CrawlConfig
 import CrawlDBI
@@ -11,7 +10,6 @@ import re
 import rpt_lib
 import sys
 import time
-import toolframe
 import util
 
 
@@ -433,6 +431,3 @@ def mprf_xplocks(args):
         pdb.set_trace()
 
     mpra_lib.xplocks(output=sys.stdout)
-
-# -----------------------------------------------------------------------------
-toolframe.tf_launch('mpra', __name__)

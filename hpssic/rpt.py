@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import crawl_lib
 import CrawlConfig
 import CrawlDBI
@@ -8,7 +6,6 @@ import optparse
 import pdb
 import rpt_lib
 import time
-import toolframe
 import util
 
 
@@ -76,6 +73,3 @@ def rptx_testmail(args):
                      to=o.recipient,
                      subject=o.subject,
                      body=msg)
-
-# -----------------------------------------------------------------------------
-toolframe.tf_launch('rpt', __name__)

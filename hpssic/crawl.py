@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Run a bunch of plug-ins which will probe the integrity of HPSS
 """
@@ -18,7 +17,6 @@ import shutil
 import sys
 import testhelp
 import time
-from hpssic import toolframe
 import traceback as tb
 import util
 import version
@@ -737,6 +735,3 @@ class CrawlDaemon(daemon.Daemon):
                 for line in tbstr.split('\n'):
                     self.dlog("crawl: '%s'" % line)
                 keep_going = False
-
-# ------------------------------------------------------------------------------
-toolframe.tf_launch("crl", __name__)

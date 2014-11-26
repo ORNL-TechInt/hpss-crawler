@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import base64
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI

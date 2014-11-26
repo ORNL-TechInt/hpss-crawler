@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Plugin class for HPSS integrity crawler
 
@@ -14,7 +13,6 @@ import re
 import sys
 from hpssic import testhelp
 import time
-from hpssic import toolframe
 import traceback as tb
 from hpssic import util as U
 

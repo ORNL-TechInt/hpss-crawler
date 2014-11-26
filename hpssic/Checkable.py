@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 An item in HPSS that can be checked for integrity
 

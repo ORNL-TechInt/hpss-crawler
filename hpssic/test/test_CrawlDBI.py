@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Database interface classes
 
@@ -27,7 +26,6 @@ import sqlite3
 import socket
 import sys
 from hpssic import testhelp
-from hpssic import toolframe
 import traceback as tb
 from hpssic import util
 import warnings

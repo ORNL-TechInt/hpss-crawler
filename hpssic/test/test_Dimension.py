@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Track stratum proportions in a sample against a population
 """
@@ -11,7 +10,6 @@ import os
 import pdb
 import sys
 from hpssic import testhelp
-from hpssic import toolframe
 import traceback as tb
 from hpssic import util as U
 

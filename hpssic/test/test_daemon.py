@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Tests for daemon.py
 """
@@ -7,7 +6,6 @@ from hpssic import daemon
 import os
 import sys
 from hpssic import testhelp
-from hpssic import toolframe
 from hpssic import util
 
 mself = sys.modules[__name__]

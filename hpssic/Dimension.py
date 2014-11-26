@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Track stratum proportions in a sample against a population
 """

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Configuration class for crawl.py
 

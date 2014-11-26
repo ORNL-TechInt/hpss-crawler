@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import glob
 from hpssic import CrawlDBI
 import hpss
@@ -6,7 +5,6 @@ import optparse
 import os
 import pdb
 import pexpect
-import toolframe
 from hpssic import util as U
 
 prefix = "c"
