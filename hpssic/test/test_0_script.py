@@ -10,6 +10,49 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
+class Test_ABLE(th.HelpedTestCase):
+    # -------------------------------------------------------------------------
+    @pytest.mark.skipif(pytest.config.getvalue("fast"),
+                        reason="slow -- omit --fast to run this one")
+    def test_000_pep8(self):
+        full_result = ""
+        for r, d, f in os.walk('hpssic'):
+            pylist = [os.path.abspath(os.path.join(r, fn))
+                      for fn in f
+                      if fn.endswith('.py') and not fn.startswith(".#")]
+            inputs = " ".join(pylist)
+            if any([r == "./test",
+                    ".git" in r,
+                    ".attic" in r,
+                    "" == inputs]):
+                continue
+            result = pexpect.run("pep8 %s" % inputs)
+            full_result += result.replace(MSG.cov_no_data, "")
+        self.expected("", full_result)
+
+    # -------------------------------------------------------------------------
+    def test_100_duplicates(self):
+        """
+        Scan all .py files for duplicate function names
+        """
+        dupl = {}
+        for r, d, f in os.walk('hpssic'):
+            for fname in f:
+                path = os.path.join(r, fname)
+                if "CrawlDBI" in path:
+                    continue
+                if path.endswith(".py") and not fname.startswith(".#"):
+                    result = check_for_duplicates(path)
+                    if result != '':
+                        dupl[path] = result
+        if dupl != {}:
+            rpt = ''
+            for key in dupl:
+                rpt += "Duplicates in %s:" % key + dupl[key] + "\n"
+            self.fail(rpt)
+
+
+# -----------------------------------------------------------------------------
 class ScriptBase(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     def script_which_module(self, modname):
@@ -281,49 +324,6 @@ class Test_TCC(ScriptBase):
         Test_TCC:
         """
         super(Test_TCC, self).script_which_module("hpssic.plugins.tcc_plugin")
-
-
-# -----------------------------------------------------------------------------
-class Test_MISC(th.HelpedTestCase):
-    # -------------------------------------------------------------------------
-    def test_duplicates(self):
-        """
-        Scan all .py files for duplicate function names
-        """
-        dupl = {}
-        for r, d, f in os.walk('hpssic'):
-            for fname in f:
-                path = os.path.join(r, fname)
-                if "CrawlDBI" in path:
-                    continue
-                if path.endswith(".py") and not fname.startswith(".#"):
-                    result = check_for_duplicates(path)
-                    if result != '':
-                        dupl[path] = result
-        if dupl != {}:
-            rpt = ''
-            for key in dupl:
-                rpt += "Duplicates in %s:" % key + dupl[key] + "\n"
-            self.fail(rpt)
-
-    # -------------------------------------------------------------------------
-    @pytest.mark.skipif(pytest.config.getvalue("fast"),
-                        reason="slow -- omit --fast to run this one")
-    def test_pep8(self):
-        full_result = ""
-        for r, d, f in os.walk('hpssic'):
-            pylist = [os.path.abspath(os.path.join(r, fn))
-                      for fn in f
-                      if fn.endswith('.py') and not fn.startswith(".#")]
-            inputs = " ".join(pylist)
-            if any([r == "./test",
-                    ".git" in r,
-                    ".attic" in r,
-                    "" == inputs]):
-                continue
-            result = pexpect.run("pep8 %s" % inputs)
-            full_result += result.replace(MSG.cov_no_data, "")
-        self.expected("", full_result)
 
 
 # -----------------------------------------------------------------------------
