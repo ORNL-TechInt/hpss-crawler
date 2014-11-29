@@ -45,15 +45,16 @@ class TesthelpTest(testhelp.HelpedTestCase):
         (its second argument). We sort the lists to ensure they'll match as
         long as they have the same contents.
         """
+        self.dbgfunc()
         all = ['TesthelpTest.test_all_tests',
                'TesthelpTest.test_list_tests',
                'TesthelpTest.test_expected_vs_got'].sort()
         l = testhelp.all_tests('__main__').sort()
-        testhelp.expectVSgot(all, l)
+        self.expected(all, l)
         l = testhelp.all_tests('__main__', 'no such tests')
-        testhelp.expectVSgot([], l)
+        self.expected([], l)
         l = testhelp.all_tests('__main__', 'helpTest').sort()
-        testhelp.expectVSgot(all, l)
+        self.expected(all, l)
 
     # -------------------------------------------------------------------------
     def test_list_tests(self):
@@ -63,6 +64,7 @@ class TesthelpTest(testhelp.HelpedTestCase):
         the list of tests in tlist. Since list_tests() writes directly to
         stdout, we have to redirect stdout to a StringIO object momentarily.
         """
+        self.dbgfunc()
         tlist = ['one', 'two', 'three', 'four', 'five']
         self.try_redirected_list([],
                                  '',
@@ -82,6 +84,7 @@ class TesthelpTest(testhelp.HelpedTestCase):
         """
         Handle one of the list_tests() tests from the routine above.
         """
+        self.dbgfunc()
         s = StringIO.StringIO()
         save_stdout = sys.stdout
         sys.stdout = s
@@ -100,6 +103,7 @@ class TesthelpTest(testhelp.HelpedTestCase):
         empty. If they don't match, this should be reported. Again, we have to
         redirect stdout.
         """
+        self.dbgfunc()
         self.redirected_evg('', '', '')
         self.redirected_evg('one', 'two',
                             "EXPECTED: 'one'\n" +
@@ -110,6 +114,7 @@ class TesthelpTest(testhelp.HelpedTestCase):
         """
         Verify that a HelpedTestCase object has the expected attributes
         """
+        self.dbgfunc()
         q = testhelp.HelpedTestCase(methodName='noop')
         for attr in ['expected', 'expected_in', 'write_cfg_file']:
             self.assertTrue(hasattr(q, attr),
@@ -124,7 +129,7 @@ class TesthelpTest(testhelp.HelpedTestCase):
         save_stdout = sys.stdout
         sys.stdout = s
         try:
-            testhelp.expectVSgot(exp, got)
+            self.expected(exp, got)
         except AssertionError:
             pass
         r = s.getvalue()

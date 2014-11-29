@@ -125,34 +125,6 @@ def all_tests(name, filter=None):
 
 
 # -----------------------------------------------------------------------------
-def expectVSgot(expected, got):
-    """
-    Compare an expected value against an actual value and report the results
-    """
-    try:
-        assert(expected == got)
-    except AssertionError as e:
-        if type(expected) == list:
-            if 5 < len(expected):
-                for i in range(0, len(expected)):
-                    try:
-                        if expected[i] != got[i]:
-                            print "EXPECTED: '%s'" % expected[i]
-                            print "GOT:      '%s'" % got[i]
-                    except IndexError:
-                        print "EXPECTED: '%s'" % expected[i]
-                        print "GOT:      None"
-            else:
-                print "EXPECTED '%s'" % expected
-                print "GOT      '%s'" % got
-            raise e
-        elif type(expected) == str:
-            print "EXPECTED: '%s'" % expected
-            print "GOT:      '%s'" % got
-            raise e
-
-
-# -----------------------------------------------------------------------------
 def keepfiles(value=None):
     """
     Return value of global value kf_flag. Optionally set it if value
