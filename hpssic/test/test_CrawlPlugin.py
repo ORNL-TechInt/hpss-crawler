@@ -8,6 +8,7 @@ from hpssic import CrawlConfig
 from hpssic import CrawlPlugin
 import os
 import pdb
+import pexpect
 import pytest
 import re
 import sys
@@ -451,6 +452,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         Create a plugin for testing
         """
+        self.dbgfunc()
         if None == pdir:
             pdir = self.plugdir()
         if not os.path.isdir(pdir):
@@ -460,7 +462,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         else:
             fname = pname
         f = open('%s/%s' % (pdir, fname), 'w')
-        f.write("#!/bin/env python\n")
+        f.write("#!%s python\n" % pexpect.which('env'))
         f.write("def main(cfg):\n")
         f.write("    f = open('%s/%s', 'w')\n" % (pdir, pname))
         f.write("    f.write('my name is %s\\n')\n" % (pname))

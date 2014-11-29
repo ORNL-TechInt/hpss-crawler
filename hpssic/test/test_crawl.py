@@ -226,6 +226,7 @@ class CrawlMiscTest(CrawlTest):
         TEST: crawl fire --plugin <plugmod>
         EXP: plugin fired and output went to specified log path
         """
+        self.dbgfunc()
         (cfname, lfname, exitpath, plugdir) = self.crawl_test_setup()
         plugname = 'plugin_1'
 
@@ -1447,7 +1448,7 @@ class CrawlMiscTest(CrawlTest):
         plugfname = plugname + '.py'
 
         f = open('%s/%s' % (plugdir, plugfname), 'w')
-        f.write("#!/bin/env python\n")
+        f.write("#!%s python\n" % pexpect.which('env'))
         f.write("def main(cfg):\n")
         f.write("    q = open('%s/fired', 'w')\n" % self.tmpdir())
         f.write(r"    q.write('plugin %s fired\n')" % plugname)
