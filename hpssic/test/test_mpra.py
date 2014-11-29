@@ -11,15 +11,6 @@ import tempfile
 from hpssic import testhelp as th
 from hpssic import util as U
 
-# These lines look to see whether we're being run by py.test or nosetests so we
-# can set things up in a way that will make the test runner happy.
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
-
 
 # -----------------------------------------------------------------------------
 class MpraResetTest(th.HelpedTestCase):

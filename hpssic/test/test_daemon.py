@@ -8,17 +8,6 @@ import sys
 from hpssic import testhelp
 from hpssic import util
 
-mself = sys.modules[__name__]
-logfile = "%s/crawl_test.log" % os.path.dirname(mself.__file__)
-
-
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
-
 
 # -----------------------------------------------------------------------------
 class daemonTest(testhelp.HelpedTestCase):

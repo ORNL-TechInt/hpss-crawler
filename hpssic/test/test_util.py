@@ -16,14 +16,6 @@ from hpssic import util
 from hpssic import util as U
 
 
-M = sys.modules['__main__']
-if 'py.test' in M.__file__:
-    import pytest
-    attr = pytest.mark.attr
-else:
-    from nose.plugins.attrib import attr
-
-
 # -----------------------------------------------------------------------------
 class UtilTest(testhelp.HelpedTestCase):
     """
