@@ -125,54 +125,6 @@ def all_tests(name, filter=None):
 
 
 # -----------------------------------------------------------------------------
-def db_config(tdir, tname, cfg_d=None):
-    """
-    Deprecated but still used in test_Checkable and test_Dimension
-    """
-    cfname = '%s/%s.cfg' % (tdir, tname)
-    if cfg_d is None:
-        cfg_d = {'dbi-crawler': {'dbtype': 'sqlite',
-                                 'dbname': '%s/test.db' % tdir,
-                                 'tbl_prefix': 'test'},
-                 'crawler': {'logpath': '%s/%s.log' % (tdir, tname)},
-                 'cv': {'fire': 'no'}
-                 }
-    cfgfile(cfname, cfg_d)
-    os.environ['CRAWL_CONF'] = cfname
-    CrawlConfig.get_config(reset=True, soft=True)
-
-
-# -----------------------------------------------------------------------------
-def cfgfile(filename, data):
-    """
-    Turn a dict into a configuration file
-    Deprecated, used in db_config()
-    """
-    cfg = cfgobj(data)
-    f = open(filename, 'w')
-    cfg.write(f)
-    f.close()
-
-
-# -----------------------------------------------------------------------------
-def cfgobj(data):
-    """
-    Turn a dict into a CrawlConfig object -- this is what CrawlConfig.dictor()
-    does, so this can be deprecated.
-    Deprecated, used in cfgfile()
-    """
-    rval = CrawlConfig.CrawlConfig()
-    for section in data:
-        rval.add_section(section)
-        for option in data[section]:
-            rval.set(section, option, data[section][option])
-    if 'crawler' not in data:
-        rval.add_section('crawler')
-        rval.set('crawler', 'verbose', 'false')
-    return rval
-
-
-# -----------------------------------------------------------------------------
 def expectVSgot(expected, got):
     """
     Compare an expected value against an actual value and report the results
