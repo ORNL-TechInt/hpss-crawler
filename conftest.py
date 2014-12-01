@@ -75,15 +75,6 @@ def pytest_runtest_makereport(item, call, __multicall__):
 
 
 # -----------------------------------------------------------------------------
-def pytest_runtest_setup(item):
-    """
-    Decide whether to skip a test under consideration
-    """
-    if 'attr' in item.keywords and item.config.getoption("--fast"):
-        pytest.skip('slow')
-
-
-# -----------------------------------------------------------------------------
 def pytest_unconfigure(config):
     hpssic_test_log(config,
                     "passed: %d; FAILED: %d" % (hpssic_test_log._passcount,

@@ -115,7 +115,9 @@ class CheckableTest(testhelp.HelpedTestCase):
             raise SkipTest('HPSS not available on jenkins')
         util.conditional_rm(self.dbname())
         Dimension.get_dim('ignore', reset=True)
-        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        CrawlConfig.add_config(close=True, filename='hpssic_sqlite_test.cfg')
+        c = CrawlConfig.add_config(dct=self.cfg_dict())
+        self.populate_ttypes()
         Checkable.ex_nihilo()
         archdir = '/home/tpb/hic_test'
         self.db_add_one(path=archdir, type='d')

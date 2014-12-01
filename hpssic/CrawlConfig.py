@@ -508,7 +508,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
             if not self.has_section(s):
                 self.add_section(s)
             for o in sorted(dct[s].keys()):
-                self.set(s, o, dict[s][o])
+                self.set(s, o, dct[s][o])
 
     # -------------------------------------------------------------------------
     def map_size_unit(self, spec):
