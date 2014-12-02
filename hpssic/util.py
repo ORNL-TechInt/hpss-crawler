@@ -615,9 +615,6 @@ def rgxin(needle, haystack):
     return bool(re.search(needle, haystack))
 
 
-default_logfile_name = "/var/log/crawl.log"
-
-
 # -----------------------------------------------------------------------------
 def squash(string):
     """
@@ -733,6 +730,24 @@ def rstring():
                               string.lowercase +
                               string.digits)
     return rval
+
+
+# -----------------------------------------------------------------------------
+def write_file(filename, mode=0644, content=None):
+    """
+    Write a file, optionally setting its permission bits. This should be in
+    util.py.
+    """
+    f = open(filename, 'w')
+    if type(content) == str:
+        f.write(content)
+    elif type(content) == list:
+        f.writelines([x.rstrip() + '\n' for x in content])
+    else:
+        raise StandardError("content is not of a suitable type (%s)"
+                            % type(content))
+    f.close()
+    os.chmod(filename, mode)
 
 
 # -----------------------------------------------------------------------------

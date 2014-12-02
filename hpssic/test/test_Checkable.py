@@ -723,7 +723,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                     os.mkdir(path)
 
             for z in pri_d:
-                testhelp.write_file(z['ppath'], content=z['data'])
+                util.write_file(z['ppath'], content=z['data'])
 
             # run get_list
             x = Checkable.get_list()
@@ -1268,14 +1268,6 @@ class test_get_list(testhelp.HelpedTestCase):
                     ("/home/tpb/hic_test/test_110", 1, fuzztime(-5)),
                     ]
         return testdata
-
-    # -------------------------------------------------------------------------
-    def tearDown(self):
-        """
-        Drop the checkables table to clear the way for the next test.
-        """
-        if not testhelp.keepfiles():
-            dbschem.drop_table(table='checkables')
 
     # -------------------------------------------------------------------------
     def check_result(self,
