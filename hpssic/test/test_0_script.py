@@ -12,8 +12,7 @@ from hpssic import util as U
 # -----------------------------------------------------------------------------
 class Test_ABLE(th.HelpedTestCase):
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(pytest.config.getvalue("fast"),
-                        reason="slow -- omit --fast to run this one")
+    @pytest.mark.slow
     def test_000_pep8(self):
         full_result = ""
         for r, d, f in os.walk('hpssic'):

@@ -57,9 +57,8 @@ class CheckableTest(testhelp.HelpedTestCase):
         db.close()
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(pytest.config.getvalue("fast"),
-                        reason="slow -- omit --fast to run this one")
-    @pytest.mark.skipif('jenkins' in os.getcwd())
+    @pytest.mark.jenkins_fail
+    @pytest.mark.slow
     def test_check_dir(self):
         """
         Calling .check() on a directory should give us back a list of Checkable
@@ -284,8 +283,7 @@ class CheckableTest(testhelp.HelpedTestCase):
             self.expected(0, rows[0][7])                   # fails
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(pytest.config.getvalue("fast"),
-                        reason="slow -- omit --fast to run this one")
+    @pytest.mark.slow
     def test_ex_nihilo_exist(self):
         """
         If the database file and the checkables table already exists, calling
@@ -1157,6 +1155,7 @@ def fuzztime(days, cfg=None):
 
 
 # -----------------------------------------------------------------------------
+@pytest.mark.slow
 class test_get_list(testhelp.HelpedTestCase):
     # these fields don't change
     rtype = 'f'

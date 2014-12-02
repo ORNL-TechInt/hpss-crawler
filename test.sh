@@ -43,9 +43,14 @@ pip install .
 cp crawl.cfg.sample crawl.cfg
 
 #
+# Touch jenkins to let the tests know that's where we're running so
+# py.test will skip tests marked '@jenkins_fail'
+touch jenkins
+
+#
 # look and see what's in the current dir
 ls -al
 
 #
 # And run the tests! 
-py.test --all hpssic --cov hpssic
+py.test hpssic -v --skip "db2 mysql" --cov hpssic

@@ -18,8 +18,8 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
-@pytest.mark.skipif('jenkins' in os.getcwd(),
-                    reason="html report not yet supported on jenkins")
+@pytest.mark.jenkins_fail
+@pytest.mark.slow
 class HtmlTest(testhelp.HelpedTestCase):
     # -----------------------------------------------------------------------------
     def setUp(self):

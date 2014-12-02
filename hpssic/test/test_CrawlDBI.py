@@ -2488,10 +2488,8 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
                              something='fribble')
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif('jenkins' in os.getcwd(),
-                        reason="HPSS is not available")
-    @pytest.mark.skipif(pytest.config.getvalue("fast"),
-                        reason="slow -- omit --fast to run this one")
+    @pytest.mark.jenkins_fail
+    @pytest.mark.slow
     def test_cvlib_lscos_populate(self):
         """
         Try running cv_sublib.lscos_populate(). It should create the lscos
@@ -2588,9 +2586,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
 
 
 # -----------------------------------------------------------------------------
-@pytest.mark.skipif('jenkins' in os.getcwd())
-@pytest.mark.skipif(pytest.config.getvalue("fast"),
-                    reason="slow -- omit --fast to run this one")
+@pytest.mark.slow
 class DBIdb2Test(DBI_in_Base, DBITestRoot):
     dbctype = 'hpss'   # the function of the database
     dbtype = 'db2'     # which database engine it uses
@@ -2624,7 +2620,7 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
                                badattr='frooble')
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif('jenkins' in os.getcwd())
+    @pytest.mark.jenkins_fail
     def test_err_handler_db2(self):
         """
         DBIdb2Test: The DB2 err handler will accept *err* (an exception object)
