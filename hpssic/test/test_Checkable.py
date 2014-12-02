@@ -102,16 +102,14 @@ class CheckableTest(testhelp.HelpedTestCase):
                 self.expected(0, c.checksum)
 
     # -------------------------------------------------------------------------
-    @pytest.mark.skipif(pytest.config.getvalue("fast"),
-                        reason="slow -- omit --fast to run this one")
-    @pytest.mark.skipif('jenkins' in os.getcwd())
+    @pytest.mark.jenkins_fail
+    @pytest.mark.slow
     def test_check_file(self):
         """
         Calling .check() on a file should execute the check actions for that
         file and update the item's last_check value.
         """
-        if 'jenkins' in os.getcwd():
-            raise SkipTest('HPSS not available on jenkins')
+        self.dbgfunc()
         util.conditional_rm(self.dbname())
         Dimension.get_dim('ignore', reset=True)
         CrawlConfig.add_config(close=True, filename='hpssic_sqlite_test.cfg')
