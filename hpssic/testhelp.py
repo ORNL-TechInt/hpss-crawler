@@ -505,6 +505,19 @@ class HelpedTestCase(unittest.TestCase):
         pass
 
     # ------------------------------------------------------------------------
+    def has_mark(self, markname):
+        """
+        Return True or False to indicate whether pytest.mark *markname* is
+        present on the current object.
+        """
+        fobj = getattr(self, self._testMethodName)
+        if hasattr(fobj, markname):
+            rval = True
+        else:
+            rval = False
+        return rval
+
+    # ------------------------------------------------------------------------
     def setUp(self):
         """
         Set self.dbgfunc to either pdb.set_trace or a no-op, depending on the
@@ -515,6 +528,17 @@ class HelpedTestCase(unittest.TestCase):
             self.dbgfunc = pdb.set_trace
         else:
             self.dbgfunc = lambda: None
+
+        if self.has_mark('jenkins_fail') and os.path.exists('jenkins'):
+            pytest.skip('%s fails on jenkins' % self._testMethodName)
+
+        if self.has_mark('slow') and pytest.config.getvalue('fast'):
+            pytest.skip('%s is slow' % self._testMethodName)
+
+        for skiptag in pytest.config.getvalue("skip").split():
+            if skiptag in self.__class__.__name__:
+                pytest.skip('Skipping %s as part of %s' %
+                            (self._testMethodName, self.__class__.__name__))
 
     # -------------------------------------------------------------------------
     @pytest.fixture(autouse=True)
