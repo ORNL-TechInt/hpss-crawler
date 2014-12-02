@@ -61,6 +61,9 @@ def pytest_runtest_makereport(item, call, __multicall__):
     if rep.outcome == 'failed':
         status = ">>>>FAIL"
         hpssic_test_log._failcount += 1
+    elif rep.outcome == 'skipped':
+        status = "**SKIP**"
+        hpssic_test_log._skipcount += 1
     else:
         status = "--pass"
         hpssic_test_log._passcount += 1
@@ -77,10 +80,13 @@ def pytest_runtest_makereport(item, call, __multicall__):
 # -----------------------------------------------------------------------------
 def pytest_unconfigure(config):
     hpssic_test_log(config,
-                    "passed: %d; FAILED: %d" % (hpssic_test_log._passcount,
-                                                hpssic_test_log._failcount))
+                    "passed: %d; skipped: %d; FAILED: %d" %
+                    (hpssic_test_log._passcount,
+                     hpssic_test_log._skipcount,
+                     hpssic_test_log._failcount))
 
 
 hpssic_test_log._logpath = "hpssic/test/hpssic_test.log"
 hpssic_test_log._passcount = 0
+hpssic_test_log._skipcount = 0
 hpssic_test_log._failcount = 0
