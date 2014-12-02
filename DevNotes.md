@@ -209,3 +209,40 @@ so it can call routines in cv_lib(3). The stack rule:
             expression
 
    -v       report test names as they are run
+
+
+#### 2014-12-02  Test Skipping
+
+There are a few situations in which tests should be skipped:
+
+ * Running on jenkins, several pieces of infrastructure are not available
+   (hsi/hpss, db2, mysql), so tests that depend on those should be skipped.
+
+ * With option --fast, tests marked 'slow' should be skipped.
+
+ * When a particular piece of infrastructure (HPSS/hsi, db2, mysql) is not
+   available in the development environment, we'd like to skip tests that
+   depend on that infrastructure.
+
+I learned yesterday that using pytest.mark.foo to mark tests and control
+skipping does not work well for classes that inherit tests from parent
+classes. The marks are assigned to the method, not the class, so the marks
+leak over to sibling classes and skip or run tests that were supposed to go
+the other way.
+
+So, the (sub-optimal) strategy I have formulated for now is the following:
+
+ * Some non-inherited tests will be marked with
+   '@pytest.mark.jenkins_fail'. Those will not be run if 1) 'jenkins'
+   appears in os.getcwd() or 2) the file 'jenkins' exists in the current
+   directory when tests are run.
+
+ * Tests can be skipped by putting some piece of the class name in the
+   --skip option. For example, 'py.test --skip db2' will skip db2 tests,
+   including those inherited from DBI_in_Base, without skipping sqlite or
+   mysql tests inherited from DBI_in_Base. 'py.test --skip "db2 mysql"' will
+   skip both db2 and mysql tests. This is based on looking at the test's
+   class name and deciding whether the skip tag appears in it.
+
+ * Slow tests can be skipped by using the option --fast on the py.test
+   command line.
