@@ -34,7 +34,7 @@ def pytest_addoption(parser):
                      help="preserve test tables")
     parser.addoption("--nolog", action="store_true", default=False,
                      help="suppress test logging")
-    parser.addoption("--skip", action="store", default='',
+    parser.addoption("--skip", action="append", default=[],
                      help="skip tests with matching tags")
     attr = pytest.mark.attr
 

@@ -53,4 +53,4 @@ ls -al
 
 #
 # And run the tests! 
-py.test hpssic -v --skip "db2 mysql" --cov hpssic
+py.test hpssic -v --skip db2 --skip mysql --cov hpssic -k CrawlDBI
