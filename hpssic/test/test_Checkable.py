@@ -141,6 +141,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Verify that the constructor gives us an object with the right methods
         and default attributes.
         """
+        CrawlConfig.add_config(close=True)
         x = Checkable()
         for method in self.methods:
             self.expected_in(method, dir(x))
@@ -159,6 +160,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Verify that the constructor accepts and sets rowid, path, type,
         cos, and last_check
         """
+        CrawlConfig.add_config(close=True)
         x = Checkable(rowid=3, path='/one/two/three', type='f', cos='6002',
                       last_check=72, probability=0.01)
         for method in self.methods:
@@ -189,6 +191,7 @@ class CheckableTest(testhelp.HelpedTestCase):
         Two (Checkable) objects should be equal iff both are instances of class
         Checkable and their path and type attributes are equal.
         """
+        CrawlConfig.add_config(close=True)
         now = time.time()
         a = Checkable(rowid=92,
                       path='/foo/bar',

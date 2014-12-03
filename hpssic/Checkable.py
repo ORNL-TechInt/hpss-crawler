@@ -117,7 +117,7 @@ class Checkable(object):
         # Since this class is only used by the cv_plugin, it makes no sense for
         # this code to be running if there is no cv section in the
         # configuration, so we'll let that exception get thrown up the stack.
-        cfg = CrawlConfig.get_config()
+        cfg = CrawlConfig.add_config()
         self.dim = {}
         try:
             dim_l = util.csv_list(cfg.get('cv', 'dimensions'))

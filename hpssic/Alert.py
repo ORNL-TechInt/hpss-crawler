@@ -74,7 +74,7 @@ class Alert(object):
         if self.cfg is not None:
             cfg = self.cfg
         else:
-            cfg = CrawlConfig.get_config()
+            cfg = CrawlConfig.add_config()
         if self.caller != '':
             section = cfg.get(self.caller, 'alerts')
         else:
