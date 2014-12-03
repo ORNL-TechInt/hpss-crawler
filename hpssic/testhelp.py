@@ -343,6 +343,9 @@ class HelpedTestCase(unittest.TestCase):
             if skiptag in self.__class__.__name__:
                 pytest.skip('Skipping %s as part of %s' %
                             (self._testMethodName, self.__class__.__name__))
+            else:
+                print("'%s' is not in '%s'" %
+                      (skiptag, self.__class__.__name__))
 
     # -------------------------------------------------------------------------
     @pytest.fixture(autouse=True)
