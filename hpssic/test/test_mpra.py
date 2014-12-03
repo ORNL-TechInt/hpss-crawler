@@ -15,6 +15,24 @@ from hpssic import util as U
 # -----------------------------------------------------------------------------
 class MpraResetTest(th.HelpedTestCase):
     # -------------------------------------------------------------------------
+    def cfg_dict(self):
+        """
+        Stand-alone config for these tests
+        """
+        rval = {'crawler': {'context': 'TEST',
+                            'plugins': 'mpra',
+                            'logpath': self.tmpdir('hpssic.log'),
+                            },
+                'mpra': {'report_file': self.rptname,
+                         },
+                'dbi-crawler': {'dbtype': 'sqlite',
+                                'dbname': self.tmpdir('test.db'),
+                                'tbl_prefix': 'test',
+                                },
+                }
+        return rval
+
+    # -------------------------------------------------------------------------
     def setUp(self):
         """
         Set up for each test: create the mpra table with prefix 'test', touch
@@ -28,13 +46,11 @@ class MpraResetTest(th.HelpedTestCase):
         else:
             raise HpssicError("mpra command not found")
 
-        self.cfgname = self.tmpdir("mpra_test.cfg")
         self.rptname = self.tmpdir("mpra_report.txt")
-        self.cfg = CrawlConfig.add_config(close=True,
-                                          filename="hpssic_mysql_test.cfg")
-        self.cfg.set('dbi-crawler', 'tbl_prefix', 'test')
-        self.cfg.set('mpra', 'report_file', self.rptname)
+        self.cfgname = self.tmpdir("mpra_test.cfg")
+        self.cfg = CrawlConfig.add_config(close=True, dct=self.cfg_dict())
         self.cfg.crawl_write(open(self.cfgname, 'w'))
+
         dbschem.make_table("mpra", cfg=self.cfg)
         U.touch(self.rptname)
 
