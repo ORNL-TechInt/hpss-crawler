@@ -56,14 +56,19 @@ def pytest_runtest_setup(item):
     fqn = '.'.join([item.module.__name__, item.cls.__name__, item.name])
     dbg_n = '..' + item.name
     dbg_l = item.config.getvalue('dbg')
+    skip_l = item.config.getvalue('skip')
     if dbg_n in dbg_l or '..all' in dbg_l:
         pdb.set_trace()
 
-    if item.get_marker('jenkins_fail') and os.path.exists('jenkins'):
-        pytest.skip('%s would fail on jenkins' % fqn)
+    jfm = 'jenkins_fail'
+    if item.get_marker(jfm):
+        if os.path.exists('jenkins') or jfm in skip_l :
+            pytest.skip('%s would fail on jenkins' % fqn)
 
-    if item.get_marker('slow') and item.config.getvalue('fast'):
-        pytest.skip('%s is slow' % fqn)
+    slow_m = 'slow'
+    if item.get_marker('slow'):
+        if item.config.getvalue('fast') or slow_m in skip_l:
+            pytest.skip('%s is slow' % fqn)
 
     for skiptag in item.config.getvalue('skip'):
         if skiptag in fqn:
