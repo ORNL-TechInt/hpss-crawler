@@ -53,8 +53,18 @@ def pytest_runtest_setup(item):
     """
     Decide whether to skip a test before running it
     """
-    # pdb.set_trace()
     fqn = '.'.join([item.module.__name__, item.cls.__name__, item.name])
+    dbg_n = '..' + item.name
+    dbg_l = item.config.getvalue('dbg')
+    if dbg_n in dbg_l or '..all' in dbg_l:
+        pdb.set_trace()
+
+    if item.get_marker('jenkins_fail') and os.path.exists('jenkins'):
+        pytest.skip('%s would fail on jenkins' % fqn)
+
+    if item.get_marker('slow') and item.config.getvalue('fast'):
+        pytest.skip('%s is slow' % fqn)
+
     for skiptag in item.config.getvalue('skip'):
         if skiptag in fqn:
             pytest.skip("Skiptag '%s' excludes '%s'" % (skiptag, fqn))

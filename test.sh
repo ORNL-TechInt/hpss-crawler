@@ -54,4 +54,4 @@ py.test --version
 
 #
 # And run the tests! 
-py.test hpssic -s -rs -v --skip mysql --skip db2 --cov hpssic -k CrawlDBI
+py.test hpssic -rs -v --skip mysql --skip db2 --cov hpssic
