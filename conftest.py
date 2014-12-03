@@ -49,6 +49,18 @@ def pytest_report_header(config):
 
 
 # -----------------------------------------------------------------------------
+def pytest_runtest_setup(item):
+    """
+    Decide whether to skip a test before running it
+    """
+    # pdb.set_trace()
+    fqn = '.'.join([item.module.__name__, item.cls.__name__, item.name])
+    for skiptag in item.config.getvalue('skip'):
+        if skiptag in fqn:
+            pytest.skip("Skiptag '%s' excludes '%s'" % (skiptag, fqn))
+
+
+# -----------------------------------------------------------------------------
 @pytest.mark.tryfirst
 def pytest_runtest_makereport(item, call, __multicall__):
     """

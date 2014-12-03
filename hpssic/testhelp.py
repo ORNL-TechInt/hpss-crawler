@@ -339,13 +339,13 @@ class HelpedTestCase(unittest.TestCase):
         if self.has_mark('slow') and pytest.config.getvalue('fast'):
             pytest.skip('%s is slow' % self._testMethodName)
 
-        for skiptag in pytest.config.getvalue("skip"):
-            if skiptag in self.__class__.__name__:
-                pytest.skip('Skipping %s as part of %s' %
-                            (self._testMethodName, self.__class__.__name__))
-            else:
-                print("'%s' is not in '%s'" %
-                      (skiptag, self.__class__.__name__))
+        # for skiptag in pytest.config.getvalue("skip"):
+        #     if skiptag in self.__class__.__name__:
+        #         pytest.skip('Skipping %s as part of %s' %
+        #                     (self._testMethodName, self.__class__.__name__))
+        #     else:
+        #         print("'%s' is not in '%s'" %
+        #               (skiptag, self.__class__.__name__))
 
     # -------------------------------------------------------------------------
     @pytest.fixture(autouse=True)
