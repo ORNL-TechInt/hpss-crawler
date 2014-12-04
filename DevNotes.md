@@ -246,3 +246,39 @@ So, the (sub-optimal) strategy I have formulated for now is the following:
 
  * Slow tests can be skipped by using the option --fast on the py.test
    command line.
+
+
+#### 2014-12-03
+
+Updating software stack -- moving CrawlPlugin from layer 8 up to layer
+3 so it can call routines in crawl_sublib. Adding crawl_sublib.py on
+level 5. The stack rule:
+
+ * To prevent dependency cycles, A file may only import files at a
+   lower level in the stack than itself, never files at its own level
+   or a higher level than itself.
+
+0                                         test/test_*.py
+0.1                                         fakesmtp
+
+ 1   crawl   cv   rpt   tcc     mpra      html
+
+ 2   crawl_lib  cv_lib   tcc_lib   mpra_lib   html_lib
+
+ 3   Checkable         toolframe    rpt_lib    CrawlPlugin
+
+ 4   Alert       Dimension     testhelp(?)
+
+ 5       {crawl,tcc,mpra,rpt}_sublib
+
+ 6               cv_sublib
+
+ 7               dbschem
+
+ 8               hpss      CrawlDBI   CrawlMail
+
+ 9       CrawlConfig
+
+10          util
+
+11          messages    version     daemon
