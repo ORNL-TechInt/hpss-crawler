@@ -37,7 +37,7 @@ def make_db2_tcfg(dbeng, obj):
     Construct and return a config object for a db2 database
     """
     tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config('hpssic_mysql_test.cfg', reset=True)
+    xcfg = CrawlConfig.add_config('hpssic_mysql_test.cfg', close=True)
     section = 'dbi-hpss'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
@@ -45,6 +45,7 @@ def make_db2_tcfg(dbeng, obj):
     for optname in ['cfg', 'sub', 'dbtype', 'tbl_prefix',
                     'hostname', 'port', 'username', 'password']:
         tcfg.set(section, optname, xcfg.get(section, optname))
+    CrawlConfig.add_config(cfg=tcfg, close=True)
     return tcfg
 
 
@@ -54,7 +55,7 @@ def make_mysql_tcfg(dbeng, obj):
     Construct and return a config object for a mysql database
     """
     tcfg = CrawlConfig.CrawlConfig()
-    xcfg = CrawlConfig.get_config('hpssic_mysql_test.cfg', reset=True)
+    xcfg = CrawlConfig.add_config(filename='hpssic_mysql_test.cfg', close=True)
     section = 'dbi-crawler'
     tcfg.add_section(section)
     tcfg.set(section, 'dbtype', dbeng)
@@ -62,6 +63,7 @@ def make_mysql_tcfg(dbeng, obj):
     tcfg.set(section, 'tbl_prefix', 'test')
     for dbparm in ['dbname', 'hostname', 'username', 'password']:
         tcfg.set(section, dbparm, xcfg.get(section, dbparm))
+    CrawlConfig.add_config(cfg=tcfg, close=True)
     return tcfg
 
 
