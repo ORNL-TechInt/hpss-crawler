@@ -22,6 +22,13 @@ tdefs = {
                               ]
                    },
 
+    'history': {'fields':    ['plugin      varchar(32)',
+                              'runtime     int',
+                              'errors      int',
+                              'primary key (plugin, runtime)'
+                              ]
+                },
+
     # In lscos, COS min and max sizes are stored as text because the max sizes
     # already exceed what an int can hold and are pushing the size of a bigint
 

@@ -5,6 +5,7 @@ This module contains the CrawlPlugin class.
 """
 import copy
 import CrawlConfig
+import crawl_sublib
 import re
 import shutil
 import sys
@@ -49,8 +50,9 @@ class CrawlPlugin(object):
         if self.firable:
             CrawlConfig.log("%s: firing" % self.name)
             # sys.modules[self.modname].main(self.cfg)
-            self.plugin.main(self.cfg)
+            errors = self.plugin.main(self.cfg)
             self.last_fired = time.time()
+            crawl_sublib.record_history(self.name, self.last_fired, errors)
         elif self.cfg.getboolean('crawler', 'verbose'):
             CrawlConfig.log("%s: not firable" % self.name)
             self.last_fired = time.time()
