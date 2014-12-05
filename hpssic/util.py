@@ -610,9 +610,25 @@ def realpath(fakepath):
 # -----------------------------------------------------------------------------
 def rgxin(needle, haystack):
     """
-    Return True if the regexp needle matches haystack.
+    If the regexp *needle* matches haystack, return the value of the first
+    match.
+
+    NOTE: The return value has changed from True/False to indicate whether a
+    match was found to the value of the first match found. Normally, this
+    should not change the behavior of the routine but there is one case that
+    will now indicate False that used to indicate True. That is, if the rgx
+    matches the empty string, the empty string will be returned. Before this
+    update, that situation would have returned True. Now the empty string
+    evaluated in a boolean context will look like False.
+
+    One way to finesse this would be the following usage:
+
+       if util.rgxin(...) is not None:
+          ...
     """
-    return bool(re.search(needle, haystack))
+    hits = re.findall(needle, haystack)
+    rval = pop0(hits)
+    return rval
 
 
 # -----------------------------------------------------------------------------
