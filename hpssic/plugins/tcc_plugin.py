@@ -50,11 +50,13 @@ def main(cfg):
 
     CrawlConfig.log("got %d bitfiles" % len(bfl))
 
+    errcount = 0
     if len(bfl) == 0:
         for oid in range(next_nsobj_id, next_nsobj_id+how_many):
             tcc_lib.record_checked_ids(cfg, oid, oid, 1, 0)
             if cfg.getboolean(tcc_lib.sectname(), 'verbose'):
                 CrawlConfig.log("Object %d is not complete" % oid)
+                errcount += 1
     else:
         # for each bitfile, if it does not have the right number of copies,
         # report it
@@ -83,8 +85,11 @@ def main(cfg):
                                        last_obj_id,
                                        correct,
                                        error)
+            errcount += error
 
         CrawlConfig.log("last nsobject in range: %d" % last_obj_id)
+
+    return errcount
 
 
 # -----------------------------------------------------------------------------

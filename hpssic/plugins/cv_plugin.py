@@ -128,6 +128,7 @@ def main(cfg):
     t = Dimension.Dimension(name='cart')
     CrawlConfig.log(d.report())
     CrawlConfig.log(t.report())
+    return failures
 
 
 # -----------------------------------------------------------------------------
