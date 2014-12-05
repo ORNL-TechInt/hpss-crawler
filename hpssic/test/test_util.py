@@ -685,15 +685,19 @@ class UtilTest(testhelp.HelpedTestCase):
         """
         self.dbgfunc()
         rgx = "a\(?b\)?c"
+        rgx2 = "(dog|fox|over)"
         fstring = "The quick brown fox jumps over the lazy dog"
         tstring1 = "Now we know our abc's"
         tstring2 = "With parens: a(b)c"
-        self.assertTrue(util.rgxin(rgx, tstring1),
+        self.assertTrue(U.rgxin(rgx, tstring1),
                         "'%s' should match '%s'" % (rgx, tstring1))
-        self.assertTrue(util.rgxin(rgx, tstring2),
+        self.assertTrue(U.rgxin(rgx, tstring2),
                         "'%s' should match '%s'" % (rgx, tstring2))
-        self.assertFalse(util.rgxin(rgx, fstring),
+        self.assertFalse(U.rgxin(rgx, fstring),
                          "'%s' should NOT match '%s'" % (rgx, fstring))
+        self.expected('abc', U.rgxin(rgx, tstring1))
+        self.expected('a(b)c', U.rgxin(rgx, tstring2))
+        self.expected('fox', U.rgxin(rgx2, fstring))
 
     # -------------------------------------------------------------------------
     def test_rrfile_long(self):
