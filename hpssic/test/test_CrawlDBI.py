@@ -1682,6 +1682,61 @@ class DBI_out_Base(object):
         db.close()
 
     # -------------------------------------------------------------------------
+    def test_composite_primary_key_duplicate(self):
+        """
+        DBI_out_Base: An attempt to insert an existing record into a table with
+        a composite primary key should fail. 'history' is such a table.
+        """
+        self.dbgfunc()
+        db = self.DBI()
+        dbschem.make_table('history')
+        db.insert(table='history',
+                  fields=['plugin', 'runtime', 'errors'],
+                  data=[('tcc', 1398456437, 0),
+                        ('migr', 1401910729, 0),
+                        ('report', 1401910729, 0),
+                        ('cv', 1401910729, 0),
+                        ('purge', 1403125415, 0)])
+
+        # should fail
+        self.assertRaisesMsg(CrawlDBI.DBIerror,
+                             ["columns plugin, runtime are not unique",
+                              "1062: Duplicate entry"],
+                             db.insert,
+                             table='history',
+                             fields=['plugin', 'runtime', 'errors'],
+                             data=[('tcc', 1398456437, 0)])
+        rows = db.select(table='history',
+                         fields=['plugin', 'runtime', 'errors'])
+        self.expected(5, len(rows))
+
+        # should succeed
+        db.insert(table='history',
+                  fields=['plugin', 'runtime', 'errors'],
+                  data=[('cv', 1398456437, 0)])
+        rows = db.select(table='history',
+                         fields=['plugin', 'runtime', 'errors'])
+        self.expected(6, len(rows))
+
+        # what if we insert three rows and one is a duplicate. Do the other two
+        # get inserted or does the whole thing fail? >>> With ignore=True, the
+        # duplicates are dropped and everything else is inserted. However, in
+        # this situation, mysql throws a warning.
+        with warnings.catch_warnings(record=True) as wlist:
+            db.insert(table='history',
+                      ignore=True,
+                      fields=['plugin', 'runtime', 'errors'],
+                      data=[('cv', 1598456437, 0),
+                            ('tcc', 1423423425, 0),
+                            ('report', 1401910729, 0),
+                            ])
+            w = util.pop0(wlist)
+            self.assertEqual(None, w, "Unexpected warning: %s" % w)
+        rows = db.select(table='history',
+                         fields=['plugin', 'runtime', 'errors'])
+        self.expected(8, len(rows))
+
+    # -------------------------------------------------------------------------
     def test_update_f(self):
         """
         DBI_out_Base: Calling update() specifying fields should update the

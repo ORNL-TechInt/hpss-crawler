@@ -31,6 +31,8 @@ empty_message = ("Empty message")
 
 hpss_unavailable = ("HPSS Unavailable")
 
+insert_ignore_bool = ("On insert(), ignore must be boolean")
+
 invalid_attr_SS = ("Attribute '%s' is not valid for %s")
 
 invalid_attr_rgx = ("Attribute '.*' is not valid for .*")

@@ -547,7 +547,7 @@ class DBIsqlite(DBI_abstract):
             raise DBIerror(''.join(e.args), dbname=self.dbname)
 
     # -------------------------------------------------------------------------
-    def insert(self, table='', fields=[], data=[]):
+    def insert(self, table='', ignore=False, fields=[], data=[]):
         """
         DBIsqlite: See DBI.insert()
         """
@@ -570,10 +570,13 @@ class DBIsqlite(DBI_abstract):
         elif data == []:
             raise DBIerror("On insert(), data list must not be empty",
                            dbname=self.dbname)
+        elif type(ignore) != bool:
+            raise DBIerror(MSG.insert_ignore_bool, dbname=self.dbname)
 
         # Construct and run the insert statement
         try:
-            cmd = ("insert into %s(" % self.prefix(table) +
+            cmd = ("insert %s" % ("or ignore " if ignore else "") +
+                   "into %s(" % self.prefix(table) +
                    ",".join(fields) +
                    ") values (" +
                    ",".join(["?" for x in fields]) +
@@ -969,7 +972,7 @@ if mysql_available:
                 self.err_handler(e)
 
         # ---------------------------------------------------------------------
-        def insert(self, table='', fields=[], data=[]):
+        def insert(self, table='', ignore=False, fields=[], data=[]):
             """
             DBImysql: Insert into a mysql database
             """
@@ -992,16 +995,25 @@ if mysql_available:
             elif data == []:
                 raise DBIerror("On insert(), data list must not be empty",
                                dbname=self.dbname)
+            elif type(ignore) != bool:
+                raise DBIerror(MSG.insert_ignore_bool, dbname=self.dbname)
 
             # Construct and run the insert statement
             try:
-                cmd = ("insert into %s(" % self.prefix(table) +
+                cmd = ("insert %s" % ("ignore " if ignore else "") +
+                       "into %s(" % self.prefix(table) +
                        ",".join(fields) +
                        ") values (" +
                        ",".join(["%s" for x in fields]) +
                        ")")
                 c = self.dbh.cursor()
-                c.executemany(cmd, data)
+                if ignore:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings("ignore",
+                                                "Duplicate entry .*")
+                        c.executemany(cmd, data)
+                else:
+                    c.executemany(cmd, data)
                 c.close()
             # Translate sqlite specific exception into a DBIerror
             except mysql_exc.Error as e:
