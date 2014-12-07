@@ -167,6 +167,73 @@ def crl_fire(argv):
 
 
 # ------------------------------------------------------------------------------
+def crl_history(argv):
+    """history - access to the plugin history
+
+    usage: crawl history [--load|--show|--reset]
+
+    --load {all,cv,mpra,tcc,rpt}
+        Load the history table from listed plugin tables, log file
+
+    --show
+        Read the history table and report its contents.
+
+    --reset
+        Drop the history table.
+
+    --read-log FILENAME
+        If --load is specified and includes 'cv', read FILENAME and load cv
+        history from it.
+
+    To load just cv data, --load cv --read-log FILENAME
+    To load just mpra data, --load mpra
+    To load all plugins, --load all (or "") --read-log FILENAME
+
+    If --load contains 'cv' but --read-log is not specified, an error message
+    will be issued.
+
+    If --load contains 'all' or is empty and --read-log is not specified, a
+    warning will be issued to notify the user that cv data is not being loaded.
+
+    If --load does not contain 'cv' or 'all' and is not empty and --read-log is
+    specified, a warning will be issued that the log file is not being read and
+    cv data is not being loaded.
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    p.add_option('-l', '--load',
+                 action='store', default=None, dest='loadlist',
+                 help='plugins to load')
+    p.add_option('-r', '--read-log',
+                 action='store', default=None, dest='filename',
+                 help='log file for cv history')
+    p.add_option('-R', '--reset',
+                 action='store_true', default=False, dest='reset',
+                 help='drop the history table')
+    p.add_option('-s', '--show',
+                 action='store_true', default=False, dest='show',
+                 help='Report the contents of the history table')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+
+    if any([all([o.loadlist is not None, o.reset]),
+            all([o.loadlist is not None, o.show]),
+            all([o.reset, o.show])]):
+        raise SystemExit(MSG.history_options)
+
+    if o.show:
+        history_show()
+    elif o.reset:
+        print(dbschem.drop_table(table='history'))
+    elif o.loadlist is not None:
+        history_load(o.loadlist, o.filename)
+
+
+# ------------------------------------------------------------------------------
 def crl_log(argv):
     """log - write a message to the indicated log file
 
