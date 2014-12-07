@@ -2,6 +2,43 @@ import CrawlDBI
 import dbschem
 import hpss
 import messages as MSG
+import pdb
+import util as U
+
+
+# -----------------------------------------------------------------------------
+def load_history(filename):
+    """
+    Read log file *filename* and create records in table pfx_history
+    corresponding to each time the cv plugin was run.
+
+    Line containing 'cv_plugin' and 'firing up' indicates run time.
+
+    Subsequent line containing 'cv_plugin' and 'failures: %d' indicate errors
+    for the run.
+    """
+    db = CrawlDBI.DBI(dbtype='crawler')
+    runtime = error = None
+    with open(filename, 'r') as f:
+        for line in f:
+            if all([runtime is None,
+                    error is None,
+                    'cv_plugin' in line,
+                    'firing up' in line]):
+                runtime = U.epoch(line[0:18])
+            if all([runtime is not None,
+                    error is None,
+                    'cv_plugin' in line,
+                    'failures:' in line,
+                    'totals' not in line]):
+                error = int(U.rgxin('failures: (\d+)', line))
+            if runtime is not None and error is not None:
+                db.insert(table='history',
+                          ignore=True,
+                          fields=['plugin', 'runtime', 'errors'],
+                          data=[('cv', runtime, error)])
+                runtime = error = None
+    db.close()
 
 
 # -----------------------------------------------------------------------------

@@ -100,6 +100,18 @@ class CrawlPlugin(object):
             self.plugin = getattr(H.plugins, self.modname)
 
     # -------------------------------------------------------------------------
+    def load_history(self, *args):
+        """
+        Call load_history in my sublib. Import the sublib if necessary.
+        """
+        slname = 'hpssic.' + self.name + '_sublib'
+        if slname in sys.modules:
+            S = sys.modules[slname]
+        else:
+            S = __import__(slname, fromlist=[slname])
+        S.load_history(*args)
+
+    # -------------------------------------------------------------------------
     def reload(self, cfg):
         """
         Re-initialize this object from the configuration.
