@@ -3,13 +3,17 @@ Run a bunch of plug-ins which will probe the integrity of HPSS
 """
 import atexit
 import base64
+import copy
+import crawl_lib
 import CrawlConfig
 import CrawlDBI
 import CrawlMail
 import CrawlPlugin
 import daemon
+import dbschem
 import getpass
 import glob
+import messages as MSG
 import optparse
 import os
 import pdb
@@ -19,6 +23,7 @@ import testhelp
 import time
 import traceback as tb
 import util
+import util as U
 import version
 
 exit_file = 'crawler.exit'
@@ -405,6 +410,62 @@ def crl_version(argv):
         pdb.set_trace()
 
     print("HPSS Integrity Crawler version %s" % version.__version__)
+
+
+# ------------------------------------------------------------------------------
+def history_load(loadlist, filename):
+    """
+    Each plugin's sublib has a load_history() routine that knows how to load
+    its data to the history file.
+
+    Unfortunately, we do have to know here something special about plugin 'cv'
+    to warn the user when a filename was specified without 'cv' in the load
+    list or vice versa and when to pass filename to the plugin's load_history()
+    method.
+    """
+    cfg = CrawlConfig.add_config()
+    pluglist = U.csv_list(cfg.get_d('crawler', 'plugins', U.default_plugins()))
+    ll = U.csv_list(loadlist)
+    if 'all' in ll or ll == []:
+        ll = copy.deepcopy(pluglist)
+
+    if filename is None and 'cv' in ll:
+        print(MSG.history_cv_not_loaded)
+        ll.remove('cv')
+    elif filename is not None and 'cv' not in ll:
+        print(MSG.history_filename_ignored)
+
+    unk_plugs = [x for x in ll if x not in pluglist]
+    if 0 < len(unk_plugs):
+        print(MSG.unrecognized_plugin_S % ', '.join(unk_plugs))
+        map(ll.remove, unk_plugs)
+
+    if ll == []:
+        return
+
+    dbschem.make_table('history')
+    for plug in [x for x in ll if x in pluglist]:
+        print("loading %s..." % plug)
+        if plug == 'cv' and filename is not None:
+            args = [filename]
+        else:
+            args = []
+        p = CrawlPlugin.CrawlPlugin(name=plug, cfg=cfg)
+        p.load_history(*args)
+
+
+# ------------------------------------------------------------------------------
+def history_show():
+    """
+    Report the records in the history table in chronological order
+    """
+    fmt = "%-20s %-10s %7s"
+    rows = crawl_lib.retrieve_history()
+    print(fmt % ("Run Time", "Plugin", "Errors"))
+    for row in rows:
+        print(fmt % (U.ymdhms(row[1]),
+                     row[0],
+                     str(row[2])))
 
 
 # ------------------------------------------------------------------------------
