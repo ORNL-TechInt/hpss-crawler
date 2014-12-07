@@ -2,6 +2,22 @@ import CrawlDBI
 
 
 # -----------------------------------------------------------------------------
+def load_history():
+    """
+    Read the contents of table pfx_mpra and load the unique scan_times
+    into table pfx_history as mpra runtimes.
+    """
+    db = CrawlDBI.DBI(dbtype='crawler')
+    rows = db.select(table='mpra',
+                     fields=['type', 'scan_time', 'hits'])
+    db.insert(table='history',
+              ignore=True,
+              fields=['plugin', 'runtime', 'errors'],
+              data=list(rows))
+    db.close()
+
+
+# -----------------------------------------------------------------------------
 def report_title():
     """
     MPRA report title

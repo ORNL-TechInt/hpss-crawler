@@ -1,3 +1,24 @@
+import CrawlDBI
+
+
+# -----------------------------------------------------------------------------
+def load_history():
+    """
+    Read the contents of table pfx_tcc_data and load the unique check_times
+    into table pfx_history as tcc runtimes.
+    """
+    db = CrawlDBI.DBI(dbtype='crawler')
+    rows = db.select(table='tcc_data',
+                     fields=['check_time', 'sum(error)'],
+                     groupby='check_time')
+    insert_data = [('tcc', x[0], x[1]) for x in rows]
+    db.insert(table='history',
+              ignore=True,
+              fields=['plugin', 'runtime', 'errors'],
+              data=insert_data)
+    db.close()
+
+
 # -----------------------------------------------------------------------------
 def report_title():
     """
