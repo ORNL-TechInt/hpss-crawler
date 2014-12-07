@@ -126,6 +126,8 @@ class HtmlTest(testhelp.HelpedTestCase):
         cmd = "html report --config %s" % cfpath
         CrawlConfig.log(cmd, close=True)
         result = pexpect.run(cmd)
+        if "HPSS Unavailable" in result:
+            pytest.skip("HPSS Unavailable")
         self.validate_report(result)
 
     # -------------------------------------------------------------------------

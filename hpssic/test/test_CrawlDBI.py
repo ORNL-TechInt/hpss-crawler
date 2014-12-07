@@ -2129,6 +2129,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBImysqlTest: The DBImysql ctor requires 'dbname' and 'tbl_prefix' as
         keyword arguments
         """
+        self.dbgfunc()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.dbname_required,
                              CrawlDBI.DBImysql,
@@ -2140,6 +2141,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBImysqlTest: The DBImysql ctor requires 'tbl_prefix' as
         keyword arguments
         """
+        self.dbgfunc()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.tblpfx_required,
                              CrawlDBI.DBImysql,
@@ -2154,6 +2156,7 @@ class DBImysqlTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
          > passing both addcol and dropcol in the same invocation should raise
            an exception
         """
+        self.dbgfunc()
         tname = util.my_name()
         tcfg = make_tcfg(self.dbtype, self)
         db = self.DBI()
@@ -2398,6 +2401,7 @@ class DBIsqliteTest(DBI_in_Base, DBI_out_Base, DBITestRoot):
         DBIsqliteTest: Called with no tbl_prefix, constructor should throw
         exception
         """
+        self.dbgfunc()
         self.assertRaisesMsg(CrawlDBI.DBIerror,
                              MSG.tblpfx_required,
                              CrawlDBI.DBIsqlite,
@@ -2733,6 +2737,8 @@ class DBIdb2Test(DBI_in_Base, DBITestRoot):
         DBIdb2Test: Called with no tbl_prefix, constructor should throw
         exception
         """
+        self.dbgfunc()
+        make_tcfg(self.dbtype, self)
         db = CrawlDBI.DBIdb2(dbname="cfg")
         self.expected('hpss.', db.tbl_prefix)
         db.close()
