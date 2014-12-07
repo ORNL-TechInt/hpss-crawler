@@ -12,6 +12,20 @@ import time
 
 
 # -----------------------------------------------------------------------------
+def retrieve_history():
+    """
+    Retrieve and return the contents of table 'history'. At some point, we may
+    need to turn this into a generator so we don't try to load the whole table
+    into memory at once, but for now YAGNI.
+    """
+    db = CrawlDBI.DBI(dbtype='crawler')
+    rows = db.select(table='history',
+                     fields=['plugin', 'runtime', 'errors'])
+    db.close()
+    return rows
+
+
+# -----------------------------------------------------------------------------
 def simplug(plugin, args):
     """
     Common plugin simulator. May be used by the interactive tools to simulate
