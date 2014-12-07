@@ -53,6 +53,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If option 'fire' is False in config, the object's firable attribute
         should be False and attempting to fire the plugin should do nothing
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
@@ -70,6 +71,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If option 'fire' is True in config, the plugin's firable attribute
         should be True and attempting to fire the plugin should work
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname)
@@ -87,6 +89,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If option 'fire' is not set in config, the firable attribute should be
         true in plugin object
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=None)
@@ -109,6 +112,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If frequency is set in config, plugin should match
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, fire=False)
@@ -122,6 +126,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If frequency not set in config, should be 3600 (1 hour) in plugin
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         c = self.make_cfg(pname, freq=None)
@@ -143,6 +148,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If plugin_dir set in config and in sys.path, sys.path should not change
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         if self.plugdir() not in sys.path:
@@ -159,6 +165,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If plugin_dir set in config and not in sys.path, should be added to
         sys.path
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         if self.plugdir() in sys.path:
@@ -178,6 +185,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If plugin_dir not set in config, attempting to create a plugin object
         should throw an exception
         """
+        self.dbgfunc()
         pname = U.my_name()
         self.make_plugin(pname)
         if self.plugdir() in sys.path:
@@ -200,6 +208,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         that py.test won't think it's a test object and munge it in a way that
         prevents it being reloaded.
         """
+        self.dbgfunc()
         # set up dir, plugin name, create plugin
         pname = 'z' + U.my_name()
         self.make_plugin(pname)
@@ -234,6 +243,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If plugin does exists and not in module list, should be imported
         """
+        self.dbgfunc()
         # set up dir, plugin name, create plugin
         pname = U.my_name()
         self.make_plugin(pname)
@@ -254,6 +264,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If plugin does not exist, should get ImportError
         """
+        self.dbgfunc()
         # set up dir, plugin name, create plugin
         if self.plugdir() not in sys.path:
             sys.path.append(self.plugdir())
@@ -275,6 +286,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         Changing a plugin's configuration and reloading it should update the
         firable attribute.
         """
+        self.dbgfunc()
         # set up the plugin
         if self.plugdir() not in sys.path:
             sys.path.append(self.plugdir())
@@ -302,6 +314,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         Changing a plugin's configuration and reloading it should update its
         frequency attribute.
         """
+        self.dbgfunc()
         # set up the plugin
         if self.plugdir() not in sys.path:
             sys.path.append(self.plugdir())
@@ -332,6 +345,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         If the plugdir changes, do we unload all the plugins currently loaded
         from the old dir? No, just the one being reloaded.
         """
+        self.dbgfunc()
         # set up the plugin
         if self.plugdir() not in sys.path:
             sys.path.insert(0, self.plugdir())
@@ -373,6 +387,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If time.time() - last_fired <= freq, time_to_fire() should return False
         """
+        self.dbgfunc()
         # set up the plugin
         if self.plugdir() not in sys.path:
             sys.path.insert(0, self.plugdir())
@@ -397,6 +412,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         If freq < time.time() - last_fired, time_to_fire() should return True
         """
+        self.dbgfunc()
         # set up the plugin
         if self.plugdir() not in sys.path:
             sys.path.insert(0, self.plugdir())
@@ -419,32 +435,50 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
     # -------------------------------------------------------------------------
     def make_cfg(self, pname, plugdir='', fire=True, freq='19'):
         """
-        pname: name of the plugin for this test
-        plugdir: <value> => plugin directory to go in config
-                 None => leave unset in the config
-        fire: True => set to 'true' in the config
-              False => set to 'false' in the config
-              None => leave unset in the config
-        freq: <value> => set 'frequency' to <value>
-              None => leave unset in the config
+        *pname*: name of the plugin for this test
+        *plugdir*: <value> => plugin directory to go in config
+                   None => leave unset in the config
+        *fire*: True => set to 'true' in the config
+               False => set to 'false' in the config
+               None => leave unset in the config
+        *freq*: <value> => set 'frequency' to <value>
+                None => leave unset in the config
+
+        We have (non-None) default values for *plugdir*, *fire*, and *freq* and
+        the value None has a significant semantic in this case: ensure the
+        option is unset in the config being constructed. In addition to calling
+        remove_option(), this also requires that we delete the value from the
+        config's _default member if the option is present there. Rather than
+        repeating this for each option, it seemed to make more sense to
+        encapsulate the logic in a nested method.
         """
-        rval = CrawlConfig.CrawlConfig()
-        rval.add_section(pname)
-        rval.add_section('crawler')
-        rval.set('crawler', 'logpath', self.tmpdir("test.log"))
-        if plugdir is not None:
-            if plugdir == '':
-                rval.set('crawler', 'plugin-dir', self.plugdir())
-            else:
-                rval.set('crawler', 'plugin-dir', plugdir)
-        if freq is not None:
-            rval.set(pname, 'frequency', freq)
-        if fire is not None:
-            if fire:
-                rval.set(pname, 'fire', 'true')
-            else:
-                rval.set(pname, 'fire', 'false')
-        rval.set(pname, 'module', pname)
+        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        def optrm(cfg, section, opt, val):
+            if val is None:
+                cfg.remove_option(section, opt)
+                if opt in cfg._defaults:
+                    del cfg._defaults[opt]
+        # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cdict = {'crawler': {'context': 'TEST',
+                             'plugin-dir': self.plugdir(),
+                             'logpath': self.tmpdir("test.log"),
+                             },
+                 pname: {'frequency': freq,
+                         'fire': "true" if fire else "false",
+                         'module': pname,
+                         },
+                 'dbi-crawler': {'dbtype': 'sqlite',
+                                 'tbl_prefix': 'test',
+                                 'dbname': self.tmpdir("test.db"),
+                                 },
+                 }
+
+        rval = CrawlConfig.add_config(dct=cdict, close=True)
+
+        optrm(rval, 'crawler', 'plugin-dir', plugdir)
+        optrm(rval, pname, 'frequency', freq)
+        optrm(rval, pname, 'fire', fire)
+
         return rval
 
     # -------------------------------------------------------------------------
@@ -452,7 +486,6 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         Create a plugin for testing
         """
-        self.dbgfunc()
         if None == pdir:
             pdir = self.plugdir()
         if not os.path.isdir(pdir):

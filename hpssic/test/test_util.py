@@ -42,8 +42,8 @@ class UtilTest(testhelp.HelpedTestCase):
         csv_list() on 'a, b   , c' => ['a', 'b', 'c']
         """
         self.dbgfunc()
-        self.expected([''], util.csv_list(""))
-        self.expected([''], util.csv_list("     "))
+        self.expected([], util.csv_list(""))
+        self.expected([], util.csv_list("     "))
         self.expected(['', ''], util.csv_list("  , "))
         self.expected(['xyz'], util.csv_list("xyz"))
         self.expected(['abc', ''], util.csv_list("  abc, "))
