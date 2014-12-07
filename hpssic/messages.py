@@ -29,6 +29,13 @@ drop_table_empty = ("On drop(), table name must not be empty")
 
 empty_message = ("Empty message")
 
+history_cv_not_loaded = ("Can't load cv data without --read-log FILENAME")
+
+history_filename_ignored = ("'cv' not specified for --load. " +
+                            "--read-log file ignored.")
+
+history_options = ("--read_log, --show, and --reset are mutually exclusive")
+
 hpss_unavailable = ("HPSS Unavailable")
 
 insert_ignore_bool = ("On insert(), ignore must be boolean")
@@ -111,6 +118,8 @@ unknown_dbtype = ("Unknown database type")
 
 unrecognized_arg_S = ("Unrecognized argument to %s. " +
                       "Only 'cfg=<config>' is accepted")
+
+unrecognized_plugin_S = ("Unrecognized plugin: '%s'")
 
 valid_dbtype = ("dbtype must be 'hpss' or 'crawler'")
 

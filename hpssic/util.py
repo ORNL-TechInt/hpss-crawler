@@ -230,6 +230,16 @@ def default_logpath():
 
 
 # -----------------------------------------------------------------------------
+def default_plugins():
+    """
+    Return the default list of currently defined plugins. This should be the
+    only place in the system where they are listed, so when the list changes,
+    only this routine need be updated.
+    """
+    return "cv,mpra,rpt,tcc"
+
+
+# -----------------------------------------------------------------------------
 def dirname(path):
     """
     Convenience wrapper for os.path.dirname()
@@ -319,7 +329,12 @@ def csv_list(value, delimiter=","):
     Split a string on a delimiter and return the resulting list, stripping away
     whitespace.
     """
-    rval = [x.strip() for x in value.split(delimiter)]
+    if value.strip() == '':
+        rval = []
+    elif delimiter not in value:
+        rval = [value.strip()]
+    else:
+        rval = [x.strip() for x in value.split(delimiter)]
     return rval
 
 
