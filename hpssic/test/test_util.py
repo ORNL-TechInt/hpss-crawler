@@ -7,6 +7,7 @@ import logging
 from hpssic import messages as MSG
 import os
 import pdb
+import random
 import re
 import stat
 import sys
@@ -743,6 +744,40 @@ class UtilTest(testhelp.HelpedTestCase):
             self.expected_in(exp, buf)
 
         rf.close()
+
+    # -------------------------------------------------------------------------
+    def test_scale(self):
+        """
+        util.scale("25") should return 25
+        """
+        # ---------------------------------------------------------------------
+        def doit(factor, spec, kb=-1, exponent=1):
+            sep = random.choice(['', ' '])
+            kw = {'spec': '%d%s%s' % (factor, sep, spec)}
+            if 0 < kb:
+                kw['kb'] = kb
+            if 'i' in spec.lower() or 1024 == kb:
+                base = 1024
+            else:
+                base = 1000
+            result = factor * base**exponent
+            self.expected(result, util.scale(**kw))
+
+        self.dbgfunc()
+        self.expected(1, util.scale())
+        self.expected(0, util.scale(''))
+        self.expected(5, util.scale('5'))
+        self.expected(7, util.scale('7 b'))
+
+        cycle = 1
+        for kmgt in ['k', 'm', 'g', 't', 'p', 'e', 'z', 'y']:
+            doit(random.randrange(0, 100), kmgt+'b', exponent=cycle)
+            doit(random.randrange(0, 100),
+                 kmgt.upper()+'b',
+                 kb=1024,
+                 exponent=cycle)
+            doit(random.randrange(0, 100), kmgt+'IB', exponent=cycle)
+            cycle += 1
 
     # -------------------------------------------------------------------------
     def test_touch_newpath_default(self):
