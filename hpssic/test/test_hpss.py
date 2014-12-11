@@ -217,6 +217,7 @@ class hpssTest(hpssBaseTest):
         """
         Successful change dir in HPSS
         """
+        self.dbgfunc()
         try:
             h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
             result = h.chdir("hic_test")
@@ -891,7 +892,7 @@ class hpssTest(hpssBaseTest):
             h.chdir("/home/tpb/hic_test")
             result = h.lsP()
             for path in self.plist:
-                self.expected_in("FILE\s+%s" % path, result)
+                self.expected_in("FILE\s+%s" % util.basename(path), result)
         except hpss.HSIerror as e:
             if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
@@ -904,9 +905,9 @@ class hpssTest(hpssBaseTest):
         try:
             h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
             h.chdir("/home/tpb/hic_test")
-            result = h.lsP()
+            result = h.lsP("hash*")
             for path in self.plist:
-                self.expected_in("FILE\s+%s" % path, result)
+                self.expected_in("FILE\s+%s" % util.basename(path), result)
         except hpss.HSIerror as e:
             if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
@@ -920,7 +921,7 @@ class hpssTest(hpssBaseTest):
             h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
             result = h.lsP(self.plist)
             for path in self.plist:
-                self.expected_in("FILE\s+%s" % path, result)
+                self.expected_in("FILE\s+%s" % util.basename(path), result)
         except hpss.HSIerror as e:
             if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
@@ -934,7 +935,7 @@ class hpssTest(hpssBaseTest):
             h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
             result = h.lsP(self.paths)
             for path in self.plist:
-                self.expected_in("FILE\s+%s" % path, result)
+                self.expected_in("FILE\s+%s" % util.basename(path), result)
         except hpss.HSIerror as e:
             if MSG.hpss_unavailable in str(e):
                 pytest.skip(str(e))
