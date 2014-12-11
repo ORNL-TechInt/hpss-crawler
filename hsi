@@ -1,7 +1,7 @@
 #!/bin/sh
 
-BINARYVERSION=4.0.1.2
-HTAR_SERVER=hpss-hsigw01.ccs.ornl.gov
+BINARYVERSION=5.0.1.1
+HTAR_SERVER=hpss-hsigw04.ccs.ornl.gov
 HTAR_PORT=1217
 BASEDIR=/sw/sources/hpss
 BASEEXEC=$(basename $0)
@@ -176,17 +176,17 @@ case $(basename $0) in
 		if [ -s ${HPSS_KEYTAB_PATH} ]; then
 		        OPTIONS=" -l ${HPSS_PRINCIPAL} -A keytab -k ${HPSS_KEYTAB_PATH} "
 		else
-		        OPTIONS=" -l ${HPSS_PRINCIPAL} -A combo "
+		        OPTIONS=" -l ${HPSS_PRINCIPAL} -A pam "
 		fi
 		;;
 	htar*)
-		#	if authmethod does not exist, try keytab if a nonzero keytab exists else combo
+		#	if authmethod does not exist, try keytab if a nonzero keytab exists else pam
 		if [ -z ${HPSS_AUTH_METHOD} ]; then
 			#	if a non-zero keytab exists, specify keytab auth
 			if [ -s ${HPSS_KEYTAB_PATH} ]; then
 				export HPSS_AUTH_METHOD=keytab
 			else
-				export HPSS_AUTH_METHOD=combo
+				export HPSS_AUTH_METHOD=pam
 			fi
 		fi
 		#	if the cos is not set, specify autocos

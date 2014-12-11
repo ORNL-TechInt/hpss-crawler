@@ -453,29 +453,31 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         encapsulate the logic in a nested method.
         """
         # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-        def optset(cfg, section, opt, prime, default=None):
-            if prime is None:
+        def optrm(cfg, section, opt, val):
+            if val is None:
                 cfg.remove_option(section, opt)
                 if opt in cfg._defaults:
                     del cfg._defaults[opt]
-            elif prime != '':
-                cfg.set(section, opt, prime)
-            elif default is not None:
-                cfg.set(section, opt, default)
         # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        cdict = {'crawler': {'context': 'TEST',
+                             'plugin-dir': self.plugdir(),
+                             'logpath': self.tmpdir("test.log"),
+                             },
+                 pname: {'frequency': freq,
+                         'fire': "true" if fire else "false",
+                         'module': pname,
+                         },
+                 'dbi-crawler': {'dbtype': 'sqlite',
+                                 'tbl_prefix': 'test',
+                                 'dbname': self.tmpdir("test.db"),
+                                 },
+                 }
 
-        rval = CrawlConfig.add_config(filename='hpssic_sqlite_test.cfg',
-                                      close=True)
-        rval.add_section(pname)
+        rval = CrawlConfig.add_config(dct=cdict, close=True)
 
-        optset(rval, 'crawler', 'logpath', self.tmpdir("test.log"))
-        optset(rval, 'crawler', 'plugin-dir', plugdir, self.plugdir())
-        optset(rval, pname, 'frequency', freq)
-        optset(rval, pname, 'module', pname)
-        optset(rval,
-               pname,
-               'fire',
-               None if fire is None else "true" if fire else "false")
+        optrm(rval, 'crawler', 'plugin-dir', plugdir)
+        optrm(rval, pname, 'frequency', freq)
+        optrm(rval, pname, 'fire', fire)
 
         return rval
 
