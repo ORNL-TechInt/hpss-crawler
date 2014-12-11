@@ -401,9 +401,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
         """
         try:
             spec = self.get(section, option)
-            [(mag, unit)] = re.findall("(\d+)\s*(\w*)", spec)
-            mult = self.map_size_unit(unit)
-            rval = int(mag) * mult
+            rval = util.scale(spec)
         except ConfigParser.NoOptionError as e:
             if default is not None:
                 rval = default
