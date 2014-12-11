@@ -559,6 +559,54 @@ def lsp_parse(lspout):
 
 
 # -----------------------------------------------------------------------------
+def map_size_unit(spec, kb=1000):
+    """
+    b  -> 1
+    kb -> 1000**1       kib -> 1024
+    mb -> 1000**2       mib -> 1024**2
+    gb -> 1000**3       gib -> 1024**3
+    tb -> 1000**4       tib -> 1024**4
+    pb -> 1000**5       pib -> 1024**5
+    eb -> 1000**6       eib -> 1024**6
+    zb -> 1000**7       zib -> 1024**7
+    yb -> 1000**8       yib -> 1024**8
+
+    We use *kb* as the base so the caller can force 'kb' to mean 1024.
+    """
+    sl = spec.lower()
+    if spec:
+        k = sl[0] + sl[-1]
+        done = False
+        while not done:
+            try:
+                exponent = map_size_unit._expmap[k]
+                done = True
+            except AttributeError:
+                map_size_unit._expmap = {'kb': 1,
+                                         'mb': 2,
+                                         'gb': 3,
+                                         'tb': 4,
+                                         'pb': 5,
+                                         'eb': 6,
+                                         'zb': 7,
+                                         'yb': 8}
+                done = False
+            except KeyError:
+                exponent = 0
+                done = True
+
+    else:
+        exponent = 0
+
+    if 'i' in sl:
+        rval = 1024 ** exponent
+    else:
+        rval = kb ** exponent
+
+    return rval
+
+
+# -----------------------------------------------------------------------------
 def memoize(f):
     """
     This makes available the @util.memoize function decorator. Functions
@@ -643,6 +691,23 @@ def rgxin(needle, haystack):
     """
     hits = re.findall(needle, haystack)
     rval = pop0(hits)
+    return rval
+
+
+# -----------------------------------------------------------------------------
+def scale(spec='1', kb=1000):
+    """
+    Scale an expression like '20kb', '1MB', '5 Gib', etc., returning the
+    corresponding numeric value. *kb* is used as the base so the caller can
+    force 'kb' to mean 1024 rather than 1000.
+    """
+    hits = re.findall("(\d+)\s*(\w*)", spec)
+    if hits:
+        (mag, unit) = hits[0]
+        factor = map_size_unit(unit, kb=kb)
+        rval = int(mag) * factor
+    else:
+        rval = 0
     return rval
 
 
