@@ -203,6 +203,9 @@ def crl_history(argv):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-n', '--dry-run',
+                 action='store_true', default=False, dest='dryrun',
+                 help='just report')
     p.add_option('-l', '--load',
                  action='store', default=None, dest='loadlist',
                  help='plugins to load')
@@ -220,17 +223,33 @@ def crl_history(argv):
     if o.debug:
         pdb.set_trace()
 
+    # This is saying, if any two of our primary command line options are set,
+    # we have a problem since they are all mutually exclusive.
     if any([all([o.loadlist is not None, o.reset]),
             all([o.loadlist is not None, o.show]),
             all([o.reset, o.show])]):
         raise SystemExit(MSG.history_options)
 
+    if o.dryrun:
+        cfg = CrawlConfig.add_config()
+        table = cfg.get('dbi-crawler', 'tbl_prefix') + '_history'
+        dbname = cfg.get('dbi-crawler', 'dbname')
+        hostname = cfg.get('dbi-crawler', 'hostname')
+
     if o.show:
+        # This option is non-destructive, so we ignore --dry-run for it.
         history_show()
     elif o.reset:
-        print(dbschem.drop_table(table='history'))
+        if o.dryrun:
+            print(MSG.history_reset_dryrun_SSS % (table, dbname, hostname))
+        else:
+            print(dbschem.drop_table(table='history'))
     elif o.loadlist is not None:
-        history_load(o.loadlist, o.filename)
+        if o.dryrun:
+            print(MSG.history_load_dryrun_SSSS %
+                  (table, dbname, hostname, o.filename))
+        else:
+            history_load(o.loadlist, o.filename)
 
 
 # ------------------------------------------------------------------------------
