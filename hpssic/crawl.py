@@ -10,6 +10,7 @@ import CrawlDBI
 import CrawlMail
 import CrawlPlugin
 import daemon
+from datetime import datetime as dt
 import dbschem
 import getpass
 import glob
@@ -21,6 +22,7 @@ import shutil
 import sys
 import testhelp
 import time
+from datetime import timedelta as td
 import traceback as tb
 import util
 import util as U
@@ -615,6 +617,14 @@ def history_show_byday():
 
 
 # ------------------------------------------------------------------------------
+def history_show_byweek():
+    """
+    Report record count by plugin by day
+    """
+    history_period_show("%x.%v", rewrite=yw2ymd)
+
+
+# ------------------------------------------------------------------------------
 def history_show_count():
     """
     Report record count by plugin and total
@@ -763,6 +773,24 @@ def stop_wait(cfg=None):
 
     if is_running(context) and timeout <= lapse:
         raise util.HpssicError("Stop wait timeout exceeded")
+
+
+# ------------------------------------------------------------------------------
+def yw2ymd(yw):
+    """
+    Convert a year.week string (*yw*) to ymd of the first day of the week
+
+    Starting from the beginning of the year (jan1), we add the number of
+    intervening weeks times 7 to the date of jan1. That yields a date in the
+    week of interest. From that date, we subtract enough days to get us back to
+    Monday. That's the beginning of the week.
+    """
+    (y, w) = yw.split('.')
+    jan1 = dt(int(y), 1, 1)
+    (_, wkj1, _) = jan1.isocalendar()
+    end = jan1 + td((int(w)-wkj1)*7)
+    mon = end - td(end.isoweekday()-1)
+    return mon.strftime("%Y.%m%d")
 
 
 # ------------------------------------------------------------------------------
