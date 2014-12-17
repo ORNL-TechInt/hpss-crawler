@@ -216,7 +216,7 @@ def crl_history(argv):
                  action='store_true', default=False, dest='reset',
                  help='drop the history table')
     p.add_option('-s', '--show',
-                 action='store_true', default=False, dest='show',
+                 action='store', default='unset', dest='show',
                  help='Report the contents of the history table')
     (o, a) = p.parse_args(argv)
 
@@ -225,6 +225,8 @@ def crl_history(argv):
 
     # This is saying, if any two of our primary command line options are set,
     # we have a problem since they are all mutually exclusive.
+    if o.show == 'unset':
+        o.show = None
     if any([all([o.loadlist is not None, o.reset]),
             all([o.loadlist is not None, o.show]),
             all([o.reset, o.show])]):
@@ -238,7 +240,7 @@ def crl_history(argv):
 
     if o.show:
         # This option is non-destructive, so we ignore --dry-run for it.
-        history_show()
+        history_show(o.show)
     elif o.reset:
         if o.dryrun:
             print(MSG.history_reset_dryrun_SSS % (table, dbname, hostname))
@@ -541,9 +543,22 @@ def history_load(loadlist, filename):
 
 
 # ------------------------------------------------------------------------------
-def history_show():
+def history_show(rptfmt):
     """
     Report the records in the history table in chronological order
+    """
+    funcname = 'history_show_' + rptfmt
+    if funcname in globals():
+        func = globals()[funcname]
+        func()
+    else:
+        raise U.HpssicError(history_invalid_format_S % rptfmt)
+
+
+# ------------------------------------------------------------------------------
+def history_show_raw():
+    """
+    Display a list of records from table history in chronological order
     """
     fmt = "%-20s %-10s %7s"
     rows = crawl_lib.retrieve_history()
