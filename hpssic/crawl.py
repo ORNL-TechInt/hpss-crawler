@@ -599,6 +599,14 @@ def history_period_show(format, rewrite=lambda x: x):
 
 
 # ------------------------------------------------------------------------------
+def history_show_bymonth():
+    """
+    Report record count by plugin by day
+    """
+    history_period_show("%Y.%m")
+
+
+# ------------------------------------------------------------------------------
 def history_show_byday():
     """
     Report record count by plugin by day
