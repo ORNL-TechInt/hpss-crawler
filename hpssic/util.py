@@ -847,12 +847,11 @@ def write_file(filename, mode=0644, content=None):
 
 
 # -----------------------------------------------------------------------------
-def ymdhms(epoch):
+def ymdhms(epoch, fmt="%Y.%m%d %H:%M:%S"):
     """
     Format an epoch time into YYYY.MMDD HH:MM:SS.
     """
-    return time.strftime("%Y.%m%d %H:%M:%S",
-                         time.localtime(epoch))
+    return time.strftime(fmt, time.localtime(epoch))
 
 
 # -----------------------------------------------------------------------------
