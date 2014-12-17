@@ -556,6 +556,20 @@ def history_show(rptfmt):
 
 
 # ------------------------------------------------------------------------------
+def history_show_count():
+    """
+    Report record count by plugin and total
+    """
+    rows = crawl_lib.retrieve_history(fields=['plugin', 'count(runtime)'],
+                                      groupby='plugin')
+    total = 0
+    for r in rows:
+        print("  %10s: %8d" % (r[0], r[1]))
+        total += r[1]
+    print("  %10s: %8d" % ("Total", total))
+
+
+# ------------------------------------------------------------------------------
 def history_show_raw():
     """
     Display a list of records from table history in chronological order
