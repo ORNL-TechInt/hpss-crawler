@@ -34,7 +34,22 @@ history_cv_not_loaded = ("Can't load cv data without --read-log FILENAME")
 history_filename_ignored = ("'cv' not specified for --load. " +
                             "--read-log file ignored.")
 
+history_invalid_format_S = ("'%s' is not a valid history report format")
+
+history_load_dryrun_SSSS = """
+     Would attempt to load table '%s'
+                     in database '%s'
+                         on host '%s'
+                   (cv from file '%s')
+                   """
+
 history_options = ("--read_log, --show, and --reset are mutually exclusive")
+
+history_reset_dryrun_SSS = """
+     Would attempt to drop table '%s'
+                     in database '%s'
+                         on host '%s'
+                            """
 
 hpss_unavailable = ("HPSS Unavailable")
 
@@ -119,7 +134,7 @@ unknown_dbtype = ("Unknown database type")
 unrecognized_arg_S = ("Unrecognized argument to %s. " +
                       "Only 'cfg=<config>' is accepted")
 
-unrecognized_plugin_S = ("Unrecognized plugin: '%s'")
+unrecognized_plugin_S = ("Plugin '%s' not found in the configured list")
 
 valid_dbtype = ("dbtype must be 'hpss' or 'crawler'")
 

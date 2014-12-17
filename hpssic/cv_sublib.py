@@ -17,20 +17,36 @@ def load_history(filename):
     Subsequent line containing 'cv_plugin' and 'failures: %d' indicate errors
     for the run.
     """
+    # -------------------------------------------------------------------------
+    def cv_fires(line):
+        """
+        Parse *line* to decide whether it indicates a firing of the cv plugin.
+        """
+        return all([runtime is None,
+                    error is None,
+                    'cv_plugin' in line or 'checksum-verifier' in line,
+                    'firing up' in line])
+
+    # -------------------------------------------------------------------------
+    def cv_completes(line):
+        """
+        Parse *line* to decide whether it indicates completion of a firing of
+        the cv plugin.
+        """
+        return all([runtime is not None,
+                    error is None,
+                    'cv_plugin' in line or 'checksum-verifier' in line,
+                    'failures:' in line,
+                    'totals' not in line])
+
+    # -------------------------------------------------------------------------
     db = CrawlDBI.DBI(dbtype='crawler')
     runtime = error = None
     with open(filename, 'r') as f:
         for line in f:
-            if all([runtime is None,
-                    error is None,
-                    'cv_plugin' in line,
-                    'firing up' in line]):
+            if cv_fires(line):
                 runtime = U.epoch(line[0:18])
-            if all([runtime is not None,
-                    error is None,
-                    'cv_plugin' in line,
-                    'failures:' in line,
-                    'totals' not in line]):
+            if cv_completes(line):
                 error = int(U.rgxin('failures: (\d+)', line))
             if runtime is not None and error is not None:
                 db.insert(table='history',

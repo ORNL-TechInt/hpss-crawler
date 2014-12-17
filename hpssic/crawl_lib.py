@@ -12,15 +12,17 @@ import time
 
 
 # -----------------------------------------------------------------------------
-def retrieve_history():
+def retrieve_history(**kw):
     """
     Retrieve and return the contents of table 'history'. At some point, we may
     need to turn this into a generator so we don't try to load the whole table
     into memory at once, but for now YAGNI.
     """
     db = CrawlDBI.DBI(dbtype='crawler')
-    rows = db.select(table='history',
-                     fields=['plugin', 'runtime', 'errors'])
+    kw['table'] = 'history'
+    if 'fields' not in kw:
+        kw['fields'] = ['plugin', 'runtime', 'errors']
+    rows = db.select(**kw)
     db.close()
     return rows
 

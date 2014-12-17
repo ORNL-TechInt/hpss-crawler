@@ -10,6 +10,7 @@ import CrawlDBI
 import CrawlMail
 import CrawlPlugin
 import daemon
+from datetime import datetime as dt
 import dbschem
 import getpass
 import glob
@@ -21,6 +22,7 @@ import shutil
 import sys
 import testhelp
 import time
+from datetime import timedelta as td
 import traceback as tb
 import util
 import util as U
@@ -203,6 +205,9 @@ def crl_history(argv):
     p.add_option('-d', '--debug',
                  action='store_true', default=False, dest='debug',
                  help='run the debugger')
+    p.add_option('-n', '--dry-run',
+                 action='store_true', default=False, dest='dryrun',
+                 help='just report')
     p.add_option('-l', '--load',
                  action='store', default=None, dest='loadlist',
                  help='plugins to load')
@@ -213,24 +218,42 @@ def crl_history(argv):
                  action='store_true', default=False, dest='reset',
                  help='drop the history table')
     p.add_option('-s', '--show',
-                 action='store_true', default=False, dest='show',
+                 action='store', default='unset', dest='show',
                  help='Report the contents of the history table')
     (o, a) = p.parse_args(argv)
 
     if o.debug:
         pdb.set_trace()
 
+    # This is saying, if any two of our primary command line options are set,
+    # we have a problem since they are all mutually exclusive.
+    if o.show == 'unset':
+        o.show = None
     if any([all([o.loadlist is not None, o.reset]),
             all([o.loadlist is not None, o.show]),
             all([o.reset, o.show])]):
         raise SystemExit(MSG.history_options)
 
+    if o.dryrun:
+        cfg = CrawlConfig.add_config()
+        table = cfg.get('dbi-crawler', 'tbl_prefix') + '_history'
+        dbname = cfg.get('dbi-crawler', 'dbname')
+        hostname = cfg.get('dbi-crawler', 'hostname')
+
     if o.show:
-        history_show()
+        # This option is non-destructive, so we ignore --dry-run for it.
+        history_show(o.show)
     elif o.reset:
-        print(dbschem.drop_table(table='history'))
+        if o.dryrun:
+            print(MSG.history_reset_dryrun_SSS % (table, dbname, hostname))
+        else:
+            print(dbschem.drop_table(table='history'))
     elif o.loadlist is not None:
-        history_load(o.loadlist, o.filename)
+        if o.dryrun:
+            print(MSG.history_load_dryrun_SSSS %
+                  (table, dbname, hostname, o.filename))
+        else:
+            history_load(o.loadlist, o.filename)
 
 
 # ------------------------------------------------------------------------------
@@ -522,9 +545,103 @@ def history_load(loadlist, filename):
 
 
 # ------------------------------------------------------------------------------
-def history_show():
+def history_show(rptfmt):
     """
     Report the records in the history table in chronological order
+    """
+    funcname = 'history_show_' + rptfmt
+    if funcname in globals():
+        func = globals()[funcname]
+        func()
+    else:
+        raise U.HpssicError(history_invalid_format_S % rptfmt)
+
+
+# ------------------------------------------------------------------------------
+def history_period_show(format, rewrite=lambda x: x):
+    """
+    Report record count by a time period defined by *format*
+    """
+    fld_list = ['date_format(from_unixtime(runtime), "%s") as period' % format,
+                'plugin',
+                'count(errors)']
+    rows = crawl_lib.retrieve_history(fields=fld_list,
+                                      groupby='plugin, period')
+    data = dict((d1, dict((p, c) for d2, p, c in rows if d2 == d1))
+                for d1, p, c in rows)
+    gtotal = 0
+    plist = sorted(set([p for d, p, c in rows]))
+    hdr = ''.join(["Date       "] +
+                  ["%10s" % x for x in sorted(plist)] +
+                  ["%15s" % "total"])
+    print hdr
+    print "-" * 76
+    psum = {}
+    for p in plist:
+        psum[p] = 0
+    for d in sorted(data.keys()):
+        lsum = 0
+        rpt = "%-11s" % rewrite(d)
+        for p in sorted(plist):
+            if p in data[d]:
+                rpt += "%10d" % data[d][p]
+                lsum += data[d][p]
+                psum[p] += data[d][p]
+            else:
+                rpt += "%10d" % 0
+        rpt += "%15d" % lsum
+        print rpt
+        gtotal += lsum
+
+    rpt = ''.join(["Total      "] +
+                  ["%10d" % psum[x] for x in sorted(plist)] +
+                  ["%15d" % gtotal])
+    print "-" * 76
+    print rpt
+
+
+# ------------------------------------------------------------------------------
+def history_show_bymonth():
+    """
+    Report record count by plugin by day
+    """
+    history_period_show("%Y.%m")
+
+
+# ------------------------------------------------------------------------------
+def history_show_byday():
+    """
+    Report record count by plugin by day
+    """
+    history_period_show("%Y.%m%d")
+
+
+# ------------------------------------------------------------------------------
+def history_show_byweek():
+    """
+    Report record count by plugin by day
+    """
+    history_period_show("%x.%v", rewrite=yw2ymd)
+
+
+# ------------------------------------------------------------------------------
+def history_show_count():
+    """
+    Report record count by plugin and total
+    """
+    rows = crawl_lib.retrieve_history(fields=['plugin', 'count(runtime)'],
+                                      groupby='plugin')
+    total = 0
+    for r in rows:
+        print("  %10s: %8d" % (r[0], r[1]))
+        total += r[1]
+    print("  %10s: %8d" % ("Total", total))
+
+
+# ------------------------------------------------------------------------------
+def history_show_raw():
+    """
+    Display a list of records from table history in chronological order
     """
     fmt = "%-20s %-10s %7s"
     rows = crawl_lib.retrieve_history()
@@ -656,6 +773,24 @@ def stop_wait(cfg=None):
 
     if is_running(context) and timeout <= lapse:
         raise util.HpssicError("Stop wait timeout exceeded")
+
+
+# ------------------------------------------------------------------------------
+def yw2ymd(yw):
+    """
+    Convert a year.week string (*yw*) to ymd of the first day of the week
+
+    Starting from the beginning of the year (jan1), we add the number of
+    intervening weeks times 7 to the date of jan1. That yields a date in the
+    week of interest. From that date, we subtract enough days to get us back to
+    Monday. That's the beginning of the week.
+    """
+    (y, w) = yw.split('.')
+    jan1 = dt(int(y), 1, 1)
+    (_, wkj1, _) = jan1.isocalendar()
+    end = jan1 + td((int(w)-wkj1)*7)
+    mon = end - td(end.isoweekday()-1)
+    return mon.strftime("%Y.%m%d")
 
 
 # ------------------------------------------------------------------------------
