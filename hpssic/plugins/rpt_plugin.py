@@ -1,3 +1,4 @@
+from hpssic import CrawlConfig
 from hpssic import CrawlMail
 from hpssic import rpt_lib
 import time
