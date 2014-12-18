@@ -1,4 +1,6 @@
 pwd
+env
 echo "This is where we build the rpm"
-ls -al /builddir
+python setup.py bdist_rpm
+ls -al dist
 exit 1

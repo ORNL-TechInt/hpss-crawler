@@ -54,8 +54,8 @@ py.test --version
 
 #
 # And run the tests! 
-py.test hpssic -rs -v --skip mysql --skip db2 --cov hpssic
+# py.test hpssic -rs -v --skip mysql --skip db2 --cov hpssic
 
 #
 # Temporarily, we're going to call build.sh
-sh ./build.sh
+bash ./build.sh
