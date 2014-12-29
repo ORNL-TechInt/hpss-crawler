@@ -56,5 +56,6 @@ py.test --version
 # And run the tests! 
 py.test hpssic -rs -v --skip mysql --skip db2 --cov hpssic
 
-# see what's in /ccs/siterepos
-ls -lR /ccs/siterepos/hpss/
+# can we build the rpms here?
+./build.sh
+ls -lR ./build ./dist
