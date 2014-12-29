@@ -57,4 +57,4 @@ py.test --version
 py.test hpssic -rs -v --skip mysql --skip db2 --cov hpssic
 
 # see what's in /ccs/siterepos
-ls -l /ccs/siterepos
+ls -l /ccs/siterepos/
