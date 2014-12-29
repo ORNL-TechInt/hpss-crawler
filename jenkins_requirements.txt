@@ -5,3 +5,4 @@ pep8==1.5.7
 pexpect==3.3
 pytest
 pytest-cov==1.8.0
+requests
