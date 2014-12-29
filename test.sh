@@ -57,5 +57,5 @@ py.test --version
 py.test hpssic -rs -v --skip mysql --skip db2 --cov hpssic
 
 # can we build the rpms here?
-./build.sh
+./build.sh -o hpssic
 ls -lR ./build ./dist
