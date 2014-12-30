@@ -33,12 +33,41 @@ def nodoc_check(mod, depth, why):
         already = nodoc_check._already
     except AttributeError:
         count = 0
-        nodoc_check._already = ['glob', 'fcntl', 're', 'pexpect', 'unittest',
-                                'difflib', 'pprint', 'warnings', 'heapq', 'os',
-                                'pdb', 'optparse', 'traceback', 'linecache',
-                                'bdb', 'logging', 'StringIO', 'inspect', 'stat',
-                                'tokenize', 'socket', 'dis', 'getopt', 'shlex',
-                                'pickle', 'shutil',
+        nodoc_check._already = ['base64',
+                                'bdb',
+                                'difflib',
+                                'dis',
+                                'email',
+                                'fcntl',
+                                'getopt',
+                                'getpass',
+                                'glob',
+                                'heapq',
+                                'inspect',
+                                'linecache',
+                                'logging',
+                                'MySQLdb',
+                                'optparse',
+                                'os',
+                                'pdb',
+                                'pexpect',
+                                'pickle',
+                                'pprint',
+                                'pytest',
+                                're',
+                                'shlex',
+                                'shutil',
+                                'socket',
+                                'sqlite3',
+                                'ssl',
+                                'stat',
+                                'StringIO',
+                                'times',
+                                'tokenize',
+                                'traceback',
+                                'unittest',
+                                'urllib',
+                                'warnings',
                                 ]
         already = nodoc_check._already
     rval = ''
@@ -55,7 +84,10 @@ def nodoc_check(mod, depth, why):
                 except AttributeError:
                     tmod = sys.modules[mod.__module__]
                     filename = U.basename(tmod.__file__)
-                rval += "\n%3d. %s(%s): %s" % (count, filename, why, name)
+                rval += "\n%3d. %s(%s): %s" % (count,
+                                               filename,
+                                               why,
+                                               item.__name__)
                 try:
                     count += 1
                 except NameError:
