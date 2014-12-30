@@ -1,3 +1,4 @@
+import inspect
 from hpssic import messages as MSG
 import os
 import pdb
@@ -6,7 +7,76 @@ import pytest
 import re
 import sys
 from hpssic import testhelp as th
+import unittest
 from hpssic import util as U
+
+
+# -----------------------------------------------------------------------------
+def test_nodoc():
+    """
+    Report routines missing a doc string
+    """
+    pytest.dbgfunc()
+    hpssic = sys.modules['hpssic']
+    result = nodoc_check(hpssic, 0, 't')
+    if result != '':
+        pytest.fail(result)
+
+# -----------------------------------------------------------------------------
+def nodoc_check(mod, depth, why):
+    """
+    Walk the tree of modules and classes looking for routines with no doc
+    string and report them
+    """
+    global count
+    try:
+        already = nodoc_check._already
+    except AttributeError:
+        count = 0
+        nodoc_check._already = ['glob', 'fcntl', 're', 'pexpect', 'unittest',
+                                'difflib', 'pprint', 'warnings', 'heapq', 'os',
+                                'pdb', 'optparse', 'traceback', 'linecache',
+                                'bdb', 'logging', 'StringIO', 'inspect', 'stat',
+                                'tokenize', 'socket', 'dis', 'getopt', 'shlex',
+                                'pickle', 'shutil',
+                                ]
+        already = nodoc_check._already
+    rval = ''
+    for name, item in inspect.getmembers(mod,
+                                         inspect.isroutine):
+        if all([not inspect.isbuiltin(item),
+                name not in dir(th.HelpedTestCase),
+                item.__name__ not in already,
+                not name.startswith('_')]):
+            already.append(":".join([mod.__name__, name]))
+            if item.__doc__ is None:
+                try:
+                    filename = U.basename(mod.__file__)
+                except AttributeError:
+                    tmod = sys.modules[mod.__module__]
+                    filename = U.basename(tmod.__file__)
+                rval += "\n%3d. %s(%s): %s" % (count, filename, why, name)
+                try:
+                    count += 1
+                except NameError:
+                    count = 1
+    for name, item in inspect.getmembers(mod,
+                                         inspect.isclass):
+        if all([hasattr(item, 'tearDown'),
+                item.__name__ not in already,
+                depth < 5]):
+            already.append(item.__name__)
+            rval += nodoc_check(item, depth+1, 'c')
+    for name, item in inspect.getmembers(mod,
+                                         inspect.ismodule):
+        if all([not inspect.isbuiltin(item),
+                item.__name__ not in already,
+                not name.startswith('@'),
+                not name.startswith('_'),
+                depth < 5]):
+            already.append(item.__name__)
+            rval += nodoc_check(item, depth+1, 'm')
+    return rval
 
 
 # -----------------------------------------------------------------------------
