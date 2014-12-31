@@ -12,106 +12,6 @@ from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
-def test_nodoc():
-    """
-    Report routines missing a doc string
-    """
-    pytest.dbgfunc()
-    hpssic = sys.modules['hpssic']
-    result = nodoc_check(hpssic, 0, 't')
-    if result != '':
-        pytest.fail(result)
-
-# -----------------------------------------------------------------------------
-def nodoc_check(mod, depth, why):
-    """
-    Walk the tree of modules and classes looking for routines with no doc
-    string and report them
-    """
-    global count
-    try:
-        already = nodoc_check._already
-    except AttributeError:
-        count = 0
-        nodoc_check._already = ['base64',
-                                'bdb',
-                                'difflib',
-                                'dis',
-                                'email',
-                                'fcntl',
-                                'getopt',
-                                'getpass',
-                                'glob',
-                                'heapq',
-                                'inspect',
-                                'linecache',
-                                'logging',
-                                'MySQLdb',
-                                'optparse',
-                                'os',
-                                'pdb',
-                                'pexpect',
-                                'pickle',
-                                'pprint',
-                                'pytest',
-                                're',
-                                'shlex',
-                                'shutil',
-                                'socket',
-                                'sqlite3',
-                                'ssl',
-                                'stat',
-                                'StringIO',
-                                'times',
-                                'tokenize',
-                                'traceback',
-                                'unittest',
-                                'urllib',
-                                'warnings',
-                                ]
-        already = nodoc_check._already
-    rval = ''
-    for name, item in inspect.getmembers(mod,
-                                         inspect.isroutine):
-        if all([not inspect.isbuiltin(item),
-                name not in dir(th.HelpedTestCase),
-                item.__name__ not in already,
-                not name.startswith('_')]):
-            already.append(":".join([mod.__name__, name]))
-            if item.__doc__ is None:
-                try:
-                    filename = U.basename(mod.__file__)
-                except AttributeError:
-                    tmod = sys.modules[mod.__module__]
-                    filename = U.basename(tmod.__file__)
-                rval += "\n%3d. %s(%s): %s" % (count,
-                                               filename,
-                                               why,
-                                               item.__name__)
-                try:
-                    count += 1
-                except NameError:
-                    count = 1
-    for name, item in inspect.getmembers(mod,
-                                         inspect.isclass):
-        if all([hasattr(item, 'tearDown'),
-                item.__name__ not in already,
-                depth < 5]):
-            already.append(item.__name__)
-            rval += nodoc_check(item, depth+1, 'c')
-    for name, item in inspect.getmembers(mod,
-                                         inspect.ismodule):
-        if all([not inspect.isbuiltin(item),
-                item.__name__ not in already,
-                not name.startswith('@'),
-                not name.startswith('_'),
-                depth < 5]):
-            already.append(item.__name__)
-            rval += nodoc_check(item, depth+1, 'm')
-    return rval
-
-
-# -----------------------------------------------------------------------------
 class Test_ABLE(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     @pytest.mark.slow
@@ -467,4 +367,111 @@ def improot(path, modpath):
     rval = path
     for x in modpath.split('.'):
         rval = os.path.dirname(rval)
+    return rval
+
+
+# -----------------------------------------------------------------------------
+def test_nodoc():
+    """
+    Report routines missing a doc string
+    """
+    pytest.dbgfunc()
+    hpssic = sys.modules['hpssic']
+    pylist = glob.glob(U.dirname(hpssic.__file__) + "/*.py")
+    mlist = [U.basename(x).replace('.py', '') for x in pylist]
+    for m in mlist:
+        mname = 'hpssic.' + m
+        if mname not in sys.modules and m != '__init__':
+            __import__(mname, fromlist=['hpssic'])
+    result = nodoc_check(hpssic, 0, 't')
+    if result != '':
+        pytest.fail(result)
+
+
+# -----------------------------------------------------------------------------
+def nodoc_check(mod, depth, why):
+    """
+    Walk the tree of modules and classes looking for routines with no doc
+    string and report them
+    """
+    global count
+    try:
+        already = nodoc_check._already
+    except AttributeError:
+        count = 0
+        nodoc_check._already = ['base64',
+                                'bdb',
+                                'difflib',
+                                'dis',
+                                'email',
+                                'fcntl',
+                                'getopt',
+                                'getpass',
+                                'glob',
+                                'heapq',
+                                'inspect',
+                                'linecache',
+                                'logging',
+                                'MySQLdb',
+                                'optparse',
+                                'os',
+                                'pdb',
+                                'pexpect',
+                                'pickle',
+                                'pprint',
+                                'pytest',
+                                're',
+                                'shlex',
+                                'shutil',
+                                'socket',
+                                'sqlite3',
+                                'ssl',
+                                'stat',
+                                'StringIO',
+                                'times',
+                                'tokenize',
+                                'traceback',
+                                'unittest',
+                                'urllib',
+                                'warnings',
+                                ]
+        already = nodoc_check._already
+    rval = ''
+    for name, item in inspect.getmembers(mod,
+                                         inspect.isroutine):
+        if all([not inspect.isbuiltin(item),
+                name not in dir(unittest.TestCase),
+                item.__name__ not in already,
+                not name.startswith('_')]):
+            already.append(":".join([mod.__name__, name]))
+            if item.__doc__ is None:
+                try:
+                    filename = U.basename(mod.__file__)
+                except AttributeError:
+                    tmod = sys.modules[mod.__module__]
+                    filename = U.basename(tmod.__file__)
+                rval += "\n%3d. %s(%s): %s" % (count,
+                                               filename,
+                                               why,
+                                               item.__name__)
+                try:
+                    count += 1
+                except NameError:
+                    count = 1
+    for name, item in inspect.getmembers(mod,
+                                         inspect.isclass):
+        if all([hasattr(item, 'tearDown'),
+                item.__name__ not in already,
+                depth < 5]):
+            already.append(item.__name__)
+            rval += nodoc_check(item, depth+1, 'c')
+    for name, item in inspect.getmembers(mod,
+                                         inspect.ismodule):
+        if all([not inspect.isbuiltin(item),
+                item.__name__ not in already,
+                not name.startswith('@'),
+                not name.startswith('_'),
+                depth < 5]):
+            already.append(item.__name__)
+            rval += nodoc_check(item, depth+1, 'm')
     return rval
