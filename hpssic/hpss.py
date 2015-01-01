@@ -42,6 +42,9 @@ class HSI(object):
 
     # -------------------------------------------------------------------------
     def __init__(self, connect=True, *args, **kwargs):
+        """
+        Initialize the object
+        """
         self.prompt = "]:"
         self.verbose = False
         self.unavailable = False
@@ -65,16 +68,25 @@ class HSI(object):
 
     # -------------------------------------------------------------------------
     def before(self):
+        """
+        Return the before attribute of the underlying pexpect object
+        """
         return self.xobj.before
 
     # -------------------------------------------------------------------------
     def chdir(self, dirname):
+        """
+        Change directories in HPSS
+        """
         self.xobj.sendline("cd %s" % dirname)
         self.xobj.expect(self.prompt)
         return self.xobj.before
 
     # -------------------------------------------------------------------------
     def connect(self):
+        """
+        Connect to HPSS
+        """
         self.xobj = pexpect.spawn(self.cmd, timeout=self.timeout)
         if self.verbose:
             self.xobj.logfile = open("hsi.out", 'a')
@@ -257,6 +269,9 @@ class HSI(object):
 
     # -------------------------------------------------------------------------
     def lscos(self):
+        """
+        Retrieve the COS descriptive info from HPSS and return it
+        """
         self.xobj.sendline("lscos")
         self.xobj.expect(self.prompt)
         return self.xobj.before
@@ -284,10 +299,16 @@ class HSI(object):
 
     # -------------------------------------------------------------------------
     def pid(self):
+        """
+        Return the process id of the underlying hsi process
+        """
         return self.xobj.pid
 
     # -------------------------------------------------------------------------
     def quit(self):
+        """
+        All done here. Let's bail.
+        """
         try:
             pid = self.xobj.pid
             self.xobj.sendline("quit")

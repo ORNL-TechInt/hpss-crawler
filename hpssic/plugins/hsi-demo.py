@@ -1,10 +1,13 @@
-import CrawlConfig
+from hpssic import CrawlConfig
 import pexpect
 import sys
 
 
 # -----------------------------------------------------------------------------
 def main(cfg):
+    """
+    HSI demo
+    """
     CrawlConfig.log("hsi-demo: sending output to hsi.out")
     hsi_prompt = "]:"
 

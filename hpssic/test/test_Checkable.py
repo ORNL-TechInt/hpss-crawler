@@ -33,6 +33,10 @@ class CheckableTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def cfg_dict(self):
+        """
+        Basic test data in a dict suitable for initializing a CrawlConfig
+        object
+        """
         rval = {'dbi-crawler': {'dbtype': 'sqlite',
                                 'dbname': self.dbname(),
                                 'tbl_prefix': 'test'},

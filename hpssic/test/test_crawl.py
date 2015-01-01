@@ -57,6 +57,9 @@ class CrawlTest(testhelp.HelpedTestCase):
 
     # --------------------------------------------------------------------------
     def cfg_dict(self):
+        """
+        Test data in a dict suitable for initializing a CrawlConfig object
+        """
         cdict = {'crawler': {'plugin-dir': self.tmpdir('plugins'),
                              'logpath': self.logpath(),
                              'logsize': '5mb',
@@ -91,6 +94,10 @@ class CrawlMiscTest(CrawlTest):
     """
     # --------------------------------------------------------------------------
     def crawl_test_setup(self):
+        """
+        Set up for a collection of tests. Perhaps the tests that call this
+        should be segregated in their own fixture.
+        """
         cfname = self.tmpdir('hpssic_test.cfg')
         lfname = self.logpath()
         exitpath = self.tmpdir("%s.exit" % self._testMethodName)
@@ -1464,6 +1471,9 @@ class CrawlMiscTest(CrawlTest):
 class CrawlGiveUpYetTest(CrawlTest):
     # --------------------------------------------------------------------------
     def setUp(self):
+        """
+        Setup for the current fixture
+        """
         fakesmtp.inbox = []
         self.email_targets = 'tbarron@ornl.gov, tusculum@gmail.com'
         t = CrawlConfig.CrawlConfig.dictor(self.cfg_dict())

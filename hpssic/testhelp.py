@@ -306,6 +306,9 @@ class HelpedTestCase(unittest.TestCase):
 
     # -------------------------------------------------------------------------
     def noop(self):
+        """
+        Do nothing
+        """
         pass
 
     # ------------------------------------------------------------------------
@@ -327,10 +330,17 @@ class HelpedTestCase(unittest.TestCase):
     # -------------------------------------------------------------------------
     @pytest.fixture(autouse=True)
     def tmpdir_setup(self, tmpdir):
+        """
+        Copy the pytest tmpdir for this test into an attribute on the object
+        """
         self.pytest_tmpdir = str(tmpdir)
 
     # ------------------------------------------------------------------------
     def tmpdir(self, base=''):
+        """
+        Return the pytest tmpdir for this test with an optional basename
+        appended
+        """
         if base:
             rval = U.pathjoin(self.pytest_tmpdir, base)
         else:
@@ -339,6 +349,10 @@ class HelpedTestCase(unittest.TestCase):
 
     # ------------------------------------------------------------------------
     def logpath(self, basename=''):
+        """
+        Return the logpath for this test. The test can specify the basename but
+        does not have to.
+        """
         if basename == '':
             basename = "test_default_hpss_crawl.log"
         rval = self.tmpdir(basename)
@@ -346,6 +360,9 @@ class HelpedTestCase(unittest.TestCase):
 
     # -------------------------------------------------------------------------
     def plugin_dir(self):
+        """
+        Return the plugin dir for this test
+        """
         return self.tmpdir("plugins")
 
     # ------------------------------------------------------------------------

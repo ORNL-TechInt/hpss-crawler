@@ -382,6 +382,11 @@ def dispatch(modname, prefix, args):
 
 # -----------------------------------------------------------------------------
 def dispatch_help(mod, prefix, cmd=None):
+    """
+    Display help as appropriate. If cmd is None, report a one liner for each
+    available function. If cmd is not None, look up its doc string and report
+    it.
+    """
     if cmd is not None:
         func = getattr(mod, "_".join([prefix, cmd]))
         print func.__doc__
@@ -618,6 +623,11 @@ def memoize(f):
 
     # -------------------------------------------------------------------------
     def helper(x=''):
+        """
+        Handle first calls based on the argument. Whenever a unique argument
+        come in, we call the function for real. If we've seen the argument
+        before, we return what we've cached.
+        """
         try:
             return cache[x]
         except KeyError:
@@ -857,7 +867,13 @@ def ymdhms(epoch, fmt="%Y.%m%d %H:%M:%S"):
 # -----------------------------------------------------------------------------
 class HpssicError(Exception):
     def __init__(self, value):
+        """
+        Set up the value, normally a text string
+        """
         self.value = value
 
     def __str__(self):
+        """
+        Return the value as a string
+        """
         return repr(self.value)

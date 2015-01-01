@@ -314,6 +314,9 @@ def record_checked_ids(cfg, low, high, correct, error):
 
 # -----------------------------------------------------------------------------
 def sectname():
+    """
+    The configuration section name for this plugin
+    """
     return 'tcc'
 
 
@@ -492,6 +495,9 @@ def nsobj_id(name='', parent=None):
 
 # -----------------------------------------------------------------------------
 def table_list():
+    """
+    Return the list of HPSS tables from the DB2 database
+    """
     db = CrawlDBI.DBI(dbtype='hpss', dbname='sub')
     db._dbobj.tbl_prefix = 'syscat.'
     rows = db.select(table='tables',

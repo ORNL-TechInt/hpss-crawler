@@ -505,6 +505,9 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def fail_report(self, msg):
+        """
+        Report a failure
+        """
         try:
             f = self.fail_report_fh
         except AttributeError:
@@ -531,6 +534,9 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def load(self):
+        """
+        Read a checkable from the database and fill out the object
+        """
         db = CrawlDBI.DBI(dbtype='crawler')
         if self.rowid is not None:
             rows = db.select(table='checkables',
@@ -782,6 +788,9 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def populate_cart(self, h):
+        """
+        Fill in the cart field
+        """
         rsp = h.lsP(self.path)
         tmp = Checkable.fdparse(rsp.split("\n")[1])
         try:
@@ -793,6 +802,9 @@ class Checkable(object):
 
     # -------------------------------------------------------------------------
     def set(self, attrname, value):
+        """
+        Any time the object is changed, it should be marked dirty
+        """
         setattr(self, attrname, value)
         self.dirty = True
 

@@ -133,11 +133,17 @@ def age_report(table, age, count, result, f, path=False):
 
 # -----------------------------------------------------------------------------
 def idivrem(secs, div):
+    """
+    Return a tuple containing the quotient and remainder of *secs* / *div*
+    """
     return(int(secs)/div, int(secs) % div)
 
 
 # -----------------------------------------------------------------------------
 def dhms(age_s):
+    """
+    Return a time interval in the format DD-HH:MM:SS
+    """
     (days, rem) = idivrem(age_s, 24*3600)
     (hours, rem) = idivrem(rem, 3600)
     (minutes, seconds) = idivrem(rem, 60)

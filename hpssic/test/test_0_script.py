@@ -16,6 +16,9 @@ class Test_ABLE(th.HelpedTestCase):
     # -------------------------------------------------------------------------
     @pytest.mark.slow
     def test_000_pep8(self):
+        """
+        Apply pep8 to all .py files in the system and return the result
+        """
         full_result = ""
         for r, d, f in os.walk('hpssic'):
             pylist = [os.path.abspath(os.path.join(r, fn))
@@ -105,6 +108,9 @@ class ScriptBase(th.HelpedTestCase):
 class Test_CRAWL(ScriptBase):
     # -------------------------------------------------------------------------
     def test_crawl_syspath(self):
+        """
+        Test the command 'crawl syspath'
+        """
         result = pexpect.run("crawl syspath")
         pass
 

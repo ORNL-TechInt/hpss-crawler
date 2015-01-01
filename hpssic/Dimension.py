@@ -95,6 +95,10 @@ class Dimension(object):
 
     # -------------------------------------------------------------------------
     def _compute_dict(self, rows):
+        """
+        Given a set of rows from the database, compute the dict that holds the
+        in memory representation of the sample
+        """
         d = {}
         for (pcount, cat) in rows:
             if cat is not None and cat != '':
@@ -106,6 +110,10 @@ class Dimension(object):
 
     # -------------------------------------------------------------------------
     def addone(self, cat):
+        """
+        Add an item to a category *cat*, adding the category if necessary and
+        updating the sample percentage
+        """
         if cat not in self.s_sum:
             self.s_sum[cat] = {'count': 0, 'pct': 0}
         self.s_sum[cat]['count'] += 1

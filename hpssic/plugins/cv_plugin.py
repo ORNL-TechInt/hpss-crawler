@@ -16,6 +16,9 @@ plugin_name = 'cv'
 
 # -----------------------------------------------------------------------------
 def main(cfg):
+    """
+    Main entry point for the cv plugin
+    """
     # Get stuff we need -- the logger object, dataroot, etc.
     CrawlConfig.log("firing up")
     plugdir = cfg.get('crawler', 'plugin-dir')

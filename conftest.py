@@ -115,6 +115,9 @@ def pytest_runtest_makereport(item, call, __multicall__):
 
 # -----------------------------------------------------------------------------
 def pytest_unconfigure(config):
+    """
+    We're on our way out -- write the test summary to the log file
+    """
     hpssic_test_log(config,
                     "passed: %d; skipped: %d; FAILED: %d" %
                     (hpssic_test_log._passcount,

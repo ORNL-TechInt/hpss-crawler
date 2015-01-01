@@ -798,6 +798,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_interpolation_ok(self):
+        """
+        Test successful interpolation
+        """
         d = copy.deepcopy(self.cdict)
         d['crawler']['logpath'] = "%(root)s/fiddle.log"
         obj = CrawlConfig.CrawlConfig.dictor(d,
@@ -809,6 +812,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_interpolation_fail(self):
+        """
+        Failing interpolation should raise an exception
+        """
         d = copy.deepcopy(self.cdict)
         d['crawler']['logpath'] = "%(root)s/fiddle.log"
         obj = CrawlConfig.CrawlConfig.dictor(d,
@@ -1257,6 +1263,10 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def validate_logger(self, expval, logger, msg=''):
+        """
+        Validate a logger, generating an appropriate message if anything is
+        wrong with it
+        """
         if expval is None:
             self.expected(None, logger)
             if msg != '':
@@ -1328,14 +1338,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_log_multfmt(self):
-        # """
-        # Tests for routine CrawlConfig.log():
-        #  - simple string in first argument
-        #  - 1 % formatter in first arg
-        #  - multiple % formatters in first arg
-        #  - too many % formatters for args
-        #  - too many args for % formatters
-        # """
+        """
+        Test a log message with multiple formatters
+        """
         fpath = self.tmpdir("%s.log" % util.my_name())
         CrawlConfig.log(close=True)
         log = CrawlConfig.log(logpath=fpath)
@@ -1356,14 +1361,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_log_onefmt(self):
-        # """
-        # Tests for routine CrawlConfig.log():
-        #  - simple string in first argument
-        #  - 1 % formatter in first arg
-        #  - multiple % formatters in first arg
-        #  - too many % formatters for args
-        #  - too many args for % formatters
-        # """
+        """
+        Test a log message with just a single formatter
+        """
         fpath = self.tmpdir("%s.log" % util.my_name())
         CrawlConfig.log(logpath=fpath, close=True)
 
@@ -1701,14 +1701,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_log_toomany_fmt(self):
-        # """
-        # Tests for routine CrawlConfig.log():
-        #  - simple string in first argument
-        #  - 1 % formatter in first arg
-        #  - multiple % formatters in first arg
-        #  - too many % formatters for args
-        #  - too many args for % formatters
-        # """
+        """
+        Too many formatters for the arguments should raise an exception
+        """
         fpath = self.tmpdir("%s.log" % util.my_name())
         log = CrawlConfig.log(logpath=fpath, close=True)
 
@@ -1735,14 +1730,9 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
 
     # -------------------------------------------------------------------------
     def test_log_toomany_args(self):
-        # """
-        # Tests for routine CrawlConfig.log():
-        #  - simple string in first argument
-        #  - 1 % formatter in first arg
-        #  - multiple % formatters in first arg
-        #  - too many % formatters for args
-        #  - too many args for % formatters
-        # """
+        """
+        Too many arguments for the formatters should raise an exception
+        """
         fpath = self.tmpdir("%s.log" % util.my_name())
         log = CrawlConfig.log(logpath=fpath, close=True)
 

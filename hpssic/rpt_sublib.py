@@ -5,6 +5,9 @@ import cv_sublib
 
 # -----------------------------------------------------------------------------
 def cos_description(name):
+    """
+    Look up and return the description of cos *name*
+    """
     db = CrawlDBI.DBI(dbtype='crawler')
     if not db.table_exists(table='lscos'):
         cv_sublib.lscos_populate()

@@ -1,9 +1,12 @@
-import CrawlConfig
+from hpssic import CrawlConfig
 import sys
 
 
 # -----------------------------------------------------------------------------
 def main(cfg):
+    """
+    Plugin example
+    """
     try:
         msg = cfg.get('example', 'message')
     except ConfigParser.NoOptionError:

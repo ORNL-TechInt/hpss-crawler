@@ -101,6 +101,9 @@ def add_config(filename=None, cfg=None, dct=None, close=False):
 
 # ------------------------------------------------------------------------------
 def defaults():
+    """
+    Return a CrawlConfig object with the standard defaults set
+    """
     rval = CrawlConfig({'fire': 'no',
                         'frequency': '3600',
                         'pid': "%05d" % os.getpid(),
@@ -451,6 +454,9 @@ class CrawlConfig(ConfigParser.ConfigParser):
 
     # -------------------------------------------------------------------------
     def to_seconds(self, spec):
+        """
+        Convert a time spec like '10min' to seconds
+        """
         [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
         mult = self.map_time_unit(unit)
         rval = int(mag) * mult
