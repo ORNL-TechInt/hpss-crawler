@@ -376,24 +376,100 @@ def test_nodoc():
     Report routines missing a doc string
     """
     pytest.dbgfunc()
-    hpssic = sys.modules['hpssic']
-    pylist = glob.glob(U.dirname(hpssic.__file__) + "/*.py")
-    mlist = [U.basename(x).replace('.py', '') for x in pylist]
+
+    # get our bearings -- where is hpssic?
+    hpssic_dir = U.dirname(sys.modules['hpssic'].__file__)
+
+    excludes = ['setup.py', '__init__.py']
+
+    # up a level from there, do we have a '.git' directory? That is, are we in
+    # a git repository? If so, we want to talk the whole repo for .py files
+    hpssic_par = U.dirname(hpssic_dir)
+    if not os.path.isdir(U.pathjoin(hpssic_par, ".git")):
+        # otherwise, we just work from hpssic down
+        wroot = hpssic_dir
+    else:
+        wroot = hpssic_par
+
+    # collect all the .py files in pylist
+    pylist = []
+    for r, dlist, flist in os.walk(wroot):
+        if '.git' in dlist:
+            dlist.remove('.git')
+        pylist.extend([U.pathjoin(r, x)
+                       for x in flist
+                       if x.endswith('.py') and x not in excludes])
+
+    # make a list of the modules implied in pylist in mdict. Each module name
+    # is a key. The associated value is False until the module is checked.
+    mlist = ['hpssic']
+    for path in pylist:
+        # Throw away the hpssic parent string, '.py' at the end, and split on
+        # '/' to get a list of the module components
+        mp = path.replace(hpssic_par + '/', '').replace('.py', '').split('/')
+
+        if 1 < len(mp):
+            fromlist = ['hpssic']
+        else:
+            fromlist = []
+        mname = '.'.join(mp)
+        mlist.append(mname)
+        if mname not in sys.modules:
+            try:
+                __import__(mname, fromlist=fromlist)
+
+            except ImportError:
+                pytest.fail('Failure trying to import %s' % mname)
+
+    result = ''
     for m in mlist:
-        mname = 'hpssic.' + m
-        if mname not in sys.modules and m != '__init__':
-            __import__(mname, fromlist=['hpssic'])
-    result = nodoc_check(hpssic, 0, 't')
+        result += nodoc_check(sys.modules[m], pylist, 0, 't')
+
+    # result = nodoc_check(hpssic, 0, 't')
     if result != '':
         pytest.fail(result)
 
 
 # -----------------------------------------------------------------------------
-def nodoc_check(mod, depth, why):
+def nodoc_check(mod, pylist, depth, why):
     """
     Walk the tree of modules and classes looking for routines with no doc
     string and report them
     """
+    # -------------------------------------------------------------------------
+    def filepath_reject(obj, pylist):
+        """
+        Reject the object based on its filepath
+        """
+        if hasattr(obj, '__file__'):
+            fpath = obj.__file__.replace('.pyc', '.py')
+            rval = fpath not in pylist
+        elif hasattr(obj, '__func__'):
+            fpath = obj.__func__.func_code.co_filename.replace('.pyc', '.py')
+            rval = fpath not in pylist
+        else:
+            rval = False
+
+        return rval
+
+    # -------------------------------------------------------------------------
+    def name_accept(name, already):
+        """
+        Whether to accept the object based on its name
+        """
+        rval = True
+        if all([name in dir(unittest.TestCase),
+                name not in dir(th.HelpedTestCase)]):
+            rval = False
+        elif name in already:
+            rval = False
+        elif all([name.startswith('__'),
+                  name != '__init__']):
+            rval = False
+
+        return rval
+
+    # -------------------------------------------------------------------------
     global count
     try:
         already = nodoc_check._already
@@ -401,6 +477,8 @@ def nodoc_check(mod, depth, why):
         count = 0
         nodoc_check._already = ['base64',
                                 'bdb',
+                                'contextlib',
+                                'decimal',
                                 'difflib',
                                 'dis',
                                 'email',
@@ -423,27 +501,38 @@ def nodoc_check(mod, depth, why):
                                 're',
                                 'shlex',
                                 'shutil',
+                                'smtplib',
                                 'socket',
                                 'sqlite3',
                                 'ssl',
                                 'stat',
                                 'StringIO',
+                                'sys',
+                                'tempfile',
+                                'text',
                                 'times',
                                 'tokenize',
                                 'traceback',
                                 'unittest',
                                 'urllib',
                                 'warnings',
+                                'weakref',
                                 ]
         already = nodoc_check._already
+
     rval = ''
-    for name, item in inspect.getmembers(mod,
-                                         inspect.isroutine):
+
+    if any([mod.__name__ in already,
+            U.safeattr(mod, '__module__') == '__builtin__',
+            filepath_reject(mod, pylist),
+            ]):
+        return rval
+
+    for name, item in inspect.getmembers(mod, inspect.isroutine):
         if all([not inspect.isbuiltin(item),
-                name not in dir(unittest.TestCase),
-                item.__name__ not in already,
-                not name.startswith('_')]):
-            already.append(":".join([mod.__name__, name]))
+                not filepath_reject(item, pylist),
+                name_accept(item.__name__, already)
+                ]):
             if item.__doc__ is None:
                 try:
                     filename = U.basename(mod.__file__)
@@ -458,20 +547,21 @@ def nodoc_check(mod, depth, why):
                     count += 1
                 except NameError:
                     count = 1
-    for name, item in inspect.getmembers(mod,
-                                         inspect.isclass):
-        if all([hasattr(item, 'tearDown'),
-                item.__name__ not in already,
+            already.append(":".join([mod.__name__, name]))
+
+    for name, item in inspect.getmembers(mod, inspect.isclass):
+        if all([item.__name__ not in already,
                 depth < 5]):
+            rval += nodoc_check(item, pylist, depth+1, 'c')
             already.append(item.__name__)
-            rval += nodoc_check(item, depth+1, 'c')
-    for name, item in inspect.getmembers(mod,
-                                         inspect.ismodule):
+
+    for name, item in inspect.getmembers(mod, inspect.ismodule):
         if all([not inspect.isbuiltin(item),
                 item.__name__ not in already,
                 not name.startswith('@'),
                 not name.startswith('_'),
                 depth < 5]):
+            rval += nodoc_check(item, pylist, depth+1, 'm')
             already.append(item.__name__)
-            rval += nodoc_check(item, depth+1, 'm')
+
     return rval
