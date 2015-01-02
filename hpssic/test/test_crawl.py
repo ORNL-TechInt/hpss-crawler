@@ -82,10 +82,6 @@ class CrawlTest(testhelp.HelpedTestCase):
                  }
         return cdict
 
-    # --------------------------------------------------------------------------
-    def logpath(self, tname='test_default_hpss_crawl'):
-        return self.tmpdir('hpssic_crawl.log')
-
 
 # -----------------------------------------------------------------------------
 class CrawlMiscTest(CrawlTest):
