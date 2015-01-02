@@ -20,10 +20,12 @@ from ConfigParser import NoSectionError
 from ConfigParser import NoOptionError
 from ConfigParser import InterpolationMissingOptionError
 import logging
+import messages as MSG
 import os
 import pdb
 import re
 import stat
+import string
 import StringIO
 import sys
 import time
@@ -457,9 +459,11 @@ class CrawlConfig(ConfigParser.ConfigParser):
         """
         Convert a time spec like '10min' to seconds
         """
-        [(mag, unit)] = re.findall('(\d+)\s*(\w*)', spec)
+        if spec.strip()[0] not in string.digits + '.':
+            raise ValueError(MSG.invalid_time_mag_S % spec)
+        [(mag, unit)] = re.findall('([\d.]+)\s*(\w*)', spec)
         mult = self.map_time_unit(unit)
-        rval = int(mag) * mult
+        rval = int(float(mag) * mult)
         return rval
 
     # -------------------------------------------------------------------------
@@ -554,8 +558,7 @@ class CrawlConfig(ConfigParser.ConfigParser):
                              }
                 done = False
             except KeyError:
-                rval = 1
-                done = True
+                raise ValueError(MSG.invalid_time_unit_S % spec)
 
         return rval
 
