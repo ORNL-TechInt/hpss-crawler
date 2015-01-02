@@ -112,7 +112,7 @@ class Test_CRAWL(ScriptBase):
         Test the command 'crawl syspath'
         """
         result = pexpect.run("crawl syspath")
-        pass
+        assert 'Traceback' not in result
 
     # -------------------------------------------------------------------------
     def test_crawl_which_lib(self):
