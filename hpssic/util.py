@@ -240,11 +240,15 @@ def default_plugins():
 
 
 # -----------------------------------------------------------------------------
-def dirname(path):
+def dirname(path, layers=1):
     """
-    Convenience wrapper for os.path.dirname()
+    Convenience wrapper for os.path.dirname(). With optional *layers* argument,
+    remove that many layers. If the result is empty, return '.'
     """
-    return os.path.dirname(path)
+    rval = path
+    for n in range(layers):
+        rval = os.path.dirname(rval)
+    return rval or '.'
 
 
 # -----------------------------------------------------------------------------
@@ -702,6 +706,17 @@ def rgxin(needle, haystack):
     hits = re.findall(needle, haystack)
     rval = pop0(hits)
     return rval
+
+
+# -----------------------------------------------------------------------------
+def safeattr(obj, attr):
+    """
+    Return the value of *attr* on *obj* or None
+    """
+    if hasattr(obj, attr):
+        return getattr(obj, attr)
+    else:
+        return None
 
 
 # -----------------------------------------------------------------------------
