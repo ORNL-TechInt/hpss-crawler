@@ -69,6 +69,10 @@ invalid_sender_S = ("From address (%s) should be a string containing a " +
 
 invalid_subject_S = ("Subject (%s) is not a string")
 
+invalid_time_unit_S = ("invalid time unit '%s'")
+
+invalid_time_mag_S = ("invalid time magnitude '%s'")
+
 lsp_invalid_file_type = ("Invalid file type in 'ls -P' output")
 
 lsp_output_not_found = ("ls -P output not found in lsp_parse input")
@@ -128,6 +132,10 @@ table_created_S = ("Table '%s' created")
 table_already_S = ("Table '%s' already exists")
 
 tblpfx_required = ("A table prefix is required")
+
+too_few_val = ("need more than 0 values to unpack")
+
+too_many_val = ("too many values to unpack")
 
 unknown_dbtype = ("Unknown database type")
 

@@ -1285,8 +1285,10 @@ class CrawlMiscTest(CrawlTest):
                 self.expected(umap[unit], result)
 
                 unit += '_x'
-                result = cfg.map_time_unit(unit)
-                self.expected(1, result)
+                self.assertRaisesMsg(ValueError,
+                                     MSG.invalid_time_unit_S % unit,
+                                     cfg.map_time_unit,
+                                     unit)
 
     # --------------------------------------------------------------------------
     def test_running_pid_mtdir(self):

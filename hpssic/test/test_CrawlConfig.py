@@ -5,6 +5,7 @@ import contextlib as ctx
 import copy
 from hpssic import CrawlConfig
 import logging
+from hpssic import messages as MSG
 import os
 import pdb
 import pytest
@@ -730,6 +731,60 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         obj = CrawlConfig.CrawlConfig.dictor(self.sample)
         self.expected(3600, obj.get_time('crawler', 'heartbeat'))
         self.expected(300, obj.get_time('crawler', 'frequency'))
+
+    # -------------------------------------------------------------------------
+    def test_get_time_float(self):
+        """
+        Verify that get_time handles floats correctly
+        """
+        self.dbgfunc()
+        obj = CrawlConfig.CrawlConfig.dictor({'crawler': {'dsec': '10s',
+                                                          'fsec': '5.0 s',
+                                                          'nzmin': '.25min',
+                                                          'lzhour': '0.1 hr',
+                                                          'fday': '7.0d',
+                                                          },
+                                              })
+        self.expected(10, obj.get_time('crawler', 'dsec'))
+        self.expected(5, obj.get_time('crawler', 'fsec'))
+        self.expected(15, obj.get_time('crawler', 'nzmin'))
+        self.expected(360, obj.get_time('crawler', 'lzhour'))
+        self.expected(7*24*3600, obj.get_time('crawler', 'fday'))
+
+    # -------------------------------------------------------------------------
+    def test_get_time_invalid(self):
+        """
+        Verify that get_time recognizes bad time specs and handles them
+        properly
+        """
+        self.dbgfunc()
+        td = {'punct': {'val': '75%8 fla',
+                        'msg': MSG.too_many_val,
+                        },
+              'nonum': {'val': 'burple',
+                        'msg': MSG.invalid_time_mag_S % 'burple',
+                        },
+              'alphirst': {'val': 'ab234',
+                           'msg': MSG.invalid_time_mag_S % 'ab234',
+                           },
+              'badunit': {'val': '9 yurt',
+                          'msg': MSG.invalid_time_unit_S % 'yurt',
+                          },
+              'minus': {'val': '17-8',
+                        'msg': MSG.too_many_val,
+                        },
+              }
+        obj = CrawlConfig.CrawlConfig.dictor({'crawler': {}, })
+        for k in td:
+            obj.set('crawler', k, td[k]['val'])
+
+        for k in obj.options('crawler'):
+            v = obj.get('crawler', k)
+            self.assertRaisesMsg(ValueError,
+                                 td[k]['msg'],
+                                 obj.get_time,
+                                 'crawler',
+                                 k)
 
     # -------------------------------------------------------------------------
     def test_get_time_opt_def(self):
