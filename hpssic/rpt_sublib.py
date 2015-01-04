@@ -14,7 +14,7 @@ def cos_description(name):
 
     r = db.select(table='lscos',
                   fields=['name'],
-                  where="name = ?",
+                  where="cos = ?",
                   data=(name,))
     if 0 < len(r):
         rval = r[0][0]

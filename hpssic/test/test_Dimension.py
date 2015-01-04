@@ -8,6 +8,7 @@ from hpssic import CrawlDBI
 from hpssic.Dimension import Dimension
 import os
 import pdb
+from hpssic import rpt_sublib
 import sys
 from hpssic import testhelp
 import traceback as tb
@@ -57,6 +58,24 @@ class DimensionTest(testhelp.HelpedTestCase):
 
         self.expected(10, a.p_sum['6001']['count'])
         self.expected(10, a.p_sum['5081']['count'])
+
+    # -------------------------------------------------------------------------
+    def test_cos_description(self):
+        """
+        Verify that rpt_sublib.cos_description() returns correct information
+        from the lscos table
+        """
+        self.dbgfunc()
+        db = CrawlDBI.DBI(dbtype='crawler')
+        rows = db.select(table='lscos',
+                         fields=['cos', 'name'])
+        db.close()
+        cd = {}
+        for r in rows:
+            cd[r[0]] = r[1]
+
+        for cos in cd:
+            self.expected(cd[cos], rpt_sublib.cos_description(cos))
 
     # -------------------------------------------------------------------------
     def test_ctor_attrs(self):
