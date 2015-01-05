@@ -66,6 +66,12 @@ class DimensionTest(testhelp.HelpedTestCase):
         from the lscos table
         """
         self.dbgfunc()
+        try:
+            cv_sublib.lscos_populate()
+        except hpss.HSIerror as e:
+            if MSG.hpss_unavailable in str(e):
+                pytest.skip(str(e))
+
         db = CrawlDBI.DBI(dbtype='crawler')
         rows = db.select(table='lscos',
                          fields=['cos', 'name'])

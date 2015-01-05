@@ -270,7 +270,7 @@ class CrawlMiscTest(CrawlTest):
         TEST: crawl fire <plugmod>
         EXP: error message that "-p <plugin-name>" is required
         """
-        with util.tmpenv('CRAWL_LOG', self.tmpdir('hpss_crawl.log'):
+        with util.tmpenv('CRAWL_LOG', self.tmpdir('hpss_crawl.log')):
             plugname = 'plugin_1'
             result = pexpect.run("%s fire %s" % (self.crawl_cmd(), plugname))
             exp = "'-p <plugin-name>' is required"
