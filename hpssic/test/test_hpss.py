@@ -1033,6 +1033,7 @@ class hpssHashAlgTest(hpssBaseTest):
         """
         With hash_algorithm = sha1 in config
         """
+        self.dbgfunc()
         self.check_hash_algorithm(util.my_name(), 'sha512')
 
     # -------------------------------------------------------------------------

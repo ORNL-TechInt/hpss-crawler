@@ -5,7 +5,9 @@ import copy
 from hpssic import Checkable
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
+from hpssic import cv_sublib
 from hpssic.Dimension import Dimension
+from hpssic import hpss
 import os
 import pdb
 from hpssic import rpt_sublib

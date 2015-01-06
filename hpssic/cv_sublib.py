@@ -68,7 +68,8 @@ def lscos_populate():
     magnitude of a mysql bigint and growing.
     """
     db = CrawlDBI.DBI(dbtype="crawler")
-    st = dbschem.make_table("lscos")
+    tabname = 'lscos'
+    st = dbschem.make_table(tabname)
     szrgx = "(\d+([KMGT]B)?)"
     rgx = ("\s*(\d+)\s*(([-_a-zA-Z0-9]+\s)+)\s+[UGAN]*\s+(\d+)" +
            "\s+(ALL)?\s+%s\s+-\s+%s" % (szrgx, szrgx))
@@ -92,7 +93,6 @@ def lscos_populate():
                                                U.scale(m[7], kb=1024))
             data.append((cos, desc, copies, lo_i, hi_i))
 
-        tabname = 'lscos'
         db.insert(table=tabname,
                   fields=['cos', 'name', 'copies', 'min_size', 'max_size'],
                   data=data)
