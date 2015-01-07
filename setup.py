@@ -1,14 +1,10 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
-from distutils.file_util import copy_file
-from distutils.sysconfig import get_python_lib
+from setuptools import setup
 import os
 
 exec(open(os.path.join('hpssic', 'version.py')).read())
-sitelib = os.path.join(get_python_lib(), 'hpssic')
 
-# copy_file("README.md", "README")
 setup(name='hpssic',
       version=__version__,
       description='HPSS Integrity Crawler',
@@ -23,6 +19,4 @@ setup(name='hpssic',
                'bin/tcc',
                ],
       packages=['hpssic', 'hpssic/plugins', 'hpssic/test'],
-      data_files=[(sitelib, ['README.md', 'crawl.cfg.sample']),
-                  ]
       )
