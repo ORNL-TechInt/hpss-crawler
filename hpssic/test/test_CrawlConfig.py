@@ -796,6 +796,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected(388, obj.get_time('crawler', 'dumpling', 388))
         self.expected(47, obj.get_time('crawler', 'strawberry', 47))
         self.expected(17.324, obj.get_time('crawler', 'beeswax', 17.324))
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.default_int_float,
+                             obj.get_time,
+                             'crawler',
+                             'fiddle',
+                             'foobar')
 
     # -------------------------------------------------------------------------
     def test_get_time_sect_def(self):
@@ -807,6 +813,12 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         self.expected(82, obj.get_time('crawlerfoo', 'heartbeat', 82))
         self.expected(19, obj.get_time('crawlerfoo', 'frequency', 19))
         self.expected(17.324, obj.get_time('crawlerfoo', 'beeswax', 17.324))
+        self.assertRaisesMsg(U.HpssicError,
+                             MSG.default_int_float,
+                             obj.get_time,
+                             'crawlerfoo',
+                             'fiddle',
+                             'foobar')
 
     # -------------------------------------------------------------------------
     def test_get_time_opt(self):

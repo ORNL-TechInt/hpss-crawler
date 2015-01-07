@@ -21,6 +21,8 @@ dbname_not_allowed = ("dbname may not be specified here")
 
 dbname_required = ("A database name is required")
 
+default_int_float = ("CrawlConfig.get_time: default must be int or float")
+
 default_mail_subject = ("HPSS Integrity Crawler ALERT")
 
 drop_table_string = ("On drop(), table name must be a string")

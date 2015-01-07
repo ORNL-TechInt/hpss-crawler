@@ -434,23 +434,29 @@ class CrawlConfig(ConfigParser.ConfigParser):
         or NoOptionError, we will return the caller's default. Otherwise, we
         raise the exception.
         """
+        # ---------------------------------------------------------------------
+        def handle_exception(exc, defval):
+            if type(defval) == int:
+                rval = defval
+                log(str(e) + '; using default value %d' % defval)
+            elif type(defval) == float:
+                rval = defval
+                log(str(e) + '; using default value %f' % defval)
+            elif defval is not None:
+                raise U.HpssicError(MSG.default_int_float)
+            else:
+                exc.message += " in %s" % self.filename
+                raise
+            return rval
+
+        # ---------------------------------------------------------------------
         try:
             spec = self.get(section, option)
             rval = self.to_seconds(spec)
         except ConfigParser.NoOptionError as e:
-            if default is not None:
-                rval = default
-                log(str(e) + '; using default value %d' % default)
-            else:
-                e.message += " in %s" % self.filename
-                raise
+            rval = handle_exception(e, default)
         except ConfigParser.NoSectionError as e:
-            if default is not None:
-                rval = default
-                log(str(e) + '; using default value %d' % default)
-            else:
-                e.message += " in %s" % self.filename
-                raise
+            rval = handle_exception(e, default)
 
         return rval
 
