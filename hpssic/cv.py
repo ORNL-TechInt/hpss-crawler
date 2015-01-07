@@ -495,9 +495,11 @@ def cvv_ttype_drop(argv):
 
 # -----------------------------------------------------------------------------
 def cvv_ttype_lookup(argv):
-    """ttype_lookup - Look up the tape type for a specified pathname
+    """ttype_lookup - Look up the tape type for specified pathnames
 
     usage: cv ttype_lookup [-d] path ...
+
+    Path may be a 'like' expression to match multiple paths.
     """
     p = optparse.OptionParser()
     p.add_option('-d', '--debug',
@@ -511,8 +513,14 @@ def cvv_ttype_lookup(argv):
     if o.debug:
         pdb.set_trace()
 
-    rpt = {}
+    clist = []
     for path in a:
+        rows = cv_lib.tpop_select_by_paths(a)
+        clist.extend(rows)
+
+    rpt = {}
+    for r in clist:
+        path = r[0]
         media = cv_lib.ttype_lookup(path)
         rpt[path] = media
 
@@ -563,8 +571,8 @@ def cvv_ttype_populate(argv):
 
     If one or more paths are specified, those records will be looked up in
     checkables and populated with media type information if present. If no
-    paths are specified and -a/--all is, all records in checkables will be
-    updated with media type info.
+    paths are specified and -a/--all is, all records in checkables where cart
+    and/or media type information is missing will be updated.
     """
     # -------------------------------------------------------------------------
     def report_updated_row_list(row_l):
