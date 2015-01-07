@@ -763,8 +763,8 @@ def stop_wait(cfg=None):
         cfg = CrawlConfig.get_config()
     context = cfg.get('crawler', 'context')
     exitpath = cfg.get('crawler', 'exitpath')
-    timeout = float(cfg.get_d('crawler', 'stopwait_timeout', 5.0))
-    sleep_time = float(cfg.get_d('crawler', 'sleep_time', 0.25))
+    timeout = cfg.get_time('crawler', 'stopwait_timeout', 5.0)
+    sleep_time = cfg.get_time('crawler', 'sleep_time', 0.25)
     lapse = 0.0
 
     while is_running(context) and lapse < timeout:
@@ -817,7 +817,7 @@ class CrawlDaemon(daemon.Daemon):
             self.whenq = []
             self.ecount = 0
             self.xtotal = 0
-            self.tlimit = float(self.cfg.get_d('crawler', 'xlim_time', "7.0"))
+            self.tlimit = self.cfg.get_time('crawler', 'xlim_time', 7.0)
             self.climit = int(self.cfg.get_d('crawler', 'xlim_count', "3"))
             self.ilimit = int(self.cfg.get_d('crawler', 'xlim_ident', "5"))
             self.zlimit = int(self.cfg.get_d('crawler', 'xlim_total', '10'))
