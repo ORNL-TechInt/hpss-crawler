@@ -54,5 +54,4 @@ py.test --version
 
 #
 # And run the tests! 
-# py.test hpssic --skip mysql --skip db2 --cov hpssic
-py.test hpssic --skip mysql --skip db2 --cov hpssic -k nodoc -s
+py.test hpssic --skip mysql --skip db2 --cov hpssic

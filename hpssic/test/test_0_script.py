@@ -397,8 +397,6 @@ def test_nodoc():
     else:
         wroot = hpssic_par
 
-    # !@!
-    print("wroot = %s" % wroot)
     # collect all the .py files in pylist
     pylist = []
     for r, dlist, flist in os.walk(wroot):
@@ -425,8 +423,6 @@ def test_nodoc():
             mlist.append(mname)
         if mname not in sys.modules and mname.startswith('hpssic'):
             try:
-                # !@!
-                print('importing %s' % mname)
                 __import__(mname, fromlist=fromlist)
 
             except ImportError:
