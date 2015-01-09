@@ -11,6 +11,7 @@ from hpssic import hpss
 from hpssic import messages as MSG
 import os
 import pdb
+import pytest
 from hpssic import rpt_sublib
 import sys
 from hpssic import testhelp
