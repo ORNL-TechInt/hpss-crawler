@@ -90,7 +90,7 @@ class HSI(object):
         self.xobj = pexpect.spawn(self.cmd, timeout=self.timeout)
         if self.verbose:
             self.xobj.logfile = open("hsi.out", 'a')
-        which = self.xobj.expect([self.prompt] + self.hsierrs)
+        which = self.xobj.expect([self.prompt, pexpect.EOF] + self.hsierrs)
         if 0 != which or self.unavailable:
             raise HSIerror("HPSS Unavailable")
 
