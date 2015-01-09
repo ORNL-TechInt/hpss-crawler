@@ -397,6 +397,8 @@ def test_nodoc():
     else:
         wroot = hpssic_par
 
+    # !@!
+    print("wroot = %s" % wroot)
     # collect all the .py files in pylist
     pylist = []
     for r, dlist, flist in os.walk(wroot):
@@ -422,6 +424,8 @@ def test_nodoc():
         mlist.append(mname)
         if mname not in sys.modules:
             try:
+                # !@!
+                print('importing %s' % mname)
                 __import__(mname, fromlist=fromlist)
 
             except ImportError:
@@ -481,28 +485,35 @@ def nodoc_check(mod, pylist, depth, why):
         already = nodoc_check._already
     except AttributeError:
         count = 0
-        nodoc_check._already = ['base64',
+        nodoc_check._already = ['AssertionError',
+                                'base64',
                                 'bdb',
                                 'contextlib',
+                                'datetime',
                                 'decimal',
                                 'difflib',
                                 'dis',
                                 'email',
+                                'errno',
                                 'fcntl',
                                 'getopt',
                                 'getpass',
                                 'glob',
                                 'heapq',
                                 'inspect',
+                                'InterpolationMissingOptionError',
                                 'linecache',
                                 'logging',
                                 'MySQLdb',
+                                'NoOptionError',
+                                'NoSectionError',
                                 'optparse',
                                 'os',
                                 'pdb',
                                 'pexpect',
                                 'pickle',
                                 'pprint',
+                                'pwd',
                                 'pytest',
                                 're',
                                 'shlex',
@@ -516,6 +527,7 @@ def nodoc_check(mod, pylist, depth, why):
                                 'sys',
                                 'tempfile',
                                 'text',
+                                'timedelta',
                                 'times',
                                 'tokenize',
                                 'traceback',
@@ -534,6 +546,7 @@ def nodoc_check(mod, pylist, depth, why):
             ]):
         return rval
 
+    # print("nodoc_check(%s = %s)" % (mod.__name__, str(mod)))
     for name, item in inspect.getmembers(mod, inspect.isroutine):
         if all([not inspect.isbuiltin(item),
                 not filepath_reject(item, pylist),

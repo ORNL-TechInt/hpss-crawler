@@ -8,6 +8,7 @@ from hpssic import CrawlDBI
 from hpssic import cv_sublib
 from hpssic.Dimension import Dimension
 from hpssic import hpss
+from hpssic import messages as MSG
 import os
 import pdb
 from hpssic import rpt_sublib
