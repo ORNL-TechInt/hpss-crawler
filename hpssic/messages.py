@@ -75,6 +75,8 @@ invalid_time_unit_S = ("invalid time unit '%s'")
 
 invalid_time_mag_S = ("invalid time magnitude '%s'")
 
+list_expected_S = ("Expected a list, but got a '%s'")
+
 lsp_invalid_file_type = ("Invalid file type in 'ls -P' output")
 
 lsp_output_not_found = ("ls -P output not found in lsp_parse input")

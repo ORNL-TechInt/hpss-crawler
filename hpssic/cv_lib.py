@@ -1,6 +1,7 @@
 import CrawlDBI
 import dbschem
 import hpss
+import messages as MSG
 import pdb
 import time
 import util as U
@@ -205,6 +206,8 @@ def tpop_select_by_paths(path_l, db=None):
     Return a list checkable rows that match the path list where ttypes
     and/or cart is null.
     """
+    if type(path_l) != list:
+        raise U.HpssicError(MSG.list_expected_S % type(path_l))
     close = False
     if db is None:
         db = CrawlDBI.DBI(dbtype='crawler')
