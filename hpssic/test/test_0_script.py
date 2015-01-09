@@ -421,7 +421,8 @@ def test_nodoc():
         else:
             fromlist = []
         mname = '.'.join(mp)
-        mlist.append(mname)
+        if mname.startswith('hpssic'):
+            mlist.append(mname)
         if mname not in sys.modules and mname.startswith('hpssic'):
             try:
                 # !@!
