@@ -2,6 +2,7 @@
 Database interface classes
 """
 import base64
+import contextlib
 import CrawlConfig
 import messages as MSG
 import pdb
@@ -1477,3 +1478,15 @@ if db2_available:
                 rval = bfid_str
 
             return rval
+
+
+# -----------------------------------------------------------------------------
+@contextlib.contextmanager
+def db_context(**kw):
+    """
+    Open a database connection, let the caller do something with it, then close
+    it
+    """
+    rval = DBI(**kw)
+    yield rval
+    rval.close()
