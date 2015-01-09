@@ -422,7 +422,7 @@ def test_nodoc():
             fromlist = []
         mname = '.'.join(mp)
         mlist.append(mname)
-        if mname not in sys.modules:
+        if mname not in sys.modules and mname.startswith('hpssic'):
             try:
                 # !@!
                 print('importing %s' % mname)
