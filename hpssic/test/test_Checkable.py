@@ -5,8 +5,10 @@ from hpssic.Checkable import Checkable
 import copy
 from hpssic import CrawlConfig
 from hpssic import CrawlDBI
+from hpssic import cv_lib
 from hpssic import dbschem
 from hpssic import Dimension
+from hpssic import messages as MSG
 import os
 import pdb
 import pytest
@@ -746,6 +748,57 @@ class CheckableTest(testhelp.HelpedTestCase):
             for z in pri_d:
                 self.assertPathNotPresent(z['ppath'])
                 self.assertPathPresent(z['cpath'])
+
+    # -------------------------------------------------------------------------
+    def test_path_like(self):
+        """
+        Verify that passing a 'like' expression to tpop_select_by_paths() works
+        properly
+        """
+        self.dbgfunc()
+        CrawlConfig.add_config(close=True, dct=self.cfg_dict())
+        Checkable.ex_nihilo()
+
+        with CrawlDBI.db_context(dbtype='crawler') as db:
+            db.insert(table='checkables',
+                      fields=['path', 'type', 'cos', 'last_check'],
+                      data=self.testdata)
+
+            path = 'abc%'
+            self.assertRaisesMsg(U.HpssicError,
+                                 MSG.list_expected_S % type(path),
+                                 cv_lib.tpop_select_by_paths,
+                                 path,
+                                 db)
+
+            td = [(unicode(z[0]),
+                   unicode(z[1]),
+                   None,
+                   None,
+                   z[-1]) for z in self.testdata]
+
+            r = cv_lib.tpop_select_by_paths(['abc%'], db)
+            self.expected(0, len(r))
+
+            r = cv_lib.tpop_select_by_paths(['%foo'], db)
+            self.expected(1, len(r))
+            self.expected_in(td[3], r)
+
+            r = cv_lib.tpop_select_by_paths(['%c/%'], db)
+            self.expected(2, len(r))
+            self.expected_in(td[3], r)
+            self.expected_in(td[4], r)
+
+            r = cv_lib.tpop_select_by_paths(['%'], db)
+            self.expected(3, len(r))
+            self.expected_in(td[2], r)
+            self.expected_in(td[3], r)
+            self.expected_in(td[4], r)
+
+            r = cv_lib.tpop_select_by_paths(['%foo', '%xyz'], db)
+            self.expected(2, len(r))
+            self.expected_in(td[2], r)
+            self.expected_in(td[3], r)
 
     # -------------------------------------------------------------------------
     def test_persist_last_check(self):
