@@ -18,6 +18,7 @@ def hpssic_test_log(config, loggable):
     with open(hpssic_test_log._logpath, 'a') as f:
         f.write(msg)
 
+
 # -----------------------------------------------------------------------------
 def pytest_addoption(parser):
     """
@@ -74,7 +75,7 @@ def pytest_runtest_setup(item):
 
     jfm = 'jenkins_fail'
     if item.get_marker(jfm):
-        if os.path.exists('jenkins') or jfm in skip_l :
+        if os.path.exists('jenkins') or jfm in skip_l:
             pytest.skip('%s would fail on jenkins' % fqn)
 
     slow_m = 'slow'
