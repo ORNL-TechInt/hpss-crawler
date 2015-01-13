@@ -139,6 +139,7 @@ class DBI(object):
         if 'dbtype' not in kwargs:
             raise DBIerror(MSG.valid_dbtype)
         elif kwargs['dbtype'] == 'hpss':
+            cfg_section = HPSS_SECTION
             dbtype = cfg.get(HPSS_SECTION, 'dbtype')
             tbl_pfx = cfg.get(HPSS_SECTION, 'tbl_prefix')
             if 'dbname' not in kwargs:
@@ -150,6 +151,7 @@ class DBI(object):
             else:
                 dbname = cfg.get(HPSS_SECTION, kwargs['dbname'])
         elif kwargs['dbtype'] == 'crawler':
+            cfg_section = CRWL_SECTION
             if 'dbname' in kwargs:
                 raise DBIerror("dbname may not be specified here")
             dbtype = cfg.get(CRWL_SECTION, 'dbtype')
@@ -169,7 +171,7 @@ class DBI(object):
         if 'timeout' in kwargs:
             okw['timeout'] = kwargs['timeout']
         else:
-            okw['timeout'] = 3600
+            okw['timeout'] = cfg.get_time(cfg_section, 'timeout', 3600)
 
         self.closed = False
         if dbtype == 'sqlite':
@@ -751,6 +753,8 @@ if mysql_available:
             if self.tbl_prefix != '':
                 self.tbl_prefix = self.tbl_prefix.rstrip('_') + '_'
             cfg = kwargs['cfg']
+            if not hasattr(self, 'timeout'):
+                self.timeout = cfg.get_time(CRWL_SECTION, 'timeout', 3600)
             host = cfg.get(CRWL_SECTION, 'hostname')
             username = cfg.get(CRWL_SECTION, 'username')
             password = base64.b64decode(cfg.get(CRWL_SECTION, 'password'))
@@ -1197,6 +1201,9 @@ if db2_available:
                 cfg = kwargs['cfg']
             except:
                 cfg = CrawlConfig.get_config()
+
+            if not hasattr(self, 'timeout'):
+                self.timeout = cfg.get_time(HPSS_SECTION, 'timeout', 3600)
             util.env_update(cfg)
             host = cfg.get(HPSS_SECTION, 'hostname')
             port = cfg.get(HPSS_SECTION, 'port')
@@ -1208,15 +1215,17 @@ if db2_available:
                 password = base64.b64decode(cfg.get(HPSS_SECTION, 'password'))
             except:
                 password = ''
-            try:
-                cxnstr = ("database=%s;" % self.dbname +
-                          "hostname=%s;" % host +
-                          "port=%s;" % port +
-                          "uid=%s;" % username +
-                          "pwd=%s;" % password)
-                self.dbh = db2.connect(cxnstr, "", "")
-            except Exception as e:
-                self.err_handler(err=e)
+
+            cxnstr = ("database=%s;" % self.dbname +
+                      "hostname=%s;" % host +
+                      "port=%s;" % port +
+                      "uid=%s;" % username +
+                      "pwd=%s;" % password)
+            self.dbh = self.retry(Exception,
+                                  db2.connect,
+                                  cxnstr,
+                                  "",
+                                  "")
 
         # ---------------------------------------------------------------------
         def __repr__(self):
@@ -1231,13 +1240,19 @@ if db2_available:
             """
             DBIdb2: error handler can accept a string or an exception object
             """
-            if err is not None:
-                if isinstance(err, ibm_db_dbi.Error):
-                    raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
-                else:
-                    raise DBIerror(str(err), dbname=self.dbname)
-            else:
+            if err is None:
                 raise DBIerror(message, dbname=self.dbname)
+            elif isinstance(err, ibm_db_dbi.Error):
+                raise DBIerror("%d: %s" % err.args, dbname=self.dbname)
+            elif 'A communication error has been detected' in str(err):
+                if not hasattr(self, 'sleeptime'):
+                    self.sleeptime = 0.1
+                CrawlConfig.log('Riding out DB2 outage -- sleeping %f seconds'
+                                % self.sleeptime)
+                time.sleep(self.sleeptime)
+                self.sleeptime = min(2*self.sleeptime, 60.0)
+            else:
+                raise DBIerror(str(err), dbname=self.dbname)
 
         # ---------------------------------------------------------------------
         def __recognized_exception__(self, exc):
