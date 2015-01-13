@@ -59,9 +59,9 @@ def main(args):
                            ])
 
     (dstdir, blddir) = prepdir(['dist', 'build'])
-    reqs = {'ibmdb': {'name': 'ibm_db',
-                      'cmds': [set_ibm_home, set_cflags, edit_setup],
-                      },
+    reqs = {#'ibmdb': {'name': 'ibm_db',
+            #          'cmds': [set_ibm_home, set_cflags, edit_setup],
+            #          },
             # 'pytest': {'name': 'pytest',
             #            'cmds': [],
             #            },
@@ -72,6 +72,9 @@ def main(args):
             #             'cmds': []
             #             },
             }
+
+    if os.getenv('VIRTUAL_ENV') is not None:
+        raise SystemExit("Please deactivate any virtual environment first")
 
     everything = reqs.keys() + ['hpssic']
     if opt.only:

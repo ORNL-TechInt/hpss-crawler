@@ -37,6 +37,9 @@ def pytest_addoption(parser):
     parser.addoption("--skip", action="append", default=[],
                      help="skip tests with matching tags")
     attr = pytest.mark.attr
+    if os.path.isdir('build'):
+        raise SystemExit('\n   Directory build will cause test failures. ' +
+                         'Please remove it and try again.\n')
 
 
 # -----------------------------------------------------------------------------
