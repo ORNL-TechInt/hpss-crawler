@@ -1,1 +1,2 @@
-python build.py
+python setup.py bdist_rpm
+
