@@ -5,5 +5,5 @@ ls -lR .
 # REPO_DESTINATION=jenkins-built-for-testing
 # REPO_DISTRO=generic6-x86_64
 # copied to /ccs/siterepos/$REPO_DESTINATION/$REP_DISTRO
-ls -alR /css/siterepos
+ls -alR /ccs/siterepos
 export REPO_DESTINATTION=hpss-generic6-x86_64
