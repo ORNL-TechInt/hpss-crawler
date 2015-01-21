@@ -12,12 +12,19 @@ import version
 
 
 # -----------------------------------------------------------------------------
-def get_html_report(cfg_file):
+def get_html_report(cfg_file=None, cfg=None):
     """
     Format a report in HTML
     """
     rval = ""
-    cfg = CrawlConfig.add_config(filename=cfg_file)
+    if cfg is not None:
+        # use it
+        pass
+    elif cfg_file is not None:
+        cfg = CrawlConfig.add_config(filename=cfg_file)
+    else:
+        cfg = CrawlConfig.add_config()
+
     db = CrawlDBI.DBI(dbtype="crawler")
 
     last_rpt_time = rpt_lib.get_last_rpt_time(db)

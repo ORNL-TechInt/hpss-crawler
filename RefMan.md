@@ -736,6 +736,15 @@ Besides start, stop, and status, the other subfunctions of crawl are:
 
 ### rpt
 
+receipients -- list of e-mail addresses to receive e-mail reports
+
+sender -- source address for e-mail reports
+
+subject -- subject line for e-mail reports
+
+alerts -- which section from this file to use for alert definitions
+
+
 ### tcc
 
 ## Tests

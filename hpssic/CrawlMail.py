@@ -30,7 +30,7 @@ def send(to='', subj='', msg='', sender='', cfg=None):
         payload = email.mime.text.MIMEText(MSG.empty_message)
 
     # Set the recipient address(es) based on *to*
-    default_recip = 'tbarron@ornl.gov'
+    default_recip = 'hpssic@mailinator.com'
     if to == '':
         if cfg is None:
             raise util.HpssicError(MSG.no_recip_list)
@@ -44,7 +44,7 @@ def send(to='', subj='', msg='', sender='', cfg=None):
             addrs = default_recip
         else:
             (section, option) = to.split('.')
-            addrs = cfg.get(section, option)
+            addrs = cfg.get_d(section, option, default_recip)
 
     addrlist = [x.strip() for x in addrs.split(',')]
     payload['To'] = addrs

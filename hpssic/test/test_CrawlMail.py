@@ -66,12 +66,66 @@ class CrawlMailTest(th.HelpedTestCase):
         self.expected_in(body, m.fullmessage)
 
     # -------------------------------------------------------------------------
+    def test_to_sectopt_noopt(self):
+        """
+        The *to* arg to CrawlMail.send() is a section.option ref into a config
+        object. Should work.
+        """
+        exp = "hpssic@mailinator.com"
+        cdict = {'crawler': {'notify-email': "somebody@somewhere.com"},
+                 'alerts': {'recipients': exp},
+                 }
+        cfg = CrawlConfig.CrawlConfig.dictor(cdict)
+
+        sender = 'from@here.now'
+        to = 'alerts.froodle'
+        subject = 'Topic'
+        body = 'Message body'
+        CrawlMail.send(sender=sender,
+                       to=to,
+                       subj=subject,
+                       msg=body,
+                       cfg=cfg)
+        m = fakesmtp.inbox[0]
+        self.expected(sender, m.from_address)
+        self.expected(exp.split(','), m.to_address)
+        self.expected_in(subject, m.fullmessage)
+        self.expected_in(body, m.fullmessage)
+
+    # -------------------------------------------------------------------------
+    def test_to_sectopt_nosect(self):
+        """
+        The *to* arg to CrawlMail.send() is a section.option ref into a config
+        object. However, the section is not present in the config object.
+        CrawlMail.send() should use a default recipient.
+        """
+        exp = "hpssic@mailinator.com"
+        cdict = {'crawler': {'notify-email': "somebody@somewhere.com"},
+                 }
+        cfg = CrawlConfig.CrawlConfig.dictor(cdict)
+
+        sender = 'from@here.now'
+        to = 'alerts.recipients'
+        subject = 'Topic'
+        body = 'Message body'
+        CrawlMail.send(sender=sender,
+                       to=to,
+                       subj=subject,
+                       msg=body,
+                       cfg=cfg)
+        m = fakesmtp.inbox[0]
+        self.expected(sender, m.from_address)
+        self.expected(exp.split(','), m.to_address)
+        self.expected_in(subject, m.fullmessage)
+        self.expected_in(body, m.fullmessage)
+
+    # -------------------------------------------------------------------------
     def test_to_sectopt_nocfg(self):
         """
         The *to* arg to CrawlMail.send() is a section.option ref into a config
         object. Should work.
         """
-        exp = "tbarron@ornl.gov"
+        exp = "hpssic@mailinator.com"
         cdict = {'crawler': {'notify-email': "somebody@somewhere.com"},
                  'alerts': {'recipients': exp},
                  }

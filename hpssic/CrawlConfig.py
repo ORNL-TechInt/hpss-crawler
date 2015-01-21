@@ -438,10 +438,10 @@ class CrawlConfig(ConfigParser.ConfigParser):
         def handle_exception(exc, defval):
             if type(defval) == int:
                 rval = defval
-                log(str(e) + '; using default value %d' % defval)
+                # log(str(e) + '; using default value %d' % defval)
             elif type(defval) == float:
                 rval = defval
-                log(str(e) + '; using default value %f' % defval)
+                # log(str(e) + '; using default value %f' % defval)
             elif defval is not None:
                 raise U.HpssicError(MSG.default_int_float)
             else:
