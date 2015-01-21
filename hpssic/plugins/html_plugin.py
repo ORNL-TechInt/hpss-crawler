@@ -17,6 +17,7 @@ def main(cfg):
     with open(npath, 'w') as out:
         out.write(rpt)
 
-    os.rename(fpath, opath)
+    if os.path.exists(fpath):
+        os.rename(fpath, opath)
     os.rename(npath, fpath)
     CrawlConfig.log("html_plugin finished")
