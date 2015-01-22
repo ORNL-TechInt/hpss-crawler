@@ -130,7 +130,7 @@ class HelpedTestCase(unittest.TestCase):
         """
         Verify that a path does not exist or throw an assertion error
         """
-        msg = (umsg or "Expected file '%s' to exist to but it does not" %
+        msg = (umsg or "Expected file '%s' to not exist to but it does" %
                pathname)
         self.assertFalse(os.path.exists(pathname), msg)
 
