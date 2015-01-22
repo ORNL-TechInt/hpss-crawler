@@ -1,5 +1,14 @@
 """
 Tests for code in crawl.py
+
+TODO: apply flex_assert() where appropriate
+
+TODO: replace references to 'testhelp' with 'th'
+
+TODO: replace references to 'util' with 'U'
+
+TODO: move constants in cstr to messages.py
+
 """
 from hpssic import crawl
 from hpssic import crawl_lib
@@ -18,6 +27,7 @@ import re
 import shutil
 import sys
 from hpssic import testhelp
+from hpssic import testhelp as th
 import time
 import tempfile
 from hpssic import util
@@ -582,6 +592,7 @@ class CrawlMiscTest(CrawlTest):
         when the exit file is touched. Verify that at least one plugin
         fires and produces some output.
         """
+        self.dbgfunc()
         (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
 
         xdict = copy.deepcopy(self.cfg_dict())
@@ -610,12 +621,13 @@ class CrawlMiscTest(CrawlTest):
 
         self.assertPathPresent(logpath)
         self.expected_in(self.cstr['ldaemon'], util.contents(logpath))
-        time.sleep(2)
-        self.expected_in('other: firing', util.contents(logpath))
-        self.assertTrue(self.tmpdir('fired'),
-                        "File %s/fired does not exist" % self.tmpdir())
-        self.expected('plugin other fired\n',
-                      util.contents(self.tmpdir('fired')))
+
+        def check_fire():
+            self.expected_in('other: firing', util.contents(logpath))
+            self.assertPathPresent(self.tmpdir('fired'))
+            self.expected('plugin other fired\n',
+                          util.contents(self.tmpdir('fired')))
+        th.flex_assert(check_fire, 3.0, 0.5)
 
         util.touch(exitpath)
 

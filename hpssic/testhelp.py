@@ -24,6 +24,7 @@ import pytest
 import re
 import shutil
 import sys
+import time
 import unittest
 import util
 import util as U
@@ -60,6 +61,40 @@ def all_tests(name, filter=None):
                 cases.append(['%s.%s' % (c, case), skip])
 
     return cases
+
+
+# -----------------------------------------------------------------------------
+def flex_assert(payload, timeout=5.0, interval=0.5, *args, **kwargs):
+    """
+    Sometimes an assertion condition is not quite yet true when we check it but
+    it will be shortly. We don't want to fail out of hand on the first
+    iteration but watch the situation for a short period of time and pass if
+    the conditions eventually pass.
+
+    This routine allows for the following in a test:
+
+        def some_assertions(this, that):
+            assert this
+            assert that
+        flex_assert(some_assertions, 3, .25, this, that)
+
+    flex_assert() will call some_assertions(). If one of the assertions fail,
+    we sleep *interval* seconds and try again. If we time out, we raise the
+    most recent AssertionError. If all assertions pass before the timeout
+    (i.e., some_assertions() returns without throwing any AssertionErrors), we
+    return to the caller, allowing this part of the test to pass.
+    """
+    start = time.time()
+    done = False
+    while not done and time.time() - start < timeout:
+        try:
+            e = None
+            payload(*args, **kwargs)
+            done = True
+        except AssertionError as e:
+            time.sleep(interval)
+    if e:
+        raise e
 
 
 # -----------------------------------------------------------------------------
