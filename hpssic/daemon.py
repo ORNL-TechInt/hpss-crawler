@@ -146,9 +146,18 @@ class Daemon:
     # -------------------------------------------------------------------------
     def delpid(self):
         """
-        Remove the pid file on the way out
+        The problem with just removing the pid file on the way out is that
+        doing so leaves a tiny little window when the crawler is still in the
+        process table and the pid file does not exist. If running_pid() gets
+        called by another process during that window, it will regenerate the
+        missing pid file. By leaving the pid file named <pid>.DEFUNCT, we make
+        it clear that the pid file is not just missing but is no longer valid
+        and should not be regenerated.
+
+        was: Remove the pid file on the way out.
         """
-        os.remove(self.pidfile)
+        if os.path.exists(self.pidfile):
+            os.rename(self.pidfile, self.pidfile + '.DEFUNCT')
 
     # -------------------------------------------------------------------------
     def get_max_fd(self):

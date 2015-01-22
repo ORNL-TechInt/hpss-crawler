@@ -742,13 +742,16 @@ def running_pid(proc_required=True):
                 pfpath = "%s/%d" % (CrawlDaemon.piddir, pid)
                 if os.path.exists(pfpath):
                     (ctx, xpath) = util.contents(pfpath).strip().split()
-                else:
+                    rval.append((pid, ctx, xpath))
+                elif not os.path.exists(pfpath + '.DEFUNCT'):
                     # crawler is running but the pid file has been lost
                     cfg = CrawlConfig.add_config()
                     ctx = cfg.get('crawler', 'context')
                     xpath = cfg.get('crawler', 'exitpath')
                     make_pidfile(pid, ctx, xpath)
-                rval.append((pid, ctx, xpath))
+                    rval.append((pid, ctx, xpath))
+                # if pfpath + '.DEFUNCT' exists, the crawler is shutting down
+                # so we don't want to recreate the pid file.
     else:
         pid_l = glob.glob("%s/*" % CrawlDaemon.piddir)
         for pid_n in pid_l:
