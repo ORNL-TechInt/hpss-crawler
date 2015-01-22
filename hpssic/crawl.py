@@ -688,7 +688,8 @@ def make_pidfile(pid, context, exitpath, just_check=False):
         ok = True
 
     if not ok:
-        pf_l = glob.glob("%s/*" % piddir)
+        pf_l = [x for x in glob.glob("%s/*" % piddir)
+                if not x.endswith('.DEFUNCT')]
         for pf_n in pf_l:
             data = util.contents(pf_n)
             if 0 == len(data):
