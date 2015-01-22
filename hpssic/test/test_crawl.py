@@ -409,6 +409,7 @@ class CrawlMiscTest(CrawlTest):
         """
         TEST: If the crawler is already running, decline to run a second copy.
         """
+        self.dbgfunc()
         (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
 
         xdict = copy.deepcopy(self.cfg_dict())
@@ -439,12 +440,13 @@ class CrawlMiscTest(CrawlTest):
 
     # --------------------------------------------------------------------------
     @pytest.mark.slow
-    def test_crawl_start_cfg(self):
+    def test_crawl_start_cfgxxx(self):
         """
         TEST: 'crawl start' should fire up a daemon crawler which will exit
         when the exit file is touched. Verify that the correct config
         file is loaded.
         """
+        self.dbgfunc()
         (cfgpath, logpath, exitpath, plugdir) = self.crawl_test_setup()
 
         xdict = copy.deepcopy(self.cfg_dict())
@@ -734,7 +736,8 @@ class CrawlMiscTest(CrawlTest):
         self.assertFalse(crawl.is_running(context=self.ctx),
                          "Expected crawler %s to be down but it is running" %
                          self.ctx)
-        down_l = glob.glob(self.pidglob)
+        down_l = [x for x in glob.glob(self.pidglob)
+                  if not x.endswith('.DEFUNCT')]
         self.expected(len(pre_l), len(down_l))
 
     # --------------------------------------------------------------------------
