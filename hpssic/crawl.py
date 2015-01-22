@@ -667,7 +667,7 @@ def is_running(context=None):
                     cfg.filename)
             raise StandardError(emsg)
 
-    rpi_l = running_pid()
+    rpi_l = running_pid(context=context)
     for rpi in rpi_l:
         if rpi[1] == context:
             running = True
@@ -729,10 +729,12 @@ def pidcmd():
 
 
 # ------------------------------------------------------------------------------
-def running_pid(proc_required=True):
+def running_pid(proc_required=True, context=None):
     """
     Return a list of pids if the crawler is running (per ps(1)) or [] otherwise
     """
+    cfg = CrawlConfig.add_config()
+
     rval = []
     if proc_required:
         result = pidcmd()
@@ -745,8 +747,7 @@ def running_pid(proc_required=True):
                     rval.append((pid, ctx, xpath))
                 elif not os.path.exists(pfpath + '.DEFUNCT'):
                     # crawler is running but the pid file has been lost
-                    cfg = CrawlConfig.add_config()
-                    ctx = cfg.get('crawler', 'context')
+                    ctx = context or cfg.get('crawler', 'context')
                     xpath = cfg.get('crawler', 'exitpath')
                     make_pidfile(pid, ctx, xpath)
                     rval.append((pid, ctx, xpath))
