@@ -501,6 +501,19 @@ def crl_version(argv):
 
 
 # ------------------------------------------------------------------------------
+def clean_defunct_pidfiles(context):
+    """
+    Remove .DEFUNCT pid files for *context*
+    """
+    cfg = CrawlConfig.add_config()
+    pdir = CrawlConfig.pid_dir()
+    for path in glob.glob(os.path.join(pdir, '*.DEFUNCT')):
+        c = util.contents(path)
+        if context in c:
+            os.unlink(path)
+
+
+# ------------------------------------------------------------------------------
 def history_load(loadlist, filename):
     """
     Each plugin's sublib has a load_history() routine that knows how to load
@@ -930,9 +943,9 @@ class CrawlDaemon(daemon.Daemon):
         self.cfg = CrawlConfig.get_config(cfgname)
         self.pidfile = "%s/%d" % (self.piddir, os.getpid())
         exit_file = self.cfg.get('crawler', 'exitpath')
-        make_pidfile(os.getpid(),
-                     self.cfg.get('crawler', 'context'),
-                     exit_file)
+        ctx = self.cfg.get('crawler', 'context')
+        clean_defunct_pidfiles(ctx)
+        make_pidfile(os.getpid(), ctx, exit_file)
         atexit.register(self.delpid)
 
         keep_going = True
