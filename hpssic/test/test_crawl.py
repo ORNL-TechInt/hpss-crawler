@@ -1579,3 +1579,95 @@ class CrawlGiveUpYetTest(CrawlTest):
             self.expected(self.email_targets, ', '.join(m.to_address))
             self.expected(self.sender, m.from_address)
             self.expected_in("crawl: %s" % shutdown_msg, m.fullmessage)
+
+
+# ------------------------------------------------------------------------------
+class CrawlCleanDefunctTest(CrawlTest):
+    # --------------------------------------------------------------------------
+    def setUp(self):
+        """
+        Set up configuration for this set of tests
+        """
+        super(CrawlCleanDefunctTest, self).setUp()
+        xdct = self.cfg_dict()
+        xdct['crawler']['pid_dir'] = self.tmpdir()
+        xdct['crawler']['context'] = self.ctx
+        xdct['crawler']['exitpath'] = self.tmpdir('%s.exit' % self.ctx)
+        self.cfg = CrawlConfig.add_config(close=True, dct=xdct)
+
+    # --------------------------------------------------------------------------
+    def test_clean_defunct_none(self):
+        """
+        Call clean_defunct_pidfiles() with no defunct pidfiles to clean
+        """
+        self.dbgfunc()
+        context = self.cfg.get('crawler', 'context')
+
+        testfile = self.tmpdir('leave_me_alone')
+        util.touch(testfile)
+
+        crawl.clean_defunct_pidfiles(context)
+
+        self.assertPathPresent(testfile)
+
+    # --------------------------------------------------------------------------
+    def test_clean_defunct_other(self):
+        """
+        Call clean_defunct_pidfiles() with no defunct pidfiles to clean
+        """
+        self.dbgfunc()
+        context = self.cfg.get('crawler', 'context')
+        pdir = self.cfg.get('crawler', 'pid_dir')
+        xpath = self.cfg.get('crawler', 'exitpath')
+        othctx = 'OTHER'
+        othxpth = '%s/%s.exit' % (pdir, othctx)
+
+        testfile = self.tmpdir('12345.DEFUNCT')
+        util.write_file(testfile,
+                        content="%s %s\n" % (othctx, othxpth))
+
+        crawl.clean_defunct_pidfiles(context)
+
+        self.assertPathPresent(testfile)
+
+    # --------------------------------------------------------------------------
+    def test_clean_defunct_current(self):
+        """
+        Call clean_defunct_pidfiles() with no defunct pidfiles to clean
+        """
+        self.dbgfunc()
+        context = self.cfg.get('crawler', 'context')
+        pdir = self.cfg.get('crawler', 'pid_dir')
+        xpath = self.cfg.get('crawler', 'exitpath')
+
+        testfile = self.tmpdir('54321.DEFUNCT')
+        util.write_file(testfile,
+                        content="%s %s\n" % (context, xpath))
+
+        crawl.clean_defunct_pidfiles(context)
+
+        self.assertPathNotPresent(testfile)
+
+    # --------------------------------------------------------------------------
+    def test_clean_defunct_both(self):
+        """
+        Call clean_defunct_pidfiles() with no defunct pidfiles to clean
+        """
+        self.dbgfunc()
+        context = self.cfg.get('crawler', 'context')
+        pdir = self.cfg.get('crawler', 'pid_dir')
+        xpath = self.cfg.get('crawler', 'exitpath')
+        othctx = 'OTHER'
+        othxpth = '%s/%s.exit' % (pdir, othctx)
+
+        other = self.tmpdir('12345.DEFUNCT')
+        util.write_file(other,
+                        content="%s %s\n" % (othctx, othxpth))
+        current = self.tmpdir('54321.DEFUNCT')
+        util.write_file(current,
+                        content="%s %s\n" % (context, xpath))
+
+        crawl.clean_defunct_pidfiles(context)
+
+        self.assertPathNotPresent(current)
+        self.assertPathPresent(other)
