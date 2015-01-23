@@ -12,7 +12,7 @@ MAXFD = 2048
 
 
 # -----------------------------------------------------------------------------
-class Daemon:
+class Daemon(object):
     """
     Usage: subclass the Daemon class and override the run() method
     """
