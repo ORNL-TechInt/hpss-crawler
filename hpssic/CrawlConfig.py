@@ -311,6 +311,16 @@ def log(*args, **kwargs):
 
 
 # ------------------------------------------------------------------------------
+def pid_dir():
+    """
+    Return the path to a directory for storing pid files. We expect it to be in
+    the configuration but provide a hard coded default in case it is not.
+    """
+    cfg = add_config()
+    return cfg.get_d('crawler', 'pid_dir', MSG.default_piddir)
+
+
+# ------------------------------------------------------------------------------
 class CrawlConfig(ConfigParser.ConfigParser):
     """
     See the module description for information on this class.

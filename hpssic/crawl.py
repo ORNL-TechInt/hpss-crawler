@@ -28,8 +28,6 @@ import util
 import util as U
 import version
 
-exit_file = 'crawler.exit'
-
 
 # ------------------------------------------------------------------------------
 def crl_cfgdump(argv):
@@ -682,7 +680,7 @@ def make_pidfile(pid, context, exitpath, just_check=False):
     the directory if necessary.
     """
     ok = False
-    piddir = CrawlDaemon.piddir
+    piddir = CrawlConfig.pid_dir()
     if not os.path.exists(piddir):
         os.mkdir(piddir)
         ok = True
@@ -742,7 +740,7 @@ def running_pid(proc_required=True, context=None):
         for line in result.split("\n"):
             if 'crawl start' in line:
                 pid = int(line.split()[0])
-                pfpath = "%s/%d" % (CrawlDaemon.piddir, pid)
+                pfpath = "%s/%d" % (CrawlConfig.pid_dir(), pid)
                 if os.path.exists(pfpath):
                     (ctx, xpath) = util.contents(pfpath).strip().split()
                     rval.append((pid, ctx, xpath))
@@ -755,7 +753,7 @@ def running_pid(proc_required=True, context=None):
                 # if pfpath + '.DEFUNCT' exists, the crawler is shutting down
                 # so we don't want to recreate the pid file.
     else:
-        pid_l = glob.glob("%s/*" % CrawlDaemon.piddir)
+        pid_l = glob.glob("%s/*" % CrawlConfig.pid_dir())
         for pid_n in pid_l:
             pid = int(os.path.basename(pid_n))
             (ctx, xpath) = util.contents(pid_n).strip().split()
@@ -811,7 +809,14 @@ class CrawlDaemon(daemon.Daemon):
     run() gets run in the background and then calls fire() when appropriate to
     invoke a plugin.
     """
-    piddir = "/tmp/crawler"
+    # --------------------------------------------------------------------------
+    def __init__(self, *args, **kwargs):
+        """
+        Set piddir for the object from the configuration, then call the
+        parent's constructor.
+        """
+        self.piddir = CrawlConfig.pid_dir()
+        super(CrawlDaemon, self).__init__(*args, **kwargs)
 
     # --------------------------------------------------------------------------
     def give_up_yet(self, tbstr):
