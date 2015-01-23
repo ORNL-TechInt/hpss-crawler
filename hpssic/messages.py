@@ -25,6 +25,8 @@ default_int_float = ("CrawlConfig.get_time: default must be int or float")
 
 default_mail_subject = ("HPSS Integrity Crawler ALERT")
 
+default_piddir = ("/tmp/crawler")
+
 drop_table_string = ("On drop(), table name must be a string")
 
 drop_table_empty = ("On drop(), table name must not be empty")

@@ -74,7 +74,7 @@ def make_sqlite_tcfg(dbeng, obj):
     """
     cdata = {'crawler': {'context': 'TEST',
                          'heartbeat': '10s',
-                         'exitpath': '/tmp/crawler/TEST.exit',
+                         'exitpath': '%s/TEST.exit' % MSG.default_piddir,
                          'stopwait_timeout': '5.0',
                          'sleep_time': '0.25',
                          'logpath': '/tmp/hpssic_sqlite.log',

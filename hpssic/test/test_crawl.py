@@ -52,7 +52,7 @@ class CrawlTest(testhelp.HelpedTestCase):
     """
     Tests for the code in crawl.py
     """
-    piddir = "/tmp/crawler"
+    piddir = CrawlConfig.pid_dir()
     pidglob = piddir + "/*"
     ctx = 'TEST'
     # more or less constant strings
