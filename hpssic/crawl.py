@@ -760,7 +760,7 @@ def running_pid(proc_required=True, context=None):
                 elif not os.path.exists(pfpath + '.DEFUNCT'):
                     # crawler is running but the pid file has been lost
                     ctx = context or cfg.get('crawler', 'context')
-                    xpath = cfg.get('crawler', 'exitpath')
+                    xpath = cfg.get_d('crawler', 'exitpath', '%s.exit' % ctx)
                     make_pidfile(pid, ctx, xpath)
                     rval.append((pid, ctx, xpath))
                 # if pfpath + '.DEFUNCT' exists, the crawler is shutting down
