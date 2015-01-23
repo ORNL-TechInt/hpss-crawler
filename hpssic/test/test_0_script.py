@@ -39,6 +39,7 @@ class Test_ABLE(th.HelpedTestCase):
         """
         Scan all .py files for duplicate function names
         """
+        self.dbgfunc()
         dupl = {}
         for r, d, f in os.walk('hpssic'):
             for fname in f:
@@ -335,7 +336,7 @@ class Test_TCC(ScriptBase):
 
 # -----------------------------------------------------------------------------
 @U.memoize
-def defrgx(obarg):
+def rgx_def(obarg):
     """
     Return a compiled regex for finding function definitions
     """
@@ -343,18 +344,36 @@ def defrgx(obarg):
 
 
 # -----------------------------------------------------------------------------
+@U.memoize
+def rgx_class(obarg):
+    """
+    Return a compiled regex for finding class definitions
+    """
+    return re.compile("^\s*class\s+(\w+)\s*\(")
+
+
+# -----------------------------------------------------------------------------
 def check_for_duplicates(path):
     """
     Scan *path* for duplicate function names
     """
-    rgx = defrgx(0)
+    rx_def = rgx_def(0)
+    rx_cls = rgx_class(0)
+
     flist = []
     rval = ''
+    cur_class = ''
     with open(path, 'r') as f:
         for l in f.readlines():
-            q = rgx.match(l)
+            q = rx_cls.match(l)
             if q:
-                flist.append(q.groups()[0])
+                cur_class = q.groups()[0] + '.'
+
+            q = rx_def.match(l)
+            if q:
+                cur_def = q.groups()[0]
+                flist.append(cur_class + cur_def)
+
     if len(flist) != len(set(flist)):
         flist.sort()
         last = ''
