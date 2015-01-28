@@ -10,6 +10,6 @@ cd RPMS; export RPM_NAME=`ls *noarch.rpm | head -1`; cd ..
 
 env
 
-if [[ "$GIT_BRANCH" == "master" ]]; then
-    echo "$RPM_NAME $REPO_DIR $REPO_ARCH" > destinations.txt
-fi
+# if [[ "$GIT_BRANCH" == "master" ]]; then
+#     echo "$RPM_NAME $REPO_DIR $REPO_ARCH" > destinations.txt
+# fi
