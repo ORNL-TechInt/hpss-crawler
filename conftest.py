@@ -44,6 +44,15 @@ def pytest_addoption(parser):
 
 
 # -----------------------------------------------------------------------------
+def pytest_configure(config):
+    """
+    If --all is on command line, override the -x in pytest.ini
+    """
+    if config.option.exitfirst and config.option.all:
+        config.option.exitfirst = False
+
+
+# -----------------------------------------------------------------------------
 def pytest_report_header(config):
     """
     Add version to header of test report
