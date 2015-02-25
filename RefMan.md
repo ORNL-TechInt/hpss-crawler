@@ -72,7 +72,7 @@ has components installed.
 
             $ db2 connect to DATABASE
             $ db2 -x "select 'grant select on table ' || rtrim(tabschema) || '.' ||
-                rtrim(tabname) || ' to user hpssic' from syscat.tables 
+                rtrim(tabname) || ' to user hpssic;' from syscat.tables
                 where tabschema = 'HPSS'"
 
   To execute the output of the above command, append '| db2 +p -tv' 
@@ -80,13 +80,12 @@ has components installed.
   'db2 +p -tv'
     
             $ db2 -x "select 'grant select on table ' || rtrim(tabschema) || '.' ||
-                rtrim(tabname) || ' to user hpssic' from syscat.tables 
+                rtrim(tabname) || ' to user hpssic;' from syscat.tables
                 where tabschema = 'HPSS'" | db2 +p -tv
         
-  If you would prefer to only grant the user access to the
-  tables the crawler actually accesses, those tables are show in
-  the following list. You would need to issue the following
-  command on each of these tables.
+  If you would prefer to only grant the user access to the tables the
+  crawler actually accesses, those tables are listed below. You would
+  need to issue the following command on each of these tables.
 
              $ GRANT SELECT ON TABLE _tablename_ TO USER hpssic
 
