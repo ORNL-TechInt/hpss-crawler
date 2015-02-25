@@ -9,6 +9,9 @@ unit-testing/
 Importing this module will redirect SMTP output to a fake in-memory 'inbox' so
 it can be examined rather than sending it off the machine.
 """
+import smtplib
+
+
 smtp = None
 inbox = []
 
@@ -70,6 +73,5 @@ class DummySMTP(object):
 
 # -----------------------------------------------------------------------------
 # this is the actual monkey patch (simply replacing one class with another)
-import smtplib
 smtplib.SMTP = DummySMTP
 # Now any calls to smtplib.SMTP will actually get this DummySMTP class instead

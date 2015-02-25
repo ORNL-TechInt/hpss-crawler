@@ -140,12 +140,7 @@ def get_config(cfname='', reset=False, soft=False):
         if soft:
             return None
         if cfname == '':
-            envval = os.getenv('CRAWL_CONF')
-            if None != envval:
-                cfname = envval
-
-        if cfname == '':
-            cfname = 'crawl.cfg'
+            cfname = os.getenv('CRAWL_CONF') or 'crawl.cfg'
 
         if not os.path.exists(cfname):
             raise SystemExit("""

@@ -265,7 +265,7 @@ class Checkable(object):
             else:
                 for line in rsp.split("\n"):
                     new = Checkable.fdparse(line)
-                    if None != new:
+                    if new is not None:
                         rval.append(new)
                         new.load()
                         new.persist()

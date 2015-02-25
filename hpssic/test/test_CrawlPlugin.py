@@ -482,7 +482,7 @@ class CrawlPluginTest(testhelp.HelpedTestCase):
         """
         Create a plugin for testing
         """
-        if None == pdir:
+        if pdir is None:
             pdir = self.plugin_dir()
         if not os.path.isdir(pdir):
             os.mkdir(pdir)

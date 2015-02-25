@@ -131,8 +131,8 @@ class Daemon(object):
                 # file was not open
                 pass
             else:
-                sys.stdout.write("Failed to close file descriptor %(fd)d"
-                                 + " (%(exc)s)" % vars())
+                sys.stdout.write("Failed to close file descriptor %(fd)d" +
+                                 " (%(exc)s)" % vars())
                 raise exc
 
     # -------------------------------------------------------------------------

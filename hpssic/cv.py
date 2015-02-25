@@ -742,19 +742,32 @@ def tape_types_populate(hpssroot):
          '0x00000001': ['MT_SUB_3590_E', 'MT_SUB_3590_E_SINGLELEN']
 
     """
-    media_type_file = os.path.join(hpssroot, "include", "hpss_media_type.x")
-    msg_file = os.path.join(hpssroot, "include", "cs_LogErr.h")
-
-    mt = open(media_type_file, "r")
-    hint = lambda x: int(x.replace(";", ""), 0)
-    TT = {}
-    rait_types = []
-
+    # -------------------------------------------------------------------------
     def dubk(d, x, y, z):
+        """
+        *x* and *y* are indexes into dictionary *d*. Each item thus addressed
+         is itself a dictionary that should contain a list indexed by 'list'.
+         If it's not there, we add it with element *z*. If it is there, we
+         append item *z*.
+        """
         try:
             d[x][y]['list'].append(z)
         except KeyError as e:
             d[x][y] = {'list': [z]}
+
+    # -------------------------------------------------------------------------
+    def hint(x):
+        """
+        Return int() on the arg after removing any semicolon
+        """
+        return int(x.replace(";", ""), 0)
+
+    media_type_file = os.path.join(hpssroot, "include", "hpss_media_type.x")
+    msg_file = os.path.join(hpssroot, "include", "cs_LogErr.h")
+
+    mt = open(media_type_file, "r")
+    TT = {}
+    rait_types = []
 
     for line in mt.readlines():
         x = line.split()

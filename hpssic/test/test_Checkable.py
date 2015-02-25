@@ -197,6 +197,17 @@ class CheckableTest(testhelp.HelpedTestCase):
         Two (Checkable) objects should be equal iff both are instances of class
         Checkable and their path and type attributes are equal.
         """
+        def mutable_object():
+            """
+            This function is a mutable object. That is, it is an object that we
+            can add attributes to. So one test we can do on the equality
+            operator for Checkable is to create an object of a different type
+            but with the same critical attributes that Checkables have. Such an
+            object should be unequal to a Checkable, even if the attribute
+            values are the same.
+            """
+            return None
+
         CrawlConfig.add_config(close=True)
         now = time.time()
         a = Checkable(rowid=92,
@@ -223,7 +234,7 @@ class CheckableTest(testhelp.HelpedTestCase):
                       cos='9222',
                       cart='',
                       last_check=now + 10132)
-        e = lambda: None
+        e = mutable_object
         setattr(e, 'path', '/foo/bar')
         setattr(e, 'type', 'f')
         f = Checkable(rowid=49,
