@@ -29,8 +29,8 @@ complete.
 
 HPSSIC (HPSS Integrity Crawler) is an attempt to provide a level of
 confidence that the data stored in HPSS has not changed since it was
-stored, is complete and accurate, and that discrepancies in the HPSS
-archive metadata are identified and addressed.
+stored, that it is complete and accurate, and that discrepancies in
+the HPSS archive metadata are identified and addressed.
 
 ## Team
 
