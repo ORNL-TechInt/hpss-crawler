@@ -753,6 +753,8 @@ class hpssTest(hpssBaseTest):
         """
         Issue "hashverify" in hsi on a wildcard, return results
         """
+        pytest.skip("hashverify globbing questionable")
+        self.dbgfunc()
         try:
             glop = "/home/tpb/hic_test/hash*"
 
@@ -784,6 +786,8 @@ class hpssTest(hpssBaseTest):
         """
         Issue "hashverify" in hsi, return results
         """
+        pytest.skip("hashverify globbing questionable")
+        self.dbgfunc()
         try:
             plist = self.plist + ["%s/hashnot" % self.hdir]
 
@@ -815,6 +819,8 @@ class hpssTest(hpssBaseTest):
         """
         Issue "hashverify" in hsi, return results
         """
+        pytest.skip("hashverify globbing questionable")
+        self.dbgfunc()
         try:
             paths = self.paths + " %s/hashnot" % self.hdir
             h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
@@ -834,6 +840,8 @@ class hpssTest(hpssBaseTest):
         """
         Issue "hashverify" in hsi with a unicode arg, return results
         """
+        pytest.skip("hashverify globbing questionable")
+        self.dbgfunc()
         try:
             paths = unicode(self.paths + " %s/hashnot" % self.hdir)
             h = hpss.HSI(verbose=("verbose" in testhelp.testargs()))
