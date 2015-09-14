@@ -223,6 +223,7 @@ class DimensionTest(testhelp.HelpedTestCase):
         object should not be stored to the database and its contents should not
         be changed.
         """
+        self.dbgfunc()
         # reboot the database and call persist() to create the table without
         # adding any data
         U.conditional_rm(self.dbname())

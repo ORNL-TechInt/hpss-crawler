@@ -1,6 +1,7 @@
 """
 Track stratum proportions in a sample against a population
 """
+import copy
 import CrawlDBI
 import pdb
 import rpt_sublib
@@ -84,6 +85,16 @@ class Dimension(object):
             raise StandardError("Caller must set attribute 'name'")
         if load:
             self.load()
+
+    # -------------------------------------------------------------------------
+    def __deepcopy__(self, memo):
+        """
+        Make a deep copy of the current object
+        """
+        rv = Dimension(load=False, name=self.name, sampsize=self.sampsize)
+        rv.p_sum = copy.deepcopy(self.p_sum)
+        rv.s_sum = copy.deepcopy(self.s_sum)
+        return rv
 
     # -------------------------------------------------------------------------
     def __repr__(self):
