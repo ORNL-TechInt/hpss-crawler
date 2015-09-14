@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BINARYVERSION=5.0.1.1
+BINARYVERSION=5.0.2.2
 HTAR_SERVER=hpss-hsigw04.ccs.ornl.gov
 HTAR_PORT=1217
 BASEDIR=/sw/sources/hpss
@@ -22,7 +22,7 @@ if [ -w $BASEDIR/log/${BASENAME}_$DateLog ]; then
    Process=$(basename $0)
    ID=$(id -un)
    VERSION=$(/sw/sources/hpss/sbin/ver -s)
-   echo "$Date $HOST $Process $ID $VERSION" >> $BASEDIR/log/${BASENAME}_$DateLog
+   echo "${Date} ${HOST} ${Process} ${ID} ${VERSION}" >> ${BASEDIR}/log/${BASENAME}_${DateLog}
 fi
 
 
@@ -46,7 +46,7 @@ Date: $(date)
 User: $(whoami)
 Host: $(hostname)
 $(echo $2)
-${EXECUTABLE}
+${MSG}
 EOF
 }
 
@@ -69,6 +69,7 @@ fi
 KERNEL=$(uname -s)
 if [ "${KERNEL}x" == "AIXx" ]; then
 	echo "${BASEEXEC} is not available on this machine." 1>&2
+	MSG="AIX client not supported"
 	mailmessage "HPSS AIX" "AIX is not supported"
 	exit 1
 else
@@ -93,6 +94,7 @@ else
 			DISTRIB=fedora
 			;;
 		*)
+			MSG="No client available for $DISTRIB"
 			mailmessage "HPSS client not available" "The distribution $DISTRIB is unknown"
 			echo "ERROR: $0 is not available for this platform, please contact help@olcf.ornl.gov" 1>&2 
 			exit 1
@@ -113,6 +115,12 @@ DONE=1
 while [ $DONE -eq 1 ]; do
 		
 	EXECUTABLE=/sw/sources/hpss/bin/${BINARYVERSION}/${BASENAME}_${DISTRIB}_${MAJOR}.${MINOR}.${ARCH}
+
+	# We are setting MSG to email the original binary name
+	if [ -z $MSG ]; then
+		MSG=$EXECUTABLE
+	fi
+
 	if [ ! -f $EXECUTABLE ]; then
 		CORRECTVERSION=NO
 		NEWMINOR=$(($MINOR-1))
@@ -154,19 +162,18 @@ if [ -z $HPSS_PFTPC_PORT_RANGE ]; then
         export HPSS_PFTPC_PORT_RANGE='ncacn_ip_tcp[10100-12100]'
 fi
 
-#	Set the principal if not set
+# Set the principal if not set
 if [ -z ${HPSS_PRINCIPAL}  ]; then
 	export HPSS_PRINCIPAL=$(id -urn)
 fi
 
-#	Set the default keytab if not set
+# Set the default keytab if not set
 if [ -z ${HPSS_KEYTAB_PATH} ]; then
 	export HPSS_KEYTAB_PATH=/ccs/keytabs/${HPSS_PRINCIPAL}.kt
 fi
 
-#	Set config path if not set
+# Set config path if not set
 if [ -z ${HPSS_CFG_FILE_PATH} ]; then
-        #export HPSS_CFG_FILE_PATH=/sw/sources/hpss/etc:/sw/sources/hpss/etc
         export HPSS_CFG_FILE_PATH=/sw/sources/hpss/etc
 fi
 
@@ -207,6 +214,6 @@ case $(basename $0) in
 esac
 
 #	run it
-exec ${EXECUTABLE} ${OPTIONS} "$@"
+${EXECUTABLE} ${OPTIONS} "$@"
 STATUS=$?
 exit $STATUS
