@@ -214,6 +214,6 @@ case $(basename $0) in
 esac
 
 #	run it
-${EXECUTABLE} ${OPTIONS} "$@"
+exec ${EXECUTABLE} ${OPTIONS} "$@"
 STATUS=$?
 exit $STATUS
