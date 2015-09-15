@@ -116,6 +116,7 @@ class Test_CRAWL(ScriptBase):
         assert 'Traceback' not in result
 
     # -------------------------------------------------------------------------
+    @pytest.skipif(not os.path.exists('.git'), "Not a git repo")
     def test_crawl_which_lib(self):
         """
         Test_CRAWL:
@@ -222,6 +223,7 @@ class Test_MPRA(ScriptBase):
         super(Test_MPRA, self).script_which_command("mpra")
 
     # -------------------------------------------------------------------------
+    @pytest.skipif(not os.path.exists('.git'), "Not a git repo")
     def test_mpra_which_lib(self):
         """
         Test_MPRA:
@@ -265,6 +267,7 @@ class Test_RPT(ScriptBase):
         super(Test_RPT, self).script_which_command("rpt")
 
     # -------------------------------------------------------------------------
+    @pytest.skipif(not os.path.exists('.git'), "Not a git repo")
     def test_rpt_which_lib(self):
         """
         Test_RPT:
@@ -313,6 +316,7 @@ class Test_TCC(ScriptBase):
         super(Test_TCC, self).script_which_command("tcc")
 
     # -------------------------------------------------------------------------
+    @pytest.skipif(not os.path.exists('.git'), "Not a git repo")
     def test_tcc_which_lib(self):
         """
         Test_TCC:
