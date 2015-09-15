@@ -460,6 +460,7 @@ class UtilTest(testhelp.HelpedTestCase):
             self.expected(exp, actual)
 
     # -------------------------------------------------------------------------
+    @pytest.mark.skipif(not os.path.exists('.git'), reason="Not a git repo")
     def test_git_repo(self):
         """
         Make sure git_repo() works on relative paths
