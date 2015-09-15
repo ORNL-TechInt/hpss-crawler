@@ -7,6 +7,7 @@ import logging
 from hpssic import messages as MSG
 import os
 import pdb
+import pytest
 import random
 import re
 import stat
