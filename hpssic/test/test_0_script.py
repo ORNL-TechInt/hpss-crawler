@@ -189,6 +189,7 @@ class Test_CV(ScriptBase):
         super(Test_CV, self).script_which_module("hpssic.cv")
 
     # -------------------------------------------------------------------------
+    @pytest.mark.skipif(not os.path.exists('.git'), reason="Not a git repo")
     def test_cv_which_plugin(self):
         """
         Test_CV:
@@ -241,6 +242,7 @@ class Test_MPRA(ScriptBase):
         super(Test_MPRA, self).script_which_module("hpssic.mpra")
 
     # -------------------------------------------------------------------------
+    @pytest.mark.skipif(not os.path.exists('.git'), reason="Not a git repo")
     def test_mpra_which_plugin(self):
         """
         Test_MPRA:
@@ -286,6 +288,7 @@ class Test_RPT(ScriptBase):
         super(Test_RPT, self).script_which_module("hpssic.rpt")
 
     # -------------------------------------------------------------------------
+    @pytest.mark.skipif(not os.path.exists('.git'), reason="Not a git repo")
     def test_rpt_which_plugin(self):
         """
         Test_RPT:
@@ -336,6 +339,7 @@ class Test_TCC(ScriptBase):
         super(Test_TCC, self).script_which_module("hpssic.tcc")
 
     # -------------------------------------------------------------------------
+    @pytest.mark.skipif(not os.path.exists('.git'), reason="Not a git repo")
     def test_tcc_which_plugin(self):
         """
         Test_TCC:
