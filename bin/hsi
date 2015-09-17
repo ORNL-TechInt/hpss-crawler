@@ -26,22 +26,22 @@ if [ -w $BASEDIR/log/${BASENAME}_$DateLog ]; then
 fi
 
 
-if [ -n "$HOSTNAME" -a $BASENAME = hsi ]; then 
-	# Get the status of the Transfer Agent
-	if [ -r $BASEDIR/bin/TA_Status ]; then
-		read TA_STATUS < $BASEDIR/bin/TA_Status
-	fi
+if [ -n "$HOSTNAME" -a $BASENAME = hsi ]; then
+    # Get the status of the Transfer Agent
+    if [ -r $BASEDIR/bin/TA_Status ]; then
+        read TA_STATUS < $BASEDIR/bin/TA_Status
+    fi
 
-	if [ "$TA_STATUS" = "enabled" ]; then
-		exec ${BASEDIR}/ta/bin/hsi $@
-	fi
+    if [ "$TA_STATUS" = "enabled" ]; then
+        exec ${BASEDIR}/ta/bin/hsi $@
+    fi
 fi
 
 
 function mailmessage
 {
-	## mm subject message
-	mail -s "$1" $MailTo  <<EOF
+    ## mm subject message
+    mail -s "$1" $MailTo  <<EOF
 Date: $(date)
 User: $(whoami)
 Host: $(hostname)
@@ -51,94 +51,94 @@ EOF
 }
 
 if [ -z $NCCSHPSSNOCHECK ]; then
-	## If the command is not available on the machine, 
-	##  then print a friendly message to stderr
-	if [ -f $NOUSEFILE ]; then
-		echo "$(basename $0) is not available on this machine ($(hostname)).  Users are encouraged" 1>&2
+    ## If the command is not available on the machine,
+    ##  then print a friendly message to stderr
+    if [ -f $NOUSEFILE ]; then
+        echo "$(basename $0) is not available on this machine ($(hostname)).  Users are encouraged" 1>&2
                 echo "to use the data transfer nodes for data transfers." 1>&2
                 echo "http://www.olcf.ornl.gov/kb_articles/employing-data-transfer-nodes/" 1>&2
-		echo "" 1>&2
-		echo "Please send questions or comments to the NCCS User Assistance Center" 1>&2
-		echo "help@olcf.ornl.gov" 1>&2
-		echo "http://www.olcf.ornl.gov/support/" 1>&2
-		exit 2;
-	fi
+        echo "" 1>&2
+        echo "Please send questions or comments to the NCCS User Assistance Center" 1>&2
+        echo "help@olcf.ornl.gov" 1>&2
+        echo "http://www.olcf.ornl.gov/support/" 1>&2
+        exit 2;
+    fi
 fi
 
 
 KERNEL=$(uname -s)
 if [ "${KERNEL}x" == "AIXx" ]; then
-	echo "${BASEEXEC} is not available on this machine." 1>&2
-	MSG="AIX client not supported"
-	mailmessage "HPSS AIX" "AIX is not supported"
-	exit 1
+    echo "${BASEEXEC} is not available on this machine." 1>&2
+    MSG="AIX client not supported"
+    mailmessage "HPSS AIX" "AIX is not supported"
+    exit 1
 else
-	DISTRIB=$(lsb_release -i | tr '[:upper:]' '[:lower:]' | sed s/"distributor id:"//g |awk '$1=$1' | sed s/" "//g)
-	case $DISTRIB in
-		suse* )
-			DISTRIB=suselinux
-			;;
-		redhatenterprise* )
-			DISTRIB=rhel
-			;;
-		centos* ) 
-			DISTRIB=centos
-			;;
-		sl* )
-			DISTRIB=sl
-			;;
-		scientificsl* )
-			DISTRIB=sl
-			;;
-		fedora* )
-			DISTRIB=fedora
-			;;
-		*)
-			MSG="No client available for $DISTRIB"
-			mailmessage "HPSS client not available" "The distribution $DISTRIB is unknown"
-			echo "ERROR: $0 is not available for this platform, please contact help@olcf.ornl.gov" 1>&2 
-			exit 1
-			;;
-	esac
-	ARCH=$(uname -p)
-	
-	RELEASE=$(lsb_release -r | tr '[:upper:]' '[:lower:]' | sed s/"release:"//g | awk '$1=$1' | sed s/" "//g )
-	MAJOR=$(echo $RELEASE | awk -F"." '{ print $1 }' )
-	MINOR=$(echo $RELEASE | awk -F"." '{ print $2 }' )
-	if [ "${MINOR}x" == "x" ]; then
-		MINOR=0
-	fi
+    DISTRIB=$(lsb_release -i | tr '[:upper:]' '[:lower:]' | sed s/"distributor id:"//g |awk '$1=$1' | sed s/" "//g)
+    case $DISTRIB in
+        suse* )
+            DISTRIB=suselinux
+            ;;
+        redhatenterprise* )
+            DISTRIB=rhel
+            ;;
+        centos* )
+            DISTRIB=centos
+            ;;
+        sl* )
+            DISTRIB=sl
+            ;;
+        scientificsl* )
+            DISTRIB=sl
+            ;;
+        fedora* )
+            DISTRIB=fedora
+            ;;
+        *)
+            MSG="No client available for $DISTRIB"
+            mailmessage "HPSS client not available" "The distribution $DISTRIB is unknown"
+            echo "ERROR: $0 is not available for this platform, please contact help@olcf.ornl.gov" 1>&2
+            exit 1
+            ;;
+    esac
+    ARCH=$(uname -p)
+
+    RELEASE=$(lsb_release -r | tr '[:upper:]' '[:lower:]' | sed s/"release:"//g | awk '$1=$1' | sed s/" "//g )
+    MAJOR=$(echo $RELEASE | awk -F"." '{ print $1 }' )
+    MINOR=$(echo $RELEASE | awk -F"." '{ print $2 }' )
+    if [ "${MINOR}x" == "x" ]; then
+        MINOR=0
+    fi
 fi
 
 CORRECTVERSION=YES
 DONE=1
 while [ $DONE -eq 1 ]; do
-		
-	EXECUTABLE=/sw/sources/hpss/bin/${BINARYVERSION}/${BASENAME}_${DISTRIB}_${MAJOR}.${MINOR}.${ARCH}
 
-	# We are setting MSG to email the original binary name
-	if [ -z $MSG ]; then
-		MSG=$EXECUTABLE
-	fi
+    EXECUTABLE=/sw/sources/hpss/bin/${BINARYVERSION}/${BASENAME}_${DISTRIB}_${MAJOR}.${MINOR}.${ARCH}
 
-	if [ ! -f $EXECUTABLE ]; then
-		CORRECTVERSION=NO
-		NEWMINOR=$(($MINOR-1))
-	else
-		NEWMINOR=$MINOR
-		DONE=0
-	fi
+    # We are setting MSG to email the original binary name
+    if [ -z $MSG ]; then
+        MSG=$EXECUTABLE
+    fi
 
-	if [ ${NEWMINOR} -lt 0 ]; then
-		mailmessage "HPSS client unavailable" "$0 cannot find a suitable client binary"
-		echo "ERROR: $0 is not available for this platform, please contact help@olcf.ornl.gov" 1>&2
-		exit 1
-	else
-		MINOR=$NEWMINOR
-	fi
+    if [ ! -f $EXECUTABLE ]; then
+        CORRECTVERSION=NO
+        NEWMINOR=$(($MINOR-1))
+    else
+        NEWMINOR=$MINOR
+        DONE=0
+    fi
+
+    if [ ${NEWMINOR} -lt 0 ]; then
+        mailmessage "HPSS client unavailable" "$0 cannot find a suitable client binary"
+        echo "ERROR: $0 is not available for this platform, please contact help@olcf.ornl.gov" 1>&2
+        exit 1
+    else
+        MINOR=$NEWMINOR
+    fi
 done
 if [ "${CORRECTVERSION}x" = "NOx" ]; then
-	mailmessage "HPSS older client" "Using an older client"
+    mailmessage "HPSS older client" "Using an older client"
 fi
 
 ## binary name is $EXECUTABLE
@@ -147,14 +147,14 @@ fi
 OPTIONS=
 
 if [ -z $NCCSHPSSNOCHECK ]; then
-	## display a friendly message is hpss is unavailable
-	if [ -e ${NOHPSSFILE}  ]; then
-		CURRENTTIME=$(date)
-		CURRENTHOST=$(hostname)
-		echo "HPSS Unavailable" 1>&2
-		echo "Current time is ${CURRENTTIME} on ${CURRENTHOST}" 1>&2
-		exit 1;
-	fi
+    ## display a friendly message is hpss is unavailable
+    if [ -e ${NOHPSSFILE}  ]; then
+        CURRENTTIME=$(date)
+        CURRENTHOST=$(hostname)
+        echo "HPSS Unavailable" 1>&2
+        echo "Current time is ${CURRENTTIME} on ${CURRENTHOST}" 1>&2
+        exit 1;
+    fi
 fi
 
 # limit to a specific port range
@@ -164,12 +164,12 @@ fi
 
 # Set the principal if not set
 if [ -z ${HPSS_PRINCIPAL}  ]; then
-	export HPSS_PRINCIPAL=$(id -urn)
+    export HPSS_PRINCIPAL=$(id -urn)
 fi
 
 # Set the default keytab if not set
 if [ -z ${HPSS_KEYTAB_PATH} ]; then
-	export HPSS_KEYTAB_PATH=/ccs/keytabs/${HPSS_PRINCIPAL}.kt
+    export HPSS_KEYTAB_PATH=/ccs/keytabs/${HPSS_PRINCIPAL}.kt
 fi
 
 # Set config path if not set
@@ -179,41 +179,41 @@ fi
 
 
 case $(basename $0) in
-	hsi*)
-		if [ -s ${HPSS_KEYTAB_PATH} ]; then
-		        OPTIONS=" -l ${HPSS_PRINCIPAL} -A keytab -k ${HPSS_KEYTAB_PATH} "
-		else
-		        OPTIONS=" -l ${HPSS_PRINCIPAL} -A pam "
-		fi
-		;;
-	htar*)
-		#	if authmethod does not exist, try keytab if a nonzero keytab exists else pam
-		if [ -z ${HPSS_AUTH_METHOD} ]; then
-			#	if a non-zero keytab exists, specify keytab auth
-			if [ -s ${HPSS_KEYTAB_PATH} ]; then
-				export HPSS_AUTH_METHOD=keytab
-			else
-				export HPSS_AUTH_METHOD=pam
-			fi
-		fi
-		#	if the cos is not set, specify autocos
-		if [ -z ${HTAR_COS} ]; then
-		        export HTAR_COS=auto
-		fi
-		# htar does not use the global hsirc so we use HPSS_SERVER_HOST
-		if [ -z ${HPSS_SERVER_HOST} ]; then
-			export HPSS_SERVER_HOST=${HTAR_SERVER}/${HTAR_PORT}
-			#OPTIONS=" -H server=${HTAR_SERVER}:port=${HTAR_PORT} "
-			# -H server=${HTAR_SERVER}/${HTAR_PORT}
-		fi
-		;;
-	*)
-		echo "ERROR: Undefined script" 1>&2
-		exit 2;
-		;;
+    hsi*)
+        if [ -s ${HPSS_KEYTAB_PATH} ]; then
+                OPTIONS=" -l ${HPSS_PRINCIPAL} -A keytab -k ${HPSS_KEYTAB_PATH} "
+        else
+                OPTIONS=" -l ${HPSS_PRINCIPAL} -A pam "
+        fi
+        ;;
+    htar*)
+        #   if authmethod does not exist, try keytab if a nonzero keytab exists else pam
+        if [ -z ${HPSS_AUTH_METHOD} ]; then
+            #   if a non-zero keytab exists, specify keytab auth
+            if [ -s ${HPSS_KEYTAB_PATH} ]; then
+                export HPSS_AUTH_METHOD=keytab
+            else
+                export HPSS_AUTH_METHOD=pam
+            fi
+        fi
+        #   if the cos is not set, specify autocos
+        if [ -z ${HTAR_COS} ]; then
+                export HTAR_COS=auto
+        fi
+        # htar does not use the global hsirc so we use HPSS_SERVER_HOST
+        if [ -z ${HPSS_SERVER_HOST} ]; then
+            export HPSS_SERVER_HOST=${HTAR_SERVER}/${HTAR_PORT}
+            #OPTIONS=" -H server=${HTAR_SERVER}:port=${HTAR_PORT} "
+            # -H server=${HTAR_SERVER}/${HTAR_PORT}
+        fi
+        ;;
+    *)
+        echo "ERROR: Undefined script" 1>&2
+        exit 2;
+        ;;
 esac
 
-#	run it
+#   run it
 exec ${EXECUTABLE} ${OPTIONS} "$@"
 STATUS=$?
 exit $STATUS
