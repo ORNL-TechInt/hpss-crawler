@@ -3,6 +3,7 @@ Tests for hpss.py
 """
 import copy
 from hpssic import CrawlConfig
+import distutils
 from hpssic import hpss
 from hpssic import messages as MSG
 import os
@@ -30,6 +31,20 @@ class hpssBaseTest(testhelp.HelpedTestCase):
                          'reset_atime': 'yes',
                          'hash_algorithm': 'md5'},
              }
+
+
+# -----------------------------------------------------------------------------
+def test_hsi_location():
+    """
+    Get the directories for 'crawl' and 'hsi'. They should match
+    """
+    cloc = distutils.spawn.find_executable('crawl')
+    assert cloc is not None, "crawl not found"
+    c = util.dirname(cloc)
+    hloc = distutils.spawn.find_executable('hsi')
+    assert hloc is not None, "hsi not found"
+    h = util.dirname(hloc)
+    assert c == h, "location of hsi does not match location of crawl"
 
 
 # -----------------------------------------------------------------------------
