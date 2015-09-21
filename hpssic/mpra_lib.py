@@ -240,7 +240,7 @@ def xplocks(output=None, mark=False):
         for r in rows:
             if (lock_min * 60) < (now - r['RECORD_LOCK_TIME']):
                 hits += 1
-                f.write("   %s  %s\n" % (CrawlDBI.DBI.db2.hexstr(r['BFID']),
+                f.write("   %s  %s\n" % (CrawlDBI.DBIdb2.hexstr(r['BFID']),
                                          util.ymdhms(r['RECORD_LOCK_TIME'])))
 
     if mark:
