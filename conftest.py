@@ -98,32 +98,30 @@ def pytest_runtest_setup(item):
 
 
 # -----------------------------------------------------------------------------
-@pytest.mark.tryfirst
-def pytest_runtest_makereport(item, call, __multicall__):
+@pytest.mark.hookwrapper
+def pytest_runtest_makereport(item, call):
     """
     Write a line to the log file for this test
     """
-    rep = __multicall__.execute()
-    if rep.when != 'call':
-        return rep
+    rep = yield
+    if call.when == 'call':
+        outcome = rep.result.outcome
+        if outcome == 'failed':
+            status = ">>>>FAIL"
+            hpssic_test_log._failcount += 1
+        elif outcome == 'skipped':
+            status = "**SKIP**"
+            hpssic_test_log._skipcount += 1
+        else:
+            status = "--pass"
+            hpssic_test_log._passcount += 1
 
-    if rep.outcome == 'failed':
-        status = ">>>>FAIL"
-        hpssic_test_log._failcount += 1
-    elif rep.outcome == 'skipped':
-        status = "**SKIP**"
-        hpssic_test_log._skipcount += 1
-    else:
-        status = "--pass"
-        hpssic_test_log._passcount += 1
-
-    parent = item.parent
-    msg = "%-8s %s:%s.%s" % (status,
-                             os.path.basename(parent.fspath.strpath),
-                             parent.name,
-                             item.name)
-    hpssic_test_log(item.config, msg)
-    return rep
+        parent = item.parent
+        msg = "%-8s %s:%s.%s" % (status,
+                                 os.path.basename(parent.fspath.strpath),
+                                 parent.name,
+                                 item.name)
+        hpssic_test_log(item.config, msg)
 
 
 # -----------------------------------------------------------------------------
