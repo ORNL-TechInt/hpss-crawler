@@ -512,10 +512,15 @@ def crl_which(argv):
 
     if o.debug:
         pdb.set_trace()
-    
+
+    rv = []
     path = os.getenv('PATH')
     for p in path.split(':'):
-        print p
+        for bin in a:
+            fp = os.path.join(p, bin)
+            if U.is_executable(fp):
+                rv.append(fp)
+    print rv
 
 
 # ------------------------------------------------------------------------------
