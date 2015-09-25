@@ -501,6 +501,24 @@ def crl_version(argv):
 
 
 # ------------------------------------------------------------------------------
+def crl_which(argv):
+    """which - find all occurrences of a binary in $PATH
+    """
+    p = optparse.OptionParser()
+    p.add_option('-d', '--debug',
+                 action='store_true', default=False, dest='debug',
+                 help='run the debugger')
+    (o, a) = p.parse_args(argv)
+
+    if o.debug:
+        pdb.set_trace()
+    
+    path = os.getenv('PATH')
+    for p in path.split(':'):
+        print p
+
+
+# ------------------------------------------------------------------------------
 def clean_defunct_pidfiles(context):
     """
     Remove .DEFUNCT pid files for *context*
