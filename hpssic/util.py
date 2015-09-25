@@ -278,14 +278,6 @@ def expand(path):
 
 
 # -----------------------------------------------------------------------------
-def is_executable(filepath):
-    """
-    Return True if filepath 1) is a file, 2) exists, and 3) has the x bit
-    """
-    return os.path.isfile(filepath) and os.access(filepath, os.X_OK)
-
-
-# -----------------------------------------------------------------------------
 def pathjoin(a, *p):
     """
     Convenience wrapper for os.path.join()
@@ -511,6 +503,14 @@ def git_repo(path):
         dotgit = pathjoin(path, ".git")
 
     return path.rstrip('/')
+
+
+# -----------------------------------------------------------------------------
+def is_executable(filepath):
+    """
+    Return True if filepath 1) is a file, 2) exists, and 3) has the x bit
+    """
+    return os.path.isfile(filepath) and os.access(filepath, os.X_OK)
 
 
 # -----------------------------------------------------------------------------

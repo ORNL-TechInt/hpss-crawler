@@ -948,3 +948,30 @@ class UtilTest(testhelp.HelpedTestCase):
             time.sleep(0.01)
             now = time.time()
         return int(now)
+
+
+# -----------------------------------------------------------------------------
+def test_is_exec_nosuch(tmpdir):
+    """
+    For a non-existent file, is_executable() should return False
+    """
+    path = str(tmpdir.join('target'))
+    assert U.is_executable(path) == False
+    assert U.is_executable(path) == False
+
+
+# -----------------------------------------------------------------------------
+@pytest.mark.parametrize("mode, exp", [(0644, False),
+                                       (0645, False),
+                                       (0654, False),
+                                       (0744, True)])
+def test_is_executable(mode, exp, tmpdir):
+    """
+    For a file with execute bits for other users, but not the owner,
+    is_executable() should return False
+    """
+    path = str(tmpdir.join('target'))
+    U.touch(path)
+    os.chmod(path, mode)
+    assert U.is_executable(path) == exp
+
