@@ -245,80 +245,16 @@ def new_logger(logpath='', cfg=None):
      - cfg
      - default (/var/log/hpssic.log if writable, else /tmp/hpssic.log)
     """
-    # -------------------------------------------------------------------------
-    def cfg_get(func, section, option, defval):
-        if cfg:
-            rval = func(section, option, defval)
-        else:
-            rval = defval
-        return rval
-
-    # -------------------------------------------------------------------------
-    def raiseError(record=None):
-        raise
-
-    envname = os.getenv('CRAWL_LOG')
-    try:
-        dcfg = get_config()
-    except:
-        dcfg = None
-
-    if logpath != '':
-        final_logpath = logpath
-    elif envname:
-        final_logpath = envname
-    elif cfg:
-        try:
-            final_logpath = cfg.get('crawler', 'logpath')
-        except NoOptionError:
-            final_logpath = U.default_logpath()
-        except NoSectionError:
-            final_logpath = U.default_logpath()
-    elif dcfg:
-        try:
-            final_logpath = dcfg.get('crawler', 'logpath')
-        except NoOptionError:
-            final_logpath = U.default_logpath()
-        except NoSectionError:
-            final_logpath = U.default_logpath()
-    else:
-        final_logpath = U.default_logpath()
-
     rval = logging.getLogger('hpssic')
+    logging.raiseExceptions = True
     rval.setLevel(logging.INFO)
-    host = util.hostname()
-
-    for h in rval.handlers:
-        h.close()
-        del h
-
-    if cfg:
-        maxBytes = cfg.get_size('crawler', 'logsize', 10*1024*1024)
-        backupCount = cfg.get_size('crawler', 'logmax', 5)
-        archdir = cfg.get_d('crawler', 'archive_dir',
-                            U.pathjoin(U.dirname(final_logpath),
-                                       'hpss_log_archive'))
-    else:
-        maxBytes = 10*1024*1024
-        backupCount = 5
-        archdir = U.pathjoin(U.dirname(final_logpath), 'hpss_log_archive')
-
-    fh = util.ArchiveLogfileHandler(final_logpath,
-                                    maxBytes=maxBytes,
-                                    backupCount=backupCount,
-                                    archdir=archdir)
-
-    strfmt = "%" + "(asctime)s [%s] " % host + '%' + "(message)s"
-    fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
-    fh.setFormatter(fmt)
-    fh.handleError = raiseError
 
     while 0 < len(rval.handlers):
         z = U.pop0(rval.handlers)
         del z
-    rval.addHandler(fh)
+    rval.addHandler(get_log_handler(logpath=logpath, cfg=cfg))
 
-    rval.info('-' * (55 - len(host)))
+    rval.info('-' * (55 - len(U.hostname())))
 
     return rval
 
