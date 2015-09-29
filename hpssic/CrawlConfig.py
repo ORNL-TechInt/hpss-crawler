@@ -114,6 +114,61 @@ def defaults():
 
 
 # ------------------------------------------------------------------------------
+def get_log_handler(logpath=None, cfg=None):
+    """
+    Create a handler object to go in the logger
+    """
+    if logpath == '':
+        logpath = None
+
+    try:
+        dcfg = get_config()
+    except:
+        dcfg = None
+
+    envname = os.getenv('CRAWL_LOG')
+
+    if logpath is not None:
+        final_logpath = logpath
+    elif envname:
+        final_logpath = envname
+    elif cfg:
+        final_logpath = cfg.get_d('crawler', 'logpath', U.default_logpath())
+    elif dcfg:
+        final_logpath = dcfg.get_d('crawler', 'logpath', U.default_logpath())
+    else:
+        final_logpath = U.default_logpath()
+
+    if cfg:
+        maxBytes = cfg.get_size('crawler', 'logsize', 10*1024*1024)
+        backupCount = cfg.get_size('crawler', 'logmax', 5)
+        archdir = cfg.get_d('crawler', 'archive_dir',
+                            U.pathjoin(U.dirname(final_logpath),
+                                       'hpss_log_archive'))
+    elif dcfg:
+        maxBytes = dcfg.get_size('crawler', 'logsize', 10*1024*1024)
+        backupCount = dcfg.get_size('crawler', 'logmax', 5)
+        archdir = dcfg.get_d('crawler', 'archive_dir',
+                             U.pathjoin(U.dirname(final_logpath),
+                                        'hpss_log_archive'))
+    else:
+        maxBytes = 10*1024*1024
+        backupCount = 5
+        archdir = U.pathjoin(U.dirname(final_logpath), 'hpss_log_archive')
+
+    fh = util.ArchiveLogfileHandler(final_logpath,
+                                    maxBytes=maxBytes,
+                                    backupCount=backupCount,
+                                    archdir=archdir)
+
+    strfmt = "%" + "(asctime)s [%s] " % U.hostname + '%' + "(message)s"
+    fmt = logging.Formatter(strfmt, datefmt="%Y.%m%d %H:%M:%S")
+    fh.setFormatter(fmt)
+    fh.handleError = raiseError
+    return fh
+
+
+# ------------------------------------------------------------------------------
 def get_config(cfname='', reset=False, soft=False):
     """
     @DEPRECATED@
