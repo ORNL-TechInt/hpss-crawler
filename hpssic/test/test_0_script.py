@@ -466,6 +466,7 @@ def test_nodoc():
 
     # result = nodoc_check(hpssic, 0, 't')
     if result != '':
+        result = "The following functions need doc strings:\n" + result
         pytest.fail(result)
 
 
