@@ -315,6 +315,14 @@ def pid_dir():
     return cfg.get_d('crawler', 'pid_dir', MSG.default_piddir)
 
 
+# -------------------------------------------------------------------------
+def raiseError(record=None):
+    """
+    Ensure errors in logging get raised
+    """
+    raise
+
+
 # ------------------------------------------------------------------------------
 class CrawlConfig(ConfigParser.ConfigParser):
     """
