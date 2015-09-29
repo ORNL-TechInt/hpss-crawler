@@ -595,7 +595,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
             self.expected(1, len(l.handlers))
             self.expected(os.path.abspath(logpath),
                           l.handlers[0].stream.name)
-            self.expected(10*1024*1024, l.handlers[0].maxBytes)
+            self.expected(5*1000*1000, l.handlers[0].maxBytes)
             self.expected(5, l.handlers[0].backupCount)
 
     # --------------------------------------------------------------------------
@@ -1358,6 +1358,7 @@ class CrawlConfigTest(testhelp.HelpedTestCase):
         to it until it rolls over. Verify that the archive file was handled
         correctly.
         """
+        self.dbgfunc()
         logbase = '%s.log' % util.my_name()
         logpath = self.tmpdir(logbase)
         logpath_1 = logpath + ".1"
