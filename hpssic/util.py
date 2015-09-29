@@ -848,6 +848,15 @@ def date_start(filename):
 
 
 # -----------------------------------------------------------------------------
+def format_traceback():
+    """
+    Return the current exception and traceback
+    """
+    t = sys.exc_info()
+    return tb.format_exception(*t)
+
+
+# -----------------------------------------------------------------------------
 def rstring():
     """
     Return a string of random characters of a random length between 10 and 25
