@@ -135,6 +135,25 @@ class ArchiveLogfileHandler(logh.RotatingFileHandler, object):
             os.makedirs(archdir)
         shutil.copy2(path1, target)
 
+    # ------------------------------------------------------------------------
+    def shouldRollover(self, record):
+        """
+        Check whether we should rollover or not by calling the super. However,
+        be prepared to catch and handle IOError exceptions.
+        """
+        rv = 0
+        try:
+            rv = super(ArchiveLogfileHandler, self).shouldRollover(record)
+        except (IOError, ValueError) as e:
+            tbstr = format_traceback()
+            ts = time.strftime("%Y.%m%d %H:%M:%S ")
+            elog = open("/tmp/crawl.emergency.log", 'a')
+            elog.write(ts + " ------\n")
+            elog.writelines(["    %s" % l for l in tbstr])
+            elog.close()
+            self.dead = True
+        return rv
+
 
 # -----------------------------------------------------------------------------
 class RRfile(object):
