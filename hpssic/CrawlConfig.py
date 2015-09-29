@@ -114,6 +114,24 @@ def defaults():
 
 
 # ------------------------------------------------------------------------------
+def fixup_log_handlers(logger):
+    """
+    Prune away any dead log handlers and add in a new one if the list winds up
+    empty. This is a bit of a hack to deal with the fact that we've seen the
+    crawler start getting tracebacks (making abrt whine) after running for a
+    few days. The real solution
+    """
+    for i, h in enumerate(logger.handlers):
+        if hasattr(h, 'dead') and h.dead:
+            path = h.name
+            h.close()
+            del logger.handlers[i]
+    if 0 == len(logger.handlers):
+        logger.addHandler(get_log_handler())
+    logger.info("Generated a new handler")
+
+
+# ------------------------------------------------------------------------------
 def get_log_handler(logpath=None, cfg=None):
     """
     Create a handler object to go in the logger
