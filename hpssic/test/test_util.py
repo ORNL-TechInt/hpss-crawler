@@ -951,6 +951,44 @@ class UtilTest(testhelp.HelpedTestCase):
 
 
 # -----------------------------------------------------------------------------
+def test_ArchiveLogfileHandler_badfd(tmpdir):
+    """
+    What happens when the stream loses its file descriptor...
+    """
+    pytest.dbgfunc()
+    logpath = tmpdir.join('abc.log').strpath
+    apath = tmpdir.join('history').strpath
+    l = logging.getLogger('test')
+    l.setLevel(logging.INFO)
+    h = U.ArchiveLogfileHandler(logpath,
+                                maxBytes=100,
+                                backupCount=2,
+                                archdir=apath)
+    l.addHandler(h)
+    os.close(h.stream.fileno())
+    l.info('testing testing')
+
+
+# -----------------------------------------------------------------------------
+def test_ArchiveLogfileHandler_closed(tmpdir):
+    """
+    What happens when the stream loses its file descriptor...
+    """
+    pytest.dbgfunc()
+    logpath = tmpdir.join('abc.log').strpath
+    apath = tmpdir.join('history').strpath
+    l = logging.getLogger('test')
+    l.setLevel(logging.INFO)
+    h = U.ArchiveLogfileHandler(logpath,
+                                maxBytes=100,
+                                backupCount=2,
+                                archdir=apath)
+    l.addHandler(h)
+    h.stream.close()
+    l.info('testing testing')
+
+
+# -----------------------------------------------------------------------------
 def test_is_exec_nosuch(tmpdir):
     """
     For a non-existent file, is_executable() should return False
@@ -974,4 +1012,3 @@ def test_is_executable(mode, exp, tmpdir):
     U.touch(path)
     os.chmod(path, mode)
     assert U.is_executable(path) == exp
-
