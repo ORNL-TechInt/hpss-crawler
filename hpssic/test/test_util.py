@@ -1012,3 +1012,40 @@ def test_is_executable(mode, exp, tmpdir):
     U.touch(path)
     os.chmod(path, mode)
     assert U.is_executable(path) == exp
+
+
+# -----------------------------------------------------------------------------
+@pytest.mark.parametrize("hits, xable", [(0, 0),
+                                         (1, 0),
+                                         (1, 1),
+                                         (2, 0),
+                                         (2, 1),
+                                         (2, 2),
+                                         (3, 0),
+                                         (3, 1),
+                                         (3, 2),
+                                         (3, 3),
+                                         ])
+def test_which_all(hits, xable, tmpdir):
+    """
+    Test U.which_all() with no matches in $PATH
+    """
+    def chmod_755(path):
+        os.chmod(path, 0755)
+    pytest.dbgfunc()
+    hitname = "runnable"
+    bstem = tmpdir.join("bin").strpath
+    path = ""
+    exp = []
+    with U.Chdir(tmpdir.strpath):
+        binlist = ["%s_%d" % (bstem, n) for n in range(hits)]
+        map(os.mkdir, binlist)
+        path = ":".join(binlist)
+        hitlist = [U.pathjoin(b, hitname) for b in binlist]
+        map(U.touch, hitlist)
+        map(chmod_755, [h for n, h in enumerate(hitlist) if n < xable])
+        exp = [h for n, h in enumerate(hitlist) if n < xable]
+        with U.tmpenv('PATH', path):
+            result = U.which_all(hitname)
+    assert len(result) == xable
+    assert sorted(exp) == sorted(result)

@@ -890,6 +890,20 @@ def rstring():
 
 
 # -----------------------------------------------------------------------------
+def which_all(name):
+    """
+    Return a list of executable files from $PATH that match name
+    """
+    rv = []
+    path = os.getenv('PATH')
+    for p in path.split(':'):
+        pathname = pathjoin(p, name)
+        if is_executable(pathname):
+            rv.append(pathname)
+    return rv
+
+
+# -----------------------------------------------------------------------------
 def write_file(filename, mode=0644, content=None):
     """
     Write a file, optionally setting its permission bits. This should be in
