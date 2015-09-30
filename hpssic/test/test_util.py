@@ -1030,22 +1030,18 @@ def test_which_all(hits, xable, tmpdir):
     """
     Test U.which_all() with no matches in $PATH
     """
-    def chmod_755(path):
-        os.chmod(path, 0755)
     pytest.dbgfunc()
     hitname = "runnable"
-    bstem = tmpdir.join("bin").strpath
-    path = ""
+    for n in range(hits):
+        tmpdir.make_numbered_dir(prefix="bin_", rootdir=tmpdir)
+    path = ":".join([p.strpath for p in tmpdir.listdir()])
     exp = []
-    with U.Chdir(tmpdir.strpath):
-        binlist = ["%s_%d" % (bstem, n) for n in range(hits)]
-        map(os.mkdir, binlist)
-        path = ":".join(binlist)
-        hitlist = [U.pathjoin(b, hitname) for b in binlist]
-        map(U.touch, hitlist)
-        map(chmod_755, [h for n, h in enumerate(hitlist) if n < xable])
-        exp = [h for n, h in enumerate(hitlist) if n < xable]
-        with U.tmpenv('PATH', path):
-            result = U.which_all(hitname)
+    for n, b in enumerate(tmpdir.listdir()):
+        f = b.join(hitname).ensure()
+        if n < xable:
+            f.chmod(0755)
+            exp.append(f.strpath)
+    with U.tmpenv('PATH', path):
+        result = U.which_all(hitname)
     assert len(result) == xable
     assert sorted(exp) == sorted(result)
