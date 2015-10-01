@@ -89,6 +89,7 @@ class HSI(object):
         if not hasattr(self, 'hash_algorithm'):
             self.hash_algorithm = cfg.get_d('cv', 'hash_algorithm', None)
 
+        maybe_update_hsi()
         self.cmd = "hsi " + cmdopts
         if connect:
             self.connect()
