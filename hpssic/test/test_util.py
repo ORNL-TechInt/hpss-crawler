@@ -991,6 +991,9 @@ def test_ArchiveLogfileHandler_closed(tmpdir):
 # -----------------------------------------------------------------------------
 @pytest.fixture
 def grep_prep(request):
+    """
+    Set up data for testing U.grep()
+    """
     f = request.function
     rgx = request.getfuncargvalue('rgx')
     idx = request.getfuncargvalue('idx')
@@ -1026,12 +1029,16 @@ def grep_prep(request):
                  [],
                  ]
 
+
 # -----------------------------------------------------------------------------
 @pytest.mark.parametrize("rgx, idx", [(True, True),
                                       (True, False),
                                       (False, True),
                                       (False, False)])
 def test_grep(rgx, idx, grep_prep):
+    """
+    Check the results of calling U.grep()
+    """
     pytest.dbgfunc()
     f = test_grep
     for n, s in enumerate(f.searches):
