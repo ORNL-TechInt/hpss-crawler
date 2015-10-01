@@ -661,29 +661,6 @@ def map_size_unit(spec, kb=1000):
 
 
 # -----------------------------------------------------------------------------
-def maybe_update_hsi():
-    """
-    If the hsi wrapper script has changed, grab and edit a fresh copy
-    """
-    l = which_all('hsi')
-    trg = l[0]
-    tc = contents(trg).split("\n")
-    tv = grep('^BINARYVERSION=', tc)
-
-    s = [x for x in l if 'sources/hpss' in x]
-    src = s[0]
-    sc = contents(src).split("\n")
-    sv = grep('^BINARYVERSION=', sc)
-
-    if tv[0] != sv[0]:
-        z = grep("${EXECUTABLE}", sc, regex=False, index=True)
-        sc[z[0]] = "exec " + sc[z[0]]
-        f = open(trg, 'w')
-        f.writelines("\n".join(sc) + "\n")
-        f.close()
-
-
-# -----------------------------------------------------------------------------
 def memoize(f):
     """
     This makes available the @util.memoize function decorator. Functions

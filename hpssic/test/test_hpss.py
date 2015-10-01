@@ -15,6 +15,7 @@ from hpssic import testhelp
 import time
 import traceback as tb
 from hpssic import util
+from hpssic import util as U
 
 
 # -----------------------------------------------------------------------------
@@ -45,6 +46,71 @@ def test_hsi_location():
     assert hloc is not None, "hsi not found"
     h = util.dirname(hloc)
     assert c == h, "location of hsi does not match location of crawl"
+
+
+# -----------------------------------------------------------------------------
+@pytest.fixture
+def muh_prep(request, tmpdir):
+    """
+    Set up maybe_update_hsi (muh) tests
+    """
+    rf = request.function
+    rf.hsihome = '/sw/sources/hpss/bin'
+    rf.bin = tmpdir.mkdir('bin')
+    rf.file = rf.bin.join('hsi').ensure()
+    rf.file.chmod(0755)
+    if 'yes' in rf.func_name:
+        # we want maybe_update to do the update
+        rf.file.write('BINARYVERSION=5.0.2.1\n' +
+                      'echo "not changed"\n')
+    elif 'cant' in rf.func_name:
+        # we want maybe_update be unable to do the update
+        rf.file.write('BINARYVERSION=5.0.2.1\n' +
+                      'echo "not changed"\n')
+        rf.file.chmod(0555)
+    else:
+        # copy hsi from hsihome and edit it
+        hsi = U.pathjoin(rf.hsihome, 'hsi')
+        q = U.contents(hsi).split("\n")
+        z = U.grep("${EXECUTABLE}", q, regex=False, index=True)
+        q[z[0]] = "exec " + q[z[0]]
+        rf.file.write("\n".join(q) + "\n")
+        rf.then = time.time() - 30
+        rf.file.setmtime(rf.then)
+    pass
+
+
+# -----------------------------------------------------------------------------
+def test_maybe_update_hsi_no(muh_prep, tmpdir):
+    """
+    If hsi matches mostly except for the 'exec' statement, it should not get
+    updated
+    """
+    pytest.dbgfunc()
+    rf = test_maybe_update_hsi_no
+    path = ":".join([rf.bin.strpath, rf.hsihome])
+    with U.tmpenv('PATH', path):
+        hpss.maybe_update_hsi()
+    assert abs(rf.then - rf.file.mtime()) < 1.0
+    c = rf.file.read()
+    assert 'exec ${EXECUTABLE}' in c
+
+
+# -----------------------------------------------------------------------------
+def test_maybe_update_hsi_yes(muh_prep, tmpdir):
+    """
+    If the local hsi wrapper is sufficiently different, maybe_update should do
+    the update
+    """
+    pytest.dbgfunc()
+    rf = test_maybe_update_hsi_yes
+    path = ":".join([rf.bin.strpath, rf.hsihome])
+    with U.tmpenv('PATH', path):
+        hpss.maybe_update_hsi()
+    assert abs(time.time() - rf.file.mtime()) < 1.0
+    c = rf.file.read()
+    assert "not changed" not in c
+    assert "exec ${EXECUTABLE}" in c
 
 
 # -----------------------------------------------------------------------------

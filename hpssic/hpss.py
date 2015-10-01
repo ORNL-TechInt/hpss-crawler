@@ -30,6 +30,29 @@ class HSIerror(Exception):
 
 
 # -----------------------------------------------------------------------------
+def maybe_update_hsi():
+    """
+    If the hsi wrapper script has changed, grab and edit a fresh copy
+    """
+    l = util.which_all('hsi')
+    trg = l[0]
+    tc = util.contents(trg).split("\n")
+    tv = util.grep('^BINARYVERSION=', tc)
+
+    s = [x for x in l if 'sources/hpss' in x]
+    src = s[0]
+    sc = util.contents(src).split("\n")
+    sv = util.grep('^BINARYVERSION=', sc)
+
+    if tv[0] != sv[0]:
+        z = util.grep("${EXECUTABLE}", sc, regex=False, index=True)
+        sc[z[0]] = "exec " + sc[z[0]]
+        f = open(trg, 'w')
+        f.writelines("\n".join(sc) + "\n")
+        f.close()
+
+
+# -----------------------------------------------------------------------------
 class HSI(object):
     hsierrs = ["Aborting transfer",
                "HPSS Unavailable",
