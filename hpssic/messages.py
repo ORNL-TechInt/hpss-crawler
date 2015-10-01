@@ -57,6 +57,9 @@ history_reset_dryrun_SSS = """
 
 hpss_unavailable = ("HPSS Unavailable")
 
+hsi_wrap_ood = ("The hsi wrapper is out of date but cannot be updated" +
+                " due to lack of write permission")
+
 insert_ignore_bool = ("On insert(), ignore must be boolean")
 
 invalid_attr_SS = ("Attribute '%s' is not valid for %s")

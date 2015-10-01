@@ -1,4 +1,5 @@
 import CrawlConfig
+from hpssic import messages as MSG
 import os
 import pexpect
 import pwd
@@ -47,9 +48,12 @@ def maybe_update_hsi():
     if tv[0] != sv[0]:
         z = util.grep("${EXECUTABLE}", sc, regex=False, index=True)
         sc[z[0]] = "exec " + sc[z[0]]
-        f = open(trg, 'w')
-        f.writelines("\n".join(sc) + "\n")
-        f.close()
+        try:
+            f = open(trg, 'w')
+            f.writelines("\n".join(sc) + "\n")
+            f.close()
+        except IOError as e:
+            CrawlConfig.log(MSG.hsi_wrap_ood)
 
 
 # -----------------------------------------------------------------------------

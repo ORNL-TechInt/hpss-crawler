@@ -81,6 +81,27 @@ def muh_prep(request, tmpdir):
 
 
 # -----------------------------------------------------------------------------
+def test_maybe_update_hsi_cant(muh_prep, tmpdir):
+    """
+    If we don't have write permission on the target, then even if we should
+    update, we can't. In this case, should log a message.
+    """
+    pytest.dbgfunc()
+    lp = tmpdir.join('crawl.test.log')
+    rf = test_maybe_update_hsi_cant
+    path = ":".join([rf.bin.strpath, rf.hsihome])
+    with U.tmpenv('PATH', path):
+        CrawlConfig.log(logpath=lp.strpath, close=True)
+        hpss.maybe_update_hsi()
+    c = rf.file.read()
+    assert 'not changed' in c
+    assert os.path.exists(lp.strpath)
+    c = lp.read()
+    assert MSG.hsi_wrap_ood in c
+    CrawlConfig.log(close=True)
+
+
+# -----------------------------------------------------------------------------
 def test_maybe_update_hsi_no(muh_prep, tmpdir):
     """
     If hsi matches mostly except for the 'exec' statement, it should not get
