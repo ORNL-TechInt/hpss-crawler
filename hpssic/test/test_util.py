@@ -989,6 +989,56 @@ def test_ArchiveLogfileHandler_closed(tmpdir):
 
 
 # -----------------------------------------------------------------------------
+@pytest.fixture
+def grep_prep(request):
+    f = request.function
+    rgx = request.getfuncargvalue('rgx')
+    idx = request.getfuncargvalue('idx')
+    f.testdata = ['zero', 'one', 'two', 'three',
+                  'four', 'five', 'six', 'seven']
+    f.searches = ['ve', 'o', 'e$', 'e.*e', 'i[vx]']
+    if rgx and idx:
+        f.exp = [[5, 7],
+                 [0, 1, 2, 4],
+                 [1, 3, 5],
+                 [3, 7],
+                 [5, 6],
+                 ]
+    elif rgx and not idx:
+        f.exp = [['five', 'seven'],
+                 ['zero', 'one', 'two', 'four'],
+                 ['one', 'three', 'five'],
+                 ['three', 'seven'],
+                 ['five', 'six'],
+                 ]
+    elif not rgx and idx:
+        f.exp = [[5, 7],
+                 [0, 1, 2, 4],
+                 [],
+                 [],
+                 [],
+                 ]
+    elif not rgx and not idx:
+        f.exp = [['five', 'seven'],
+                 ['zero', 'one', 'two', 'four'],
+                 [],
+                 [],
+                 [],
+                 ]
+
+# -----------------------------------------------------------------------------
+@pytest.mark.parametrize("rgx, idx", [(True, True),
+                                      (True, False),
+                                      (False, True),
+                                      (False, False)])
+def test_grep(rgx, idx, grep_prep):
+    pytest.dbgfunc()
+    f = test_grep
+    for n, s in enumerate(f.searches):
+        assert U.grep(s, f.testdata, regex=rgx, index=idx) == f.exp[n]
+
+
+# -----------------------------------------------------------------------------
 def test_is_exec_nosuch(tmpdir):
     """
     For a non-existent file, is_executable() should return False

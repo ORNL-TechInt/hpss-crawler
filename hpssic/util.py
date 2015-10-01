@@ -497,6 +497,24 @@ def foldsort(seq):
 
 
 # -----------------------------------------------------------------------------
+def grep(needle, haystack, regex=True, index=False):
+    """
+    Find *needle* in *haystack*. If *re* is True (the default), we'll treat
+    *needle* as a regular expression. If *index* is True, we return the index
+    of the match in haystack. Otherwise, we return the matching item.
+    """
+    if regex and index:
+        rv = [n for n, h in enumerate(haystack) if re.search(needle, h)]
+    elif regex and not index:
+        rv = [h for n, h in enumerate(haystack) if re.search(needle, h)]
+    elif not regex and index:
+        rv = [n for n, h in enumerate(haystack) if needle in h]
+    elif not regex and not index:
+        rv = [h for n, h in enumerate(haystack) if needle in h]
+    return rv
+
+
+# -----------------------------------------------------------------------------
 def hostname(long=False):
     """
     Return the name of the current host.
