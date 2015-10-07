@@ -1,5 +1,6 @@
 .ackrc
 .attic
+.cache
 all
 cmsg
 CrawlConfig
@@ -7,6 +8,7 @@ crawler_pid
 crawler.exit
 DODO
 .hpssic_version
+history
 hsitool*
 ls.PR*
 MANIFEST
