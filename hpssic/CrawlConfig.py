@@ -303,7 +303,6 @@ def log(*args, **kwargs):
                args[0])
         nargs = (fmt,) + args[1:]
         try:
-            fixup_log_handlers(log._logger)
             log._logger.info(*nargs)
         except AttributeError:
             log._logger = new_logger(logpath=logpath, cfg=cfg)
