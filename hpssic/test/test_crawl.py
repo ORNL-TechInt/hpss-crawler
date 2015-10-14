@@ -1517,6 +1517,7 @@ class CrawlGiveUpYetTest(CrawlTest):
         number of identical traceback strings. Otherwise, it should return
         False.
         """
+        pytest.dbgfunc()
         self.assertFalse(self.D.give_up_yet(self.tbstr[0]))
         self.assertFalse(self.D.give_up_yet(self.tbstr[1]))
         self.assertFalse(self.D.give_up_yet(self.tbstr[0]))

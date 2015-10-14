@@ -140,8 +140,14 @@ class Daemon(object):
         """
         Conditional logging
         """
-        if self.logger:
+        if not hasattr(self, 'logger'):
+            return
+        if not self.logger:
+            return
+        try:
             self.logger.info(message)
+        except IOError as e:
+            self.logger = None
 
     # -------------------------------------------------------------------------
     def delpid(self):
