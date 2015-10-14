@@ -941,6 +941,7 @@ class CrawlDaemon(daemon.Daemon):
         """
         cfgname = ''
         self.cfg = CrawlConfig.get_config(cfgname)
+        util.env_update(self.cfg)
         self.pidfile = "%s/%d" % (self.piddir, os.getpid())
         exit_file = self.cfg.get('crawler', 'exitpath')
         ctx = self.cfg.get('crawler', 'context')

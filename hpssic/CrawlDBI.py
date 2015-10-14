@@ -1204,7 +1204,6 @@ if db2_available:
 
             if not hasattr(self, 'timeout'):
                 self.timeout = cfg.get_time(HPSS_SECTION, 'timeout', 3600)
-            util.env_update(cfg)
             host = cfg.get(HPSS_SECTION, 'hostname')
             port = cfg.get(HPSS_SECTION, 'port')
             try:
